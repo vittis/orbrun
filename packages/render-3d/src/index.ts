@@ -820,6 +820,15 @@ export class Render3d implements MapRenderer {
     this.builtLayout = -1
   }
 
+  /** Project a world anchor through the same lens that drew the dungeon. */
+  project(x: number, y: number, height = 0) {
+    this.cam.updateMatrixWorld()
+    const v = new THREE.Vector3(x + 0.5, height, y + 0.5)
+    if (v.clone().applyMatrix4(this.cam.matrixWorldInverse).z >= -0.05) return null
+    v.project(this.cam)
+    return { x: (v.x + 1) * this.width / 2, y: (1 - v.y) * this.height / 2 }
+  }
+
   /** The lens after the last frame, for the HUD's edge pips. */
   projector(): { tanHalfY: number; aspect: number; shiftY: number; height: number; toCamera(x: number, y: number, h: number): { x: number; y: number; z: number } } {
     const cam = this.cam

@@ -36,6 +36,8 @@ import type { DragRelease } from './camera'
 import { requestRenderFrame, cancelFrame } from './frames'
 import { PredictiveMovement } from './predictive-movement'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
+import { CombatFeedback } from './combat-feedback'
+import { CombatPopups } from './combat-popups'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
 const VIEW_MAX_DPR = 1
@@ -116,6 +118,8 @@ export interface GameHooks {
  * The game screen: canvas + renderer, HUD, overlays, input wiring.
  */
 export class GameScreen {
+  private feedback: CombatFeedback
+  private combatPopups = new CombatPopups()
   private prediction: PredictiveMovement
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
@@ -325,10 +329,12 @@ export class GameScreen {
     // first: anything below that asks for a frame (`wake`) schedules the loop
     this.loop = this.loop.bind(this)
     this.session = session
+    this.feedback = new CombatFeedback(session.state)
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     this.root.append(this.canvas, this.loading)
+    this.root.append(this.combatPopups.root)
     const st = hooks.settings()
     this.renderMode = st.renderer
     this.is3d = st.renderer === '3d'
@@ -471,6 +477,9 @@ export class GameScreen {
           this.wake()
           this.onScene()
         } else if (e.type === 'state') {
+          const resets = this.feedback.resets
+          this.feedback.observe(session.state, e.msg)
+          if (resets !== this.feedback.resets) this.combatPopups.clear()
           this.prediction.state(e.msg, performance.now())
           this.lastHeard = performance.now()
           this.wake()
@@ -487,6 +496,7 @@ export class GameScreen {
           this.lastSent = performance.now()
           this.prediction.sent(e.msg, this.runner.sendingStep, this.lastSent)
         } else if (e.type === 'closed') {
+          this.combatPopups.clear()
           this.prediction.reset(performance.now())
           this.wake()
         } else if (e.type === 'gamedata') {
@@ -575,6 +585,7 @@ export class GameScreen {
     this.grid.destroy()
     document.documentElement.style.removeProperty('--phone-shrink')
     this.renderer.destroy()
+    this.combatPopups.clear()
     this.park.clear()
     this.root.remove()
   }
@@ -1033,6 +1044,9 @@ export class GameScreen {
     this.hud.keepClear(this.handsLeft())
     // the monster list or the edge pips, one or the other; in 2D the top-down view frames everything in sight, so the list stands in
     const settings = this.settings()
+    const popups = this.feedback.flush(this.session.scene)
+    if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now)
+    else this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
@@ -1092,6 +1106,7 @@ export class GameScreen {
       this.hud.renderPips(this.session.scene, st, this.session.gamedata, r3d ? r3d.projector() : null, nearby === 'pips' ? 'all' : 'off')
       perf?.mark('pips')
     }
+    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d, this.cam.reducedMotion)
     perf?.end()
   }
 
@@ -1180,7 +1195,7 @@ export class GameScreen {
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
     if (this.cam.steering || this.padLooking) return true
-    if (this.renderer.animating) return true
+    if (this.renderer.animating || this.combatPopups.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 

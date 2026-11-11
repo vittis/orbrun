@@ -541,6 +541,7 @@ export interface Settings {
   depthTilt: number
   depthZoom: number
   depthAnimate: boolean
+  combatPopups: boolean
   /** How high the eye stands, in cells: 0 is the floor, 1 the lid (rendering-3d.md II.11). */
   eyeHeight: number
   /** The up-and-down field of view in degrees, 0 for Auto (settings-rows.ts `fovOf`). */
@@ -629,6 +630,7 @@ export const defaultSettings: Settings = {
   depthTilt: 50,
   depthZoom: 1,
   depthAnimate: true,
+  combatPopups: true,
   eyeHeight: 0.6,
   fov: 0,
   restPitch: -5,

@@ -22,6 +22,17 @@ const row = (label: string) => ALL_SETTING_ROWS.find((r) => r.label === label)!
 describe('what is written down', () => {
   beforeEach(() => store.clear())
 
+  it('offers combat popups in every view and persists the off switch', () => {
+    const effects = row('Combat popups')
+    expect(getSettings().combatPopups).toBe(true)
+    expect(effects.group).toBe('View')
+    adjustSetting(effects, 1)
+    expect(getSettings().combatPopups).toBe(false)
+    expect(settingValue(effects)).toBe('Off')
+    resetGroup('View')
+    expect(getSettings().combatPopups).toBe(true)
+  })
+
   it('keeps predictive movement opt-in, persists it and restores the Controls default', () => {
     const prediction = row('Predictive movement')
     expect(getSettings().predictiveMovement).toBe(false)

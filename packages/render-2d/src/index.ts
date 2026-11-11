@@ -425,6 +425,15 @@ export class Render2d implements MapRenderer {
     return { x: this.shift.x + (x - this.origin.x + 0.5) * cs, y: this.shift.y + (y - this.origin.y + 0.5) * cs }
   }
 
+  project(x: number, y: number, _height = 0) {
+    const q = this.cellCentre(x, y)
+    const pivot = this.opts.center ?? (this.opts.follow ? this.camera : null)
+    const p = pivot ? this.cellCentre(pivot.x, pivot.y) : { x: this.width / 2 + this.shift.x, y: this.height / 2 + this.shift.y }
+    const angle = -(this.opts.upYaw ?? dirToYaw(this.opts.up))
+    const c = Math.cos(angle), s = Math.sin(angle)
+    return { x: p.x + (q.x - p.x) * c - (q.y - p.y) * s, y: p.y + (q.x - p.x) * s + (q.y - p.y) * c }
+  }
+
   pick(px: number, py: number): CellKey | null {
     const cs = this.opts.cellSize
     const x = Math.floor((px - this.shift.x) / cs) + this.origin.x

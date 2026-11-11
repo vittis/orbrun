@@ -1,0 +1,16 @@
+Show actual attack damage in messages, so the client can display combat numbers.
+Inspired by Super Dungeon Crawl's damage-numbers.patch:
+https://github.com/vimuston/super-dungeon-crawl
+GPLv2+, as the DCSS file it patches.
+
+--- a/crawl-ref/source/attack.cc
++++ b/crawl-ref/source/attack.cc
+@@ -682,7 +682,7 @@
+  */
+ string attack::debug_damage_number()
+ {
+-#ifdef DEBUG_DIAGNOSTICS
++#if defined(DEBUG_DIAGNOSTICS) || defined(__EMSCRIPTEN__)
+     return make_stringf(" for %d", damage_done);
+ #else
+     return "";

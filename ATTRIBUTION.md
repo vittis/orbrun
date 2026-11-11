@@ -128,6 +128,12 @@ The offline engine's patches and build files (`engine/`) are derived from
 WebAssembly port of DCSS (GPLv2+), reworked into a patch series against
 upstream and a JSPI-only build.
 
+Combat popup presentation is inspired by [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl).
+The offline engine's beam-damage patch is adapted from that project's
+`spell-damage-numbers.patch` (GPLv2); the attack-damage patch follows its
+approach of including actual damage in combat messages. The client popup
+layer is implemented independently for Orbrun's renderers.
+
 ## Third-party assets and dependencies
 
 - [three.js](https://threejs.org) (MIT): the 3D renderer, a runtime

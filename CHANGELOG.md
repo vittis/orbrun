@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.14 — 2026-11-11
+
+- Add combat popups in every dungeon view: damage, misses, blocks, kills, healing, level-ups and important status changes, with elemental colors and reduced-motion support. Toggle them in Settings → View → Combat popups.
+- Use exact player health changes and server-reported attack damage; ordinary public-server hits say HIT when no number is available. Offline engine builds now include actual melee and beam damage in messages (requires a rebuilt engine).
+
 ## 0.3.13 — 2026-11-11
 
 - Fix remaining 2.5D tile seams at fractional zoom and display density, including filtered terrain edges and inherited flat-view wall shadows.

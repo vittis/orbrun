@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbrun · Combat feedback preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #080c13; color: #d9d3c6; font: 14px system-ui, sans-serif; }
+    header, footer { padding: 18px 24px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid #28303a; }
+    h1 { font-size: 17px; margin: 0 12px 0 0; color: #e7c98f; }
+    label { display: flex; align-items: center; gap: 6px; }
+    button, select { background: #151c27; color: #e5e2d9; border: 1px solid #384354; border-radius: 4px; padding: 7px 10px; cursor: pointer; }
+    button:hover { background: #283348; border-color: #e7c98f; }
+    #dungeon { position: relative; min-height: 0; }
+    canvas { position: absolute; display: block; }
+    footer { border-top: 1px solid #28303a; color: #929ca9; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Orbrun / Combat feedback</h1>
+    <label>View <select id="projection"><option value="2.5d">Dungeon 2.5D</option><option value="2d">Tiles 2D</option><option value="3d">First person</option></select></label>
+    <button data-effect="hit">Heavy hit</button><button data-effect="miss">Miss</button><button data-effect="fire">Fire</button><button data-effect="cold">Cold</button><button data-effect="kill">Kill</button><button data-effect="block">Block</button><button data-effect="hurt">Hurt</button><button data-effect="status">Poison</button><button data-effect="heal">Heal / level</button>
+    <label><input type="checkbox" id="reduced"> Reduced motion</label>
+    <label><input type="checkbox" id="paused"> Freeze popups</label>
+  </header>
+  <main id="dungeon"></main>
+  <footer>Development preview · Uses the live combat message parser, tracker and popup layer · Freeze popups for inspection</footer>
+  <script type="module" src="./combat.ts"></script>
+</body>
+</html>

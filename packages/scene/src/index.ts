@@ -547,6 +547,8 @@ export interface MapRenderer {
   setCamera(cam: Camera): void
   setCursor(cursor: SceneCursor | null): void
   render(now?: number): void
+  /** Cell centre at height (0 floor, 1 wall top), in CSS pixels; null behind the lens. */
+  project?(x: number, y: number, height?: number): { x: number; y: number } | null
   pick(px: number, py: number): CellKey | null
   resize(width: number, height: number, dpr: number): void
   destroy(): void

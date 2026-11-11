@@ -118,6 +118,10 @@ export class Render25d implements MapRenderer {
     return cell.featureTile !== undefined && (cell.stance === 'upright' || cell.freestanding || cell.feature?.type === 'door')
   }
 
+  project(x: number, y: number, height = 0) {
+    return project(this.projection(), x, y, height)
+  }
+
   private inFrame(p: Projection, cell: SceneCell) {
     const q = project(p, cell.x, cell.y)
     return q.x > -p.scale * 2 && q.x < this.width + p.scale * 2 && q.y > -p.scale * 2 && q.y < this.height + p.scale * 2

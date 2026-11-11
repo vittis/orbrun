@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.13 point at the `cloudflare-online-v1.10` release tag in
+Source links for 0.3.14 point at the `cloudflare-online-v1.11` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -237,3 +237,30 @@ the final snapped-edge picking correction, all 23 renderer tests passed. All
 342 real Canvas pixel checks, forced TypeScript check, production build,
 ASSETS-only Worker dry-run and diff checks passed. Desktop/phone previews and
 the recorded fountain scene were inspected; live rollout is checked after push.
+
+
+## 0.3.14 combat feedback release — 2026-11-11
+
+User authorized integration into main, commit and deployment. Rebased onto
+0.3.13 (`956681d`) to retain the shared terrain edges and original sprite
+proportions. Immutable source tag: `cloudflare-online-v1.11`.
+
+Combat popups use each renderer's world-to-screen projection, follow the camera,
+expire after 1.1 seconds and respect reduced motion. Settings → View → Combat
+popups toggles the layer. Message rollbacks append only new text; health deltas,
+status transitions, kills and same-name multi-target attacks have regression
+coverage. No changes to transport, input dispatch or authoritative game state.
+
+Validation: forced TypeScript check; full suite 2,046 passed / two optional
+engine skips; production build; ASSETS-only Worker dry-run (102 assets,
+20.95 KiB Worker / 6.26 KiB gzip); diff checks. Optional engine E2E: 44 skips
+because no engine artifacts are installed. All three views were visually
+checked locally. The new engine patches apply to upstream source and preserve
+native-build messages behind Emscripten guards; no engine binary was built or
+deployed. Hosted production remains online-only, with HIT when the server does
+not expose exact monster damage. Player HP changes are numeric.
+
+Previous production Worker for rollback: `5e34462f-f97a-4016-b640-c91067cbd148`.
+Push main and the source tag atomically, wait for Workers Builds, then verify
+source links, the live entry bundle, strict CSP, proxy restrictions and anonymous
+spectating with combat feedback enabled.
