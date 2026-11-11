@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.31 — 2026-11-11
+
+- Replace NO DAMAGE with a subtle armor-block icon for players and enemies.
+- Make combat popups smaller and use distinct icons for misses, shield blocks, kills, damage types, healing, statuses and leveling to reduce reading during combat.
+
 ## 0.3.30 — 2026-11-11
 
 - Strengthen wall-base shadows in Dungeon (2.5D) so wall height is easier to read.

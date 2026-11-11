@@ -764,3 +764,24 @@ production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
 checks. Optional engine E2E reports 44 explicit skips. The atomic main/source-tag
 push triggers Cloudflare Workers Builds. No deployment polling or hosted checks
 will be performed, as requested.
+
+## 0.3.31 compact combat icons — prepared 2026-11-11
+
+User authorized committing to main and deploying. Immutable source tag:
+`cloudflare-online-v1.28`. Zero-damage player and enemy hits show a muted armor
+symbol with a quiet fade and shorter rise. Shield blocks, misses, kills, damage
+types, healing, status changes and leveling use distinct SVG symbols. Numeric
+damage and estimates remain visible; unknown statuses retain their wording.
+Popup sizes, stacking gaps and travel are smaller. Existing concise and reduced
+motion preferences remain supported.
+
+Integrated current main, retaining 0.3.29 spell effects and 0.3.30 wall/LOS
+changes. Release checks pass: forced TypeScript rebuild, 2,271 unit tests with
+two optional-engine skips, production build, ASSETS-only Worker dry-run
+(104 assets, 20.95 KiB), and diff checks. The optional engine E2E lane reports
+44 explicit skips because engine artifacts are absent. Headless Chrome verified
+the combat preview at 1280×800 and 390×844, including player/enemy armor,
+readable numeric damage, statuses and a gallery of all expression symbols.
+
+Push main and the source tag atomically to trigger Workers Builds, then verify
+that the hosted release source, popup bundles and strict CSP match this build.
