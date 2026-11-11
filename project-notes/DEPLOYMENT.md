@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.32 point at the `cloudflare-online-v1.29` release tag in
+Source links for 0.3.34 point at the `cloudflare-online-v1.31` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -833,3 +833,27 @@ Local Chrome checks confirmed distinct computed defense colors, no sword or
 level icon, 48 confetti pieces, readable desktop/phone presentation, and fully
 suppressed text/confetti motion in Still mode. Push main and the source tag
 atomically to trigger Workers Builds. The user will verify the deployment.
+
+
+## 0.3.34 non-projectile spell VFX — prepared 2026-11-11
+
+User authorized committing and deploying the completed VFX changes. Integrated
+0.3.33's combat colors and level-up celebration. Immutable source tag:
+`cloudflare-online-v1.31`. Confirmed spell and ability feedback now produces
+bounded, depth-sorted bursts independently of projectile artwork and combat
+popup settings. Includes Freeze, Airstrike, Scorch, draining, smiting, electrical
+and hex effects, healing, buffs, transformations and summoning confirmations.
+Incoming abilities and zero-damage results also animate. Short server cell
+flashes survive receipt/clear between frames. Visibility, level transitions,
+remote maps and Still mode clear the histories.
+
+Feature validation passed 2,307 unit tests with two optional-engine skips,
+typecheck, production build and 19 real Canvas checks. The pixel checks cover
+all 14 effect families, complete expiry, four confirmed result sentences and a
+synchronous server flash. Evidence: `evidence/release-0334-spell-checks.json`.
+Final integrated checks passed: forced TypeScript rebuild, 2,311 unit tests
+with two optional-engine skips, production build, ASSETS-only Worker dry-run
+(104 assets, 20.95 KiB) and diff checks. Optional engine E2E reports 44 explicit
+skips because engine artifacts are absent. Push main and the immutable source
+tag atomically to trigger Cloudflare Workers Builds, then verify the hosted
+version, source links, bundle identity, CSP and proxies.

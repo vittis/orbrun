@@ -1,0 +1,144 @@
+{
+  "checks": 19,
+  "passed": 19,
+  "failures": [],
+  "results": [
+    {
+      "kind": "cold",
+      "pixels": 696,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "fire",
+      "pixels": 845,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "electric",
+      "pixels": 702,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "poison",
+      "pixels": 570,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "acid",
+      "pixels": 580,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "air",
+      "pixels": 963,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "earth",
+      "pixels": 314,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "drain",
+      "pixels": 854,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "holy",
+      "pixels": 571,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "magic",
+      "pixels": 593,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "heal",
+      "pixels": 548,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "buff",
+      "pixels": 938,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "debuff",
+      "pixels": 938,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "kind": "teleport",
+      "pixels": 938,
+      "expired": 0,
+      "passed": true
+    },
+    {
+      "line": "You freeze the goblin but do no damage.",
+      "effects": [
+        {
+          "x": 12,
+          "y": 5,
+          "kind": "cold"
+        }
+      ],
+      "pixels": 696,
+      "passed": true
+    },
+    {
+      "line": "The open air twists around violently and strikes the goblin!",
+      "effects": [
+        {
+          "x": 12,
+          "y": 5,
+          "kind": "air"
+        }
+      ],
+      "pixels": 963,
+      "passed": true
+    },
+    {
+      "line": "You draw life force from the goblin!",
+      "effects": [
+        {
+          "x": 12,
+          "y": 5,
+          "kind": "drain"
+        }
+      ],
+      "pixels": 854,
+      "passed": true
+    },
+    {
+      "line": "You smite the goblin!",
+      "effects": [
+        {
+          "x": 12,
+          "y": 5,
+          "kind": "holy"
+        }
+      ],
+      "pixels": 571,
+      "passed": true
+    },
+    {
+      "kind": "synchronous-flash",
+      "pixels": 696,
+      "passed": true
+    }
+  ]
+}

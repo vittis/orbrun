@@ -1,6 +1,77 @@
-import type { MeleeStroke, SpellTrace } from './effects.js'
+import type { MeleeStroke, SpellTrace, SpellBurst } from './effects.js'
 import { project, type Projection } from './projection.js'
 import type { Context2d } from './tiles.js'
+
+const burstColours: Record<SpellBurst['kind'], string> = {
+  cold: '#a5e7ff', fire: '#ff9a47', electric: '#c0d9ff', poison: '#9de85e', acid: '#d1f46c',
+  air: '#d8edf0', earth: '#d7b68b', drain: '#c178dd', holy: '#ffe6a0', magic: '#d1acff',
+  heal: '#7ff0bd', buff: '#f6d998', debuff: '#cda1ec', teleport: '#b8a3ff',
+}
+
+/** Cell-local bursts surround upright actors, so contact spells remain readable
+ * without inventing a missile. Geometry is depth sorted with walls and sprites. */
+export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst, now: number) {
+  const age = (now - burst.born) / burst.duration
+  if (age < 0 || age >= 1) return
+  const q = project(p, burst.x, burst.y + 0.22), s = p.scale, kind = burst.kind
+  const fade = (1 - age) ** 1.2, expand = 1 - (1 - age) ** 3
+  const seed = burst.x * 2.31 + burst.y * 1.73
+  ctx.save(); ctx.translate(q.x, q.y - s * 0.42)
+  ctx.strokeStyle = ctx.fillStyle = burstColours[kind]
+  ctx.lineWidth = Math.max(1, s * 0.025); ctx.lineCap = 'round'
+  // A compact pulse at the feet connects the upright burst to its world cell.
+  ctx.globalAlpha = fade * 0.55
+  ctx.beginPath(); ctx.ellipse(0, s * 0.36, s * (0.14 + expand * 0.27), s * Math.sin(p.tilt) * 0.13, 0, 0, Math.PI * 2); ctx.stroke()
+  if (kind === 'air' || kind === 'teleport' || kind === 'buff' || kind === 'debuff') {
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = fade * 0.8
+      const y = s * (0.28 - i * 0.27 - age * 0.12), r = s * (0.19 + expand * 0.17)
+      ctx.beginPath(); ctx.ellipse(0, y, r, s * 0.09, -0.2, age * 5 + i * 1.8, age * 5 + i * 1.8 + Math.PI * 1.4); ctx.stroke()
+    }
+  }
+  if (kind === 'drain') {
+    for (let i = 0; i < 4; i++) {
+      const a = seed + i * Math.PI / 2 + age * 2.5, r = s * (0.42 - expand * 0.3)
+      ctx.globalAlpha = fade * 0.85; ctx.beginPath()
+      ctx.moveTo(Math.cos(a - 0.5) * (r + s * 0.08), Math.sin(a - 0.5) * (r + s * 0.08))
+      ctx.quadraticCurveTo(Math.cos(a) * r, Math.sin(a) * r, Math.cos(a + 0.7) * r * 0.4, Math.sin(a + 0.7) * r * 0.4)
+      ctx.stroke()
+    }
+  }
+  for (let i = 0; i < 8; i++) {
+    const angle = seed + i * Math.PI / 4
+    const radius = s * (0.12 + expand * 0.29)
+    const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius * 0.85 - age * s * 0.12
+    const size = s * (0.065 - age * 0.025)
+    ctx.globalAlpha = fade * (0.65 + (i % 3) * 0.12)
+    ctx.beginPath()
+    if (kind === 'cold') {
+      // Six-point ice crystals radiate out of the contact point.
+      for (let j = 0; j < 3; j++) {
+        const a = j * Math.PI / 3
+        ctx.moveTo(x - Math.cos(a) * size, y - Math.sin(a) * size)
+        ctx.lineTo(x + Math.cos(a) * size, y + Math.sin(a) * size)
+      }
+    } else if (kind === 'electric') {
+      ctx.moveTo(x * 0.3, y * 0.3); ctx.lineTo(x * 0.65 - size, y * 0.55)
+      ctx.lineTo(x * 0.5 + size, y * 0.65); ctx.lineTo(x, y)
+    } else if (kind === 'heal' || kind === 'holy') {
+      ctx.moveTo(x - size, y); ctx.lineTo(x + size, y)
+      ctx.moveTo(x, y - size); ctx.lineTo(x, y + size)
+    } else if (kind === 'fire') {
+      ctx.moveTo(x - size * 0.6, y + size); ctx.quadraticCurveTo(x + size, y, x, y - size * (2 + age))
+      ctx.quadraticCurveTo(x - size, y, x - size * 0.6, y + size); ctx.fill()
+    } else if (kind === 'earth') {
+      ctx.fillRect(x, y + age * age * s * 0.25, size, size * 0.65)
+    } else if (kind === 'poison' || kind === 'acid') {
+      ctx.arc(x, y, size * (0.5 + age), 0, Math.PI * 2)
+    } else {
+      ctx.moveTo(x - size * 0.6, y); ctx.lineTo(x, y - size); ctx.lineTo(x + size * 0.6, y); ctx.lineTo(x, y + size); ctx.closePath()
+    }
+    ctx.stroke()
+  }
+  ctx.restore()
+}
 
 /** Short weapon gestures sit below health bars and leave the tile silhouette clear. */
 export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, now: number) {

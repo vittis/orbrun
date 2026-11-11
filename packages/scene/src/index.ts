@@ -555,6 +555,13 @@ export interface MeleeAttack {
   hit: boolean
 }
 
+/** Confirmed spell/ability feedback, independent of projectile artwork or damage. */
+export interface SpellEffect {
+  x: number
+  y: number
+  kind: 'cold' | 'fire' | 'electric' | 'poison' | 'acid' | 'air' | 'earth' | 'drain' | 'holy' | 'magic' | 'heal' | 'buff' | 'debuff' | 'teleport'
+}
+
 export interface MapRenderer {
   /** Whether presentation effects need another frame without a new game state. */
   readonly animating?: boolean
@@ -567,6 +574,7 @@ export interface MapRenderer {
   /** A confirmed visible impact, in cell coordinates and monotonic seconds. */
   impact?(x: number, y: number, strength: number, now: number): void
   melee?(attack: MeleeAttack, now: number): void
+  spell?(effect: SpellEffect, now: number): void
   render(now?: number): void
   /** Cell centre at height (0 floor, 1 wall top), in CSS pixels; null behind the lens. */
   project?(x: number, y: number, height?: number): { x: number; y: number } | null

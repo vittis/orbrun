@@ -92,6 +92,13 @@ and picking regions. The existing first-person renderer remains independent.
   feedback and the wielded inventory item, independently of popup settings.
   Disappearing transient spell lights leave faint fire, frost, electrical or
   magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
+  Confirmed `SpellEffect` events also produce upright, depth-sorted bursts for
+  non-projectile spells and abilities: Freeze crystals, Airstrike gusts, Scorch
+  flames, electrical arcs, draining wisps, holy/healing sparks and status rings.
+  The app resolves result sentences and status changes independently of combat
+  popup settings; zero-damage results still show their effect. Server cell
+  flashes also leave a short burst when received and cleared between frames.
+  These bursts last 0.5–0.85 seconds and never change damage or game state.
   Histories clear on level changes, remote maps, lost visibility and Still mode.
   Projectile appearance is independent of light emission: Sandblast/rock/metal
   spells leave dust or chips without glowing. Compact missiles preserve their
@@ -111,8 +118,8 @@ emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
 effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
-Server flashes are rendered as supplied; spell types and damage are not
-guessed from message text.
+Server flashes keep their supplied colours. The renderer receives typed spell
+feedback from the app; it never parses messages or determines damage.
 Idle motion uses device-pixel-snapped offsets. Breathing is a shallow vertical
 rise; in crisp mode, sprites are enlarged by whole pixels before narrow edge
 smoothing eases the animation. Still sprites retain the selected tile filter.
@@ -144,7 +151,7 @@ Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
 player directly; long-distance moves demonstrate multi-cell tweening.
 **Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
-**Cast** previews four spell trace families. Append `?effectFrame=0.1` to freeze
+**Cast** previews contact spells, abilities, buffs and four projectile trace families. Append `?effectFrame=0.1` to freeze
 each triggered effect 100 ms into its lifetime for deterministic captures.
 **Toggle LOS** dims/reveals the area around the player; press again mid-fade
 to inspect a continuous reversal, or disable Animation to compare Still mode.

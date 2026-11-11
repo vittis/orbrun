@@ -1,6 +1,6 @@
 import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { cellKey, makeCamera, type TileSource, type MeleeAttack, type WoundLevel, type TileLight } from '@orbrun/scene'
+import { cellKey, makeCamera, type TileSource, type MeleeAttack, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
@@ -216,7 +216,18 @@ document.getElementById('melee')!.addEventListener('click', () => {
 })
 let castSequence = 0
 document.getElementById('cast')!.addEventListener('click', () => {
-  const index = spellKinds.indexOf((document.getElementById('spell') as HTMLSelectElement).value as typeof spellKinds[number])
+  const selection = (document.getElementById('spell') as HTMLSelectElement).value
+  if (selection.startsWith('burst:')) {
+    const kind = selection.slice(6) as SpellEffect['kind']
+    const target = ['heal', 'buff', 'teleport'].includes(kind) ? scene.player : practiceEnemy()
+    if (!target) return
+    const now = performance.now() / 1000
+    renderer.spell({ x: target.x, y: target.y, kind }, now)
+    if (effectFrame) captureTime = now + effectFrame
+    wake()
+    return
+  }
+  const index = spellKinds.indexOf(selection as typeof spellKinds[number])
   const id = `preview-spell:${++castSequence}`
   const cells = [-2, -1, 0, 1, 2].map(dx => scene.cells.get(cellKey(scene.player.x + dx, scene.player.y - 1)))
     .filter(c => c?.visibility === 'visible' && !c.occluder)

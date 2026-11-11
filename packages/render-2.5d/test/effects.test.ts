@@ -16,6 +16,47 @@ const target: Billboard = { x: 1, y: 0, kind: 'monster', tile: 2, height: 1 }
 const spell = (x = 1): Billboard => ({ x, y: 0, kind: 'projectile', tile: 3, height: 1,
   life: { lights: [{ colour: [255, 118, 30], radius: 2.8, power: 0.45, pulse: 'fire', transient: true }] } })
 
+describe('non-projectile spell histories', () => {
+  it('keeps confirmed zero-damage casts without projectile/light dependencies, deduplicates and expires', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    expect(fx.spell(scene, { x: 1, y: 0, kind: 'cold' }, 1)).toBe(true)
+    expect(fx.spell(scene, { x: 1, y: 0, kind: 'cold' }, 1.02)).toBe(false)
+    expect(fx.bursts).toHaveLength(1)
+    fx.observe({ ...scene, revision: 1 }, 1.1, true)
+    expect(fx.bursts[0].born).toBe(1)
+    fx.tick(scene, 2)
+    expect(fx.bursts).toHaveLength(0)
+    for (let i = 0; i < 100; i++) fx.spell(scene, { x: 1, y: 0, kind: 'cold' }, 2 + i * 0.1)
+    expect(fx.bursts.length).toBeLessThanOrEqual(48)
+  })
+
+  it('retains flashes created and cleared before a draw without replaying unchanged flashes', () => {
+    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(1, 0))!
+    fx.observe(scene, 0, true)
+    cell.flash = { r: 80, g: 180, b: 255, a: 100 }
+    scene.revision++; fx.observe(scene, 1, true)
+    scene.revision++; fx.observe(scene, 1.1, true)
+    delete cell.flash
+    scene.revision++; fx.observe(scene, 1.101, true)
+    expect(fx.bursts).toMatchObject([{ x: 1, y: 0, kind: 'cold', born: 1 }])
+    fx.tick(scene, 2)
+    expect(fx.bursts).toHaveLength(0)
+  })
+
+  it.each(['level', 'remote', 'still', 'visibility'] as const)('clears direct effects for %s', reset => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.spell(scene, { x: 1, y: 0, kind: 'cold' }, 1)
+    if (reset === 'level') scene.levelKey = 'D:2'
+    if (reset === 'remote') scene.playerOnLevel = false
+    if (reset === 'visibility') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+    fx.observe(scene, 1.1, reset !== 'still')
+    expect(fx.bursts).toEqual([])
+    if (reset === 'visibility' || reset === 'remote') expect(fx.spell(scene, { x: 1, y: 0, kind: 'cold' }, 1.2)).toBe(false)
+  })
+})
+
 describe('bounded dungeon combat presentation', () => {
   it('retains sub-frame non-glowing projectile art and creates dust impact/residue once', () => {
     const fx = new DungeonEffects(), scene = world()

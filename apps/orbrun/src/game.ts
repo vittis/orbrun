@@ -1053,7 +1053,8 @@ export class GameScreen {
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
     const incomingMelee = this.feedback.takeMelee()
-    if (incomingMelee.length || popups.some(p => p.melee || p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
+    const spells = this.feedback.takeSpells()
+    if (spells.length || incomingMelee.length || popups.some(p => p.melee || p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
     if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now, this.renderMode === '2.5d')
     else this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
@@ -1102,6 +1103,7 @@ export class GameScreen {
       // 3D view marks the way that view faces, which a north-up map otherwise loses.
       if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
       this.syncRendererScene(this.session.scene, now / 1000)
+      if (!this.mapShown) for (const effect of spells) this.renderer.spell?.(effect, now / 1000)
       if (!this.mapShown) for (const attack of incomingMelee) this.renderer.melee?.(attack, now / 1000)
       if (!this.mapShown) for (const event of popups) {
         if (this.renderer.melee) {

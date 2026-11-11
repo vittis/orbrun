@@ -1,14 +1,14 @@
 import {
   cellKey, emptyScene, minibarRects, DungeonLife, livingPose,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
-  type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter,
+  type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
 import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
-import { DungeonEffects } from './effects.js'
-import { drawMelee, drawSpellTrace } from './effects-draw.js'
+import { DungeonEffects, type SpellBurst } from './effects.js'
+import { drawMelee, drawSpellTrace, drawSpellBurst } from './effects-draw.js'
 import { drawWallShadows, shadeWallFace, WALL_HEIGHT } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 
@@ -34,7 +34,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -205,6 +205,10 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate && this.effects.melee(this.scene, attack, now)) this.active = true
   }
 
+  spell(effect: SpellEffect, now: number) {
+    if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
+  }
+
   render(now = performance.now() / 1000) {
     const ctx = this.ctx
     if (!ctx) return
@@ -224,6 +228,12 @@ export class Render25d implements MapRenderer {
         const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
         if (!cell || !this.inFrame(p, billboard)) continue
         standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
+        this.active = true
+      }
+      for (const burst of this.effects.bursts) {
+        const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
+        if (!cell || cell.occluder || !this.inFrame(p, burst)) continue
+        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + 0.35 })
         this.active = true
       }
       standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
@@ -298,7 +308,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -315,7 +325,12 @@ export class Render25d implements MapRenderer {
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
       if (entry.moving) this.active = true
-      if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
+      if (entry.burst) {
+        const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
+        ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1); ctx.clip()
+        drawSpellBurst(ctx, p, entry.burst, now); ctx.restore()
+      }
+      else if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
       else if (entry.cell.occluder) this.wall(ctx, p, entry.cell)
       else this.actor(ctx, p, entry.cell, { x: entry.cell.x, y: entry.cell.y, tile: entry.cell.featureTile!, height: 1, kind: 'doll', scenery: true, life: entry.cell.life }, time)
     }

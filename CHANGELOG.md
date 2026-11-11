@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.34 — 2026-11-11
+
+- Add Dungeon (2.5D) effects for Freeze and other spells and abilities without projectiles, including gusts, flames, draining, smiting, hexes, healing, buffs and summons.
+- Show confirmed zero-damage results and incoming abilities, even with combat popups disabled. Preserve brief server flashes received between rendered frames.
+- Keep effects bounded, depth sorted and consistent with visibility, level changes and Still mode.
+
 ## 0.3.33 — 2026-11-11
 
 - Remove the sword beside physical damage numbers and celebrate level-ups with larger text, colorful confetti, sparks and an expanding ring.

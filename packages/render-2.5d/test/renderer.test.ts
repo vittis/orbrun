@@ -64,6 +64,26 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it('draws direct spells on its frame clock, sleeps after expiry, and respects Still mode', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0), cell(1, 0))
+    r.setScene(scene, 0)
+    r.spell({ x: 1, y: 0, kind: 'cold' }, 1)
+    r.render(1.1)
+    expect(r.animating).toBe(true)
+    expect(ctx.strokeStyle).toBe('#a5e7ff')
+    r.render(2)
+    expect(r.animating).toBe(false)
+    r.setOptions({ animate: false })
+    r.spell({ x: 1, y: 0, kind: 'cold' }, 3)
+    r.render(3.1)
+    expect(r.animating).toBe(false)
+    r.setOptions({ animate: true })
+    r.spell({ x: 100, y: 100, kind: 'fire' }, 4)
+    r.render(4.1)
+    expect(r.animating).toBe(false)
+  })
+
   it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {
     const { r } = renderer()
     const c = cell(0, 0, { visibility: 'remembered' }), scene = sceneOf(c)
