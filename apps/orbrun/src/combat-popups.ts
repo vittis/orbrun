@@ -7,7 +7,7 @@ const LIFETIME = 1100
 const MAX_POPUPS = 10
 const MAX_AT_ANCHOR = 3
 interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot: number }
-const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}`
+const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}${event.amount === 0 ? ' no-damage' : ''}`
 function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.className = popupClass(event)
   let number = node.querySelector('.combat-number')
@@ -15,13 +15,13 @@ function paintPopup(node: HTMLElement, event: CombatPopup) {
   // Keep this wrapper mounted when an estimate/brand refines the same hit,
   // so its compositor entrance runs once instead of restarting.
   if (event.estimated) number.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
-  else number.replaceChildren(h('span', { class: 'combat-value' }, event.text))
+  else number.replaceChildren(h('span', { class: 'combat-value' }, event.amount === 0 ? 'NO DAMAGE' : event.text))
 }
 
 /** Bounded trajectories driven by the same frame clock as placement/fading.
  * Elemental motion is applied to the number, leaving its anchor stable. */
 export function popupMotion(event: CombatPopup, age: number, direction: number, reduced: boolean) {
-  if (reduced) return { x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 }
+  if (reduced || event.amount === 0) return { x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 }
   const settle = Math.exp(-age * 9), wave = Math.sin(age * Math.PI * 2)
   let x = 0, y = 0, sx = 1, sy = 1, angle = 0
   const tone = event.kind === 'heal' ? 'heal' : event.tone ?? 'physical'

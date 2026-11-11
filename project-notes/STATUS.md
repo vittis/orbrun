@@ -1,5 +1,18 @@
 # Project status
 
+## 0.3.24 trunk Ice Thorns and no-damage feedback — prepared 2026-11-11
+
+User identified Ice Thorns from trunk and requested damage/no-damage popups,
+then commit and deployment. Source tag: `cloudflare-online-v1.21`. The parser
+now accepts plural beam hit verbs, including Ice Thorns' “skewer”, and preserves
+explicit zeroes. NO DAMAGE uses quiet text without hit glow or impact ripples.
+Incoming explicit zero-damage hits also receive feedback without an HP delta.
+
+Official trunk terrain.cc/beam.cc/zap-data.h confirm the spell's exact messages
+and plural no-damage grammar. The actual GameScreen fixture displays both
+NO DAMAGE and ≈4 cold feedback and records one impact for the damaging hit.
+Full release checks and rollout are recorded in DEPLOYMENT.md.
+
 ## 0.3.23 synchronized player/camera and native combat text — deployed 2026-11-11
 
 User authorized fixing player movement, checking missing live combat text, and

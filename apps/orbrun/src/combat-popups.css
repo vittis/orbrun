@@ -76,6 +76,13 @@
   letter-spacing: 0.08em;
 }
 .combat-popup.block { --impact: #a4d6ef; }
+.combat-popup.no-damage {
+  --impact: #b7c7d2;
+  font-size: clamp(12px, 1.6vw, 16px);
+  letter-spacing: 0.06em;
+}
+.combat-popup.no-damage .combat-number .combat-value { text-shadow: inherit; }
+.combat-popup.no-damage::before, .combat-popup.no-damage .combat-value::after { display: none; }
 .combat-popup.kill, .combat-popup.level { --impact: #fff2be; letter-spacing: 0.09em; }
 .combat-popup.kill { font-size: clamp(13px, 1.7vw, 18px); letter-spacing: 0.04em; }
 .combat-popup.status, .combat-popup.heal { font-size: clamp(12px, 1.7vw, 17px); letter-spacing: 0.04em; }

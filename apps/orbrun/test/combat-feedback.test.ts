@@ -28,6 +28,39 @@ function harness() {
 
 describe('combat sentences', () => {
   it.each([
+    'The ice thorns skewer the goblin.',
+    '<lightblue>The ice thorns skewer the goblin!<lightgrey>',
+    'Your ice thorns skewer the goblin!!',
+  ])('recognizes trunk Ice Thorns damage: %s', text => {
+    const [hit] = combatText(text)
+    expect(hit).toMatchObject({ kind: 'hit', target: 'the goblin', tone: 'cold', text: 'HIT' })
+    expect(hit.band?.min).toBeGreaterThan(0)
+  })
+
+  it.each([
+    'The ice thorns skewer the goblin but do no damage.',
+    'The wall freezes the goblin but does no damage.',
+    'You hit the goblin but do no damage.',
+    'The ice thorns skewer the goblin for 0 damage.',
+  ])('retains an explicit zero without estimating damage: %s', text => {
+    expect(combatText(text)).toMatchObject([{ kind: 'hit', target: 'the goblin', amount: 0, text: '0' }])
+    expect(combatText(text)[0].band).toBeUndefined()
+  })
+
+  it.each([
+    'The ice thorns skewer you but do no damage.',
+    'The goblin hits you with a +0 club but does no damage.',
+    'The goblin bites you but does no damage.',
+  ])('retains incoming no-damage hits without an HP delta: %s', text => {
+    expect(combatText(text)).toMatchObject([{ kind: 'hurt', text: '0', amount: 0, player: true }])
+  })
+
+  it('keeps patched-server exact Ice Thorns damage exact and ignores crumbling terrain', () => {
+    expect(combatText('The ice thorns skewer the goblin for 7 damage!')).toMatchObject([{ kind: 'hit', text: '7', amount: 7, tone: 'cold' }])
+    expect(combatText('Your icy thorns crumble before you. The icy thorns crumble before the goblin.')).toEqual([])
+  })
+
+  it.each([
     'You perforate the hornet like a sieve!!!',
     'You skewer the hornet like a kebab!!!',
     'You stick the hornet like a pincushion!!!',
@@ -64,6 +97,24 @@ describe('combat sentences', () => {
 })
 
 describe('combat updates', () => {
+  it('places Ice Thorns zero and damage popups on a stepping enemy without requiring a wound change', () => {
+    const { feedback, scene, text } = harness()
+    text('The ice thorns skewer the goblin but do no damage.')
+    const moved = world(goblin(1, 2))
+    expect(feedback.flush(moved)).toMatchObject([{ kind: 'hit', actorId: 'id:1', x: 2, y: 0, amount: 0, text: '0', tone: 'cold' }])
+    text('The ice thorns skewer the goblin.')
+    expect(feedback.flush(moved)).toMatchObject([{ kind: 'hit', actorId: 'id:1', x: 2, estimated: true, amount: 4, tone: 'cold' }])
+    expect(feedback.flush(scene)).toEqual([])
+  })
+
+  it('does not replay an Ice Thorns hit when Crawl appends a wound sentence', () => {
+    const { feedback, scene, text } = harness()
+    text('The ice thorns skewer the goblin!')
+    expect(feedback.flush(scene)).toMatchObject([{ text: '≈12', estimated: true, tone: 'cold' }])
+    text('The ice thorns skewer the goblin! The goblin is heavily wounded.', 1)
+    expect(feedback.flush(scene)).toEqual([])
+  })
+
   it('resolves an observed live strong-hit sentence into a placed number alongside a kill', () => {
     const { feedback, text } = harness()
     const scene = world({ ...goblin(), name: 'hornet', id: 7, ref: undefined })

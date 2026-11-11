@@ -14,6 +14,20 @@ function preview() {
 }
 
 describe('popup presentation', () => {
+  it.each([false, true])('shows explicit NO DAMAGE text and separate cold damage feedback (concise=%s)', concise => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'hit', text: '0', amount: 0, tone: 'cold', x: 1, y: 0, turn: 1 }], 0, concise)
+    render(100)
+    const zero = popups.root.querySelector<HTMLElement>('.no-damage')!
+    expect(zero.textContent).toBe('NO DAMAGE')
+    expect(zero.hidden).toBe(false)
+    expect(zero.querySelector('.combat-estimate')).toBeNull()
+    expect(popupMotion({ kind: 'hit', text: '0', amount: 0, tone: 'cold' }, 0.1, 1, false).glow).toBe(0)
+    popups.add([{ kind: 'hit', text: '≈4', amount: 4, estimated: true, tone: 'cold', x: 1, y: 0, turn: 2 }], 150, concise)
+    render(200)
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['NO DAMAGE', '≈4'])
+  })
+
   it('anchors text to interpolated entities while the camera and target are moving', () => {
     const popups = new CombatPopups(), view = document.createElement('canvas'), scene = emptyScene()
     Object.defineProperties(view, { clientWidth: { value: 640 }, clientHeight: { value: 400 } })

@@ -48,6 +48,9 @@ export function combatText(text: string): CombatPopup[] {
     let m: RegExpExecArray | null
     if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off) (.+?)[.!]+$/.exec(s))) {
       out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
+    } else if (/^(?!You\b).+? you(?: with .+?)? but (?:do|does) no damage[.!]+$/.test(s)) {
+      // There is no HP delta for a zero-damage incoming hit. Keep the server's explicit result.
+      out.push({ kind: 'hurt', text: '0', amount: 0, player: true, tone: toneOf(s) })
     } else if ((m = /^You(?: (?:barely|closely|completely))? miss (.+?)(?: with .+)?[.!]+$/.exec(s))) {
       out.push({ kind: 'miss', text: 'MISS', target: m[1] })
     } else if (/^(?!You\b).+? (?:(?:barely|closely|completely) )?(?:misses|fails to hit) you[.!]+$/.test(s)) {
@@ -63,7 +66,7 @@ export function combatText(text: string): CombatPopup[] {
       m = /^You (?:clumsily )?([\w-]+) (.+?)(?:[.!]+)$/.exec(s)
       let target: string | undefined
       if (m && attacks.test(m[1])) target = m[2]
-      else if ((m = /^(?:The|Your) .+? (?:hits|pierces|strikes|burns|engulfs|freezes) (.+?)[.!]+$/.exec(s))) target = m[1]
+      else if ((m = /^(?:The|Your) .+? (?:hits?|pierces?|strikes?|burns?|engulfs?|freezes?|skewers?) (.+?)[.!]+$/.exec(s))) target = m[1]
       if (!target || /^you(?:\b|$)/i.test(target)) continue // HP deltas already report incoming damage.
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const noDamage = /but (?:do|does) no damage/.test(s)

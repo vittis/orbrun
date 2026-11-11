@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.24 — 2026-11-11
+
+- Show damage popups when enemies step on Ice Thorns from Crawl trunk, including its plural “skewer” hit messages.
+- Display a quiet NO DAMAGE popup for explicitly reported zero-damage hits, including incoming hits that cause no HP change. Keep damage estimates distinct from exact zeroes and skip damage-impact effects for zero-damage hits.
+
 ## 0.3.23 — 2026-11-11
 
 - Fix the camera jumping ahead of the player in Dungeon (2.5D). Deliver the new camera center with the confirmed scene and keep both on one movement curve.

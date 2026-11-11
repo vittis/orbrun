@@ -1102,6 +1102,7 @@ export class GameScreen {
       this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) for (const event of popups) {
         if (event.kind !== 'hit' && event.kind !== 'hurt' && event.kind !== 'level') continue
+        if (event.amount === 0) continue
         const x = event.player ? this.session.scene.player.x : event.x
         const y = event.player ? this.session.scene.player.y : event.y
         if (x === undefined || y === undefined) continue

@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.23 point at the `cloudflare-online-v1.20` release tag in
+Source links for 0.3.24 point at the `cloudflare-online-v1.21` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -597,3 +597,25 @@ and `evidence/release-0323-canvas-checks.json`. Hosted rollout follows publicati
 
 Post-rollout evidence remains on the working branch; main and the immutable
 tag retain the exact deployed source commit.
+
+
+## 0.3.24 Ice Thorns / no-damage feedback — prepared 2026-11-11
+
+User confirmed the spell is Ice Thorns from trunk and explicitly requested
+commit/deployment. New source tag: `cloudflare-online-v1.21`. Official Crawl
+`terrain.cc:ice_thorns_trigger` sets the plural beam verb to “skewer”;
+`zap-data.h` names the beam “ice thorns” with BEAM_ICE flavour. `beam.cc` emits
+“The ice thorns skewer …” and “… but do no damage” for a post-AC zero.
+
+The parser now recognizes plural hit verbs and preserves known zero damage.
+NO DAMAGE text is quiet, unestimated, and skips damage-impact ripples. Positive
+Ice Thorns damage keeps the cold tone and existing marked estimates. Explicit
+incoming no-damage hits also produce feedback despite having no HP delta.
+Tests cover moving targets, exact/estimated/zero amounts, message rollback,
+crumbling thorns, and concise/normal popup rendering. The real GameScreen
+fixture shows NO DAMAGE and ≈4 with only one damage-impact call. Verification
+uses source-confirmed local protocol events; no player account or gameplay was
+used. Release checks passed: forced TypeScript, 2,185 unit tests/two optional
+engine skips, production build, and ASSETS-only Worker dry-run (20.95 KiB).
+Optional engine E2E reports 44 skips. Evidence:
+`evidence/release-0324-ice-thorns.json`. Hosted rollout follows publication.
