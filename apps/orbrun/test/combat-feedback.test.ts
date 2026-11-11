@@ -58,14 +58,14 @@ describe('combat updates', () => {
     expect(feedback.flush(scene)).toEqual([])
     const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin!' }] }
     reduce(state, msg); feedback.observe(state, msg)
-    expect(feedback.flush(scene).map(p => p.text)).toEqual(['HIT'])
+    expect(feedback.flush(scene).map(p => p.text)).toEqual(['≈12'])
   })
   it('folds an unknown brand hit into its base hit, retaining actual damage', () => {
     const { feedback, scene, text } = harness()
     text('The bolt hits the goblin for 7! The bolt burns the goblin!')
     expect(feedback.flush(scene)).toMatchObject([{ text: '7', tone: 'fire' }])
     text('You hit the goblin. You freeze the goblin!')
-    expect(feedback.flush(scene)).toMatchObject([{ text: 'HIT', tone: 'cold' }])
+    expect(feedback.flush(scene)).toMatchObject([{ text: '≈4', tone: 'cold', estimated: true }])
   })
   it('handles appended message rollbacks without repeating a hit', () => {
     const { feedback, scene, text } = harness()
@@ -135,5 +135,77 @@ describe('combat updates', () => {
     send({ msg: 'go_lobby' })
     expect(feedback.flush(scene)).toEqual([])
     expect(feedback.resets).toBe(2)
+  })
+})
+
+function wounded(id: number, x: number, damage: Billboard['damage'], hp = 100): Billboard {
+  return { ...goblin(id, x), damage, ref: { id, name: 'goblin', typedata: { avghp: hp } } }
+}
+
+describe('estimated outgoing damage', () => {
+  it('refines an unknown hit with the observed wound decline', () => {
+    const { feedback, text } = harness()
+    feedback.flush(world(wounded(1, 1, 'uninjured', 20)))
+    text('You hit the goblin.')
+    expect(feedback.flush(world(wounded(1, 1, 'lightly_damaged', 20)))).toMatchObject([{ amount: 3, text: '≈3', estimated: true }])
+  })
+  it('still shows a positive estimate when damage stays inside one health category', () => {
+    const { feedback, text } = harness()
+    const scene = world(wounded(1, 1, 'moderately_damaged'))
+    feedback.flush(scene)
+    text('You hit the goblin!')
+    const [hit] = feedback.flush(scene)
+    expect(hit.estimated).toBe(true)
+    expect(hit.amount).toBeGreaterThan(0)
+    expect(hit.text).not.toBe('HIT')
+  })
+  it('groups several strikes in one turn but keeps different turns separate', () => {
+    const { feedback, scene, send, text } = harness()
+    text('You hit the goblin. You hit the goblin.')
+    expect(feedback.flush(scene)).toMatchObject([{ text: '≈7', amount: 7, estimated: true }])
+    send({ msg: 'msgs', messages: [{ text: 'You hit the goblin.', turn: 20 }, { text: 'You hit the goblin.', turn: 21 }] })
+    const hits = feedback.flush(scene)
+    expect(hits.map(p => p.turn)).toEqual([20, 21])
+    expect(hits.reduce((n, p) => n + p.amount!, 0)).toBe(7)
+  })
+  it('never estimates over an exact reported number or an explicit zero', () => {
+    const { feedback, text } = harness()
+    feedback.flush(world(wounded(1, 1, 'uninjured')))
+    text('You hit the goblin for 8!')
+    const [hit] = feedback.flush(world(wounded(1, 1, 'heavily_damaged')))
+    expect(hit.text).toBe('8')
+    expect(hit.estimated).not.toBe(true)
+    text('You hit the goblin but do no damage.')
+    expect(feedback.flush(world(wounded(1, 1, 'heavily_damaged')))).toMatchObject([{ text: '0', amount: 0 }])
+  })
+  it('retains estimated damage alongside a kill and caps average net overkill', () => {
+    const { feedback, text } = harness()
+    feedback.flush(world(wounded(1, 1, 'uninjured', 10)))
+    text('You impale the goblin!!! You kill the goblin!')
+    expect(feedback.flush(world()).map(p => p.text)).toEqual(['≈10', 'SLAIN'])
+  })
+  it('uses wound evidence to choose a farther same-name target', () => {
+    const { feedback, text } = harness()
+    feedback.flush(world(wounded(1, 1, 'uninjured'), wounded(2, 3, 'uninjured')))
+    text('You hit the goblin!!')
+    const hits = feedback.flush(world(wounded(1, 1, 'uninjured'), wounded(2, 3, 'moderately_damaged')))
+    expect(hits).toHaveLength(1)
+    expect(hits[0]).toMatchObject({ actorId: 'id:2', x: 3, estimated: true })
+  })
+  it('infers damage-over-time wound changes once, without fabricating hits on healing or disappearance', () => {
+    const { feedback } = harness()
+    feedback.flush(world(wounded(1, 1, 'lightly_damaged', 50)))
+    const next = world(wounded(1, 1, 'heavily_damaged', 50))
+    expect(feedback.flush(next)).toMatchObject([{ text: '≈20', estimated: true, fromWound: true }])
+    expect(feedback.flush(next)).toEqual([])
+    expect(feedback.flush(world(wounded(1, 1, 'lightly_damaged', 50)))).toEqual([])
+    expect(feedback.flush(world())).toEqual([])
+  })
+  it('does not manufacture damage when a new monster appears or a monster changes form', () => {
+    const { feedback } = harness()
+    expect(feedback.flush(world(wounded(2, 2, 'almost_dead')))).toEqual([])
+    expect(feedback.flush(world(wounded(2, 2, 'uninjured')))).toEqual([])
+    const changed = { ...wounded(2, 2, 'heavily_damaged'), name: 'orc' }
+    expect(feedback.flush(world(changed))).toEqual([])
   })
 })

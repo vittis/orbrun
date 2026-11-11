@@ -72,3 +72,47 @@ describe('popup presentation', () => {
     expect(popups.root.childElementCount).toBe(2)
   })
 })
+
+describe('estimated number UX', () => {
+  it('marks estimates separately, explains the symbol and keeps their number beside a kill', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'hit', text: '≈12', amount: 12, estimated: true, x: 1, y: 0, turn: 1 }], 0)
+    render(100)
+    expect(popups.root.querySelector('.combat-estimate')?.textContent).toBe('≈')
+    expect(popups.root.querySelector('.combat-value')?.textContent).toBe('12')
+    expect(popups.root.dataset.estimates).toBe('true')
+    popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 120)
+    expect(popups.root.childElementCount).toBe(2)
+    popups.clear()
+    expect(popups.root.dataset.estimates).toBeUndefined()
+  })
+  it('accumulates a same-turn number across frames without creating a stack', () => {
+    const { popups } = preview()
+    const hit = { kind: 'hit' as const, text: '≈4', amount: 4, estimated: true, turn: 10, actorId: 'id:1', x: 1, y: 0 }
+    popups.add([hit], 0)
+    popups.add([{ ...hit, x: 2 }], 100)
+    expect(popups.root.childElementCount).toBe(1)
+    expect(popups.root.textContent).toBe('≈8')
+    popups.add([{ ...hit, turn: 11 }], 200)
+    expect(popups.root.childElementCount).toBe(2)
+    popups.add([{ ...hit, amount: 9, text: '≈9', fromWound: true }], 250)
+    expect(popups.root.childElementCount).toBe(2)
+    expect(popups.root.textContent).toBe('≈9≈4')
+  })
+  it('recolors a delayed unknown brand without adding a guessed second hit', () => {
+    const { popups } = preview()
+    const hit = { kind: 'hit' as const, text: '≈4', amount: 4, estimated: true, turn: 10, x: 1, y: 0 }
+    popups.add([hit], 0)
+    popups.add([{ ...hit, text: '≈12', amount: 12, tone: 'fire', followup: true, brandOnly: true }], 100)
+    expect(popups.root.childElementCount).toBe(1)
+    expect(popups.root.textContent).toBe('≈4')
+    expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
+  })
+  it('does not mark exact damage as approximate', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'hit', text: '12', amount: 12, x: 1, y: 0 }], 0)
+    render(100)
+    expect(popups.root.querySelector('.combat-estimate')).toBeNull()
+    expect(popups.root.dataset.estimates).toBe('false')
+  })
+})

@@ -1,5 +1,6 @@
 import { cellKey, type Billboard, type Scene } from '@orbrun/scene'
 import { formattedStringToText, type GameState, type ServerMessage, type StatusEntry } from '@orbrun/webtiles'
+import { estimateDamage, hitDamageBand, woundRank, type DamageBand } from './damage-estimate'
 
 export type PopupKind = 'hit' | 'miss' | 'block' | 'kill' | 'hurt' | 'heal' | 'status' | 'level'
 export type PopupTone = 'physical' | 'fire' | 'cold' | 'poison' | 'magic'
@@ -15,6 +16,14 @@ export interface CombatPopup {
   heavy?: boolean
   /** A weapon brand's extra sentence, which can recolor the preceding hit. */
   followup?: boolean
+  brandOnly?: boolean
+  amount?: number
+  estimated?: boolean
+  band?: DamageBand
+  turn?: number
+  actorId?: string
+  /** A later wound update refines an earlier estimate instead of adding another hit. */
+  fromWound?: boolean
 }
 
 const attacks = /^(?:hit|slash|slice|stab|pierce|impale|skewer|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast)$/i
@@ -28,7 +37,7 @@ function toneOf(s: string): PopupTone {
   return 'physical'
 }
 
-/** Only explicit combat sentences; never infer a damage number from wound pips. */
+/** Parse reported damage exactly, retaining strength bounds for an explicit estimate later. */
 export function combatText(text: string): CombatPopup[] {
   const out: CombatPopup[] = []
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
@@ -58,7 +67,8 @@ export function combatText(text: string): CombatPopup[] {
       target = target.replace(/(?: with | using | for | but |, ).*$/, '').trim()
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
-      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup })
+      const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
+      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), amount: damage ?? undefined, band: damage === null ? hitDamageBand(punctuation) : undefined, target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup, brandOnly: followup })
     }
   }
   return out
@@ -101,7 +111,7 @@ export class CombatFeedback {
 
   private snapshot(state: GameState) {
     const p = state.player
-    return { hp: p.hp, max: p.hp_max, xl: p.xl, place: p.place + ':' + p.depth, statuses: statuses(p.status) }
+    return { hp: p.hp, max: p.hp_max, xl: p.xl, place: p.place + ':' + p.depth, turn: p.turn, statuses: statuses(p.status) }
   }
 
   observe(state: GameState, msg: ServerMessage) {
@@ -139,17 +149,24 @@ export class CombatFeedback {
     if (msg.msg === 'msgs') {
       const lines = state.messages.lines.map(l => plain(l.text))
       if (this.ready && this.presented && !this.history && Array.isArray(msg.messages)) {
-        const incoming = msg.messages as { text?: string }[]
+        const incoming = msg.messages as { text?: string; turn?: number }[]
         // Crawl replaces the last line to append another sentence. Read only its suffix.
         const rollback = Math.min(this.lines.length, Math.max(0, Number(msg.rollback) || 0))
         const removed = rollback ? this.lines.slice(-rollback).join(' ') : ''
-        let fresh = incoming.map(l => plain(String(l?.text ?? ''))).join(' ')
-        if (removed && fresh.startsWith(removed)) fresh = fresh.slice(removed.length).trim()
-        else if (removed === fresh) fresh = ''
-        for (const event of combatText(fresh)) {
-          const hit = event.followup && event.text === 'HIT' ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
-          if (hit) { hit.tone = event.tone; hit.followup = true }
-          else this.pending.push(event)
+        const texts = incoming.map(l => plain(String(l?.text ?? '')))
+        const combined = texts.join(' ')
+        const skip = removed && combined.startsWith(removed) ? removed.length : 0
+        let offset = 0
+        for (let i = 0; i < texts.length; i++) {
+          const fresh = texts[i].slice(Math.max(0, skip - offset)).trim()
+          offset += texts[i].length + 1
+          const turn = incoming[i]?.turn ?? state.player.turn
+          for (const parsed of combatText(fresh)) {
+            const event = { ...parsed, turn }
+            const hit = event.followup && event.text === 'HIT' ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
+            if (hit) { hit.tone = event.tone; hit.followup = true }
+            else this.pending.push(event)
+          }
         }
       }
       if (Array.isArray(msg.messages)) this.history = false
@@ -163,27 +180,100 @@ export class CombatFeedback {
     const old = this.scene
     this.scene = scene
     this.presented = scene.playerOnLevel && scene.cells.size > 0
-    if (!scene.playerOnLevel || !pending.length) return []
-    const candidates = new Map<string, Billboard>()
-    for (const view of [old, scene]) if (view) for (const b of view.billboards) {
-      if (b.kind !== 'monster' || b.scenery || view.cells.get(cellKey(b.x, b.y))?.visibility !== 'visible') continue
-      const id = (b.ref as { id?: number } | undefined)?.id
-      candidates.set(id === undefined ? b.x + ',' + b.y : 'id:' + id, b)
-    }
-    const used = new Set<Billboard>()
+    if (!scene.playerOnLevel) return []
+    if (!pending.length && old === scene) return []
+    const before = actorsIn(old), after = actorsIn(scene)
+    const candidates = new Map([...before, ...after])
+    const used = new Set<string>()
     const lastHit = new Map<string, Billboard>()
-    return pending.flatMap(event => {
+    const killedNames = new Set(pending.filter(p => p.kind === 'kill').map(p => bare(p.target ?? '')))
+    const changed = (b: Billboard) => {
+      const id = actorKey(b), was = before.get(id), now = after.get(id)
+      return was && now ? Math.max(0, woundRank(now.damage) - woundRank(was.damage)) : 0
+    }
+    const resolved: CombatPopup[] = pending.flatMap(event => {
       if (event.player) return [event]
       const wanted = bare(event.target ?? '')
+      const deathEvidence = (b: Billboard) => killedNames.has(wanted) && before.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
       const matches = [...candidates.values()].filter(b => {
         const ref = b.ref as { name?: string; plural?: string } | undefined
         return [b.name, ref?.name, ref?.plural].some(n => n && bare(plain(n)) === wanted)
-      }).sort((a, b) => Number(used.has(a)) - Number(used.has(b)) || Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
+      }).sort((a, b) => Number(used.has(actorKey(a))) - Number(used.has(actorKey(b)))
+        || (event.kind === 'hit' || event.kind === 'kill' ? deathEvidence(b) - deathEvidence(a) : 0)
+        || (event.kind === 'hit' || event.kind === 'kill' ? changed(b) - changed(a) : 0)
+        || Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
       const b = event.kind === 'kill' ? lastHit.get(wanted) ?? matches[0] : matches[0]
-      if (!b) return [] // Never put a hit on an unrelated creature or an unseen square.
-      used.add(b)
+      if (!b) return []
+      const id = actorKey(b)
+      used.add(id)
       if (event.kind === 'hit') lastHit.set(wanted, b)
-      return [{ ...event, x: b.x, y: b.y, height: Math.min(0.9, b.height) }]
+      return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height) }]
     })
+    const hitActors = new Set(resolved.filter(p => p.kind === 'hit' || p.kind === 'kill').map(p => p.actorId))
+    // Poison, clouds and allies can hurt a creature without an attack sentence.
+    // Only a visible, same-identity wound decline counts; disappearance is not death.
+    for (const [id, now] of after) {
+      const was = before.get(id)
+      if (!was || hitActors.has(id) || !was.damage || !now.damage || woundRank(now.damage) <= woundRank(was.damage) || !sameForm(was, now)) continue
+      const amount = estimateDamage({ bands: [], averageHp: averageHp(now), before: was.damage, after: now.damage })
+      if (amount !== null) resolved.push({ kind: 'hit', text: '≈' + amount, amount, estimated: true, fromWound: true, actorId: id, turn: this.previous.turn, x: now.x, y: now.y, height: Math.min(0.9, now.height), heavy: amount >= 18 })
+    }
+    const groups = new Map<string, CombatPopup[]>()
+    for (const event of resolved) if (event.kind === 'hit' && event.actorId && !event.fromWound) {
+      const list = groups.get(event.actorId) ?? []
+      list.push(event)
+      groups.set(event.actorId, list)
+    }
+    const replacements = new Map<CombatPopup, CombatPopup>(), removed = new Set<CombatPopup>()
+    for (const [id, hits] of groups) {
+      const unknown = hits.filter(p => p.amount === undefined)
+      if (!unknown.length) continue
+      const was = before.get(id), now = after.get(id)
+      const compatible = !was || !now || sameForm(was, now)
+      const amount = estimateDamage({
+        bands: unknown.flatMap(p => p.band ? [p.band] : []),
+        averageHp: averageHp(was ?? now),
+        before: compatible ? was?.damage : undefined,
+        after: compatible ? now?.damage : undefined,
+        killed: resolved.some(p => p.kind === 'kill' && p.actorId === id),
+        knownDamage: hits.reduce((sum, p) => sum + (p.amount ?? 0), 0),
+      })
+      if (amount === null) continue
+      // One estimate per target/turn, even for quick blades, cleave or several hits.
+      const turns = new Map<number | undefined, CombatPopup[]>()
+      for (const event of unknown) {
+        const list = turns.get(event.turn) ?? []
+        list.push(event)
+        turns.set(event.turn, list)
+      }
+      const weight = (list: CombatPopup[]) => list.reduce((sum, p) => sum + (p.band ? (p.band.min + p.band.max) / 2 : 1), 0)
+      let budget = Math.max(amount, turns.size), remainingWeight = weight(unknown), left = turns.size
+      for (const list of turns.values()) {
+        const part = left === 1 ? budget : Math.max(1, Math.min(budget - left + 1, Math.round(budget * weight(list) / remainingWeight)))
+        const first = list[0], last = list[list.length - 1]
+        replacements.set(first, { ...first, text: '≈' + part, amount: part, estimated: true, brandOnly: list.every(p => p.brandOnly), tone: last.tone ?? first.tone, heavy: part >= 18 })
+        for (const extra of list.slice(1)) removed.add(extra)
+        budget -= part; remainingWeight -= weight(list); left--
+      }
+    }
+    return resolved.filter(p => !removed.has(p)).map(p => replacements.get(p) ?? p)
   }
+}
+
+function actorKey(b: Billboard) {
+  const id = (b.ref as { id?: number } | undefined)?.id
+  return id === undefined ? `cell:${b.x},${b.y}:${bare(b.name ?? '')}` : 'id:' + id
+}
+function actorsIn(scene: Scene | null) {
+  const result = new Map<string, Billboard>()
+  if (scene) for (const b of scene.billboards) {
+    if (b.kind === 'monster' && !b.scenery && scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible') result.set(actorKey(b), b)
+  }
+  return result
+}
+function averageHp(b: Billboard | undefined): number | undefined {
+  return (b?.ref as { typedata?: { avghp?: number } } | undefined)?.typedata?.avghp
+}
+function sameForm(a: Billboard, b: Billboard) {
+  return bare(a.name ?? '') === bare(b.name ?? '') && averageHp(a) === averageHp(b)
 }

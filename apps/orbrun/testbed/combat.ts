@@ -61,9 +61,10 @@ function frame(now: number) {
 function wake() { if (!raf) raf = requestAnimationFrame(frame) }
 function send(msg: ServerMessage) { reduce(state, msg); feedback.observe(state, msg) }
 function play(kind: string) {
+  send({ msg: 'player', turn: state.player.turn + 1 })
   const messages: Record<string, string> = {
-    hit: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
-    fire: 'The bolt of fire hits the orc for 18!', cold: 'The puff of frost hits the goblin for 9!',
+    hit: 'You slash the goblin!!', exact: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
+    fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
     block: 'You block the goblin\'s attack.', kill: 'You hit the goblin for 12! You kill the goblin!',
   }
   if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })

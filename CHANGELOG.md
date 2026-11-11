@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.16 — 2026-11-11
+
+- Show estimated public-server damage as ≈ numbers using hit strength and visible wounds; group same-turn hits and keep exact server numbers when available.
+- Improve damage popup placement when several monsters share a name, and keep estimated damage visible beside kill callouts.
+
 ## 0.3.15 — 2026-11-11
 
 - Keep rapid combat readable: limit popup stacks, fold weapon-brand effects into their hits, and skip old combat queued while a game is loading.

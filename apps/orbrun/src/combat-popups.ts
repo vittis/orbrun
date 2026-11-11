@@ -7,7 +7,12 @@ const LIFETIME = 1100
 const MAX_POPUPS = 10
 const MAX_AT_ANCHOR = 3
 interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot: number }
-const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}`
+const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}`
+function paintPopup(node: HTMLElement, event: CombatPopup) {
+  node.className = popupClass(event)
+  if (event.estimated) node.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
+  else node.textContent = event.text
+}
 
 /** A bounded, pointer-transparent layer, positioned from the renderer after each frame. */
 export class CombatPopups {
@@ -22,16 +27,26 @@ export class CombatPopups {
       return false
     })
     for (const event of events) {
-      const atAnchor = (p: LivePopup) => !!p.event.player === !!event.player && p.event.x === event.x && p.event.y === event.y
-      const hit = event.followup && event.text === 'HIT' ? [...this.live].reverse().find(p => atAnchor(p) && p.event.kind === 'hit' && !p.event.followup) : undefined
+      const atAnchor = (p: LivePopup) => !!p.event.player === !!event.player && (event.actorId && p.event.actorId ? event.actorId === p.event.actorId : p.event.x === event.x && p.event.y === event.y)
+      const hit = (event.brandOnly ?? event.followup) && (event.estimated || event.text === 'HIT') ? [...this.live].reverse().find(p => atAnchor(p) && p.event.kind === 'hit' && !p.event.followup && (event.turn === undefined || p.event.turn === event.turn)) : undefined
       if (hit) {
         hit.event = { ...hit.event, tone: event.tone, followup: true }
-        hit.node.className = popupClass(hit.event)
+        paintPopup(hit.node, hit.event)
+        continue
+      }
+      const previous = event.estimated && event.turn !== undefined ? this.live.find(p => atAnchor(p) && p.event.kind === 'hit' && p.event.estimated && p.event.turn === event.turn) : undefined
+      if (previous) {
+        // A delayed wound observation refines the existing estimate. Separate
+        // attack messages in the same turn accumulate without more text clutter.
+        const amount = event.fromWound || previous.event.fromWound ? Math.max(previous.event.amount!, event.amount!) : previous.event.amount! + event.amount!
+        previous.event = { ...event, amount, text: '≈' + amount, heavy: amount >= 18 }
+        paintPopup(previous.node, previous.event)
+        if (!event.fromWound) previous.born = now
         continue
       }
       // A kill replaces generic hit words; an actual damage number can remain beside it.
       if (event.kind === 'kill') this.live = this.live.filter(p => {
-        if (!atAnchor(p) || (p.event.kind === 'hit' && /^\d+$/.test(p.event.text))) return true
+        if (!atAnchor(p) || (p.event.kind === 'hit' && (p.event.estimated || /^\d+$/.test(p.event.text)))) return true
         p.node.remove()
         return false
       })
@@ -44,7 +59,8 @@ export class CombatPopups {
       const slots = new Set(nearby.map(p => p.slot))
       let slot = 0
       while (slots.has(slot)) slot++
-      const node = h('span', { class: popupClass(event) }, event.text)
+      const node = h('span')
+      paintPopup(node, event)
       this.root.append(node)
       this.live.push({ event, node, born: now, slot })
     }
@@ -74,7 +90,8 @@ export class CombatPopups {
       }
       return true
     })
+    this.root.dataset.estimates = String(this.live.some(p => p.event.estimated && !p.node.hidden))
   }
 
-  clear() { this.live = []; this.root.replaceChildren() }
+  clear() { this.live = []; this.root.replaceChildren(); delete this.root.dataset.estimates }
 }

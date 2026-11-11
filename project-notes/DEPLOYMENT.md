@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.15 point at the `cloudflare-online-v1.12` release tag in
+Source links for 0.3.16 point at the `cloudflare-online-v1.13` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -284,3 +284,29 @@ Validation: forced typecheck; 2,050 unit tests passed / two optional-engine
 skips; production build and ASSETS-only dry-run; diff check. Optional engine
 E2E remains 44 skips without artifacts. Publish the committed source and verify
 the corrected live spectator path before calling this task complete.
+
+## 0.3.16 approximate public-server damage — 2026-11-11
+
+User explicitly requested approximate damage numbers with clear presentation.
+Prepared immutable source tag: `cloudflare-online-v1.13`. Estimates carry a
+small ≈ prefix and a contextual legend; server-reported damage and explicit
+zero damage remain exact. The existing combat-popup toggle controls the layer.
+
+The estimate starts with the standard attack-punctuation damage interval,
+then uses compatible visible wound intervals and species-average HP to refine
+it. Average HP is never treated as an individual's exact maximum. Conflicting
+wound information falls back to the attack-strength prior; an unchanged wound
+category never becomes a false zero. Estimated kills cap excessive overkill to
+estimated remaining health. Multiple hits combine per actor/turn, while exact
+reported components stay distinct. Same-name targeting uses wound/death evidence
+and actor IDs. A visible wound decline without a hit sentence can produce an
+estimate for damage over time; spawn, healing, polymorph and disappearance do
+not manufacture damage events. Delayed wound observations refine existing text.
+
+Validation: 2,070 tests passed / two optional-engine skips; forced typecheck,
+production build, ASSETS-only Worker dry-run and diff checks. Estimator and
+popup regressions cover same-band damage, wound refinement, invalid average HP,
+per-turn grouping, same-name targets, exact damage, zero damage, kills, brands,
+stack limits and delayed observations. All three views were inspected, with a
+phone-sized viewport and reduced-motion presentation. Engine binary artifacts
+remain absent; this release changes only client feedback and is not a new engine.
