@@ -52,7 +52,11 @@ and picking regions. The existing first-person renderer remains independent.
   departures after reserving stationary copies. Spawns, ambiguous matches,
   teleports, level changes and transitions into/out of visibility snap. Fast
   travel retargets from the current drawn position with at most two cells of
-  visual lag and no animation queue. Targeting pans snap for immediate feedback.
+  visual lag and no animation queue. The default player curve carries velocity
+  through repeated steps and adapts to observed arrival cadence within 1–1.4×
+  the configured duration; the camera uses that exact curve. Targeting pans
+  snap for immediate feedback. The app delivers the centre before every scene
+  observation, including receipt-time updates, so it cannot jump ahead.
   `Render25dOptions.movement`, `movementDuration` (seconds, clamped to 0.04–0.25)
   and `movementEasing` (`ease-out`, `smooth`, `linear`) configure the tween.
 - `tiles.ts` caches composed, tinted tiles, including transparent and tall
@@ -105,12 +109,13 @@ player directly; long-distance moves demonstrate teleport snapping.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 738 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for 900 real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist.
 Movement checks sample all three easing curves at the start, midpoint and
-landing, checking sprite pixels, item cursors, badges, picking and sleep. These
+landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
+a steady centred player and moving world under camera follow. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,

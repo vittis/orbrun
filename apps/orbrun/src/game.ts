@@ -802,7 +802,7 @@ export class GameScreen {
       r.setTiles(this.session.gamedata)
       this.warmRenderer(r)
     }
-    r.setScene(this.session.scene)
+    this.syncRendererScene(this.session.scene, undefined, r)
     r.setCamera(this.cam.camera)
     return r
   }
@@ -1099,8 +1099,7 @@ export class GameScreen {
       // level map is open, so the map scrolls under the cursor as WebTiles' does. A map borrowed from the
       // 3D view marks the way that view faces, which a north-up map otherwise loses.
       if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
-      if (this.renderer instanceof Render25d) this.renderer.setOptions({ center: st.map.viewCenter })
-      this.renderer.setScene(this.session.scene, now / 1000)
+      this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) for (const event of popups) {
         if (event.kind !== 'hit' && event.kind !== 'hurt' && event.kind !== 'level') continue
         const x = event.player ? this.session.scene.player.x : event.x
@@ -1151,8 +1150,15 @@ export class GameScreen {
 
   /** One timestamp for the camera's movement and the sprites rendered this frame. */
   private advancePresentation(dt: number, now: number): boolean {
-    this.renderer.setScene(this.session.scene, now)
+    this.syncRendererScene(this.session.scene, now)
     return this.cam.update(dt, now)
+  }
+
+  /** Deliver the view centre with the scene, including receipt-time observations before drawing. */
+  private syncRendererScene(scene: Scene, now?: number, renderer = this.renderer) {
+    if (!renderer) return
+    if (renderer instanceof Render25d) renderer.setOptions({ center: this.session.state.map.viewCenter })
+    renderer.setScene(scene, now)
   }
 
   /**
@@ -1565,7 +1571,7 @@ export class GameScreen {
         else this.owedTurn = { names: [...(this.owedTurn?.names ?? []), ...names], newcomer: (this.owedTurn?.newcomer ?? false) || newest !== null }
       }
     }
-    this.renderer?.setScene(scene, now)
+    this.syncRendererScene(scene, now)
     this.needsRender = true
   }
 

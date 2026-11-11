@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.23 — 2026-11-11
+
+- Fix the camera jumping ahead of the player in Dungeon (2.5D). Deliver the new camera center with the confirmed scene and keep both on one movement curve.
+- Carry velocity through repeated player steps for smoother walking and travel, preserving configurable timing, exact landing and reduced motion.
+- Restore damage popups for native strong-hit messages such as “perforate … like a sieve” and “cut … into ribbons”. Keep floating text aligned with moving entities and the camera.
+
 ## 0.3.22 — 2026-11-11
 
 - Add smooth movement tweens for entities in Dungeon (2.5D), with a synchronized following camera and a snappy 100 ms ease-out default.

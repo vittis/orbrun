@@ -14,6 +14,18 @@ function preview() {
 }
 
 describe('popup presentation', () => {
+  it('anchors text to interpolated entities while the camera and target are moving', () => {
+    const popups = new CombatPopups(), view = document.createElement('canvas'), scene = emptyScene()
+    Object.defineProperties(view, { clientWidth: { value: 640 }, clientHeight: { value: 400 } })
+    scene.billboards = [{ kind: 'player', tile: 1, x: 1, y: 0, height: 1 }, { kind: 'monster', id: 7, tile: 2, x: 2, y: 0, height: 1 }]
+    const renderer = { project: () => ({ x: 999, y: 999 }), projectBillboard: (b: typeof scene.billboards[number]) => ({ x: b.kind === 'player' ? 320 : 400, y: 180 }) } as unknown as MapRenderer
+    popups.add([{ kind: 'hurt', text: '-3', player: true }, { kind: 'hit', text: '7', actorId: 'id:7', x: 1, y: 0 }], 0)
+    popups.render(100, renderer, scene, view, false, false)
+    const nodes = [...popups.root.children] as HTMLElement[]
+    expect(nodes.map(n => n.hidden)).toEqual([false, false])
+    expect(nodes.map(n => n.style.left)).toEqual(['320px', '400px'])
+  })
+
   it('gives each damage type a distinct bounded trajectory and stops motion when requested', () => {
     const tones = ['physical', 'fire', 'cold', 'poison', 'acid', 'electric', 'magic'] as const
     const poses = tones.map(tone => popupMotion({ kind: 'hit', text: '7', tone }, 0.12, 1, false))

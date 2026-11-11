@@ -1,5 +1,21 @@
 # Project status
 
+## 0.3.23 synchronized player/camera and native combat text — prepared 2026-11-11
+
+User authorized fixing player movement, checking missing live combat text, and
+committing/deploying when done. Source tag: `cloudflare-online-v1.20`.
+Fixed a stale-centre receipt path that observed the new scene before handing
+its centre to Render25d, causing a camera jump while the doll still tweened.
+Player and following camera now share a velocity-preserving, cadence-aware
+curve. Enemy movement retains its existing configured easing.
+
+A public CDI spectator trace showed native strong attacks such as “perforate
+the hornet like a sieve”; missing verbs and descriptive suffixes prevented
+popup target matching. Added native wording coverage and presentation-position
+popup anchoring. Checks: 2,170 tests / two optional-engine skips; 900 real
+Canvas checks; actual GameScreen fixture confirms centred walking and visible
+popups. Release build/dry-run and hosted rollout follow below in DEPLOYMENT.md.
+
 ## 0.3.22 configurable 2.5D movement — deployed 2026-11-11
 
 User authorized commit to main and production deployment. New immutable source

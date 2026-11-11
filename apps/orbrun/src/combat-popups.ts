@@ -100,9 +100,13 @@ export class CombatPopups {
       const age = (now - p.born) / LIFETIME
       if (age >= 1) { p.node.remove(); return false }
       const e = p.event
+      const billboard = scene.billboards.find(b => e.player ? b.kind === 'player'
+        : b.kind === 'monster' && (e.actorId?.startsWith('id:') ? `id:${b.id ?? (b.ref as { id?: number } | undefined)?.id}` === e.actorId : b.x === e.x && b.y === e.y))
+      const anchorHeight = e.player ? 0.8 : e.height
       const anchor = e.player && firstPerson
         ? { x: width * 0.5, y: height * 0.66 }
-        : renderer.project?.(e.player ? scene.player.x : e.x!, e.player ? scene.player.y : e.y!, e.player ? 0.8 : e.height)
+        : billboard && renderer.projectBillboard ? renderer.projectBillboard(billboard, anchorHeight)
+          : renderer.project?.(e.player ? scene.player.x : e.x!, e.player ? scene.player.y : e.y!, anchorHeight)
       const visible = anchor && anchor.x >= 0 && anchor.x <= width && anchor.y >= 0 && anchor.y <= height
       p.node.hidden = !visible
       if (anchor && visible) {

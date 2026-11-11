@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, type Billboard } from '@orbrun/scene'
 import { initialState, MouseMode } from '@orbrun/webtiles'
 import { Render3d } from '@orbrun/render-3d'
+import { Render25d, fittedScale } from '@orbrun/render-2.5d'
+import { TileCache } from '../../../packages/render-2.5d/src/tiles'
 import { CameraController } from '../src/camera'
 import { GameScreen } from '../src/game'
 import { PredictiveMovement } from '../src/predictive-movement'
@@ -48,6 +50,56 @@ afterEach(() => {
 })
 
 describe('game presentation', () => {
+  it.each([60, 120])('delivers the 2.5D centre with the received scene and keeps the player steady at %i Hz', hz => {
+    vi.useFakeTimers()
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(7)
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    const h = harness()
+    h.renderer.destroy()
+    const renderer = new Render25d(), gradient = { addColorStop: vi.fn() }
+    const ctx = new Proxy({ createRadialGradient: () => gradient, createLinearGradient: () => gradient } as Record<string, unknown>, {
+      get(target, key: string) { return target[key] ??= vi.fn() },
+    })
+    renderer.mount({ getContext: () => ctx } as unknown as HTMLCanvasElement)
+    renderer.resize(900, 700, 1)
+    const draw = vi.spyOn(TileCache.prototype, 'draw')
+    h.scene.playerOnLevel = true
+    h.scene.billboards = [{ kind: 'player', x: 0, y: 0, tile: 2, height: 1, life: { motion: 'still' } }]
+    for (let x = -1; x <= 2; x++) h.scene.cells.set(cellKey(x, 0), { ...h.scene.cells.get(cellKey(3, -1))!, x, y: 0 })
+    h.state.player.place = 'Dungeon'; h.state.player.depth = 1
+    h.state.map.viewCenter = { x: 0, y: 0 }
+    const screen = Object.assign(h.screen, {
+      renderer, hops: [{ dx: 1, dy: 0 }], jumped: false, lastLevel: 'Dungeon:1', lastPos: { x: 0, y: 0 },
+      lastMonsters: new Set(), forgetTabs: vi.fn(), runner: { stepForMove: () => null, lastWaitAt: -Infinity },
+    }) as typeof h.screen & { onScene(): void; syncRendererScene(scene: typeof h.scene, now?: number): void }
+    screen.syncRendererScene(h.scene, 1)
+    const arrival = 1000 + 250 / hz, frame = 1000 + 1000 / hz
+    h.session.sceneChangedAt = arrival
+    h.session.flushScene.mockImplementationOnce(() => {
+      h.scene.player = { x: 1, y: 0 }
+      h.scene.billboards[0].x = 1
+      h.scene.revision++
+      h.state.map.viewCenter = { x: 1, y: 0 }
+      screen.onScene() // actual receipt-time path, before advancePresentation and drawing
+      return true
+    })
+    screen.loop(frame)
+    renderer.render(frame / 1000)
+    const size = fittedScale(900, 700, 50 * Math.PI / 180)
+    const cameraX = (450 - renderer.project(0, 0).x) / size
+    expect(cameraX).toBeGreaterThan(0)
+    expect(cameraX).toBeLessThan(1)
+    const playerSample = draw.mock.calls.at(-1)![9]!
+    expect(playerSample.x + size * 1.5).toBeCloseTo(450, 10)
+    // A later presentation pass and unrelated revised scene must not restart either mover.
+    h.scene.revision++
+    screen.advancePresentation(0.01, frame / 1000 + 0.01)
+    renderer.render(frame / 1000 + 0.01)
+    expect(draw.mock.calls.at(-1)![9]!.x + size * 1.5).toBeCloseTo(450, 10)
+    expect((450 - renderer.project(0, 0).x) / size).toBeGreaterThan(cameraX)
+    renderer.destroy()
+  })
+
   it.each([60, 120])('shows confirmed movement on the first eligible frame at %i Hz', (hz) => {
     vi.useFakeTimers()
     vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(7)

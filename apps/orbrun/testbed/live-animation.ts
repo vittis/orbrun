@@ -20,10 +20,16 @@ const state = initialState(); state.phase = 'playing'; state.inputMode = MouseMo
 Object.assign(state.player, { received: true, name: 'Animation check', title: 'the Magician', species: 'Formicid', pos: scene.player, hp: 30, hp_max: 30, mp: 6, mp_max: 6, xl: 3, place: 'Dungeon', depth: 1 })
 state.map.viewCenter = scene.player; state.map.playerOnLevel = true
 const listeners = new Set<(e: SessionEvent) => void>()
+let scenePending = false
 const session = {
   state, scene, gamedata: null, loading: false, watching: false, server: { offline: false }, conn: {}, closed: false, diagnostics: [],
   on: (fn: (e: SessionEvent) => void) => { listeners.add(fn); return () => listeners.delete(fn) },
-  flushScene: () => false, send: () => {}, deviceRc: () => null,
+  flushScene: () => {
+    if (!scenePending) return false
+    scenePending = false
+    for (const fn of listeners) fn({ type: 'scene', scene })
+    return true
+  }, send: () => {}, deviceRc: () => null,
 } as unknown as Session
 let settings: Settings = { ...defaultSettings, renderer: '2.5d', depthAnimate: true, hints: 'off' }
 const deviceMotion = new EventTarget() as EventTarget & { matches: boolean; media: string }
@@ -32,9 +38,21 @@ const nativeMatch = window.matchMedia.bind(window)
 window.matchMedia = query => query === deviceMotion.media ? deviceMotion as unknown as MediaQueryList : nativeMatch(query)
 const renderer = new Render25d({ animate: true }); renderer.setTiles(tiles as TileSource)
 let frames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
+let hits = 0
+let moves = 0, maxPlayerDrift = 0
+let lastPopup: { text: string; visible: boolean; width: number; height: number } | null = null
 const draw = renderer.render.bind(renderer)
 renderer.render = now => {
   draw(now); frames++; frameTimes.push(now!); frameTimes = frameTimes.slice(-120)
+  const player = scene.billboards.find(b => b.kind === 'player')!
+  const feet = renderer.projectBillboard(player)
+  const frameCanvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
+  if (moves && frameCanvas) maxPlayerDrift = Math.max(maxPlayerDrift, Math.abs(feet.x - frameCanvas.clientWidth / 2))
+  const popup = document.querySelector<HTMLElement>('.combat-popup')
+  if (popup) {
+    const box = popup.getBoundingClientRect(), number = popup.querySelector('.combat-number')!
+    lastPopup = { text: popup.textContent ?? '', visible: !popup.hidden && getComputedStyle(number).opacity !== '0', width: box.width, height: box.height }
+  }
   const canvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
   const q = renderer.project(scene.player.x, scene.player.y)
   if (canvas && q) {
@@ -59,11 +77,32 @@ document.getElementById('motion')!.addEventListener('change', event => {
 document.getElementById('reduced')!.addEventListener('change', event => {
   deviceMotion.matches = (event.target as HTMLInputElement).checked; deviceMotion.dispatchEvent(new Event('change')); reset()
 })
-document.getElementById('hit')!.addEventListener('click', () => {
-  const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin for 12 damage.', turn: ++state.player.turn }] }
+const hit = () => {
+  hits++
+  const msg = { msg: 'msgs', messages: [{ text: 'You perforate the goblin like a sieve!!!', turn: ++state.player.turn }] }
   reduce(state, msg); for (const fn of listeners) fn({ type: 'state', msg })
-})
+}
+document.getElementById('hit')!.addEventListener('click', hit)
+// Receipt-style updates drive only the fake server. GameScreen owns every render frame.
+const walk = () => {
+  const x = scene.player.x === 11 ? 12 : 11, y = 5
+  scene.player = { x, y }
+  scene.billboards = scene.billboards.map(b => b.kind === 'player' ? { ...b, x, y } : b)
+  scene.revision++; moves++
+  state.map.viewCenter = { x, y }
+  scenePending = true
+  session.sceneChangedAt = performance.now()
+  const msg = { msg: 'player', pos: { x, y }, turn: ++state.player.turn }
+  reduce(state, msg); for (const fn of listeners) fn({ type: 'state', msg })
+}
+if (new URLSearchParams(location.search).has('check')) {
+  setTimeout(hit, 400)
+  setTimeout(walk, 600)
+  setTimeout(walk, 690)
+  setTimeout(walk, 780)
+  setTimeout(hit, 1100)
+}
 setInterval(() => {
   const number = document.querySelector<HTMLElement>('.combat-number')
-  document.getElementById('result')!.textContent = JSON.stringify({ frames, uniqueActorFrames: actorImages.size, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: deviceMotion.matches, popupAnimation: number ? getComputedStyle(number).animationName : null })
+  document.getElementById('result')!.textContent = JSON.stringify({ frames, hits, moves, maxPlayerDrift, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: deviceMotion.matches, popupAnimation: number ? getComputedStyle(number).animationName : null, lastPopup })
 }, 100)

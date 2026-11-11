@@ -138,6 +138,11 @@ export class Render25d implements MapRenderer {
     return project(this.projection(), x, y, height)
   }
 
+  projectBillboard(billboard: Billboard, height = 0) {
+    const pos = this.movement.position(billboard, this.frameTime)
+    return this.project(pos.x, pos.y, height)
+  }
+
   private inFrame(p: Projection, cell: { x: number; y: number }) {
     const q = project(p, cell.x, cell.y)
     return q.x > -p.scale * 2 && q.x < this.width + p.scale * 2 && q.y > -p.scale * 2 && q.y < this.height + p.scale * 2

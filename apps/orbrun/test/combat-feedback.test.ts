@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { cellKey, emptyScene, type Billboard } from '@orbrun/scene'
 import { CombatFeedback, combatText } from '../src/combat-feedback'
+import { readFileSync } from 'node:fs'
 
 function world(...monsters: Billboard[]) {
   const scene = emptyScene()
@@ -26,6 +27,19 @@ function harness() {
 }
 
 describe('combat sentences', () => {
+  it.each([
+    'You perforate the hornet like a sieve!!!',
+    'You skewer the hornet like a kebab!!!',
+    'You stick the hornet like a pincushion!!!',
+    'You spit the hornet like a pig!!!',
+    'You cut the hornet into ribbons!!!',
+    'You flatten the hornet like a pancake!!!',
+    'You thrash the hornet mercilessly!!!',
+    'You tentacle-slap the hornet!',
+    'You clumsily bash the hornet.',
+  ])('recognizes native weapon/unarmed wording: %s', text => {
+    expect(combatText(text)).toMatchObject([{ kind: 'hit', target: 'the hornet', text: 'HIT' }])
+  })
   it('keeps electric and acid damage distinct from magic and poison', () => {
     expect(combatText('You electrocute the goblin for 7 damage.')[0]?.tone).toBe('electric')
     expect(combatText('You burn the goblin with acid for 7 damage.')[0]?.tone).toBe('acid')
@@ -50,6 +64,31 @@ describe('combat sentences', () => {
 })
 
 describe('combat updates', () => {
+  it('resolves an observed live strong-hit sentence into a placed number alongside a kill', () => {
+    const { feedback, text } = harness()
+    const scene = world({ ...goblin(), name: 'hornet', id: 7, ref: undefined })
+    feedback.flush(scene)
+    text('<lightgrey>You perforate the hornet like a sieve!!!<lightgrey> <red>You kill the hornet!<lightgrey>')
+    expect(feedback.flush(world())).toMatchObject([
+      { kind: 'hit', actorId: 'id:7', x: 1, y: 0, estimated: true },
+      { kind: 'kill', actorId: 'id:7', x: 1, y: 0 },
+    ])
+  })
+
+  it('produces combat text from the recorded public WebTiles stream', () => {
+    const trace = readFileSync(new URL('../../../packages/webtiles/test/fixtures/cdi-0.34-watch.ndjson', import.meta.url), 'utf8').trim().split('\n').map(line => JSON.parse(line).m as ServerMessage)
+    const state = initialState(), feedback = new CombatFeedback(state)
+    const scene = world({ ...goblin(), name: 'black mamba', ref: { id: 1, name: 'black mamba' } })
+    const events = []
+    for (const msg of trace) {
+      reduce(state, msg); feedback.observe(state, msg)
+      events.push(...feedback.flush(scene))
+    }
+    expect(events.some(p => p.kind === 'hit' && p.estimated && p.amount! > 0)).toBe(true)
+    expect(events.some(p => p.kind === 'miss' && p.text === 'MISS')).toBe(true)
+    expect(events.some(p => p.kind === 'hurt' && p.player)).toBe(true)
+  })
+
   it('does not replay combat queued while the first scene and game data load', () => {
     const state = initialState()
     Object.assign(state.player, { hp: 30, hp_max: 30 })

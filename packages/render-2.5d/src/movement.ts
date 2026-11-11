@@ -1,9 +1,9 @@
-import { cellKey, type Billboard, type Scene } from '@orbrun/scene'
+import { cellKey, StepCadence, planStep, sampleStep, type StepCurve, type Billboard, type Scene } from '@orbrun/scene'
 
 export type MovementEasing = 'ease-out' | 'smooth' | 'linear'
 export interface MovementOptions { enabled: boolean; duration: number; easing: MovementEasing }
 interface Point { x: number; y: number }
-interface Tween { from: Point; to: Point; start: number; duration: number; easing: MovementEasing }
+interface Tween { from: Point; to: Point; start: number; duration: number; easing: MovementEasing; curve?: StepCurve }
 interface Actor { kind: Billboard['kind']; signature: string; tween: Tween }
 
 const same = (a: Point, b: Point) => a.x === b.x && a.y === b.y
@@ -19,8 +19,17 @@ const signature = (b: Billboard) => JSON.stringify([b.kind, b.tile, b.name, b.ly
 
 export function sampleMovement(tween: Tween, now: number): Point {
   const t = tween.duration ? Math.max(0, Math.min(1, (now - tween.start) / tween.duration)) : 1
-  const f = tween.easing === 'ease-out' ? 1 - (1 - t) ** 3 : tween.easing === 'smooth' ? t * t * (3 - 2 * t) : t
+  const f = tween.curve ? sampleStep(tween.curve, now - tween.start).distance / tween.curve.length
+    : tween.easing === 'ease-out' ? 1 - (1 - t) ** 3 : tween.easing === 'smooth' ? t * t * (3 - 2 * t) : t
   return { x: tween.from.x + (tween.to.x - tween.from.x) * f, y: tween.from.y + (tween.to.y - tween.from.y) * f }
+}
+
+function velocity(tween: Tween, now: number): Point {
+  const t = tween.duration ? Math.max(0, (now - tween.start) / tween.duration) : 1
+  if (t >= 1) return { x: 0, y: 0 }
+  const rate = tween.curve ? sampleStep(tween.curve, now - tween.start).speed / tween.curve.length
+    : (tween.easing === 'ease-out' ? 3 * (1 - t) ** 2 : tween.easing === 'smooth' ? 6 * t * (1 - t) : 1) / tween.duration
+  return { x: (tween.to.x - tween.from.x) * rate, y: (tween.to.y - tween.from.y) * rate }
 }
 
 /** Confirmed positions only. Retarget in place; never queue turns or mutate a Scene. */
@@ -32,10 +41,12 @@ export class DungeonMovement {
   private level: string | undefined
   private onLevel = false
   private nextId = 0
+  private cadence = new StepCadence()
 
   observe(scene: Scene, center: Point, now: number, options: MovementOptions) {
     const reset = scene.levelKey !== this.level || scene.playerOnLevel !== this.onLevel
     if (reset) this.clear()
+    if (!options.enabled) this.cadence.reset()
     const next = new Map<string, Actor>(), assigned = new Map<Billboard, string>()
     const boards = scene.billboards.filter(b => visible(scene, b))
     const used = new Set<string>()
@@ -64,7 +75,7 @@ export class DungeonMovement {
     this.billboards.clear()
     for (const b of boards) {
       const id = assigned.get(b)!, previous = this.actors.get(id)
-      const tween = this.retarget(previous?.kind === b.kind ? previous.tween : undefined, b, scene, now, options)
+      const tween = this.retarget(previous?.kind === b.kind ? previous.tween : undefined, b, scene, now, options, true, b.kind === 'player')
       next.set(id, { kind: b.kind, signature: signature(b), tween })
       this.billboards.set(b, tween)
     }
@@ -73,19 +84,41 @@ export class DungeonMovement {
     const dx = this.player ? scene.player.x - this.player.x : 0
     const dy = this.player ? scene.player.y - this.player.y : 0
     const following = walked && this.camera && center.x - this.camera.to.x === dx && center.y - this.camera.to.y === dy
-    this.camera = this.retarget(this.camera ?? undefined, center, scene, now, { ...options, enabled: options.enabled && (!!following || !!this.camera && same(this.camera.to, center)) }, false)
+    const playerTween = next.get('player')?.tween
+    if (following && options.enabled && playerTween) {
+      const offset = { x: center.x - scene.player.x, y: center.y - scene.player.y }
+      // One curve owns both feet and camera, so they cannot drift or settle at different times.
+      this.camera = { ...playerTween, from: { x: playerTween.from.x + offset.x, y: playerTween.from.y + offset.y }, to: { ...center } }
+    } else this.camera = this.retarget(this.camera ?? undefined, center, scene, now, { ...options, enabled: options.enabled && (!!following || !!this.camera && same(this.camera.to, center)) }, false)
     this.actors = next
     this.player = { ...scene.player }
     this.level = scene.levelKey
     this.onLevel = scene.playerOnLevel
   }
 
-  private retarget(old: Tween | undefined, to: Point, scene: Scene, now: number, options: MovementOptions, checkVisibility = true): Tween {
+  private retarget(old: Tween | undefined, to: Point, scene: Scene, now: number, options: MovementOptions, checkVisibility = true, player = false): Tween {
     if (!options.enabled || !old) return still(to)
     const from = sampleMovement(old, now)
     // Never glide through unknown space or draw a long streak after a teleport.
-    if (distance(old.to, to) > 1 || distance(from, to) > 2 || checkVisibility && (!visible(scene, old.to) || !visible(scene, from))) return still(to)
+    if (distance(old.to, to) > 1 || distance(from, to) > 2 || checkVisibility && (!visible(scene, old.to) || !visible(scene, from))) {
+      if (player) this.cadence.reset()
+      return still(to)
+    }
     if (same(old.to, to)) return old
+    if (same(from, to)) {
+      if (player) this.cadence.reset()
+      return still(to)
+    }
+    if (player) {
+      const timing = this.cadence.confirm(now)
+      if (options.easing === 'ease-out') {
+        const duration = timing.continuous ? Math.max(options.duration, Math.min(options.duration * 1.4, timing.duration)) : options.duration
+        const length = distance(from, to), v = velocity(old, now)
+        const dx = (to.x - from.x) / length, dy = (to.y - from.y) / length
+        const speed = timing.continuous ? Math.max(0, (v.x * dx + v.y * dy) / (dx * dx + dy * dy)) : undefined
+        return { from, to: { x: to.x, y: to.y }, start: now, duration, easing: options.easing, curve: planStep(length, duration, speed, timing.continuous) }
+      }
+    }
     return { from, to: { x: to.x, y: to.y }, start: now, duration: options.duration, easing: options.easing }
   }
 
@@ -99,10 +132,12 @@ export class DungeonMovement {
   }
   cameraMoving(now: number) { return !!this.camera && now < this.camera.start + this.camera.duration - 1e-9 }
   finish() {
-    for (const actor of this.actors.values()) { actor.tween.from = { ...actor.tween.to }; actor.tween.duration = 0 }
+    for (const actor of this.actors.values()) { actor.tween.from = { ...actor.tween.to }; actor.tween.duration = 0; actor.tween.curve = undefined }
+    this.cadence.reset()
     if (this.camera) this.camera = still(this.camera.to)
   }
   clear() {
     this.actors.clear(); this.billboards.clear(); this.camera = null; this.player = null; this.nextId = 0
+    this.cadence.reset()
   }
 }

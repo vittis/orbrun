@@ -48,6 +48,28 @@ export function movementChecks(source: TileSource) {
         failures.push({ kind: 'moving pixels / item cursor / badge / picking / sleep', width, height, dpr, degrees, easing, elapsed, boxes, expected: { x: q.x * dpr, cursorLeft, cursorTop }, picked, animating: r.animating })
       }
     }
+    // A walking player should stay centred while the world moves continuously.
+    cell.icons = []; cell.cursorTile = undefined
+    const start = { ...scene, revision: 2, levelKey: 'follow', player: { x: 0, y: 0 }, billboards: [{ ...scene.billboards[0], kind: 'player' as const }] }
+    r.setOptions({ center: start.player }); r.setScene(start, 2)
+    const follow = { ...start, revision: 3, player: { x: 1, y: 0 }, billboards: [{ ...start.billboards[0], x: 1 }] }
+    r.setOptions({ center: follow.player }); r.setScene(follow, 3)
+    for (const elapsed of [0, 0.05, 0.1]) {
+      r.render(3 + elapsed)
+      const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+      let left = Infinity, right = -1
+      for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
+        const i = (py * canvas.width + px) * 4
+        if (pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3) { left = Math.min(left, px); right = Math.max(right, px) }
+      }
+      const progress = elapsed / 0.1
+      const f = easing === 'ease-out' ? 1 - (1 - progress) ** 3 : easing === 'smooth' ? progress * progress * (3 - 2 * progress) : progress
+      const feet = r.projectBillboard(follow.billboards[0], 0.3)
+      const picked = r.pick(feet.x, feet.y - scale * 0.5)
+      checks++
+      if (Math.abs((left + right + 1) / 2 - width * dpr / 2) > 1.5 || Math.abs(r.project(0, 0).x - (width / 2 - f * scale)) > 1e-6 ||
+        picked !== cellKey(1, 0) || r.animating !== (elapsed < 0.1)) failures.push({ kind: 'following camera / steady player / picking / sleep', width, height, dpr, degrees, easing, elapsed, left, right, picked })
+    }
     r.destroy()
   }
   return { checks, failures }

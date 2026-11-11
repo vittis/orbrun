@@ -125,6 +125,47 @@ describe('confirmed entity movement', () => {
 })
 
 describe('the following camera', () => {
+  it('carries player velocity into repeated steps and keeps the camera on that exact curve', () => {
+    const m = new DungeonMovement()
+    const a = actor(0, 0, { kind: 'player' }), b = actor(1, 0, { kind: 'player' }), c = actor(2, 0, { kind: 'player' })
+    const start = scene(a), first = scene(b), second = scene(c)
+    first.player = { x: 1, y: 0 }; second.player = { x: 2, y: 0 }
+    observe(m, start, 0); observe(m, first, 1)
+    const epsilon = 0.000001, at = 1.08
+    const before = (m.position(b, at).x - m.position(b, at - epsilon).x) / epsilon
+    const drawn = m.position(b, at)
+    observe(m, second, at)
+    expect(m.position(c, at)).toEqual(drawn)
+    const after = (m.position(c, at + epsilon).x - m.position(c, at).x) / epsilon
+    expect(after).toBeCloseTo(before, 2)
+    for (const t of [at, at + 0.01, at + 0.05, at + 0.1]) expect(m.center(second.player, t)).toEqual(m.position(c, t))
+    expect(m.position(c, at + 0.1)).toEqual({ x: 2, y: 0 })
+  })
+
+  it('keeps repeated walking moving near the next arrival rather than easing almost to a stop on each tile', () => {
+    const m = new DungeonMovement()
+    for (let x = 0; x <= 3; x++) {
+      const b = actor(x, 0, { kind: 'player' }), s = scene(b)
+      s.player = { x, y: 0 }
+      observe(m, s, 1 + x * 0.09)
+      if (x < 2) continue
+      const early = m.position(b, 1 + x * 0.09 + 0.03).x - m.position(b, 1 + x * 0.09 + 0.02).x
+      const late = m.position(b, 1 + x * 0.09 + 0.08).x - m.position(b, 1 + x * 0.09 + 0.07).x
+      expect(late).toBeGreaterThan(early * 0.7)
+      expect(m.center(s.player, 1 + x * 0.09 + 0.08)).toEqual(m.position(b, 1 + x * 0.09 + 0.08))
+    }
+  })
+
+  it('handles a reversed player step before the first frame without a zero-length curve', () => {
+    const m = new DungeonMovement(), a = actor(0, 0, { kind: 'player' }), b = actor(1, 0, { kind: 'player' })
+    const start = scene(a), next = scene(b)
+    next.player = { x: 1, y: 0 }
+    observe(m, start, 0); observe(m, next, 1); observe(m, start, 1)
+    expect(m.position(a, 1)).toEqual({ x: 0, y: 0 })
+    expect(m.center(start.player, 1)).toEqual({ x: 0, y: 0 })
+    expect(m.cameraMoving(1)).toBe(false)
+  })
+
   it('shares the player timeline and preserves it through unrelated scene updates', () => {
     const m = new DungeonMovement(), a = actor(0, 0, { kind: 'player' }), b = actor(1, 0, { kind: 'player' })
     const start = scene(a), next = scene(b)

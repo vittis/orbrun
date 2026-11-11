@@ -26,7 +26,8 @@ export interface CombatPopup {
   fromWound?: boolean
 }
 
-const attacks = /^(?:hit|slash|slice|stab|pierce|impale|skewer|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast)$/i
+// Includes Crawl's set_attack_verb variants for weak/strong weapon and unarmed hits.
+const attacks = /^(?:hit|slash|slice|stab|pierce|puncture|impale|skewer|spit|stick|perforate|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|sock|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|flog|flagellate|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast|dice|fracture|shatter|splatter|open|cut|beat|flatten|eviscerate|tentacle-slap|squash|pulverise|shave)$/i
 const bare = (s: string) => s.toLowerCase().replace(/^(?:the |an? |your )/, '').trim()
 const plain = (s: string) => formattedStringToText(s).trim()
 function toneOf(s: string): PopupTone {
@@ -59,14 +60,16 @@ export function combatText(text: string): CombatPopup[] {
       out.push({ kind: 'miss', text: bare(m[1]) === 'you' ? 'DODGED' : 'MISS', target: m[1], player: bare(m[1]) === 'you' })
     } else {
       // Debug/patched servers append "for N"; ordinary WebTiles sends only punctuation.
-      m = /^You ([\w-]+) (.+?)(?:[.!]+)$/.exec(s)
+      m = /^You (?:clumsily )?([\w-]+) (.+?)(?:[.!]+)$/.exec(s)
       let target: string | undefined
       if (m && attacks.test(m[1])) target = m[2]
       else if ((m = /^(?:The|Your) .+? (?:hits|pierces|strikes|burns|engulfs|freezes) (.+?)[.!]+$/.exec(s))) target = m[1]
       if (!target || /^you(?:\b|$)/i.test(target)) continue // HP deltas already report incoming damage.
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const noDamage = /but (?:do|does) no damage/.test(s)
-      target = target.replace(/(?: with | using | for | but |, ).*$/, '').trim()
+      // Native strong-hit descriptions follow the name ("like a sieve", "into
+      // ribbons", "mercilessly"); they must not become part of target matching.
+      target = target.replace(/(?: with | using | for | but |, | like | into | mercilessly| balefully|'s weak point).*$/, '').trim()
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
       const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
@@ -257,7 +260,7 @@ export class CombatFeedback {
 }
 
 function actorKey(b: Billboard) {
-  const id = (b.ref as { id?: number } | undefined)?.id
+  const id = b.id ?? (b.ref as { id?: number } | undefined)?.id
   return id === undefined ? `cell:${b.x},${b.y}:${bare(b.name ?? '')}` : 'id:' + id
 }
 function actorsIn(scene: Scene | null) {

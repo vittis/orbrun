@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.22 point at the `cloudflare-online-v1.19` release tag in
+Source links for 0.3.23 point at the `cloudflare-online-v1.20` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -551,3 +551,30 @@ Release verification also passed: forced TypeScript rebuild, 2,153 unit tests
 
 Post-rollout evidence is committed on the working branch; main and the
 immutable tag retain the exact deployed source commit.
+
+
+## 0.3.23 synchronized movement and combat text — prepared 2026-11-11
+
+User authorized commit/deployment after fixing player movement and checking
+missing combat text. New immutable source tag: `cloudflare-online-v1.20`.
+Receipt-time, advance and draw paths now deliver the 2.5D centre with the scene.
+The following camera uses the player's curve; repeated default-easing steps
+carry velocity with bounded cadence adaptation. Teleports, targeting, custom
+easing and reduced motion retain their existing behavior.
+
+Popup parsing accepts native strong-hit verbs/descriptive suffixes verified
+against official Crawl melee-attack.cc and an anonymous public CDI spectator
+trace. Popup anchors use interpolated entity positions. No gameplay, login or
+chat was sent; CBRG had no public games available for observation.
+
+Feature checks: 2,170 unit tests / two optional-engine skips; 900 real Canvas
+checks. The actual GameScreen local fixture confirms camera/player alignment
+and visible text through protocol-style events. Source: receipt-path regression
+tests at 60/120 Hz, velocity/cadence tests, recorded WebTiles message replay,
+strong-hit/kill placement and popup anchor tests. Forced TypeScript, the full
+release suite (2,170 pass / two optional-engine skips), production build and
+ASSETS-only Worker dry-run (20.95 KiB) pass. Optional engine E2E: 44 skips.
+The real game loop produces a visible ≈54 popup from native strong-hit wording;
+three receipt-style steps keep player-centre drift within 0.24 CSS pixels
+(including clientWidth rounding). Evidence: `evidence/release-0323-game-loop.json`
+and `evidence/release-0323-canvas-checks.json`. Hosted rollout follows publication.
