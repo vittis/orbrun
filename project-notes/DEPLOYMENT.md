@@ -639,3 +639,20 @@ production build, ASSETS-only Worker dry-run (104 asset files, 20.95 KiB), and
 diff checks. Optional engine E2E reports 44 explicit skips. Prior production
 Worker `2f08c8fc-f899-417b-a546-4f43133e7304` is the rollback target. Hosted
 rollout follows publication.
+
+
+### Successful 0.3.25 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.22` point to
+  `41dc68b51bf11a681e9497b1d36bd664ceb0c13b`, pushed atomically after validation.
+- Cloudflare build `a433f31b-d289-48a9-b3ec-8ad8ef204908` succeeded. Worker
+  `f39a789a-660a-4371-bbfd-d10072e9e6e7` serves 100% of production traffic;
+  deployed 2026-11-11 at 17:48:48 America/Sao_Paulo.
+- All 15 hosted checks pass: 0.3.25 notes, immutable source links, strict CSP,
+  scripts/fonts/licenses, allowed gamedata and rejected offline/unlisted proxy
+  routes. Three JavaScript and two CSS bundles match local production bytes.
+- Evidence: `evidence/release-0325-http-checks.json`.
+- Rollback: Worker `2f08c8fc-f899-417b-a546-4f43133e7304` (0.3.24).
+
+Post-rollout evidence is committed on the working branch; main and the source
+release tag retain the exact deployed code commit.

@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.25 2.5D animation and combat polish — prepared 2026-11-11
+## 0.3.25 2.5D animation and combat polish — deployed 2026-11-11
 
 User authorized committing to main and deploying the completed animation work.
 New immutable source tag: `cloudflare-online-v1.22`. Idle poses are 25% stronger
@@ -16,7 +16,12 @@ Feature verification: 2,204 unit tests passed / two optional-engine skips;
 suite used two workers after a concurrent build caused an unrelated 3D meshing
 test timeout. The interactive dungeon testbed includes weapon, wound and spell
 controls plus deterministic effect captures. Final release checks and deployment
-are recorded in DEPLOYMENT.md.
+are recorded in DEPLOYMENT.md. Main and immutable tag point to `41dc68b`.
+Cloudflare build `a433f31b-d289-48a9-b3ec-8ad8ef204908` succeeded; Worker
+`f39a789a-660a-4371-bbfd-d10072e9e6e7` serves 100% of production traffic.
+All 15 hosted checks pass, including source/version/CSP, proxy behavior and
+three JavaScript/two CSS bundles matching local bytes. Evidence:
+`evidence/release-0325-http-checks.json`.
 
 ## 0.3.24 trunk Ice Thorns and no-damage feedback — prepared 2026-11-11
 
