@@ -607,6 +607,7 @@ export class GameScreen {
    */
   private relayout(force = false) {
     if (!this.hud) return
+    this.hud.setMinimapEnabled(this.settings().renderer !== '2.5d')
     const st = this.session.state
     const o = st.options
     const g = this.grid.grid

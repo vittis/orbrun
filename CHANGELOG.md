@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.12 — 2026-11-11
+
+- Blend the Dungeon (2.5D) view by removing raised-tile outlines and the duplicate corner 2D view.
+- Replace blue explored-terrain shading with a faint black haze that keeps terrain readable.
+- Make fullscreen opt-in with an icon in the main menu's upper-right corner; installed apps open in standalone mode.
+
 ## 0.3.11 — 2026-11-11
 
 - Add Dungeon (2.5D) in Settings → View: raised walls, upright creatures, shadows and environmental lighting, with adjustable tilt, zoom and animation.

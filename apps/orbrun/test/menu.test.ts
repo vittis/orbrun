@@ -145,6 +145,81 @@ function pad(screen: FrontEnd, button: 'A' | 'B' | 'X' | 'Y' | 'LB' | 'RB' | 'ST
   screen.pad({ type: 'press', button, t: 0 })
 }
 
+describe('fullscreen on the main menu', () => {
+  const originalEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled')
+  const originalElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement')
+  const originalRequest = Object.getOwnPropertyDescriptor(document.documentElement, 'requestFullscreen')
+  const originalExit = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
+  const setFullscreen = (element: Element | null) => Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: element })
+
+  beforeEach(() => {
+    store.clear()
+    document.body.replaceChildren()
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true })
+    setFullscreen(null)
+  })
+
+  afterEach(() => {
+    for (const [target, key, descriptor] of [
+      [document, 'fullscreenEnabled', originalEnabled],
+      [document, 'fullscreenElement', originalElement],
+      [document.documentElement, 'requestFullscreen', originalRequest],
+      [document, 'exitFullscreen', originalExit],
+    ] as const) {
+      if (descriptor) Object.defineProperty(target, key, descriptor)
+      else Reflect.deleteProperty(target, key)
+    }
+  })
+
+  it('enters fullscreen only when its corner button is activated', async () => {
+    const request = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: request })
+    const { screen } = make()
+    window.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'mouse' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    window.dispatchEvent(new Event('focus'))
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(request).not.toHaveBeenCalled()
+    const button = screen.root.querySelector<HTMLButtonElement>('.home-fullscreen')!
+    expect(button.getAttribute('aria-label')).toBe('Go fullscreen')
+    button.click()
+    expect(request).toHaveBeenCalledExactlyOnceWith({ navigationUI: 'hide' })
+    button.click()
+    expect(request).toHaveBeenCalledTimes(1)
+    await Promise.resolve()
+    setFullscreen(document.documentElement)
+    document.dispatchEvent(new Event('fullscreenchange'))
+    expect(button.getAttribute('aria-label')).toBe('Exit fullscreen')
+    const exit = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: exit })
+    button.click()
+    expect(exit).toHaveBeenCalledOnce()
+    await Promise.resolve()
+    setFullscreen(null)
+    document.dispatchEvent(new Event('fullscreenchange'))
+    expect(button.getAttribute('aria-label')).toBe('Go fullscreen')
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows a retry after the browser rejects fullscreen', async () => {
+    const request = vi.fn().mockRejectedValueOnce(new Error('activation')).mockResolvedValue(undefined)
+    Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: request })
+    const { screen } = make()
+    const button = screen.root.querySelector<HTMLButtonElement>('.home-fullscreen')!
+    button.click()
+    await Promise.resolve()
+    expect(screen.root.querySelector('.menu-msg')?.textContent).toContain('Fullscreen could not start')
+    expect(button.disabled).toBe(false)
+    button.click()
+    expect(request).toHaveBeenCalledTimes(2)
+  })
+
+  it('omits the button when fullscreen is unavailable', () => {
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false })
+    expect(make().screen.root.querySelector('.home-fullscreen')).toBeNull()
+  })
+})
+
 describe('the front end: the home screen', () => {
   beforeEach(() => {
     store.clear()

@@ -15,6 +15,11 @@ const template = fs.readFileSync(path.join(here, '..', 'index.html'), 'utf8')
  * else is a 404 rather than another copy of the home page.
  */
 describe('the site’s pages', () => {
+  it('opens installed apps without forcing fullscreen', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(here, '..', 'public/manifest.webmanifest'), 'utf8'))
+    expect(manifest.display).toBe('standalone')
+  })
+
   it('ships page controls externally under a CSP that blocks remote HTML script execution', () => {
     const assets = new Map<string, string>()
     const generate = sitePages().generateBundle
@@ -33,7 +38,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.8/issues')
+        expect(html).not.toContain('cloudflare-online-v1.9/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")

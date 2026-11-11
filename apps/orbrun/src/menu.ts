@@ -352,6 +352,16 @@ export class FrontEnd {
     // the room fills the screen, so it is the one to say the screen changed size; a web font landing can rewrap a line
     this.roomView.onfit = this.fitHome
     document.fonts?.addEventListener('loadingdone', this.fitHome, { signal: this.aborter.signal })
+    document.addEventListener('fullscreenchange', () => {
+      const button = this.root.querySelector<HTMLButtonElement>('.home-fullscreen')
+      if (button) {
+        const label = document.fullscreenElement ? 'Exit fullscreen' : 'Go fullscreen'
+        button.title = label
+        button.setAttribute('aria-label', label)
+        const item = this.navItems.find(f => f.id === 'fullscreen')
+        if (item) item.label = label
+      }
+    }, { signal: this.aborter.signal })
     // an offline build checked for, downloading, or new is said on its game's row
     this.unwatchEngines = engines.onChange(() => {
       if (this._view === 'home') this.showHome()
@@ -1049,7 +1059,31 @@ export class FrontEnd {
       brand.append(h('footer', { class: 'home-footer' }, utilities))
     }
     // which Orbrun this is, in the title screen's corner as a console game's is: the release What's new names
-    if (home) brand.append(h('div', { class: 'home-version' }, version))
+    if (home) {
+      brand.append(h('div', { class: 'home-version' }, version))
+      if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+        const label = document.fullscreenElement ? 'Exit fullscreen' : 'Go fullscreen'
+        const button = h('button', {
+          type: 'button', class: 'home-fullscreen', title: label,
+          'aria-label': label, dataset: { focus: 'fullscreen' },
+          html: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg>',
+        })
+        button.addEventListener('click', async () => {
+          if (button.disabled) return
+          button.disabled = true
+          try {
+            if (document.fullscreenElement) await document.exitFullscreen()
+            else await document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+          } catch {
+            this.say('Fullscreen could not start. Tap Go fullscreen on the screen or use a keyboard to try again.')
+          } finally {
+            button.disabled = false
+          }
+        })
+        brand.append(button)
+        all.push({ id: 'fullscreen', label, el: button, row: -1, activate: () => button.click() })
+      }
+    }
     // a dialog (the exit report) is laid over the screen that is already up, which keeps its place behind it;
     // the next screen drawn clears both, as it clears everything but the room
     if (opts.over) {

@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, shadeOf,
+  cellKey, emptyScene, MEMORY_SHADE, minibarRects, shadeOf,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource,
 } from '@orbrun/scene'
@@ -125,7 +125,10 @@ export class Render25d implements MapRenderer {
 
   private light(cell: SceneCell) {
     const tint = this.scene.level.tint
-    return Math.min(1, shadeOf(cell, this.scene) * 1.12 * (tint.r + tint.g + tint.b) / 3)
+    // Memory uses one faint black haze in the tile cache, without stacking
+    // the shared renderer's much darker memory shade underneath it.
+    const shade = shadeOf(cell, this.scene) / (cell.visibility === 'visible' ? 1 : MEMORY_SHADE)
+    return Math.min(1, shade * 1.12 * (tint.r + tint.g + tint.b) / 3)
   }
 
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, illuminate = true) {
@@ -163,14 +166,16 @@ export class Render25d implements MapRenderer {
       layers.push(...(cell.overlays ?? []).map(tile => ({ tile })))
       this.plane(ctx, p, cell, layers, 0, false)
       if (!this.tiles.source) {
-        ctx.fillStyle = cell.visibility === 'visible' ? '#d7d5c8' : '#788190'
+        ctx.fillStyle = '#d7d5c8'
         ctx.font = `${s * 0.65}px monospace`
         ctx.textAlign = 'center'
         ctx.fillText(cell.glyph ?? (cell.occluder ? '#' : '·'), q.x + s / 2, q.y + s * sy * 0.8)
       }
       if (cell.visibility !== 'visible') {
-        ctx.fillStyle = 'rgba(12,22,40,0.28)'
-        ctx.fillRect(q.x, q.y, s, s * sy)
+        if (!this.tiles.source) {
+          ctx.fillStyle = 'rgba(0,0,0,0.18)'
+          ctx.fillRect(q.x, q.y, s, s * sy)
+        }
       } else {
         this.environment(ctx, p, cell, time)
       }
@@ -282,9 +287,6 @@ export class Render25d implements MapRenderer {
     ctx.fillRect(0, 0, s, s)
     ctx.restore()
     this.plane(ctx, p, cell, [{ tile }], height)
-    ctx.strokeStyle = 'rgba(220,221,207,0.15)'
-    ctx.lineWidth = 1
-    ctx.strokeRect(q.x + 0.5, q.y - lift + 0.5, s - 1, s * sy - 1)
     ctx.restore()
     this.hits.push({ key: cellKey(cell.x, cell.y), left: q.x, right: q.x + s, top: q.y - lift, bottom: q.y + s * sy })
   }

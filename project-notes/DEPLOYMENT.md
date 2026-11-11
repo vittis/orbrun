@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.11 point at the `cloudflare-online-v1.8` release tag in
+Source links for 0.3.12 point at the `cloudflare-online-v1.9` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -200,3 +200,17 @@ phone sizes; physical controller and authenticated gameplay checks remain manual
 Push main and the source tag atomically, wait for Workers Builds to succeed,
 then verify hosted source links, 0.3.11 settings and anonymous 2.5D spectating.
 Testing instructions are in STATUS.md and packages/render-2.5d/README.md.
+
+## 0.3.12 presentation release — 2026-11-11
+
+Prepared at the user's request to commit on main and deploy. Immutable source
+tag: `cloudflare-online-v1.9`. Removes raised-tile outlines and the duplicate
+corner view in Dungeon (2.5D), replaces blue memory tint with a faint black
+haze, and makes fullscreen an explicit main-menu action. The installed-app
+manifest now uses standalone display rather than automatic fullscreen.
+
+Validation: 2,020 tests passed / two optional engine skips before release
+metadata and manifest updates. Final forced typecheck, 22 site/news/Markdown
+checks (including standalone display), production build, ASSETS-only Worker
+dry-run and diff checks passed. Push main and the source tag atomically, then
+verify the deployed version, source links and fullscreen control.

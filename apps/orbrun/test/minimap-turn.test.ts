@@ -38,6 +38,22 @@ afterEach(() => {
 })
 
 describe('the minimap through a turn of the view', () => {
+  it('keeps the corner view hidden through a level-map round trip when disabled by the projection', () => {
+    const m = minimap()
+    const canvas = m.hud.root.querySelector('canvas.minimap')!
+    m.hud.setMinimapEnabled(false)
+    m.hud.hideMinimap()
+    m.hud.showMinimap()
+    m.frame({ x: 5, y: 5, yaw: 0 })
+    expect(canvas.classList.contains('hidden')).toBe(true)
+    expect(m.draw).not.toHaveBeenCalled()
+    expect(m.inner.minimapCone.hidden).toBe(true)
+    m.hud.setMinimapEnabled(true)
+    m.frame({ x: 5, y: 5, yaw: 0 })
+    expect(canvas.classList.contains('hidden')).toBe(false)
+    expect(m.draw).toHaveBeenCalledOnce()
+  })
+
   it('north up: the map is drawn once and the cone turns with the view', () => {
     const m = minimap()
     m.hud.minimapFov = 1.2

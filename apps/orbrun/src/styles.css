@@ -2147,6 +2147,27 @@ a.item.beside {
 .frame.home-list .legend:empty {
   display: none;
 }
+/* Explicit fullscreen control in the title screen's upper-right corner. */
+.frame.home-list .home-fullscreen {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--ink-dim);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.frame.home-list .home-fullscreen:is(:hover, :focus-visible, .focused) {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  outline: none;
+}
 /* the release, in the screen's very corner under the legend: the smallest, dimmest words on the screen */
 .frame.home-list .home-version {
   position: absolute;

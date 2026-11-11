@@ -430,6 +430,7 @@ export class Hud {
   private minimapTiles: Gamedata | null = null
   /** The level map is open: the minimap has become it and stays out of sight. */
   private minimapHidden = false
+  private minimapEnabled = true
   /** Held upright, the side of the square at the band's right the player stands in the middle of (`bandFit`); 0 otherwise. */
   private minimapSquare = 0
   /** the finger's lessons standing (touch-hints.ts): a ring on the pane a tap opens something from, and its word under it */
@@ -543,6 +544,7 @@ export class Hud {
    */
   private bandFit(host: GridHost): { w: number; h: number; cell: number; cols: number } {
     const g = host.grid
+    if (!this.minimapEnabled) return { w: 0, h: 0, cell: 1, cols: 0 }
     const fit = minimapFit({ w: g.cols * g.cw, h: g.rows * g.ch }, screenShort(g), this.minimapAcross, this.minimapCell, host.phone)
     // the hud fills the grid's host (styles.css .hud): its width as the host was last fitted, read once a resize
     const across = host.width || g.cols * g.cw + 2 * g.ox
@@ -660,7 +662,7 @@ export class Hud {
       w: Math.min(gridW * MINIMAP_WIDEST, statsRight === null ? Infinity : sidePx.left + sidePx.width - statsRight - host.grid.cw),
       h: barBeside ? bottom - sidePx.top - this.touchbarSpan() - TOUCH_MAP_GAP : sidePx.height * MINIMAP_TALLEST,
     }
-    const { w, h: size, cell } = portrait ? this.bandFit(host) : minimapFit(room, short, this.minimapAcross, this.minimapCell, host.phone)
+    const { w, h: size, cell } = !this.minimapEnabled ? { w: 0, h: 0, cell: 1 } : portrait ? this.bandFit(host) : minimapFit(room, short, this.minimapAcross, this.minimapCell, host.phone)
     this.minimapShown = w > 0 && cell > 0 ? { tiles: Math.round(w / cell), cell: host.phone || !(short > 0) ? cell : Math.round((cell * MINIMAP_REF_SHORT) / short) } : null
     if (cell !== this.minimapDrawn) {
       this.minimapDrawn = cell
@@ -1549,7 +1551,7 @@ export class Hud {
    * gamedata tileset is ready.
    */
   private renderMinimap(scene: Scene, cam: Camera, state: GameState, gd: Gamedata | null) {
-    if (this.minimapHidden || !this.minimapSize.w) return
+    if (!this.minimapEnabled || this.minimapHidden || !this.minimapSize.w) return
     // the map is a full redraw of every known cell: only when something it shows moved.
     // The rc's palette rides `rev.player` (state.ts: `options` and `set_option` bump it).
     // A turn of the view is not one: the facing cone is an element of its own (`placeCone`)
@@ -1630,7 +1632,7 @@ export class Hud {
   private placeCone(scene: Scene, cam: Camera) {
     const cone = this.minimapCone
     const fov = this.minimapFov
-    const shown = fov != null && !this.minimapHidden && scene.playerOnLevel
+    const shown = fov != null && this.minimapEnabled && !this.minimapHidden && scene.playerOnLevel
     if (cone.hidden !== !shown) cone.hidden = !shown
     if (!shown) return
     const cs = this.minimap.cellSize
@@ -1691,6 +1693,16 @@ export class Hud {
     ctx.restore()
   }
 
+  /** Overhead projections can show the dungeon without a duplicate corner view. */
+  setMinimapEnabled(enabled: boolean) {
+    if (enabled === this.minimapEnabled) return
+    this.minimapEnabled = enabled
+    this.minimapCanvas.classList.toggle('hidden', !enabled || this.minimapHidden)
+    if (!enabled) this.minimapCone.hidden = true
+    this.minimapKey = ''
+    this.mapAt = null
+  }
+
   /** The level map is open: the fullscreen map stands in for the minimap, and the monster list, which would lie over it, goes with it. */
   hideMinimap() {
     this.minimapHidden = true
@@ -1701,7 +1713,7 @@ export class Hud {
 
   /** The level map closed: the live minimap and the monster list are back in their corner. */
   showMinimap() {
-    this.minimapCanvas.classList.remove('hidden')
+    this.minimapCanvas.classList.toggle('hidden', !this.minimapEnabled)
     this.monsters.classList.remove('hidden')
     this.minimapHidden = false
     this.minimapKey = ''
@@ -2165,7 +2177,7 @@ export class Hud {
     if (!ids.length) return
     const root = this.paneRect(this.root)
     for (const id of ids) {
-      const target = id === 'menu' ? this.stats : !this.minimapHidden && this.minimapShown ? this.minimapCanvas : null
+      const target = id === 'menu' ? this.stats : this.minimapEnabled && !this.minimapHidden && this.minimapShown ? this.minimapCanvas : null
       const shown = target !== null && !target.hidden && (id !== 'map' || this.minimapBand || !this.sidebar.hidden)
       const r = shown ? this.paneRect(target) : null
       let el = this.touchHints.get(id)

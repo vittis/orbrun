@@ -16,9 +16,6 @@ import { HOME } from './site'
 import { ownWindow } from './quit'
 import { installBack } from './back'
 import { requestInputFrame, cancelFrame } from './frames'
-import { installFullscreen } from './fullscreen'
-
-installFullscreen()
 
 const app = document.getElementById('app')!
 const gamepad = new GamepadInput()
