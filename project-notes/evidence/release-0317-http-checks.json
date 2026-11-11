@@ -1,0 +1,60 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "bytes": 9485,
+    "type": "text/html",
+    "source_v1_14": true,
+    "strict_csp": true
+  },
+  {
+    "path": "/about",
+    "status": 200,
+    "bytes": 63158,
+    "type": "text/html",
+    "source_v1_14": true,
+    "strict_csp": true
+  },
+  {
+    "path": "/about/new",
+    "status": 200,
+    "bytes": 58784,
+    "type": "text/html",
+    "source_v1_14": true,
+    "strict_csp": true,
+    "release_0_3_17": true
+  },
+  {
+    "path": "/site-controls.js",
+    "status": 200,
+    "bytes": 10486,
+    "type": "text/javascript"
+  },
+  {
+    "path": "/gamedata-proxy/127.0.0.1/gamedata/abc/enums.js",
+    "status": 404,
+    "bytes": 9,
+    "type": "text/plain;charset=UTF-8"
+  },
+  {
+    "path": "/gamedata-proxy/crawl.dcss.io/gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js",
+    "status": 200,
+    "bytes": 9710,
+    "type": "text/javascript; charset=utf-8"
+  },
+  {
+    "path": "/assets/main-BYl3F75A.js",
+    "status": 200,
+    "sha256_matches_local": true
+  },
+  {
+    "path": "/assets/index-BwNCXk_9.js",
+    "status": 200,
+    "sha256_matches_local": true
+  },
+  {
+    "path": "/assets/game-DtfwvnXP.js",
+    "status": 200,
+    "sha256_matches_local": true
+  }
+]

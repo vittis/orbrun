@@ -320,3 +320,29 @@ source tag `cloudflare-online-v1.14`. Includes raised item cursor alignment,
 neutral unexplored mist, stronger LOS/memory contrast and removal of player
 lighting. Current release validation and rollout results are recorded in STATUS
 and SESSION_LOG; automatic Workers Builds follows the main-branch push.
+
+
+## 0.3.17 live verification — 2026-11-11
+
+- Production source `896dcfc3945e75cb7ff299c6331f191acb0dcbd5`, immutable
+  `cloudflare-online-v1.14`. GitHub main and source tag point to that same commit.
+- Workers Builds `f177b373-2ddb-4bdf-8a05-72efc41040c0` completed successfully.
+  Worker `7a3baecf-4bd5-4b3c-842b-8024ccfcc183` serves 100% of traffic,
+  deployed at 16:50:53 UTC (13:50:53 America/Sao_Paulo).
+- Public home shows 0.3.17. Root, About and What's New return 200 with strict
+  CSP and v1.14 source links. Main, shared renderer and gameplay JavaScript
+  bundles match the validated local build byte for byte. Allowed versioned
+  gamedata returns 200; an unlisted loopback proxy destination returns 404.
+- Browser loaded CBRG's public lobby and anonymous live 2.5D spectating with
+  textured terrain/HUD and no warning/error logs. The observed player had a
+  character status popup open over part of the map; no commands were sent.
+  Individual highlight/fog/LOS regressions are covered by 504 local real Canvas
+  pixel checks and the deployed asset hash comparison. HTTP evidence:
+  `evidence/release-0317-http-checks.json`.
+- Local Python's bundled CA store could not verify HTTPS; repeated the HTTP
+  verification with system curl and normal certificate checks, which passed.
+  No certificate verification was disabled.
+- Post-rollout notes are committed only on the working branch; main and the
+  immutable source tag stay on the verified code release, avoiding a second
+  production build. Previous production 0.3.16 Worker for rollback:
+  `ac9eeef0-29a4-45d2-9296-94b131e22363`.

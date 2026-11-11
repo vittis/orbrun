@@ -1,6 +1,18 @@
 # Project status
 
-## 0.3.17 visibility release — 2026-11-11
+## 0.3.17 is LIVE — 2026-11-11
+
+Public client: https://dcss-client.vittis.workers.dev
+Release commit `896dcfc3945e75cb7ff299c6331f191acb0dcbd5`, immutable source
+`cloudflare-online-v1.14`. Cloudflare build
+`f177b373-2ddb-4bdf-8a05-72efc41040c0` succeeded; Worker
+`7a3baecf-4bd5-4b3c-842b-8024ccfcc183` serves 100%. Public home shows 0.3.17,
+three deployed JS bundles match the local build, source/CSP/proxy checks pass,
+and anonymous CBRG 2.5D spectating loads without browser errors. Main and the
+release tag retain the exact deployed code; verification notes stay on the
+working branch. Evidence: `evidence/release-0317-http-checks.json`.
+
+## 0.3.17 implementation and validation — 2026-11-11
 
 Implemented in worktree `60b1/dcss-client`, branch `codex/2-5d-presentation`,
 rebased on production `97b49ee` (0.3.16), preserving combat feedback.
@@ -16,8 +28,7 @@ elevation/zoom/DPR/filtering, including marker placement, LOS contrast, fog,
 seams and sprite sizes. Local preview has synthetic pickup markers on real
 item art; no browser warning/error logs. Existing build warnings about JSON
 import attributes and large chunks remain. User authorized commit and deployment. Worker dry-run passes (ASSETS only,
-20.95 KiB). Optional engine E2E reports 44 skips. Live rollout verification
-follows publication. No user game/account commands were sent.
+20.95 KiB). Optional engine E2E reports 44 skips. Live rollout verification is recorded above. No user game/account commands were sent.
 
 ## 0.3.11 renderer release — 2026-11-11
 
