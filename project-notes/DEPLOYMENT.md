@@ -720,7 +720,7 @@ expiry. Existing terrain/movement/wall Canvas checks are retained. Final release
 checks and rollout evidence follow below.
 
 
-Final integrated validation: forced TypeScript, 2,238 unit tests/two optional
+Final integrated validation: forced TypeScript, 2,239 unit tests/two optional
 engine skips, production build, ASSETS-only Worker dry-run (104 assets,
 20.95 KiB) and diff checks passed. Optional engine E2E reports 44 explicit skips.
 All 1,062 terrain/movement/wall Canvas checks and 20 real-art spell checks pass.

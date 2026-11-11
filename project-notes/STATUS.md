@@ -10,7 +10,7 @@ metal/air projectiles have independent impact and residue styles, and compact
 art avoids beam-only alpha thinning. Load history, invisible spells, Still,
 visibility and level-transition cleanup are preserved. Main's 0.3.26 movement
 and 0.3.27 wall-depth and 0.3.28 breathing changes are integrated. Real server artwork passes all
-20 projectile/impact/residue/expiry checks. Final integrated validation: 2,238
+20 projectile/impact/residue/expiry checks. Final integrated validation: 2,239
 unit tests/two optional-engine skips; 1,062 existing Canvas checks; forced
 TypeScript, production build and ASSETS-only dry-run pass. Optional engine E2E
 reports 44 skips. Evidence and rollout details are in DEPLOYMENT.md.
