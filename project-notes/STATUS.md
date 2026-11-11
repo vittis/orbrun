@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.24 trunk Ice Thorns and no-damage feedback — prepared 2026-11-11
+## 0.3.24 trunk Ice Thorns and no-damage feedback — deployed 2026-11-11
 
 User identified Ice Thorns from trunk and requested damage/no-damage popups,
 then commit and deployment. Source tag: `cloudflare-online-v1.21`. The parser
@@ -11,7 +11,12 @@ Incoming explicit zero-damage hits also receive feedback without an HP delta.
 Official trunk terrain.cc/beam.cc/zap-data.h confirm the spell's exact messages
 and plural no-damage grammar. The actual GameScreen fixture displays both
 NO DAMAGE and ≈4 cold feedback and records one impact for the damaging hit.
-Full release checks and rollout are recorded in DEPLOYMENT.md.
+Forced TypeScript, 2,185 tests/two optional-engine skips, production build and
+ASSETS-only dry-run pass; engine E2E has 44 skips. Main and immutable source tag
+point to `670dc21`. Cloudflare build `e31fd8a5-ebc0-4e1d-a5e0-398d123e7d62`
+succeeded; Worker `2f08c8fc-f899-417b-a546-4f43133e7304` serves 100% of traffic.
+All 15 hosted checks pass, including exact three-JS/two-CSS asset hashes.
+Evidence: `evidence/release-0324-{ice-thorns,http-checks}.json`.
 
 ## 0.3.23 synchronized player/camera and native combat text — deployed 2026-11-11
 

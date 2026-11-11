@@ -460,3 +460,23 @@ Main and `cloudflare-online-v1.20` point to `ac3a4c0`. Cloudflare build
 `c420b95c-c942-4c55-a622-b96852572c9c` serves 100% of traffic. All 15 hosted
 checks pass, including exact three-JS/two-CSS bundle hashes. Evidence:
 `evidence/release-0323-{http-checks,game-loop,canvas-checks}.json`.
+
+
+## 0.3.24 trunk Ice Thorns / no-damage popups — 2026-11-11
+
+User clarified Ice Thorns from trunk, requested damage and no-damage feedback,
+and authorized commit/deployment. Official terrain.cc sets plural “skewer”;
+beam.cc emits “The ice thorns skewer … but do no damage” for a post-AC zero.
+Added plural hit-verb coverage, quiet explicit NO DAMAGE text, incoming zero-hit
+feedback without HP deltas, and skipping impact ripples for known zeroes.
+Positive damage retains cold styling and marked estimates. Rollback, moving
+actor, exact amount, crumbling-thorn and concise/normal rendering cases pass.
+
+The actual GameScreen local fixture displays NO DAMAGE and ≈4 and records
+only one damage impact. Forced TypeScript, 2,185 tests/two optional-engine
+skips, production build and ASSETS-only dry-run pass; engine E2E has 44 skips.
+Main and `cloudflare-online-v1.21` point to `670dc21`. Cloudflare build
+`e31fd8a5-ebc0-4e1d-a5e0-398d123e7d62` succeeded; Worker
+`2f08c8fc-f899-417b-a546-4f43133e7304` serves 100% of traffic. All 15 hosted
+checks pass, including exact JS/CSS hashes. Evidence:
+`evidence/release-0324-{ice-thorns,http-checks}.json`. No public gameplay sent.

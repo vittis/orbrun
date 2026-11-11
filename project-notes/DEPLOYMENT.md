@@ -619,3 +619,21 @@ used. Release checks passed: forced TypeScript, 2,185 unit tests/two optional
 engine skips, production build, and ASSETS-only Worker dry-run (20.95 KiB).
 Optional engine E2E reports 44 skips. Evidence:
 `evidence/release-0324-ice-thorns.json`. Hosted rollout follows publication.
+
+
+### Successful 0.3.24 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.21` point to
+  `670dc21a793204aaa3e622e005d1be751acbd206`, pushed atomically.
+- Cloudflare build `e31fd8a5-ebc0-4e1d-a5e0-398d123e7d62` succeeded. Worker
+  `2f08c8fc-f899-417b-a546-4f43133e7304` serves 100% of traffic; deployment
+  created 2026-11-11 at 17:24:10 America/Sao_Paulo.
+- All 15 hosted checks pass: version/source/CSP, scripts/licenses/fonts,
+  allowed gamedata and rejected offline/unlisted proxy routes. Three JavaScript
+  and two CSS bundles match the locally validated build byte for byte.
+- Evidence: `evidence/release-0324-ice-thorns.json` and
+  `evidence/release-0324-http-checks.json`.
+- Rollback: 0.3.23 Worker `c420b95c-c942-4c55-a622-b96852572c9c`.
+
+Post-rollout evidence stays on the working branch; main and the source tag
+retain the exact deployed source commit.
