@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.22 configurable 2.5D movement — prepared 2026-11-11
+## 0.3.22 configurable 2.5D movement — deployed 2026-11-11
 
 User authorized commit to main and production deployment. New immutable source
 tag: `cloudflare-online-v1.19`. Adds confirmed movement tweens for all billboard
@@ -9,7 +9,14 @@ and easing. Defaults to 100 ms ease-out. Visual anchors and picking follow the
 tween; fast travel has no animation queue. Teleports/level changes snap, and
 Still/Auto reduced motion stop movement. Feature verification: 2,153 unit tests
 passed / two optional-engine skips, 738 real Canvas checks, typecheck and build.
-Release checks and live rollout are recorded in DEPLOYMENT.md.
+Forced TypeScript, release suite/build and ASSETS-only dry-run also pass.
+Main and tag point to `ab1a9f5`; Cloudflare build
+`4e3ba95d-5d66-4a85-9dbb-67108e9d435e` succeeded. Worker
+`6e108e3a-538a-4dc8-8b68-c95c6035740a` serves 100% of traffic.
+All 13 hosted checks pass, including the immutable source links, 0.3.22 notes,
+strict CSP, proxy restrictions and all three JavaScript bundles matching local
+bytes. Optional engine E2E reports 44 explicit skips. Evidence:
+`evidence/release-0322-http-checks.json`. Release details: DEPLOYMENT.md.
 
 ## 0.3.21 original exposure and live animation — deployed 2026-11-11
 

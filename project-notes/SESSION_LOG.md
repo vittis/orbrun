@@ -416,3 +416,21 @@ verified 0.3.21 notes and anonymous CBRG 2.5D spectating, with native colors,
 compact torch glow and the right-side pane. No gameplay/chat sent. Evidence
 and completed rollout notes stay on the working branch, preserving the exact
 main/source-tag release commit.
+
+
+## 0.3.22 movement tween release — 2026-11-11
+
+User requested configurable smooth/snappy entity movement in 2.5D, then
+explicitly authorized commit and deployment to main. Added a confirmed-position
+movement layer with stable IDs, conservative anonymous matching, bounded
+retargeting and synchronized camera follow. Shadows, glows, depth sorting,
+badges, item cursors and picking track the drawn position. Added persisted
+movement/duration/easing controls; Still/Auto reduced motion stop tweens.
+
+Forced TypeScript, 2,153 tests (two optional-engine skips), production build,
+ASSETS-only Worker dry-run and 738 real Canvas checks pass. Optional engine E2E
+reports 44 skips. Main and immutable source tag `cloudflare-online-v1.19` point
+to `ab1a9f5`. Cloudflare build `4e3ba95d-5d66-4a85-9dbb-67108e9d435e` succeeded;
+Worker `6e108e3a-538a-4dc8-8b68-c95c6035740a` serves 100% of traffic. All 13
+hosted checks pass, including exact local/live hashes for all three entry
+bundles. Evidence: `evidence/release-0322-http-checks.json`.

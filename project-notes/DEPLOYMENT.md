@@ -532,3 +532,22 @@ test passed in isolation, and the complete suite passed with four workers.
 Release verification also passed: forced TypeScript rebuild, 2,153 unit tests
 (two optional-engine skips), production build and ASSETS-only Worker dry-run
 (20.95 KiB Worker). Hosted rollout verification follows publication.
+
+
+### Successful 0.3.22 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.19` point to
+  `ab1a9f5fbb97f6cc5532844aa59330c96bb75fd4`, pushed atomically.
+- Cloudflare build `4e3ba95d-5d66-4a85-9dbb-67108e9d435e` succeeded.
+  Worker `6e108e3a-538a-4dc8-8b68-c95c6035740a` serves 100% of traffic;
+  deployment created 2026-11-11 at 16:37:47 America/Sao_Paulo.
+- Thirteen hosted checks pass: 0.3.22 notes, immutable source, strict CSP,
+  public scripts/licenses/fonts, allowed gamedata and rejected offline/unlisted
+  proxy routes. All three entry JavaScript bundles match local SHA-256 hashes.
+- Optional engine E2E: 44 explicit skips because the engine is not bundled.
+- Evidence: `evidence/release-0322-http-checks.json`. Browser movement/raster
+  verification was local before publication; no hosted gameplay was sent.
+- Rollback: 0.3.21 Worker `086e982a-3e9c-4c7d-bf09-4ef4e0d12a3b`.
+
+Post-rollout evidence is committed on the working branch; main and the
+immutable tag retain the exact deployed source commit.
