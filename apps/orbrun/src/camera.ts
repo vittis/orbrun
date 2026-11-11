@@ -1,5 +1,6 @@
 import {
   StepCadence,
+  STEP_SECONDS,
   MAX_WALK_LAG,
   planStep,
   sampleStep,
@@ -92,6 +93,8 @@ export class CameraController {
   private walkSpeed = 0
   /** Last sampled movement time; yaw/input still use the frame delta. */
   private walkAt = 0
+  /** Only the eye may visit this tile before confirmation; camera.x/y stay authoritative. */
+  private prediction: { x: number; y: number } | null = null
   /** Steering revision at autofight input; null means it was pressed during manual look. */
   private autofightRevision: number | null | undefined
 
@@ -120,6 +123,7 @@ export class CameraController {
    * one update several cells on). No glide: nothing was drawn between.
    */
   snapTo(x: number, y: number) {
+    this.prediction = null
     this.stopClosing()
     this.cadence.reset()
     this.landAt(x, y)
@@ -136,6 +140,40 @@ export class CameraController {
     this.walkSpeed = 0
   }
 
+  /** One complete visual step, with no changes to the confirmed feet or scene. */
+  predictStep(x: number, y: number, now: number): boolean {
+    const c = this.camera
+    if (this.reducedMotion || this.prediction || this.walk || c.eyeX !== c.x || c.eyeY !== c.y) return false
+    if (Math.max(Math.abs(x - c.x), Math.abs(y - c.y)) !== 1) return false
+    this.prediction = { x, y }
+    this.path = [{ x, y }]
+    this.walkAt = now
+    this.planWalk(1, STEP_SECONDS, undefined, false)
+    return true
+  }
+
+  /** A matching reply adopts the feet without restarting or accelerating the eye. */
+  confirmPrediction(x: number, y: number, now: number): boolean {
+    if (this.prediction?.x !== x || this.prediction.y !== y) return false
+    this.advanceWalk(0, now)
+    this.camera.x = x
+    this.camera.y = y
+    this.prediction = null
+    this.cadence.confirm(now)
+    return true
+  }
+
+  /** Ease back along the predicted segment; a subsequent real walk can append its path. */
+  cancelPrediction(now: number) {
+    if (!this.prediction) return
+    this.advanceWalk(0, now)
+    this.prediction = null
+    this.path = [{ x: this.camera.x, y: this.camera.y }]
+    this.walkAt = now
+    this.cadence.reset()
+    this.planWalk(this.pathLength(), STEP_SECONDS, 0, false)
+  }
+
   /**
    * The feet walked to `x`, `y` by `hops`, one cell each, from the camera's
    * cell (the last goal). The eye glides after them along that path
@@ -147,6 +185,8 @@ export class CameraController {
    * seconds) adjusts repeated steps within 100–140 ms; it never adds a hop.
    */
   walkTo(x: number, y: number, hops: readonly { dx: number; dy: number }[], now = performance.now() / 1000) {
+    if (this.confirmPrediction(x, y, now)) return
+    this.cancelPrediction(now)
     const c = this.camera
     if (this.reducedMotion) {
       this.snapTo(x, y)
@@ -662,7 +702,14 @@ export class CameraController {
     walk.elapsed = Math.min(walk.duration, walk.elapsed + dt)
     // Finish exactly, including accumulated floating-point time at the deadline.
     if (walk.duration - walk.elapsed < 1e-9) {
-      this.landAt(c.x, c.y)
+      // A prediction can finish before its reply. Land the eye only and keep
+      // the confirmed feet untouched until confirmPrediction accepts it.
+      const goal = this.prediction ?? c
+      c.eyeX = goal.x
+      c.eyeY = goal.y
+      this.path = []
+      this.walk = null
+      this.walkSpeed = 0
       return true
     }
     const { distance: position, speed } = sampleStep(walk, walk.elapsed)

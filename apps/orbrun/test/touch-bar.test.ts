@@ -116,7 +116,7 @@ describe('a game torn down under a finger (a reconnect)', () => {
     const wake = vi.fn()
     const screen = Object.assign(Object.create(GameScreen.prototype), {
       wake, saveView: noop, raf: 0, idleTimer: 0, tooltipTimer: 0, onKeyDown: noop, onResize: noop, unsub: [],
-      runner: { abortSequence: noop }, hud: { destroy: noop }, overlays: { destroy: noop }, perf: { destroy: noop },
+      runner: { abortSequence: noop }, prediction: { reset: noop }, hud: { destroy: noop }, overlays: { destroy: noop }, perf: { destroy: noop },
       grid: { destroy: noop }, renderer: { destroy: noop }, park: { clear: noop }, root: { remove: noop },
     }) as { destroy(): void; pad(ev: PadEvent): void; hooks: unknown }
     // the pad hands the releases straight back to the game, as main.ts routes them

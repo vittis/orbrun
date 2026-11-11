@@ -1,5 +1,14 @@
 # Project status
 
+0.3.10 is prepared and validated; production remains 0.3.9 until rollout.
+New opt-in Settings / Controls / Predictive movement: complete visual step,
+matching confirmation without restart, smooth correction, one speculative step,
+conservative visible-floor eligibility. Default Off; all game state remains
+server-authoritative. No command buffering or replay, no actual RTT reduction.
+Full suite 2,005 pass / 2 skips, forced typecheck/build/dry-run pass; optional
+engine E2E 44 skips. Source release tag planned: cloudflare-online-v1.7.
+
+
 Release **0.3.9 is LIVE** at https://dcss-client.vittis.workers.dev.
 Final source `d293a56bbade3e5ceeb80feb0fb74f0cecd2b570`, immutable tag
 `cloudflare-online-v1.6`; build `13ee2d51-d14c-4752-8451-452de0d9b3c9` succeeded.

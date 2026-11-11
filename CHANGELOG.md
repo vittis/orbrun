@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.10 — 2026-11-11
+
+- Add opt-in Predictive movement under Settings › Controls for online 3D play. A single step into clear visible floor starts immediately; matching replies keep the same animation and refused steps ease back.
+- Keep authoritative position, map, combat and targeting unchanged. Prediction stays off around monsters, status effects, occupied or special terrain, and prompts; it never adds, buffers or replays commands.
+
 ## 0.3.9 — 2026-11-11
 
 - Remove the partial movement preview that caused a move–pause–move effect online. Confirmed steps use one continuous glide again, retaining input-before-render scheduling and first-frame motion.

@@ -3,6 +3,7 @@ import { emptyScene } from '@orbrun/scene'
 import { initialState, MouseMode } from '@orbrun/webtiles'
 import { CameraController } from '../src/camera'
 import { GameScreen } from '../src/game'
+import { PredictiveMovement } from '../src/predictive-movement'
 import { OWN_STEP_WINDOW_MS, Runner, type RunnerHooks } from '../src/runner'
 import type { Session } from '../src/session'
 
@@ -22,7 +23,7 @@ function harness() {
     context: () => ({ mode: 'command' }), now: () => performance.now(), swing,
   } as unknown as RunnerHooks)
   const screen = Object.assign(Object.create(GameScreen.prototype), {
-    session, cam, runner, wake: vi.fn(), lastPos: { x: 0, y: 0 }, hopPos: { x: 0, y: 0 },
+    session, cam, runner, prediction: new PredictiveMovement(session, cam, () => false), wake: vi.fn(), lastPos: { x: 0, y: 0 }, hopPos: { x: 0, y: 0 },
     hops: [], jumped: false, lastLevel: `${state.player.place}:${state.player.depth}`,
     lastMonsters: new Set(), padStep: null, arrivalPending: false,
     actionTabUp: 'spells', packPage: null, packRow: new Map(),

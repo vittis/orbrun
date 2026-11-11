@@ -33,6 +33,7 @@ import { HEADING } from './fling'
 import { LookDrag } from './look-drag'
 import type { DragRelease } from './camera'
 import { requestRenderFrame, cancelFrame } from './frames'
+import { PredictiveMovement } from './predictive-movement'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
@@ -114,6 +115,7 @@ export interface GameHooks {
  * The game screen: canvas + renderer, HUD, overlays, input wiring.
  */
 export class GameScreen {
+  private prediction: PredictiveMovement
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
   private renderer: MapRenderer
@@ -406,6 +408,7 @@ export class GameScreen {
       swipe: (step) => this.touchPress(step > 0 ? 'DR' : 'DL'),
       typed: () => this.wake(),
     })
+    this.prediction = new PredictiveMovement(session, this.cam, () => this.is3d && this.settings().predictiveMovement && !this.overlays.hasClientOverlay)
     this.runner = new Runner(session, this.cam, {
       context: () => this.ctx,
       ui: (op, arg, category, section) => this.uiOp(op, arg, category, section),
@@ -454,6 +457,7 @@ export class GameScreen {
           this.wake()
           this.onScene()
         } else if (e.type === 'state') {
+          this.prediction.state(e.msg, performance.now())
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
@@ -467,6 +471,10 @@ export class GameScreen {
           }
         } else if (e.type === 'sent') {
           this.lastSent = performance.now()
+          this.prediction.sent(e.msg, this.runner.sendingStep, this.lastSent)
+        } else if (e.type === 'closed') {
+          this.prediction.reset(performance.now())
+          this.wake()
         } else if (e.type === 'gamedata') {
           if (e.status === 'ready') {
             this.hideLoading()
@@ -525,6 +533,7 @@ export class GameScreen {
     setAutoMinimap(null)
     setExploreGame(null)
     this.destroyed = true
+    this.prediction.reset(performance.now())
     // a finger on the touch bar as it goes (a reconnect, the screen torn down under it) never lifts where the page
     // can hear it: let go here, or a held arrow walks on into the next game. The releases land on nothing (`pad`)
     this.hooks.gamepad.virtualRelease()
@@ -928,6 +937,7 @@ export class GameScreen {
       this.sceneTime = undefined
     }
     perf?.mark('scene')
+    this.prediction.update(now)
     const beforeLook = { yaw: this.cam.camera.yaw, pitch: this.cam.camera.pitch }
     if (this.advancePresentation(dt, now / 1000)) this.needsRender = true
     perf?.mark('present')
@@ -1397,6 +1407,7 @@ export class GameScreen {
     const jumped = this.jumped
     this.hops = []
     this.jumped = false
+    const predicted = this.prediction.reconcile(now * 1000, hops, jumped)
     if (scene.playerOnLevel) {
       const level = `${st.player.place}:${st.player.depth}`
       const newLevel = level !== this.lastLevel
@@ -1428,8 +1439,10 @@ export class GameScreen {
         // the eye glides after a walk, by the hops the server drew (the rc's
         // `travel_delay`: a positive one sends every step, -1 sends the
         // arrival alone, which is a jump here as it is a jump there)
-        if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
-        else this.cam.snapTo(p.x, p.y)
+        if (!predicted) {
+          if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
+          else this.cam.snapTo(p.x, p.y)
+        }
         if (!sameLevel) {
           // level change: never nose-to-wall
           if (!this.cam.steering) this.arrivalPending = !this.cam.faceAfterArrival(scene)

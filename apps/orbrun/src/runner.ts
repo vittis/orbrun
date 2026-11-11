@@ -85,6 +85,8 @@ export class Runner {
   private sequence: { steps: (() => Promise<boolean>)[]; abort: () => void } | null = null
   /** last step the runner initiated, so auto-facing knows it was ours */
   lastStep: LastStep | null = null
+  /** Set only during the synchronous send of a plain manual step, never a run/attack/macro. */
+  sendingStep: Dir8 | null = null
   /** Recent intents, newest first: replies can arrive after another direction was sent. */
   private recentSteps: LastStep[] = []
   /** when the last wait (`.`, `s`) went out: a turn passed in place, which leaves the view where it is */
@@ -474,7 +476,12 @@ export class Runner {
     // a step of the player's own: whatever autofight was closing on, this walk is theirs
     this.cam.stopClosing()
     if (target) this.hooks.swing()
-    this.send(dirMessage(abs, opts))
+    this.sendingStep = opts.run || opts.attack ? null : abs
+    try {
+      this.send(dirMessage(abs, opts))
+    } finally {
+      this.sendingStep = null
+    }
   }
 
   /**

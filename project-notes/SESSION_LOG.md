@@ -251,3 +251,31 @@
   Live diagnostic completed at 43 ms median on desktop before the route-only
   correction; actual Odin game latency remains unmeasured by this new check.
   User should compare Odin CBRG Wi-Fi/hotspot results with game response timings.
+
+
+## 2026-11-11 — 0.3.10 predictive movement
+
+- User requested conservative client-side movement prediction with correction.
+  Added an opt-in Settings / Controls / Predictive movement toggle, default Off.
+- A plain manual step sent by the real session can animate its entire 100 ms
+  path immediately. Camera eye coordinates are speculative; camera grid position,
+  player state, map, minimap, targeting and game results remain authoritative.
+  Matching confirmation preserves the exact curve/deadline. A refused step eases
+  back; mismatched movement returns via the source tile before the real path.
+- Separate PredictiveMovement coordinator gates plain online 3D movement to
+  visible ordinary floor, with no visible monsters, status effects, occupied
+  cells, hazards or diagonal occluding corners. At most one predicted step.
+  Input bookkeeping never generates, queues, replays or drops game commands.
+- WebTiles has no per-input sequence acknowledgements. Command-ready boundaries
+  and actual position/hops reconcile the visual step; ambiguous outstanding
+  commands suppress new predictions. Missing replies return the eye after
+  1.5 seconds without freeing outstanding-command bookkeeping. Menus/prompts,
+  disconnect, new games, level changes, teleports and setting changes cancel it.
+- Full suite: 2,005 passed, 2 optional engine skips. Forced TypeScript check,
+  production build and Worker dry-run passed. Optional engine E2E: 44 skips.
+  Tests cover 30/75/150/250/350 ms replies, exact curve preservation, refusal,
+  unrelated messages, repeated/different inputs, coalesced hops, later turns,
+  teleport/level transitions, timeout/late reply, unsafe tiles and preferences.
+- No actual server latency reduction, server configuration changes, game commands
+  or Odin hardware measurements. Prediction can still visibly correct a wrong
+  guess and a long reply can leave a pause between complete steps.

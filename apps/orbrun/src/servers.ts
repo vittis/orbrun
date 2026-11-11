@@ -548,6 +548,8 @@ export interface Settings {
   invertLook: boolean
   lookSensitivity: number
   confirmStairs: boolean
+  /** Opt-in visual prediction of one clear online step; server state is never predicted. */
+  predictiveMovement: boolean
   /** Draw the wielded weapon and off-hand item in the 3D view (rendering-3d.md II.7). */
   viewmodel: boolean
   /** What is around you: the monster list, or edge pips on the 3D view (hud.md "What is around you"). */
@@ -635,6 +637,7 @@ export const defaultSettings: Settings = {
   invertLook: false,
   lookSensitivity: 1,
   confirmStairs: false,
+  predictiveMovement: false,
   viewmodel: true,
   nearby: 'pips',
   minimapTiles: 0,
@@ -650,6 +653,7 @@ export const defaultSettings: Settings = {
 export function getSettings(): Settings {
   const saved = load<Partial<Settings>>(SETTINGS_KEY, {})
   const s = { ...defaultSettings, ...saved }
+  s.predictiveMovement = saved.predictiveMovement === true
   s.hints = hintsFrom(saved)
   s.leftRightKeys = leftRightFrom(saved, 'leftRightKeys', ['leftRightArrows', 'leftRightVim', 'leftRightNumpad'])
   s.leftRightPad = leftRightFrom(saved, 'leftRightPad', ['leftRightDpad', 'leftRightStick'])

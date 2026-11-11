@@ -247,6 +247,7 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('View', 'Hands', 'viewmodel', [true, false], 'The wielded weapon and off-hand item, drawn in view.', (v) => (v ? 'Weapon and shield shown' : 'Hidden')),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
   // Controls
+  row('Controls', 'Predictive movement', 'predictiveMovement', [false, true], 'Online 3D play: start a step into clear, visible floor immediately. A refused step eases back. Predicts one step at a time; combat and uncertain terrain wait for the server.', (v) => (v ? 'On' : 'Off'), (s) => s.renderer !== '3d'),
   ...leftRightRows,
   row('Controls', 'Swipe to turn', 'swipeTurn', ['step', 'drag'], 'A finger swiped across the view: the view turns with it and goes on to the next heading as it lifts, so a short swipe turns 45° and a long drag turns about; or the earlier turn, which springs on with the speed it lifts at.', (v) => (v === 'step' ? 'On to the next heading' : 'Earlier turn')),
   row('Controls', 'Look sensitivity', 'lookSensitivity', [1, 1.3, 1.6, 0.7], 'How far the right stick turns you.', (v) => Math.round(v * 100) + '%'),

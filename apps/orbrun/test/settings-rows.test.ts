@@ -22,6 +22,19 @@ const row = (label: string) => ALL_SETTING_ROWS.find((r) => r.label === label)!
 describe('what is written down', () => {
   beforeEach(() => store.clear())
 
+  it('keeps predictive movement opt-in, persists it and restores the Controls default', () => {
+    const prediction = row('Predictive movement')
+    expect(getSettings().predictiveMovement).toBe(false)
+    expect(prediction.group).toBe('Controls')
+    adjustSetting(prediction, 1)
+    expect(getSettings().predictiveMovement).toBe(true)
+    expect(settingValue(prediction)).toBe('On')
+    resetGroup('Controls')
+    expect(getSettings().predictiveMovement).toBe(false)
+    store.set('orbrun.settings', JSON.stringify({ predictiveMovement: 'true' }))
+    expect(getSettings().predictiveMovement).toBe(false)
+  })
+
   it('is only what the player changed, so a later default reaches everyone who never touched the row', () => {
     saveSettings({ ...defaultSettings })
     expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
