@@ -494,6 +494,20 @@ describe('buildScene on a recorded level', () => {
     expect(badges).toBeGreaterThan(0)
   })
 
+  it('identifies the server cursor separately from other cell badges', () => {
+    const st = initialState()
+    const floor = gd.dngn.id('FLOOR_NORMAL') ?? 1
+    for (const [flag, name] of [[0x00180000, 'CURSOR'], [0x00080000, 'CURSOR2'], [0x00100000, 'CURSOR3'], [0x00280000, 'TUTORIAL_CURSOR']] as const) {
+      st.map.cells.set(cellKey(1, 1), { x: 1, y: 1, g: '.', t: { bg: floor + flag, travel_trail: 1 } })
+      const cell = buildScene(st, gd).cells.get(cellKey(1, 1))!
+      expect(cell.cursorTile).toBe(gd.icons.id(name))
+      expect(cell.icons).toContain(cell.cursorTile)
+      expect(cell.icons).toContain(gd.icons.id('TRAVEL_PATH_FROM'))
+    }
+    st.map.cells.set(cellKey(1, 1), { x: 1, y: 1, g: '.', t: { bg: floor, travel_trail: 1 } })
+    expect(buildScene(st, gd).cells.get(cellKey(1, 1))!.cursorTile).toBeUndefined()
+  })
+
   it('draws no decoration by a name the server does not publish', () => {
     // the guard that would have caught SOMETHING_UNDER: a renamed tile stops
     // being drawn silently, so every name in the tables is checked at load

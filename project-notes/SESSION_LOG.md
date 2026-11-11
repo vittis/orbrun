@@ -279,3 +279,32 @@
 - No actual server latency reduction, server configuration changes, game commands
   or Odin hardware measurements. Prediction can still visibly correct a wrong
   guess and a long reply can leave a pause between complete steps.
+
+
+## 2026-11-11 — 2.5D item markers and visibility
+
+- The user's screenshot matches the separate active 2.5D worktree at
+  `/Users/vittis/.codex/worktrees/60b1/dcss-client`, rather than the chat's older
+  `/Users/vittis/dev/dcss-client` checkout. Applied changes to the matching
+  renderer branch `codex/2-5d-presentation` on `956681d`; left the older checkout
+  unchanged. Worktree writes and checks used approved sandbox escalation.
+- Exposed the server cursor tile separately among SceneCell icons, preserving
+  the original icon list for existing renderers. The 2.5D renderer uses the
+  item sprite's anchor for that cursor, leaving other badges on the ground.
+- Replaced the blue unknown-space fill with neutral world-anchored dark mist.
+  The fog uses no hidden terrain data and stays static, preserving idle sleep
+  and reduced motion. Memory tiles/art keep 44% of ambient brightness plus
+  their existing subtle fog; visible LOS stays uniformly lit.
+- Removed player light emission and distance falloff for upright art. Existing
+  environmental emitters and their occlusion remain covered by regressions.
+- `npm test`: 138 files pass / 1 optional file skipped; 2,034 tests pass /
+  2 optional engine skips. `npm run typecheck -- --force` and `npm run build`
+  pass. Build retains JSON import-attribute and chunk-size warnings.
+  `git diff --check` passes. Local browser `/testbed/dungeon-checks.html`:
+  504/504 pixel checks pass (162 new marker/LOS/fog checks, 342 existing).
+  Preview `/testbed/dungeon.html` visibly shows aligned green item frames,
+  darker memory and textured unknown space; no warning/error browser logs.
+- Pixel-test samples avoid the intentional screen vignette; synthetic cursors
+  use a wider stroke so sub-texel atlas sampling does not obscure placement.
+  Production cursor artwork remains server supplied. No commit, push,
+  deployment, authenticated session or gameplay commands performed.

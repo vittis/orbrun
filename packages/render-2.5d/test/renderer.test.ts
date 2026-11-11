@@ -166,6 +166,13 @@ describe('picking and visibility', () => {
 })
 
 describe('environmental lighting', () => {
+  it('the player never emits a light pool or lights ordinary dungeon cells', () => {
+    const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
+    expect(lightField(scene).size).toBe(0)
+    scene.player = { x: 1, y: 0 }
+    expect(lightField(scene).size).toBe(0)
+  })
+
   it.each([
     ['visible', 'blue', 2],
     ['visible', 'dry_fountain', 0],
@@ -181,11 +188,12 @@ describe('environmental lighting', () => {
   })
 
   it('lights nearby visible ground, stops at walls, and leaves memory cold', () => {
-    const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0, { kind: 'wall', occluder: true }), cell(3, 0), cell(0, 1, { visibility: 'remembered' }))
+    const scene = sceneOf(cell(0, 0), cell(1, 0), cell(1, 1, { kind: 'wall', occluder: true }), cell(1, 2), cell(0, 1, { visibility: 'remembered' }))
+    scene.cells.get(cellKey(0, 0))!.flags.lava = true
     const field = lightField(scene)
     expect(field.get(cellKey(0, 0))!.strength).toBeGreaterThan(field.get(cellKey(1, 0))!.strength)
-    expect(field.has(cellKey(2, 0))).toBe(true)
-    expect(field.has(cellKey(3, 0))).toBe(false)
+    expect(field.has(cellKey(1, 1))).toBe(true)
+    expect(field.has(cellKey(1, 2))).toBe(false)
     expect(field.has(cellKey(0, 1))).toBe(false)
   })
 

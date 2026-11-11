@@ -6,6 +6,18 @@ import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
 
 const tiles = await loadRoomTiles()
+// Synthetic server-style pickup cursor to inspect alignment with real item art.
+const marker = document.createElement('canvas')
+marker.width = marker.height = 32
+const markerInk = marker.getContext('2d')!
+markerInk.strokeStyle = '#00ff00'
+markerInk.lineWidth = 1
+markerInk.strokeRect(0.5, 0.5, 31, 31)
+const roomSource: TileSource = {
+  tile: id => id === -2 ? { atlas: 'preview-marker', sx: 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 } : tiles.tile(id),
+  atlas: name => name === 'preview-marker' ? marker : tiles.atlas(name),
+  atlasNames: () => [...tiles.atlasNames(), 'preview-marker'],
+}
 let { scene } = antechamberScene(tiles)
 scene.player = { x: 11, y: 5 }
 scene.playerOnLevel = true
@@ -16,6 +28,11 @@ scene.billboards.push(
   { x: 9, y: 3, tile: 7189, kind: 'monster', height: 0.4, attitude: 'hostile' },
   { x: 13, y: 4, tile: 7114, kind: 'monster', height: 0.5, attitude: 'friendly' },
 )
+for (const b of scene.billboards.filter(b => b.kind === 'item' && !b.lying)) {
+  const c = scene.cells.get(cellKey(b.x, b.y))!
+  c.cursorTile = -2
+  c.icons = [...(c.icons ?? []), -2]
+}
 for (const cell of scene.cells.values()) {
   if (cell.x < 5) cell.visibility = 'remembered'
   if (cell.x >= 14 && cell.x <= 16 && cell.y >= 5 && cell.y <= 6 && !cell.occluder) {
@@ -27,12 +44,12 @@ for (const cell of scene.cells.values()) {
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!
 const renderer = new Render25d({ center: { x: 9, y: 4 }, animate: !matchMedia('(prefers-reduced-motion: reduce)').matches })
 renderer.mount(canvas)
-renderer.setTiles(tiles)
+renderer.setTiles(roomSource)
 renderer.setScene(scene)
 renderer.setCamera(makeCamera(11, 5))
 const original = new Render2d({ center: { x: 9, y: 4 } })
 original.mount(canvas)
-original.setTiles(tiles)
+original.setTiles(roomSource)
 original.setScene(scene)
 original.setCamera(makeCamera(11, 5))
 const flat = document.querySelector<HTMLInputElement>('#original')!
@@ -63,7 +80,7 @@ for (const id of ['tilt', 'zoom', 'animate', 'original']) document.getElementByI
 const roomScene = scene
 document.getElementById('scene')!.addEventListener('change', async () => {
   const id = (document.getElementById('scene') as HTMLSelectElement).value
-  let source: TileSource = tiles
+  let source: TileSource = roomSource
   if (id === 'room') scene = roomScene
   else {
     const [file, image] = await Promise.all([

@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, MEMORY_SHADE, minibarRects, shadeOf,
+  cellKey, emptyScene, minibarRects,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource,
 } from '@orbrun/scene'
@@ -127,21 +127,20 @@ export class Render25d implements MapRenderer {
     return q.x > -p.scale * 2 && q.x < this.width + p.scale * 2 && q.y > -p.scale * 2 && q.y < this.height + p.scale * 2
   }
 
-  private light(cell: SceneCell) {
+  private light() {
     const tint = this.scene.level.tint
-    // Memory uses one faint black haze in the tile cache, without stacking
-    // the shared renderer's much darker memory shade underneath it.
-    const shade = shadeOf(cell, this.scene) / (cell.visibility === 'visible' ? 1 : MEMORY_SHADE)
-    return Math.min(1, shade * 1.12 * (tint.r + tint.g + tint.b) / 3)
+    // LOS determines brightness; distance from the player adds no spotlight.
+    // The tile cache applies the same memory veil to terrain and standing art.
+    return Math.min(1, 0.9 * (tint.r + tint.g + tint.b) / 3)
   }
 
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, illuminate = true) {
-    return this.tiles.draw(ctx, layers, x, y, size, this.light(cell), cell.visibility !== 'visible', cell.flash, illuminate ? this.lighting.get(cellKey(cell.x, cell.y)) : undefined)
+    return this.tiles.draw(ctx, layers, x, y, size, this.light(), cell.visibility !== 'visible', cell.flash, illuminate ? this.lighting.get(cellKey(cell.x, cell.y)) : undefined)
   }
 
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
-    // Continuous light pools supply the falloff; per-tile distance bands read as a grid.
+    // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
     const tint = this.scene.level.tint
     const ambient = 0.86 * (tint.r + tint.g + tint.b) / 3
     return this.tiles.drawPlane(ctx, layers, rect, ambient, cell.visibility !== 'visible', cell.flash, illuminate ? this.lighting.get(cellKey(cell.x, cell.y)) : undefined)
@@ -156,8 +155,7 @@ export class Render25d implements MapRenderer {
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
-    ctx.fillStyle = '#080c13'
-    ctx.fillRect(0, 0, this.width, this.height)
+    this.unexploredFog(ctx, p)
     const cells = this.cells.filter(c => this.inFrame(p, c))
 
     for (const cell of cells) {
@@ -177,7 +175,7 @@ export class Render25d implements MapRenderer {
       }
       if (cell.visibility !== 'visible') {
         if (!this.tiles.source) {
-          ctx.fillStyle = 'rgba(0,0,0,0.18)'
+          ctx.fillStyle = 'rgba(0,0,0,0.56)'
           ctx.fillRect(q.x, q.y, s, s * sy)
         }
       }
@@ -222,7 +220,14 @@ export class Render25d implements MapRenderer {
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {
       const q = project(p, cell.x - 0.5, cell.y - 0.5)
-      for (const tile of cell.icons ?? []) drawTile(ctx, this.tiles.source, { tile }, q.x, q.y, s)
+      for (const tile of cell.icons ?? []) {
+        // Item cursors frame the upright atlas art. Travel/exclusion/stair
+        // badges retain their ground anchor, even when sharing an item cell.
+        if (tile === cell.cursorTile && this.standing.some(entry => entry.cell === cell && entry.billboard?.kind === 'item' && !entry.billboard.lying)) {
+          const item = project(p, cell.x, cell.y + 0.3)
+          drawTile(ctx, this.tiles.source, { tile }, item.x - s / 2, item.y - s, s)
+        } else drawTile(ctx, this.tiles.source, { tile }, q.x, q.y, s)
+      }
       if (cell.flags.excluded) {
         ctx.strokeStyle = '#ee776b'
         ctx.lineWidth = 1
@@ -244,10 +249,36 @@ export class Render25d implements MapRenderer {
       }
     }
     const vignette = ctx.createRadialGradient(this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.3, this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.65)
-    vignette.addColorStop(0, 'rgba(3,7,15,0)')
-    vignette.addColorStop(1, 'rgba(3,7,15,0.48)')
+    vignette.addColorStop(0, 'rgba(0,0,0,0)')
+    vignette.addColorStop(1, 'rgba(0,0,0,0.48)')
     ctx.fillStyle = vignette
     ctx.fillRect(0, 0, this.width, this.height)
+  }
+
+  /** Neutral, world-anchored mist behind known geometry; uses no hidden map data.
+   * Static wisps also preserve still mode and let an idle scene sleep. */
+  private unexploredFog(ctx: Context2d, p: Projection) {
+    ctx.fillStyle = '#030404'
+    ctx.fillRect(0, 0, this.width, this.height)
+    const sy = Math.sin(p.tilt), step = 4
+    const left = Math.floor((p.x - this.width / p.scale / 2) / step) * step - step
+    const right = p.x + this.width / p.scale / 2 + step
+    const top = Math.floor((p.y - this.height / (p.scale * sy) / 2) / step) * step - step
+    const bottom = p.y + this.height / (p.scale * sy) / 2 + step
+    ctx.save()
+    ctx.scale(1, sy)
+    for (let y = top; y <= bottom; y += step) for (let x = left; x <= right; x += step) {
+      const phase = x * 1.31 + y * 2.17
+      const q = project(p, x + Math.sin(phase) * 1.2, y + Math.cos(phase) * 0.8)
+      const cy = q.y / sy, radius = p.scale * (2.8 + Math.sin(phase * 1.7) * 0.6)
+      const mist = ctx.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
+      mist.addColorStop(0, 'rgba(44,45,43,0.18)')
+      mist.addColorStop(0.45, 'rgba(35,36,34,0.065)')
+      mist.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = mist
+      ctx.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
+    }
+    ctx.restore()
   }
 
   private groundLights(ctx: Context2d, p: Projection) {
@@ -386,7 +417,7 @@ export class Render25d implements MapRenderer {
     const face = { x: roof.x, y: roof.y + roof.height, width: roof.width, height: ground.y + ground.height - roof.y - roof.height }
     ctx.fillStyle = '#343039'
     ctx.fillRect(face.x, face.y, face.width, face.height)
-    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(cell), cell.visibility !== 'visible', cell.flash, this.lighting.get(cellKey(cell.x, cell.y)))
+    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), cell.visibility !== 'visible', cell.flash, this.lighting.get(cellKey(cell.x, cell.y)))
     ctx.fillStyle = 'rgba(0,0,0,0.38)'
     ctx.fillRect(face.x, face.y, face.width, face.height)
     this.plane(ctx, p, cell, [{ tile }], height)

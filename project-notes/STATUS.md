@@ -1,5 +1,22 @@
 # Project status
 
+## Local 2.5D visibility fixes — 2026-11-11
+
+Implemented in worktree `60b1/dcss-client`, branch `codex/2-5d-presentation`,
+on top of `956681d` (0.3.13). Server item cursors now share the upright sprite
+frame; travel/stair/exclusion markers keep their ground position. Unexplored
+space uses neutral dark mist, remembered artwork is more strongly dimmed, and
+the player lantern and distance-based sprite spotlight are removed.
+Environmental lava/portal/altar lighting remains.
+
+Validation: 2,034 unit tests pass, 2 optional engine skips; forced TypeScript
+check and production build pass. All 504 real Canvas pixel checks pass across
+elevation/zoom/DPR/filtering, including marker placement, LOS contrast, fog,
+seams and sprite sizes. Local preview has synthetic pickup markers on real
+item art; no browser warning/error logs. Existing build warnings about JSON
+import attributes and large chunks remain. Changes are local, uncommitted and
+not deployed; no user game/account commands were sent.
+
 ## 0.3.11 renderer release — 2026-11-11
 
 Prepared on fork `main`, based on production source `60ee664`, for the user's

@@ -34,9 +34,10 @@ and picking regions. The existing first-person renderer remains independent.
   Contact shadows replace the original flat-view wall-shadow decals.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
-- `lighting.ts` derives a bounded set of lantern, lava, altar and portal
+- `lighting.ts` derives a bounded set of lava, altar and portal
   lights from scene semantics. Light is blocked by known occluders; unseen
   terrain never receives light and remembered terrain never emits it.
+  The player emits no light; LOS has uniform ambient brightness.
   Floor lights use continuous gradients clipped to reachable cells. Sprite
   lighting is quantized for reuse in the tile cache.
 - `tiles.ts` caches composed, tinted tiles, including transparent and tall
@@ -46,6 +47,12 @@ and picking regions. The existing first-person renderer remains independent.
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
   replacement; frames cull outside the viewport and reuse tile composites.
+
+Unexplored space uses neutral, world-anchored dark mist behind known geometry.
+Remembered tiles and standing art retain 44% of their ambient brightness,
+with a subtle fog overlay; visible tiles remain bright. Server item cursors
+share the upright item frame, while other cell badges keep their ground anchor.
+The unexplored mist is static, so it does not keep idle scenes awake.
 
 Time is presentation-only: breathing, drifting clouds and remembered-terrain fog,
 continuous water ripples, fountain ripples,
@@ -76,9 +83,10 @@ games use their server's complete tileset.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 342 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for 504 real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
-equal-atlas player/monster/item silhouettes with upright picking. These
+equal-atlas player/monster/item silhouettes with upright picking, item cursor
+alignment, independent ground badges, LOS contrast and neutral unexplored mist. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,

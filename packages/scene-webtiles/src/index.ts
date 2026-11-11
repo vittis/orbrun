@@ -1052,7 +1052,10 @@ function decorate(cell: SceneCell, t: CellTiles, bgw: FlagWord, gd: Gamedata) {
   const ck = cell.flags.cursorKind
   if (ck) {
     const cid = ck === 'tutorial' ? I.TUTORIAL_CURSOR : ck === 'cursor1' ? I.CURSOR : ck === 'cursor2' ? I.CURSOR2 : I.CURSOR3
-    if (cid !== undefined) icons.push(cid)
+    if (cid !== undefined) {
+      icons.push(cid)
+      cell.cursorTile = cid
+    }
   }
   // travel trail: the step that led here and the step that leaves, as arrows
   const trail = t.travel_trail || 0

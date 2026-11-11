@@ -29,6 +29,7 @@ Updated 2026-11-11. Status: done / partial / ready / queued / blocked / optional
 | P3-002 | P2 / M | optional | Pixi comparison spike and decision | P3-001 | Same scenes/effects; measured benefit and migration cost; Canvas retention valid |
 | P3-003 | P1 / L | queued | Confirmed-state motion/effects | P3-001, renderer decision | Bounded/cancellable effects; no authoritative prediction or hidden-state leak; reduced motion |
 | P3-004 | P1 / M | queued | Renderer resource/recovery/visual regression gates | P3-003 | Repeat mount/unmount and context/atlas failures handled; no growth; parity preserved |
+| P4-VIS-001 | P1 / S | done locally | 2.5D pickup cursor alignment, neutral unexplored mist, stronger LOS contrast, remove player spotlight | 0.3.13 renderer | 2,034 tests + 504 Canvas pixel checks + typecheck/build pass; publication not requested |
 | P4-001 | P2 / M | optional | Depth/shadow sprite prototype | P3-004 | Readability and performance compared with flat baseline |
 | P4-002 | P2 / M | optional | Projection/picking/accessibility review | P4-001 | Coordinates/control semantics unchanged; no occluded tactical information |
 | P4-003 | P2 / L | optional | Geometry/Three decision if simpler approach fails | P4-002 | ADR justifies cost and supported-renderer count; no automatic hybrid stack |

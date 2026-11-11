@@ -184,6 +184,8 @@ export interface SceneCell {
    * "new stairs" badge, exclusion marks on unseen cells, rampage hints.
    */
   icons?: TileId[]
+  /** The server cursor among `icons`; raised renderers can align it with a standing item. */
+  cursorTile?: TileId
   cloud?: TileId
   /**
    * The travel trail through this cell (`show_travel_trail`): the heading the

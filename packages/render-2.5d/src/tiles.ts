@@ -61,7 +61,7 @@ export class TileCache {
       c.fillStyle = `rgba(0,0,0,${1 - shade})`
       c.fillRect(0, 0, size, size)
       if (memory) {
-        c.fillStyle = 'rgba(0,0,0,0.18)'
+        c.fillStyle = 'rgba(0,0,0,0.56)'
         c.fillRect(0, 0, size, size)
       }
       if (glow) {

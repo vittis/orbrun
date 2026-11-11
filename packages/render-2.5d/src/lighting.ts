@@ -28,9 +28,6 @@ export function lightingFor(scene: Scene): { field: Map<CellKey, Light>; pools: 
   }
   emitters.sort((a, b) => Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
   emitters.length = Math.min(48, emitters.length)
-  if (scene.playerOnLevel && scene.cells.get(cellKey(scene.player.x, scene.player.y))?.visibility === 'visible') {
-    emitters.unshift({ ...scene.player, radius: 7, colour: [255, 201, 122], power: 0.2 })
-  }
   const result = new Map<CellKey, Light>()
   const pools = emitters.map(source => ({ source, cells: [] as SceneCell[] }))
   for (const [key, cell] of scene.cells) {
