@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest'
 import { emptyScene, type MapRenderer } from '@orbrun/scene'
-import { CombatPopups } from '../src/combat-popups'
+import { CombatPopups, popupMotion } from '../src/combat-popups'
 
 function preview() {
   const popups = new CombatPopups(), view = document.createElement('canvas'), scene = emptyScene()
@@ -14,6 +14,21 @@ function preview() {
 }
 
 describe('popup presentation', () => {
+  it('gives each damage type a distinct bounded trajectory and stops motion when requested', () => {
+    const tones = ['physical', 'fire', 'cold', 'poison', 'acid', 'electric', 'magic'] as const
+    const poses = tones.map(tone => popupMotion({ kind: 'hit', text: '7', tone }, 0.12, 1, false))
+    expect(new Set(poses.map(p => JSON.stringify(p))).size).toBe(tones.length)
+    for (const tone of tones) for (let frame = 0; frame <= 66; frame++) {
+      const event = { kind: 'hit' as const, text: '7', tone }
+      const p = popupMotion(event, frame / 66, 1, false)
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(6)
+      expect(Math.abs(p.y)).toBeLessThanOrEqual(10)
+      expect(Math.abs(p.angle)).toBeLessThanOrEqual(5)
+      expect(popupMotion(event, frame / 66, 1, true)).toEqual({ x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 })
+    }
+    const event = { kind: 'hit' as const, text: '20' }
+    expect(popupMotion({ ...event, heavy: true }, 0.1, 1, false).scale).toBeGreaterThan(popupMotion(event, 0.1, 1, false).scale)
+  })
   it('keeps damage and useful feedback in concise mode without generic hit or slain labels', () => {
     const { popups } = preview()
     popups.add([

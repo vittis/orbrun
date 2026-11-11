@@ -150,6 +150,8 @@ layer is implemented independently for Orbrun's renderers.
   dependency.
 - Grenze Gotisch by Omnibus-Type (SIL Open Font License 1.1,
   `assets/fonts/OFL.txt`): the title face, as described above.
+- Barlow Condensed Bold by the Barlow Project Authors (SIL Open Font License
+  1.1, `apps/orbrun/public/fonts/BARLOW-OFL.txt`): self-hosted combat popup face.
 - Tile art and atlases for gameplay are **not** distributed here. They are
   fetched at runtime from the connected DCSS server, which serves its own
   copies. DCSS tiles are by the DCSS contributors under the licenses stated

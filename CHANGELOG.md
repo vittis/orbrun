@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.20 — 2026-11-11
+
+- Brighten Dungeon (2.5D) ambient lighting and dark floor artwork, with lighter contact shadows and a gentler vignette.
+- Share one smooth light field across floors, walls and sprites. Remove per-tile light tints; soften torch flicker and fade spell afterglows every frame.
+- Draw spell bolts as thinner, smoothly filtered ground-plane effects, preserving connected beam segments. Reduce cloud opacity, impact rings and ambient particles.
+- Use a new condensed combat-number font with distinct motion and glow for physical, fire, cold, poison, acid, electric and magical damage. Heavy hits pop more strongly; reduced motion keeps numbers still.
+
 ## 0.3.19 — 2026-11-11
 
 - Remove player lighting halos in Dungeon (2.5D), use neutral black shading with faint fog outside line of sight, and make living animations smoother and more pronounced.

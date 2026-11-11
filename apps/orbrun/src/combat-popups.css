@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/barlow-condensed-700.ttf') format('truetype');
+}
 .combat-popups {
   position: absolute;
   overflow: hidden;
@@ -11,12 +18,15 @@
   position: absolute;
   white-space: nowrap;
   color: var(--impact);
-  font: 800 clamp(16px, 2.2vw, 23px)/1.1 var(--mono, monospace);
-  letter-spacing: -0.04em;
+  font: 700 clamp(19px, 2.5vw, 27px)/1 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   text-shadow: -1px -1px #100e16, 1px -1px #100e16, -1px 1px #100e16, 1px 2px #100e16, 0 2px 6px #000;
   will-change: transform, opacity;
+  transform-origin: 50% 80%;
+  --glow: 0;
 }
+.combat-value { position: relative; display: inline-block; }
 .combat-estimate {
   display: inline-block;
   margin-right: 0.09em;
@@ -41,8 +51,10 @@
 .combat-popup.fire { --impact: #ffab62; }
 .combat-popup.cold { --impact: #9ce5ff; }
 .combat-popup.poison { --impact: #b2ec78; }
+.combat-popup.acid { --impact: #e3ed79; }
+.combat-popup.electric { --impact: #b2e9ff; }
 .combat-popup.magic { --impact: #d0b4ff; }
-.combat-popup.heavy { font-size: clamp(20px, 2.8vw, 29px); }
+.combat-popup.heavy { font-size: clamp(24px, 3.2vw, 35px); }
 .combat-popup.hurt { --impact: #ff7878; }
 .combat-popup.heal { --impact: #8fe4ad; }
 .combat-popup.miss, .combat-popup.block {
@@ -57,15 +69,37 @@
 .combat-popup.hit::before, .combat-popup.kill::before {
   content: '';
   position: absolute;
-  width: 5px;
-  height: 5px;
-  left: -9px;
+  width: 3px;
+  height: 3px;
+  left: -6px;
   top: 45%;
   background: var(--impact);
   transform: rotate(45deg);
-  box-shadow: 0 0 7px var(--impact);
+  box-shadow: 0 0 4px var(--impact);
 }
+.combat-popup.fire .combat-value { text-shadow: 0 1px 1px #541700, 0 -2px 5px #f86a2488, 0 var(--heat-rise, -3px) 10px #ff9b3244; }
+.combat-popup.cold .combat-value { text-shadow: 0 -1px 0 #effcff, 0 0 5px #88dfff88; }
+.combat-popup.poison .combat-value { text-shadow: 0 2px 2px #244a14, 0 0 6px #a0ea6566; }
+.combat-popup.magic .combat-value { text-shadow: 0 0 3px #f3dfff, 0 0 9px #ac81ff88; }
+.combat-popup.electric .combat-value { text-shadow: -1px 0 0 #75baff, 1px 0 0 #fff, 0 0 7px #8fcfff99; }
+.combat-popup.acid .combat-value { text-shadow: 0 2px 1px #545f13, 0 3px 6px #def46388; }
+.combat-popup.heal .combat-value { text-shadow: 0 0 6px #8fe4ad77; }
+.combat-popup:is(.fire, .cold, .poison, .acid, .electric, .magic) .combat-value::after {
+  content: '';
+  position: absolute;
+  inset: -0.12em -0.18em;
+  border-radius: 50%;
+  box-shadow: 0 0 8px 1px var(--impact);
+  opacity: calc(var(--glow) * 0.2);
+  pointer-events: none;
+}
+.combat-popup.cold .combat-value::after { border-radius: 2px; border-bottom: 1px solid var(--impact); }
+.combat-popup.poison .combat-value::after { box-shadow: 0 4px 7px -2px var(--impact); }
+.combat-popup.electric .combat-value::after { border-radius: 0; border-left: 1px solid var(--impact); transform: skewX(-15deg); }
+.combat-popup[data-motion="still"] .combat-value::after { display: none; }
+.combat-popup[data-motion="still"]::before { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .combat-popup { will-change: opacity; }
   .combat-popup::before { display: none; }
+  .combat-value::after { display: none; }
 }

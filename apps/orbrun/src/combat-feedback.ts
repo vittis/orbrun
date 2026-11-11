@@ -3,7 +3,7 @@ import { formattedStringToText, type GameState, type ServerMessage, type StatusE
 import { estimateDamage, hitDamageBand, woundRank, type DamageBand } from './damage-estimate'
 
 export type PopupKind = 'hit' | 'miss' | 'block' | 'kill' | 'hurt' | 'heal' | 'status' | 'level'
-export type PopupTone = 'physical' | 'fire' | 'cold' | 'poison' | 'magic'
+export type PopupTone = 'physical' | 'fire' | 'cold' | 'poison' | 'acid' | 'electric' | 'magic'
 export interface CombatPopup {
   text: string
   kind: PopupKind
@@ -30,10 +30,12 @@ const attacks = /^(?:hit|slash|slice|stab|pierce|impale|skewer|bludgeon|whack|sm
 const bare = (s: string) => s.toLowerCase().replace(/^(?:the |an? |your )/, '').trim()
 const plain = (s: string) => formattedStringToText(s).trim()
 function toneOf(s: string): PopupTone {
+  if (/acid|corro/i.test(s)) return 'acid'
   if (/fire|flame|burn|lava|scorch/i.test(s)) return 'fire'
   if (/cold|frost|freez|ice|icicle/i.test(s)) return 'cold'
-  if (/poison|acid|venom/i.test(s)) return 'poison'
-  if (/magic|lightning|electric|negative energy|drain|holy/i.test(s)) return 'magic'
+  if (/poison|venom/i.test(s)) return 'poison'
+  if (/lightning|electr/i.test(s)) return 'electric'
+  if (/magic|negative energy|drain|holy/i.test(s)) return 'magic'
   return 'physical'
 }
 
@@ -78,7 +80,7 @@ const statusRules: [RegExp, string, PopupTone][] = [
   [/pois|poison/i, 'POISONED', 'poison'], [/conf/i, 'CONFUSED', 'magic'],
   [/paral/i, 'PARALYSED', 'magic'], [/slow/i, 'SLOWED', 'cold'],
   [/haste|fast/i, 'HASTED', 'magic'], [/berserk/i, 'BERSERK', 'fire'],
-  [/corro/i, 'CORRODED', 'poison'], [/petr/i, 'PETRIFYING', 'physical'],
+  [/corro/i, 'CORRODED', 'acid'], [/petr/i, 'PETRIFYING', 'physical'],
   [/invis/i, 'INVISIBLE', 'magic'], [/silence|silenced/i, 'SILENCED', 'magic'],
   [/held|net|web/i, 'HELD', 'physical'],
 ]

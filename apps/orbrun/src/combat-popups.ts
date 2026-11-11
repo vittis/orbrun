@@ -11,7 +11,26 @@ const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.t
 function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.className = popupClass(event)
   if (event.estimated) node.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
-  else node.textContent = event.text
+  else node.replaceChildren(h('span', { class: 'combat-value' }, event.text))
+}
+
+/** Bounded trajectories driven by the same frame clock as placement/fading.
+ * Elemental motion is applied to the number, leaving its anchor stable. */
+export function popupMotion(event: CombatPopup, age: number, direction: number, reduced: boolean) {
+  if (reduced) return { x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 }
+  const settle = Math.exp(-age * 9), wave = Math.sin(age * Math.PI * 2)
+  let x = 0, y = 0, sx = 1, sy = 1, angle = 0
+  const tone = event.kind === 'heal' ? 'heal' : event.tone ?? 'physical'
+  if (tone === 'fire') { x = Math.sin(age * 9) * 3 * (1 - age); y = -age * 9; angle = wave * 3 }
+  else if (tone === 'cold') { x = direction * age * 5; sx += settle * 0.1; sy -= settle * 0.12; angle = direction * settle * 3 }
+  else if (tone === 'poison') { x = wave * 4; y = Math.sin(age * Math.PI) * 3; angle = wave * 4 }
+  else if (tone === 'acid') { x = Math.sin(age * 7) * 2; y = age * 6; sy -= settle * 0.15 }
+  else if (tone === 'electric') { x = Math.sin(age * 28) * 3 * Math.exp(-age * 7); angle = Math.sin(age * 22) * 4 * settle }
+  else if (tone === 'magic') { x = Math.sin(age * 12) * 2 * settle; angle = Math.sin(age * 9) * 5 * settle }
+  else if (tone === 'heal') y = -Math.sin(age * Math.PI / 2) * 7
+  else { x = direction * 5 * Math.sin(Math.min(1, age / 0.28) * Math.PI) * settle; sy -= settle * 0.08; sx += settle * 0.06 }
+  const kick = Math.sin(Math.min(1, age / 0.22) * Math.PI)
+  return { x, y, sx, sy, angle, scale: 1 + kick * (event.heavy ? 0.34 : 0.2), glow: (tone === 'physical' ? 0.12 : 0.45) + settle * 0.4 }
 }
 
 /** A bounded, pointer-transparent layer, positioned from the renderer after each frame. */
@@ -83,12 +102,15 @@ export class CombatPopups {
       const visible = anchor && anchor.x >= 0 && anchor.x <= width && anchor.y >= 0 && anchor.y <= height
       p.node.hidden = !visible
       if (anchor && visible) {
+        const motion = popupMotion(e, age, p.slot % 2 ? -1 : 1, reducedMotion)
         const drift = reducedMotion ? 0 : (e.kind === 'miss' ? 22 : 6) * age * (p.slot % 2 ? -1 : 1)
         const rise = reducedMotion ? 0 : 36 * age
-        const pop = reducedMotion ? 1 : 1 + 0.22 * Math.sin(Math.min(1, age / 0.18) * Math.PI)
         p.node.style.left = `${Math.max(Math.min(48, width / 2), Math.min(width - Math.min(48, width / 2), anchor.x))}px`
         p.node.style.top = `${Math.max(38, anchor.y - 12 - p.slot * 24)}px`
-        p.node.style.transform = `translate(calc(-50% + ${drift}px), calc(-100% - ${rise}px)) scale(${pop})`
+        p.node.style.transform = `translate(calc(-50% + ${drift + motion.x}px), calc(-100% - ${rise - motion.y}px)) rotate(${motion.angle}deg) scale(${motion.scale * motion.sx}, ${motion.scale * motion.sy})`
+        p.node.style.setProperty('--glow', `${motion.glow}`)
+        p.node.style.setProperty('--heat-rise', `${reducedMotion ? -3 : -3 - age * 3}px`)
+        p.node.dataset.motion = reducedMotion ? 'still' : 'full'
         p.node.style.opacity = String(Math.min(1, (1 - age) / 0.35))
       }
       return true

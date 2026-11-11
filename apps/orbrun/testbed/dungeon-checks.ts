@@ -1,6 +1,7 @@
 /** Real Canvas checks: DOM mocks cannot detect raster seams or filtering bleed. */
 import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
+import { surfaceLightChecks } from './surface-light-checks'
 
 const atlas = document.createElement('canvas')
 atlas.width = 128
@@ -48,7 +49,7 @@ for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) fo
     const pixels = canvas.getContext('2d')!.getImageData(x, y, width, height).data
     let badPixels = 0
     for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] !== 223 || pixels[i + 1] !== 223 || pixels[i + 2] !== 223 || pixels[i + 3] !== 255) badPixels++
+      if (pixels[i] !== 255 || pixels[i + 1] !== 255 || pixels[i + 2] !== 255 || pixels[i + 3] !== 255) badPixels++
     }
     checks++
     if (badPixels) failures.push({ kind: 'seam', viewWidth, viewHeight, dpr, filterScaling, degrees, zoom, wall, badPixels, firstPixel: [...pixels.slice(0, 4)] })
@@ -160,4 +161,6 @@ for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (
   if (dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
   r.destroy()
 }
+const surfaces = surfaceLightChecks()
+checks += surfaces.checks; failures.push(...surfaces.failures)
 document.querySelector('#result')!.textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)

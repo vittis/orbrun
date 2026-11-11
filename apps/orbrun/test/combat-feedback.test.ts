@@ -26,6 +26,11 @@ function harness() {
 }
 
 describe('combat sentences', () => {
+  it('keeps electric and acid damage distinct from magic and poison', () => {
+    expect(combatText('You electrocute the goblin for 7 damage.')[0]?.tone).toBe('electric')
+    expect(combatText('You burn the goblin with acid for 7 damage.')[0]?.tone).toBe('acid')
+    expect(combatText('The bolt hits the goblin with acid for 7 damage.')[0]?.tone).toBe('acid')
+  })
   it('uses actual damage when supplied and honest hit feedback otherwise', () => {
     expect(combatText('<yellow>You slash the goblin for 23!!</yellow>')[0]).toMatchObject({ kind: 'hit', text: '23', target: 'the goblin', heavy: true })
     expect(combatText('You hit the goblin.')[0]).toMatchObject({ text: 'HIT', heavy: false })

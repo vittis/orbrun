@@ -1,5 +1,21 @@
 # Project status
 
+## 0.3.20 smooth lighting and effects — prepared 2026-11-11
+
+User authorized commit and production deployment. App 0.3.20 uses immutable
+source tag `cloudflare-online-v1.17`. 2.5D LOS ambience is brighter; floors,
+wall roofs/faces and masked standing art sample one continuous light texture.
+Torch flicker and spell afterglows are smooth per-frame effects. Beam art is
+thinned and plane-aligned without breaking connected segments; other ambient
+VFX are quieter. Damage numbers use self-hosted Barlow Condensed Bold with
+bounded type-specific animation, distinct acid/electric tones and still mode.
+
+Validation: 2,120 unit tests pass / two optional-engine skips; forced
+TypeScript, production build and ASSETS-only Worker dry-run pass. Optional
+engine E2E: 44 skips. The Canvas suite has 576 checks, including 18 targeted
+surface-light/beam checks. 14 animation/impact checks and the interactive
+`/testbed/effects.html` preview pass. Hosted verification follows rollout.
+
 ## 0.3.19 2.5D refinements — deployed 2026-11-11
 
 User authorized commit to main and deployment. App 0.3.19 uses immutable

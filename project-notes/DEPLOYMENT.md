@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.19 point at the `cloudflare-online-v1.16` release tag in
+Source links for 0.3.20 point at the `cloudflare-online-v1.17` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -398,3 +398,32 @@ Optional engine E2E: 44 skips because local engine artifacts are absent.
 
 Post-rollout evidence stays on the working branch, preserving production main
 and the immutable source tag at the exact deployed code commit.
+
+
+## 0.3.20 smooth lighting and effects release — 2026-11-11
+
+User authorized commit and production deployment after implementation.
+Prepared source tag `cloudflare-online-v1.17`, app 0.3.20. Brighter uniform
+LOS ambience, lifted dark atlas texels and reduced vignette/shadows improve
+readability. One continuous light texture supplies floors, wall roofs/faces
+and masked sprites; reachability remains occlusion-aware, while flicker and
+afterglows update every frame without per-cell tint quantization.
+
+Spell bolts use their server art on the ground plane with softened, thinned
+alpha and connected segment edges. Clouds, impact rings and particles are
+smaller/quieter. Self-hosted Barlow Condensed Bold supplies damage numbers;
+physical, fire, cold, poison, acid, electric and magic get distinct bounded
+trajectories and glow. Reduced motion freezes movement and glow motion.
+
+Local browser preview: `/testbed/effects.html`; 18 added real-pixel checks
+cover brightness, continuity over floor/raised-wall joins, alpha masking,
+memory protection, smooth flicker and thin connected beam segments at DPR1/2.
+The full raster suite now contains 576 checks. Final release checks and
+hosted rollout verification are recorded below after execution.
+
+Final release checks: forced TypeScript, 2,120 unit tests/two optional-engine
+skips, production build and ASSETS-only Worker dry-run pass. Engine E2E: 44
+explicit skips. All 558 original raster checks, the 18 new surface/beam checks
+and 14 animation/impact checks pass; the complete current raster suite is 576.
+The effects preview shows the new font and seven damage styles without
+console warnings/errors. Rollout follows the atomic main/source-tag push.

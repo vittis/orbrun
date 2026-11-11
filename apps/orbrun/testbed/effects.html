@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2.5D light and combat effects</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #151619; color: #deddd8; font: 14px system-ui, sans-serif; }
+    header { display: flex; align-items: center; gap: 24px; padding: 18px 24px; }
+    h1 { font-size: 16px; font-weight: 500; margin: 0; }
+    label { display: flex; align-items: center; gap: 8px; }
+    #stage { position: relative; height: min(65vh, 600px); }
+    canvas { display: block; width: 100%; height: 100%; }
+    #numbers { position: relative; height: 150px; border-top: 1px solid #34363c; background: #202329; }
+    #labels { display: flex; justify-content: space-around; padding-top: 118px; color: #b7bac1; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header><h1>2.5D lighting and combat effects</h1><label><input id="still" type="checkbox"> Still / reduced motion</label><label><input id="light" type="checkbox" checked> Torch lighting</label></header>
+  <div id="stage"><canvas aria-label="Brighter dungeon with continuous torch lighting and slim spell bolts"></canvas></div>
+  <div id="numbers"><div id="labels"></div></div>
+  <script type="module" src="./effects.ts"></script>
+</body>
+</html>

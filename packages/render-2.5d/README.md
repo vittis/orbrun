@@ -34,15 +34,17 @@ and picking regions. The existing first-person renderer remains independent.
   Contact shadows replace the original flat-view wall-shadow decals.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
-- `lighting.ts` derives a bounded set of lava, altar and portal
-  lights from scene semantics. Light is blocked by known occluders; unseen
-  terrain never receives light and remembered terrain never emits it.
-  The player emits no light; LOS has uniform ambient brightness.
-  Floor lights use continuous gradients clipped to reachable cells. Sprite
-  lighting is quantized for reuse in the tile cache.
+- `lighting.ts` builds one continuous world-space light texture from semantic
+  emitters. Floors, wall roofs/faces and alpha-masked sprites all sample that
+  field, without per-cell colour steps. Reachability is cached separately from
+  smooth per-frame flicker and afterglow fading. Known occluders block light;
+  unseen and remembered terrain never receives it. The player emits no light.
+  LOS has uniform bright ambient exposure and a gentle vignette.
 - `tiles.ts` caches composed, tinted tiles, including transparent and tall
   artwork. Terrain uses unpadded composites so filtering cannot sample a
   transparent border; standing artwork keeps its tall/offset padding.
+  Dynamic lighting stays outside the tile cache. Beam art is plane-aligned,
+  alpha-thinned and smoothly filtered without shortening adjoining segments.
   The cache is bounded to 1,024 surfaces, does no pixel readback,
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
@@ -83,7 +85,7 @@ games use their server's complete tileset.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 558 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for 576 real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist. These
