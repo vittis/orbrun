@@ -1,24 +1,31 @@
 # Project status
 
-Release **0.3.7 is LIVE** at https://dcss-client.vittis.workers.dev.
-Source tag `cloudflare-online-v1.3` and production `main` point to
-`2aada9317dedd33108d675466890068a9cebb488`. Worker version
-`73ea14db-a8a4-478d-a859-c0fc2e5ec793` serves 100% of traffic.
+Release **0.3.8 is prepared; publication in progress**. Production is still
+0.3.7 until rollout verification below is updated. Source links for the new
+release target immutable tag `cloudflare-online-v1.4`.
 
-The release includes input-before-render scheduling, receipt-timed confirmed
-movement, and automatic launch/resume fullscreen with first-tap/key fallback.
-Validation: 1,950 tests passed, two optional-engine tests skipped; forced clean
-TypeScript check, production build and Worker dry-run passed. Cloudflare build
-`a2664106-0498-4bb8-897d-5ed9ec3504ca` deployed successfully. Live Chrome shows
-0.3.7 and loaded anonymous CBRG 0.34 spectating with no console errors. The live
-entry bundle matches the locally validated build byte for byte; source links
-and strict CSP are correct.
+User confirmed the original comparison was offline. Follow-up original online
+screenshots on CBRG show response p50 147–150 ms (one p95 343 ms), consistent
+with our online response delay. The user authorized the recommended movement
+tweaks: a bounded camera preview and faster completion after delayed confirmation.
 
-Physical Odin 3 input latency and system-bar behavior remain to be checked by
-the user. Original deployed game/runner/camera/main sources match the pre-fix
-fork baseline, so the whole reported device-specific difference is not yet
-attributed. Browser fullscreen can require touch/keyboard activation; no
-Settings visit is needed. See DEPLOYMENT and SESSION_LOG for release evidence.
+Implemented an online-only 18%-tile eye preview on visible ordinary empty floor,
+without changing player position or commands. Repeats cannot accumulate distance
+or refresh the timeout; missing replies return within 430 ms. Refusals, prompts,
+visible monsters, status effects, overlays and connection closure cancel it.
+Reduced motion, offline play and 2D retain their behavior. Confirmed single manual
+steps subtract response wait from their 100–140 ms glide, keeping a 60 ms minimum.
+Batched paths, travel and monster timing retain their existing cadence.
+
+Validation: 1,987 tests passed / 2 optional engine skips; forced TypeScript check,
+production build and Worker dry-run passed. Optional engine E2E: 44 skips.
+Chrome camera simulation: first visible motion 4 ms, response at 154 ms,
+landing 67 ms later, max unconfirmed offset 0.18 tiles. This is a desktop
+simulation, not an Odin or live server latency measurement. Screenshot:
+`evidence/release-038-preview.png`. Temporary testbed removed.
+
+0.3.7 rollback: commit `2aada9317dedd33108d675466890068a9cebb488`, tag
+`cloudflare-online-v1.3`, Worker `73ea14db-a8a4-478d-a859-c0fc2e5ec793`.
 The Phase 0 snapshot below is historical.
 
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**

@@ -1,5 +1,85 @@
 # Session log
 
+## 2026-11-11 — 0.3.8 online movement anticipation
+
+- Follow-up original screenshots show online CBRG (`/play/cbrg/dcss-git`),
+  response p50 147–150 ms and one p95 343 ms. User confirms offline comparison
+  explained the difference, then authorizes the recommended responsiveness tweaks.
+- Added a presentation-only 0.18-tile preview, capped to one direction without
+  renewing its timeout on held inputs. Visible ordinary empty floor only; any
+  visible monster, special terrain, item/cloud, status effect or prompt disables
+  it. Diagonals cannot peek around blocked corners. Offline/2D/reduced motion
+  are excluded. Missing replies return after 350 ms plus an 80 ms ease back.
+- Runner provides a direction hint through the existing synchronous send path;
+  no new commands, input queue or change to authoritative position. Readiness
+  markers reconcile after scene flush so a confirmation in the same response
+  consumes the preview before refusal handling. Outstanding input prevents fresh
+  previews after timeout. Wrong-direction confirmations return through the real
+  cell; level changes/teleports clear it.
+- Attributed single online manual steps reduce their remaining camera glide by
+  time spent awaiting confirmation, bounded to 60 ms. Unattributed/batched paths
+  and monster timing remain unchanged.
+- Added 37 regression tests, including 60/120 Hz first-frame progress, repeat and
+  timeout limits, refused/corrected moves, modes/hazards/reduced motion, command
+  count and response-batch ordering. Updated existing game-movement fixture with
+  its missing server descriptor after the first full run exposed the omission.
+- Final local suite: 1,987 passed / 2 optional engine skips. Forced tsc/build and
+  Worker dry-run passed; optional engine E2E explicitly skips all 44 tests.
+- Chrome real-renderer camera simulation: preview visible at 4 ms, maximum offset
+  0.18 tiles before simulated reply at 154 ms; landed 67 ms after the reply.
+  Screenshot evidence/release-038-preview.png. Temporary testbed removed. This
+  measures desktop presentation, not physical Odin or actual online response time.
+- Prepared package/changelog 0.3.8 and source links cloudflare-online-v1.4.
+  Publication and live smoke verification follow.
+
+## 2026-11-11 — Odin screenshot evidence
+
+- Inspected all 13 supplied photographs; user identifies original by its Chrome
+  bar. All legible original URLs are `/play/offline/dcss-git?perf#Player`.
+  Checked route/server/session/local connection code: this selects a local
+  WebAssembly engine, not an online DCSS server. The generic overlay `net up`
+  and `rtt` labels also apply to that local connection.
+- Original representative interval p50/p95 16.5/17.0 ms, response 7.6/8.0 ms,
+  time-to-draw 19.1/20.6 ms. Fork representative interval 8.3/8.6 ms, response
+  152/235 ms, time-to-draw 164/244 ms; other fork windows show response
+  169/263 and 205/274 ms. Idle zero-sample captures excluded.
+- Evidence explains the captured difference as local-engine versus online
+  response latency, consistent with immediate camera motion. RTT includes
+  transport/server/application response work; it is not a pure network ping.
+  No measured rendering bottleneck or justified additional production fix.
+- Updated investigation evidence/status only. No application edit, test run,
+  commit, push or deployment in this screenshot review. Request comparison
+  with original explicitly connected to the same online server before further
+  latency changes. Restoring offline support is a separate scope decision.
+
+## 2026-11-11 — Remaining Odin-only latency investigation
+
+- User says 0.3.7 may help but remains slower than original on Odin, while desktop
+  keyboard matches original. Clarified that both comparisons use installed apps
+  and touchscreen movement also lags. This invalidates a controller-only diagnosis.
+- Investigated independent command polling; discarded the uncommitted experiment
+  after the touch clarification. No polling or gameplay production changes remain.
+- Added offline replay tools: `node_modules/.bin/vite-node tools/perf/scene-replay.ts`
+  and `node_modules/.bin/vite-node tools/perf/transport-replay.ts`. Only pinned local
+  fixtures and trusted repository history are executed for the upstream reference.
+  Seven alternating-order runs after warm-up: 425-message/1,161-cell scene replay
+  medians 84.43 ms upstream / 79.66 ms current. Transport 265,624-byte recording:
+  1.147 / 1.411 ms per replay, same dispatch count. These desktop measurements
+  do not establish device performance or explain a perceptible input pause.
+- Tested native versus shared frame scheduling in Chrome at observed ~120 Hz,
+  with 0/12/22 ms controlled callback work for 1.5 seconds per case. Frame counts
+  and p50/p95 gaps were comparable. Removed temporary testbed afterward; retained
+  result data in evidence/odin-latency-investigation.json. No scheduler change.
+- Asked for Odin interval/rtt/ttd p50/p95 values from each app's existing ?perf
+  overlay, and whether local camera turns/drags also lag. No answer yet. Ensure
+  any on-device comparison preserves installed/display mode. ADB is not available
+  on this host. No physical measurements, identified root cause, additional fix,
+  commit, push, or deployment in this follow-up so far.
+- Follow-up answer: camera turns/drags are immediate; forward steps lag. User
+  will attach the requested performance screenshots next. Narrow the comparison
+  to server-response latency and confirmed-step scene work, rather than general
+  controller/display responsiveness. Await screenshots before choosing a fix.
+
 ## 2026-11-11 — Authorized 0.3.7 publication and launch fullscreen
 
 - User explicitly requested deploying 0.3.7 and making fullscreen automatic on

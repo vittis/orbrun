@@ -1,0 +1,151 @@
+{
+  "date": "2026-11-11",
+  "production": "0.3.7",
+  "userObservations": {
+    "odin": "Both touch and physical controls lag relative to original Orbrun",
+    "comparison": "Both installed apps, online on same server",
+    "desktop": "Keyboard responsive and similar to original",
+    "camera": "Immediate; forward steps lag"
+  },
+  "limits": "Desktop benchmarks are not Odin measurements. User supplied Odin photographs now identify an offline-versus-online comparison; they do not establish same-server online parity or isolate network transit from server processing. Overlay RTT is an approximate command-to-applied-response measurement, not ICMP ping.",
+  "recordedSceneReplay": {
+    "cells": 1161,
+    "messages": 425,
+    "upstreamMedianMs": 84.43,
+    "clientMedianMs": 79.66,
+    "sameFlagChecksum": true
+  },
+  "recordedTransportReplay": {
+    "frames": 425,
+    "bytes": 265624,
+    "upstreamMedianMs": 1.147,
+    "clientMedianMs": 1.411,
+    "sameMessageCount": true
+  },
+  "chromeFrameScheduling": [
+    {
+      "mode": "native",
+      "workMs": 0,
+      "frames": 180,
+      "p50Ms": 8.3,
+      "p95Ms": 9.3
+    },
+    {
+      "mode": "scheduler",
+      "workMs": 0,
+      "frames": 181,
+      "p50Ms": 8.3,
+      "p95Ms": 9.3
+    },
+    {
+      "mode": "native",
+      "workMs": 12,
+      "frames": 123,
+      "p50Ms": 9.3,
+      "p95Ms": 17.1
+    },
+    {
+      "mode": "scheduler",
+      "workMs": 12,
+      "frames": 122,
+      "p50Ms": 9.3,
+      "p95Ms": 17.3
+    },
+    {
+      "mode": "native",
+      "workMs": 22,
+      "frames": 68,
+      "p50Ms": 25.0,
+      "p95Ms": 25.9
+    },
+    {
+      "mode": "scheduler",
+      "workMs": 22,
+      "frames": 68,
+      "p50Ms": 24.9,
+      "p95Ms": 25.4
+    }
+  ],
+  "pending": [
+    "User assesses 0.3.8 movement feel on Odin 3. Actual network/server delay remains unchanged."
+  ],
+  "odinScreenshots": {
+    "directory": "WhatsApp Unknown 2026-11-11 at 02.30.30",
+    "inspected": 13,
+    "identity": "User identifies visible Chrome bar as original Orbrun. Every legible original address reads orbrun.app/play/offline/dcss-git?perf#Player.",
+    "originalRepresentative": {
+      "file": "WhatsApp Image 2026-11-11 at 02.29.15 (3).jpeg",
+      "mode": "local-wasm (offline)",
+      "intervalP50Ms": 16.5,
+      "intervalP95Ms": 17.0,
+      "rttP50Ms": 7.6,
+      "rttP95Ms": 8.0,
+      "ttdP50Ms": 19.1,
+      "ttdP95Ms": 20.6
+    },
+    "forkRepresentative": {
+      "file": "WhatsApp Image 2026-11-11 at 02.29.15 (2).jpeg",
+      "mode": "online (production is online-only; fullscreen address not visible)",
+      "intervalP50Ms": 8.3,
+      "intervalP95Ms": 8.6,
+      "rttP50Ms": 152,
+      "rttP95Ms": 235,
+      "ttdP50Ms": 164,
+      "ttdP95Ms": 244
+    },
+    "forkAdditional": [
+      {
+        "file": "WhatsApp Image 2026-11-11 at 02.29.14 (2).jpeg",
+        "rttP50Ms": 169,
+        "rttP95Ms": 263,
+        "ttdP50Ms": 176,
+        "ttdP95Ms": 268
+      },
+      {
+        "file": "WhatsApp Image 2026-11-11 at 02.29.14.jpeg",
+        "rttP50Ms": 205,
+        "rttP95Ms": 274,
+        "ttdP50Ms": 209,
+        "ttdP95Ms": 283
+      }
+    ],
+    "finding": "Captured movement delay is dominated by waiting for online command responses. The original local engine replies in about 7 ms. Smooth fork frame intervals and immediate camera turns agree with this. Earlier user statement that both were online is contradicted for these captures by the original route.",
+    "limitations": "Photographs, some cropped/blurred, not raw traces. Idle captures with n=0 excluded. Percentile differences are not paired per-command render measurements. No production code change justified by these captures."
+  },
+  "onlineFollowup": {
+    "files": [
+      "WhatsApp Image 2026-11-11 at 02.39.24 (1).jpeg",
+      "WhatsApp Image 2026-11-11 at 02.39.24.jpeg"
+    ],
+    "originalRoute": "/play/cbrg/dcss-git?perf#vittisXX",
+    "responseP50Ms": [
+      147,
+      150
+    ],
+    "responseP95Ms": [
+      343,
+      150
+    ],
+    "timeToDrawP50Ms": [
+      152,
+      171
+    ],
+    "finding": "User confirms offline comparison explained the earlier difference. Original online has comparable response latency; user authorizes bounded visual anticipation and faster confirmed completion."
+  },
+  "previewSimulation": {
+    "environment": "Desktop Chrome, actual camera and room renderer; simulated server reply",
+    "confirmed": {
+      "firstMotionMs": 4,
+      "replyMs": 154,
+      "finishAfterReplyMs": 67,
+      "maxUnconfirmedTiles": 0.18
+    },
+    "refused": {
+      "firstMotionMs": 3.2,
+      "replyMs": 154,
+      "finishAfterReplyMs": 83,
+      "returnedExactlyToConfirmedPosition": true
+    },
+    "hardwareValidation": "Odin 3 assessment pending after 0.3.8 rollout"
+  }
+}

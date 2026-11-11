@@ -46,6 +46,26 @@ afterEach(() => {
 })
 
 describe('game presentation', () => {
+  it('consumes a preview before the same response batch signals command readiness', () => {
+    vi.useFakeTimers()
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(7)
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    const h = harness()
+    h.cam.previewStep(2, 0.9)
+    h.cam.update(0.1, 1)
+    Object.assign(h.screen, { previewReply: true, previewPending: true })
+    h.session.flushScene.mockImplementationOnce(() => {
+      h.cam.walkTo(1, 0, [{ dx: 1, dy: 0 }], h.screen.sceneTime, 0.9)
+      return true
+    })
+    h.screen.loop(1055)
+    expect(h.cam.previewDirection).toBeNull()
+    expect(h.cam.camera.eyeX).toBeGreaterThan(0.18)
+    h.cam.update(0.06, 1.115)
+    expect(h.cam.camera.eyeX).toBe(1)
+    h.renderer.destroy()
+  })
+
   it.each([60, 120])('shows confirmed movement on the first eligible frame at %i Hz', (hz) => {
     vi.useFakeTimers()
     vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(7)

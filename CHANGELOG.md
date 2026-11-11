@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.8 — 2026-11-11
+
+- Give online walking an immediate, small camera preview on clear visible floor. The server still decides every step; refused moves ease back, and previews are disabled around visible monsters, special terrain, prompts and status effects.
+- Finish confirmed manual steps sooner when their response was delayed, without adding or buffering commands.
+
 ## 0.3.7 — 2026-11-11
 
 - Reduce controller response delay and show confirmed movement sooner, keeping camera and monster motion synchronized.

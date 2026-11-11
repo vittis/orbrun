@@ -13,7 +13,7 @@ function harness() {
   const scene = emptyScene()
   scene.playerOnLevel = true
   const send = vi.fn()
-  const session = { watching: false, state, scene, send } as unknown as Session
+  const session = { watching: false, server: { offline: false }, state, scene, send } as unknown as Session
   const cam = new CameraController()
   const swing = vi.fn()
   const runner = new Runner(session, cam, {

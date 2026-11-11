@@ -92,6 +92,58 @@ export class CameraController {
   private walkSpeed = 0
   /** Last sampled movement time; yaw/input still use the frame delta. */
   private walkAt = 0
+  /** A bounded eye offset only; camera.x/y and the scene always remain authoritative. */
+  private preview: { dir: Dir8; at: number; back?: { at: number; x: number; y: number } } | null = null
+  private previewAt = 0
+
+  get previewDirection(): Dir8 | null {
+    return this.preview?.dir ?? null
+  }
+
+  previewStep(dir: Dir8, now: number): void {
+    if (this.preview) {
+      // Repeats never accumulate distance or renew the timeout.
+      if (dir !== this.preview.dir) this.cancelPreview(now)
+      return
+    }
+    const c = this.camera
+    if (this.reducedMotion || this.walk || c.eyeX !== c.x || c.eyeY !== c.y) return
+    this.preview = { dir, at: now }
+    this.previewAt = now
+  }
+
+  cancelPreview(now: number): void {
+    this.advancePreview(now)
+    const p = this.preview
+    if (p && !p.back) p.back = { at: now, x: this.camera.eyeX, y: this.camera.eyeY }
+  }
+
+  private advancePreview(now: number): boolean {
+    const p = this.preview
+    if (!p) return false
+    this.previewAt = Math.max(this.previewAt, now)
+    now = this.previewAt
+    const c = this.camera
+    if (this.reducedMotion) {
+      this.landAt(c.x, c.y)
+      return true
+    }
+    const amount = 0.18 * (1 - (1 - Math.min(1, Math.max(0, (now - p.at) / 0.1))) ** 3)
+    if (!p.back) {
+      c.eyeX = c.x + DIR8_DX[p.dir] * amount
+      c.eyeY = c.y + DIR8_DY[p.dir] * amount
+      // A lost/refused reply cannot leave the eye displaced or keep the loop awake.
+      if (now - p.at >= 0.35) p.back = { at: p.at + 0.35, x: c.eyeX, y: c.eyeY }
+    }
+    if (p.back) {
+      const t = Math.min(1, Math.max(0, (now - p.back.at) / 0.08))
+      const remaining = 1 - t * t * (3 - 2 * t)
+      c.eyeX = c.x + (p.back.x - c.x) * remaining
+      c.eyeY = c.y + (p.back.y - c.y) * remaining
+      if (t === 1) this.preview = null
+    }
+    return true
+  }
   /** Steering revision at autofight input; null means it was pressed during manual look. */
   private autofightRevision: number | null | undefined
 
@@ -127,6 +179,7 @@ export class CameraController {
 
   /** Landing keeps the arrival cadence; an explicit snap forgets it. */
   private landAt(x: number, y: number) {
+    this.preview = null
     this.camera.x = x
     this.camera.y = y
     this.camera.eyeX = x
@@ -146,7 +199,7 @@ export class CameraController {
    * cell, else the walk is a jump and the eye snaps. Arrival time (`now`,
    * seconds) adjusts repeated steps within 100–140 ms; it never adds a hop.
    */
-  walkTo(x: number, y: number, hops: readonly { dx: number; dy: number }[], now = performance.now() / 1000) {
+  walkTo(x: number, y: number, hops: readonly { dx: number; dy: number }[], now = performance.now() / 1000, sentAt?: number) {
     const c = this.camera
     if (this.reducedMotion) {
       this.snapTo(x, y)
@@ -175,6 +228,17 @@ export class CameraController {
       if (x !== c.x || y !== c.y) pts.push({ x, y })
     }
     if (pts.length === 0) return
+    this.advancePreview(now)
+    const preview = this.preview
+    if (preview) {
+      const first = pts[0]
+      // A different authoritative move returns through the confirmed cell,
+      // rather than cutting a corner from the preview's offset.
+      if (first.x !== c.x + DIR8_DX[preview.dir] || first.y !== c.y + DIR8_DY[preview.dir]) {
+        pts.unshift({ x: c.x, y: c.y })
+      }
+      this.preview = null
+    }
     // Sample the previous confirmed walk at the arrival time before retargeting,
     // exactly as the monsters do. Never charge the new step for an older frame.
     this.advanceWalk(0, now)
@@ -184,7 +248,12 @@ export class CameraController {
     const moving = this.walk !== null
     this.path.push(...pts)
     const { duration, continuous } = this.cadence.confirm(now)
-    this.planWalk(this.pathLength(), duration, moving ? this.walkSpeed : undefined, continuous)
+    // Only a single, attributed manual step gets latency compensation. Travel,
+    // monsters and coalesced paths keep their normal cadence. Always leave a
+    // short glide instead of snapping when the reply was slow.
+    const waited = sentAt === undefined ? 0 : Math.max(0, now - sentAt)
+    const landing = hops.length === 1 && sentAt !== undefined ? Math.max(0.06, duration - waited) : duration
+    this.planWalk(this.pathLength(), landing, moving ? this.walkSpeed : undefined, continuous)
   }
 
   /** The view to keep between sessions: the way the camera faces right now. */
@@ -597,6 +666,7 @@ export class CameraController {
     if (!Number.isFinite(dt) || dt <= 0) return false
     const c = this.camera
     let moved = this.advanceWalk(dt, now)
+    if (this.advancePreview(now ?? this.previewAt + dt)) moved = true
     if (this.freeLook) {
       c.yaw = normalizeYaw(c.yaw + this.lookVel * dt)
       c.pitch = this.clampPitch(c.pitch + this.pitchVel * dt)
