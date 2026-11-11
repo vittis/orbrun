@@ -1,7 +1,13 @@
 # Project status
 
-Release **0.3.9 prepared; rollout verification pending**. Live remains 0.3.8
-until this paragraph is updated. New immutable source tag: `cloudflare-online-v1.6`.
+Release **0.3.9 is LIVE** at https://dcss-client.vittis.workers.dev.
+Final source `d293a56bbade3e5ceeb80feb0fb74f0cecd2b570`, immutable tag
+`cloudflare-online-v1.6`; build `13ee2d51-d14c-4752-8451-452de0d9b3c9` succeeded.
+Worker `23664951-4aa6-472e-ab2a-a88cd9c4889b` serves 100% of traffic.
+Live entry matches local build byte for byte; 0.3.9 home and CBRG spectator
+rendering verified. Canonical /connection-check returns HTTP 200 + noindex +
+strict CSP. The .html URL redirects there. Initial v1.5 rollout had a diagnostic
+HTTP 404 classification issue; corrected in v1.6 without further gameplay changes.
 
 User reports 0.3.8's move–pause–move animation. Confirmed cause: preview stops at
 0.18 tiles after 100 ms, waits for the reply, then the remaining move is squeezed

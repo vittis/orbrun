@@ -240,3 +240,14 @@
   canonical /connection-check URL. Added that exact route and test coverage;
   source links advance to immutable v1.6, retaining v1.5 unchanged. App version
   remains 0.3.9; no further gameplay code changed.
+
+- Final 0.3.9 rollout verified: d293a56bbade3e5ceeb80feb0fb74f0cecd2b570 /
+  cloudflare-online-v1.6. Build 13ee2d51-d14c-4752-8451-452de0d9b3c9 succeeded;
+  Worker 23664951-4aa6-472e-ab2a-a88cd9c4889b at 100% traffic. Canonical
+  /connection-check HTTP 200, noindex and strict CSP. Live main-D5W5a3b2.js
+  matches local validated build. 0.3.9 home and CBRG spectating rendered.
+- Route correction validated with 20 focused site/Worker/Markdown tests, forced
+  tsc/build/dry-run and hosted pipeline. Optional engine E2E: 44 skips.
+  Live diagnostic completed at 43 ms median on desktop before the route-only
+  correction; actual Odin game latency remains unmeasured by this new check.
+  User should compare Odin CBRG Wi-Fi/hotspot results with game response timings.

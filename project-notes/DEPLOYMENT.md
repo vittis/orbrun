@@ -167,3 +167,19 @@ are not measured by this browser smoke check.
   TypeScript check, build, Worker dry-run. Optional engine E2E: 44 skips.
 - Camera preview simulation and hardware limits are recorded in SESSION_LOG.
   Rollback: 0.3.7 Worker `73ea14db-a8a4-478d-a859-c0fc2e5ec793`.
+
+## 0.3.9 rollout — 2026-11-11
+
+- Corrective final source `d293a56bbade3e5ceeb80feb0fb74f0cecd2b570`, immutable
+  `cloudflare-online-v1.6`. Initial v1.5/source c057b2b fixed the gameplay but
+  marked the diagnostic's extensionless URL 404; corrected and both tags retained.
+- Build `13ee2d51-d14c-4752-8451-452de0d9b3c9`, Worker
+  `23664951-4aa6-472e-ab2a-a88cd9c4889b`, 100% traffic at 06:19:43 UTC.
+- Live main-D5W5a3b2.js matches local build. Home 0.3.9 and CBRG spectator
+  scene verified; /connection-check returns 200, noindex and strict CSP.
+- Full suite 1,960 pass / 2 optional engine skips; route correction 20 focused
+  tests pass. Forced typecheck/build/dry-run pass; optional E2E 44 skips.
+- One continuous confirmed glide restored; actual RTT not reduced. Diagnostic
+  is a separate anonymous connection, eight finite lightweight requests only.
+- Smooth-motion rollback if needed: 0.3.7 Worker
+  `73ea14db-a8a4-478d-a859-c0fc2e5ec793`; 0.3.8 contains the reported choppiness.
