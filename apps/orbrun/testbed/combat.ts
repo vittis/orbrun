@@ -66,6 +66,7 @@ function play(kind: string) {
     hit: 'You slash the goblin!!', exact: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
     fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
     block: 'You block the goblin\'s attack.', kill: 'You hit the goblin for 12! You kill the goblin!',
+    armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
   }
   if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })
   if (kind === 'hurt') {

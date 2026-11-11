@@ -1,5 +1,6 @@
 import type { MapRenderer, Scene } from '@orbrun/scene'
 import type { CombatPopup } from './combat-feedback'
+import { combatIcon, type CombatIcon } from './combat-icons'
 import { h } from './dom'
 import './combat-popups.css'
 
@@ -8,20 +9,46 @@ const MAX_POPUPS = 10
 const MAX_AT_ANCHOR = 3
 interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot: number }
 const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}${event.amount === 0 ? ' no-damage' : ''}`
+const statusIcons: Record<string, CombatIcon> = {
+  POISONED: 'poison', CONFUSED: 'confused', PARALYSED: 'paralysed', SLOWED: 'slowed',
+  HASTED: 'hasted', BERSERK: 'berserk', CORRODED: 'acid', PETRIFYING: 'petrifying',
+  INVISIBLE: 'invisible', SILENCED: 'silenced', HELD: 'held',
+}
+function popupContent(event: CombatPopup): { icon: CombatIcon; value: string; label: string } {
+  if (event.amount === 0) return { icon: 'armor', value: '', label: 'Blocked (no damage)' }
+  if (event.text === 'POISON CLEARED') return { icon: 'cured', value: '', label: event.text }
+  if (event.kind === 'status') {
+    const icon = statusIcons[event.text]
+    return { icon: icon ?? 'magic', value: icon ? '' : event.text, label: event.text }
+  }
+  if (event.kind === 'level') return { icon: 'level', value: event.text.replace(/^LEVEL\s+/, ''), label: event.text }
+  if (event.kind === 'heal') return { icon: 'heal', value: event.text.replace(/ HP$/, ''), label: event.text }
+  if (event.kind === 'miss' || event.kind === 'block' || event.kind === 'kill') {
+    return { icon: event.kind === 'block' ? 'shield' : event.kind, value: '', label: event.text }
+  }
+  const icon = event.tone && event.tone !== 'physical' ? event.tone : event.kind === 'hurt' ? 'hurt' : 'hit'
+  return { icon, value: event.estimated ? String(event.amount) : event.text === 'HIT' ? '' : event.text, label: event.text }
+}
 function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.className = popupClass(event)
+  const { icon, value, label } = popupContent(event)
+  node.title = label
+  node.classList.toggle('icon-only', !value)
   let number = node.querySelector('.combat-number')
   if (!number) { number = h('span', { class: 'combat-number' }); node.append(number) }
   // Keep this wrapper mounted when an estimate/brand refines the same hit,
   // so its compositor entrance runs once instead of restarting.
-  if (event.estimated) number.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
-  else number.replaceChildren(h('span', { class: 'combat-value' }, event.amount === 0 ? 'NO DAMAGE' : event.text))
+  number.replaceChildren(combatIcon(icon))
+  if (value) {
+    if (event.estimated) number.append(h('span', { class: 'combat-estimate' }, '≈'))
+    number.append(h('span', { class: 'combat-value' }, value))
+  }
 }
 
 /** Bounded trajectories driven by the same frame clock as placement/fading.
  * Elemental motion is applied to the number, leaving its anchor stable. */
 export function popupMotion(event: CombatPopup, age: number, direction: number, reduced: boolean) {
-  if (reduced || event.amount === 0) return { x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 }
+  if (reduced || event.amount === 0 || event.kind === 'block' || event.kind === 'miss') return { x: 0, y: 0, scale: 1, sx: 1, sy: 1, angle: 0, glow: 0 }
   const settle = Math.exp(-age * 9), wave = Math.sin(age * Math.PI * 2)
   let x = 0, y = 0, sx = 1, sy = 1, angle = 0
   const tone = event.kind === 'heal' ? 'heal' : event.tone ?? 'physical'
@@ -112,9 +139,9 @@ export class CombatPopups {
       if (anchor && visible) {
         const motion = popupMotion(e, age, p.slot % 2 ? -1 : 1, reducedMotion)
         const drift = reducedMotion ? 0 : (e.kind === 'miss' ? 22 : 6) * age * (p.slot % 2 ? -1 : 1)
-        const rise = reducedMotion ? 0 : 36 * age
+        const rise = reducedMotion ? 0 : (e.amount === 0 || e.kind === 'block' ? 22 : 30) * age
         p.node.style.left = `${Math.max(Math.min(48, width / 2), Math.min(width - Math.min(48, width / 2), anchor.x))}px`
-        p.node.style.top = `${Math.max(38, anchor.y - 12 - p.slot * 24)}px`
+        p.node.style.top = `${Math.max(32, anchor.y - 12 - p.slot * 20)}px`
         p.node.style.transform = `translate(calc(-50% + ${drift + motion.x}px), calc(-100% - ${rise - motion.y}px)) rotate(${motion.angle}deg) scale(${motion.scale * motion.sx}, ${motion.scale * motion.sy})`
         p.node.style.setProperty('--glow', `${motion.glow}`)
         p.node.style.setProperty('--heat-rise', `${reducedMotion ? -3 : -3 - age * 3}px`)
