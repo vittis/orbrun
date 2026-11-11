@@ -40,14 +40,15 @@ describe('popup presentation', () => {
     expect(popups.root.textContent).toBe('')
   })
 
-  it.each<[CombatPopup, string, string]>([
+  it.each<[CombatPopup, string | undefined, string]>([
     [{ kind: 'miss', text: 'MISS' }, 'miss', ''],
     [{ kind: 'miss', text: 'DODGED', player: true }, 'miss', ''],
     [{ kind: 'kill', text: 'SLAIN' }, 'kill', ''],
-    [{ kind: 'hit', text: 'HIT' }, 'hit', ''],
+    [{ kind: 'hit', text: 'HIT' }, undefined, 'HIT'],
+    [{ kind: 'hit', text: '7', amount: 7 }, undefined, '7'],
     [{ kind: 'heal', text: '+7 HP', player: true }, 'heal', '+7'],
     [{ kind: 'heal', text: 'POISON CLEARED', player: true }, 'cured', ''],
-    [{ kind: 'level', text: 'LEVEL 4', player: true }, 'level', '4'],
+    [{ kind: 'level', text: 'LEVEL 4', player: true }, undefined, 'LEVEL UP · 4'],
     ...Object.entries({ POISONED: 'poison', CONFUSED: 'confused', PARALYSED: 'paralysed', SLOWED: 'slowed', HASTED: 'hasted', BERSERK: 'berserk', CORRODED: 'acid', PETRIFYING: 'petrifying', INVISIBLE: 'invisible', SILENCED: 'silenced', HELD: 'held' }).map(([text, icon]): [CombatPopup, string, string] => [{ kind: 'status', text, player: true }, icon, '']),
     [{ kind: 'status', text: 'NEW STATUS', player: true }, 'magic', 'NEW STATUS'],
   ])('uses recognizable symbols and compact values for %j', (event, icon, value) => {
@@ -56,6 +57,49 @@ describe('popup presentation', () => {
     expect(popups.root.querySelector('.combat-icon')?.getAttribute('data-icon')).toBe(icon)
     expect(popups.root.textContent).toBe(value)
     expect((popups.root.firstElementChild as HTMLElement).title).toBe(event.text)
+  })
+
+  it('identifies the receiver for defenses and other effects, including zero-damage player hits', () => {
+    const { popups } = preview()
+    popups.add(combatText('You miss the goblin. The goblin misses you. You block the goblin\'s attack. The goblin blocks your attack. You hit the goblin but do no damage. The goblin hits you but does no damage.'), 0)
+    expect([...popups.root.children].map(n => n.classList.contains('on-player'))).toEqual([false, true, true, false, false, true])
+    expect(popups.root.querySelectorAll('.on-player')).toHaveLength(3)
+    expect(popups.root.querySelectorAll('.on-enemy')).toHaveLength(3)
+  })
+
+  it('keeps a level celebration alive longer than damage and freezes its particles with the frame clock', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'level', text: 'LEVEL 4', player: true }, { kind: 'hurt', text: '-3', player: true }], 0)
+    render(400)
+    const level = popups.root.querySelector<HTMLElement>('.level')!
+    expect(level.querySelector('svg')).toBeNull()
+    expect(level.querySelectorAll('.combat-confetti')).toHaveLength(48)
+    const piece = level.querySelector<HTMLElement>('.combat-confetti')!
+    const transform = piece.style.transform
+    render(400)
+    expect(piece.style.transform).toBe(transform)
+    render(1300)
+    expect(popups.root.querySelector('.hurt')).toBeNull()
+    expect(popups.root.querySelector('.level')).toBe(level)
+    expect(piece.style.transform).not.toBe(transform)
+    popups.add([{ kind: 'hurt', text: '-4', player: true }], 1400)
+    expect(popups.root.querySelector('.level')).toBe(level)
+    render(2400)
+    expect(popups.root.querySelector('.level')).toBeNull()
+    popups.clear()
+    expect(popups.root.querySelector('.combat-confetti')).toBeNull()
+  })
+
+  it('suppresses level confetti and movement in Still mode while keeping the announcement', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'level', text: 'LEVEL 4', player: true }], 0)
+    render(100, true, true)
+    const level = popups.root.querySelector<HTMLElement>('.level')!
+    const transform = level.style.transform
+    expect(level.textContent).toBe('LEVEL UP · 4')
+    expect(level.querySelector<HTMLElement>('.combat-celebration')!.hidden).toBe(true)
+    render(1000, true, true)
+    expect(level.style.transform).toBe(transform)
   })
 
   it('anchors text to interpolated entities while the camera and target are moving', () => {

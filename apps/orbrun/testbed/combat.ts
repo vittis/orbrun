@@ -67,6 +67,7 @@ function play(kind: string) {
     fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
     block: 'You block the goblin\'s attack.', kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
+    dodge: 'The goblin misses you.', enemyBlock: 'The goblin blocks your attack.',
   }
   if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })
   if (kind === 'hurt') {
@@ -79,7 +80,8 @@ function play(kind: string) {
     send({ msg: 'player', status: [] }); feedback.flush(scene)
     send({ msg: 'player', status: [{ light: 'Pois', text: 'poisoned' }] })
   }
-  if (kind === 'heal') send({ msg: 'player', hp: state.player.hp + 7, xl: state.player.xl + 1 })
+  if (kind === 'heal') send({ msg: 'player', hp: state.player.hp + 7 })
+  if (kind === 'level') send({ msg: 'player', xl: state.player.xl + 1 })
   const now = performance.now()
   popups.add(feedback.flush(scene), now)
   if (paused) freezeAt = now + 180

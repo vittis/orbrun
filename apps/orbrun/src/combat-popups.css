@@ -14,7 +14,8 @@
   contain: layout paint;
 }
 .combat-popup {
-  --impact: #ffe5a3;
+  --recipient: #ffba7a;
+  --impact: color-mix(in srgb, var(--recipient) 75%, var(--element, var(--recipient)));
   position: absolute;
   white-space: nowrap;
   color: var(--impact);
@@ -75,27 +76,57 @@
   text-shadow: 0 1px 2px #000;
 }
 .combat-popup[hidden] { display: none; }
-.combat-popup.fire { --impact: #ffab62; }
-.combat-popup.cold { --impact: #9ce5ff; }
-.combat-popup.poison { --impact: #b2ec78; }
-.combat-popup.acid { --impact: #e3ed79; }
-.combat-popup.electric { --impact: #b2e9ff; }
-.combat-popup.magic { --impact: #d0b4ff; }
+.combat-popup.on-player { --recipient: #7be3ff; }
+.combat-popup.fire { --element: #ffab62; }
+.combat-popup.cold { --element: #9ce5ff; }
+.combat-popup.poison { --element: #b2ec78; }
+.combat-popup.acid { --element: #e3ed79; }
+.combat-popup.electric { --element: #b2e9ff; }
+.combat-popup.magic { --element: #d0b4ff; }
 .combat-popup.heavy { font-size: clamp(17px, 2.2vw, 22px); }
-.combat-popup.hurt { --impact: #ff7878; }
-.combat-popup.heal { --impact: #8fe4ad; }
+.combat-popup.hurt.on-player { --recipient: #ff7faa; }
+.combat-popup.heal.on-player { --recipient: #8ff1c8; }
 .combat-popup.miss, .combat-popup.block {
-  --impact: #afc4d5;
+  --impact: var(--recipient);
   font-size: clamp(12px, 1.4vw, 14px);
 }
-.combat-popup.block { --impact: #a4d6ef; }
 .combat-popup.no-damage {
-  --impact: #b7c7d2;
+  --impact: var(--recipient);
   font-size: clamp(12px, 1.4vw, 14px);
 }
-.combat-popup.kill, .combat-popup.level { --impact: #fff2be; letter-spacing: 0.09em; }
+.combat-popup.kill, .combat-popup.level { letter-spacing: 0.09em; }
 .combat-popup.kill { font-size: clamp(12px, 1.5vw, 15px); }
 .combat-popup.status, .combat-popup.heal { font-size: clamp(12px, 1.5vw, 15px); letter-spacing: 0.02em; }
+.combat-popup.level {
+  --impact: #ffe69a;
+  font-size: clamp(22px, 3vw, 30px);
+  z-index: 2;
+}
+.combat-popup.level .combat-number { position: relative; z-index: 1; animation: combat-level-enter 520ms both; }
+.combat-popup.level .combat-value { text-shadow: 0 2px 2px #231307, 0 0 12px #ffcb5977, 0 0 24px #ffb23844; }
+@keyframes combat-level-enter {
+  0% { opacity: 0; transform: scale(0.6) translateY(6px); }
+  55% { opacity: 1; transform: scale(1.12) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.combat-celebration { display: none; position: absolute; left: 50%; top: 50%; }
+.combat-popup[data-motion="full"] .combat-celebration { display: block; }
+.combat-popup .combat-celebration[hidden] { display: none; }
+.combat-level-ring {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border: 1px solid #ffe69a;
+  border-radius: 50%;
+  box-shadow: 0 0 16px #ffcb5966, inset 0 0 12px #ffcb5933;
+}
+.combat-confetti { position: absolute; width: 4px; height: 7px; background: #ffe69a; opacity: 0; }
+.combat-confetti:nth-child(6n) { background: #82eaff; }
+.combat-confetti:nth-child(6n + 1) { background: #ff91c5; }
+.combat-confetti:nth-child(6n + 2) { background: #c2a1ff; }
+.combat-confetti:nth-child(6n + 3) { background: #9af0bc; }
+.combat-confetti:nth-child(6n + 4) { background: #fff4cd; }
+.combat-confetti.spark { width: 3px; height: 3px; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
 .combat-popup.fire .combat-value { text-shadow: 0 1px 1px #541700, 0 -2px 5px #f86a2488, 0 var(--heat-rise, -3px) 10px #ff9b3244; }
 .combat-popup.cold .combat-value { text-shadow: 0 -1px 0 #effcff, 0 0 5px #88dfff88; }
 .combat-popup.poison .combat-value { text-shadow: 0 2px 2px #244a14, 0 0 6px #a0ea6566; }
@@ -120,4 +151,5 @@
   .combat-popup:not([data-motion="full"]) .combat-number { animation: none; }
   .combat-popup { will-change: opacity; }
   .combat-value::after { display: none; }
+  .combat-popup:not([data-motion="full"]) .combat-celebration { display: none; }
 }
