@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.15 — 2026-11-11
+
+- Keep rapid combat readable: limit popup stacks, fold weapon-brand effects into their hits, and skip old combat queued while a game is loading.
+
 ## 0.3.14 — 2026-11-11
 
 - Add combat popups in every dungeon view: damage, misses, blocks, kills, healing, level-ups and important status changes, with elemental colors and reduced-motion support. Toggle them in Settings → View → Combat popups.

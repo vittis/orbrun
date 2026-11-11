@@ -4,8 +4,10 @@ import { h } from './dom'
 import './combat-popups.css'
 
 const LIFETIME = 1100
-const MAX_POPUPS = 16
+const MAX_POPUPS = 10
+const MAX_AT_ANCHOR = 3
 interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot: number }
+const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}`
 
 /** A bounded, pointer-transparent layer, positioned from the renderer after each frame. */
 export class CombatPopups {
@@ -14,12 +16,35 @@ export class CombatPopups {
   get active() { return this.live.length > 0 }
 
   add(events: CombatPopup[], now: number) {
+    this.live = this.live.filter(p => {
+      if (now - p.born < LIFETIME) return true
+      p.node.remove()
+      return false
+    })
     for (const event of events) {
-      const nearby = this.live.filter(p => p.event.player === event.player && p.event.x === event.x && p.event.y === event.y)
+      const atAnchor = (p: LivePopup) => !!p.event.player === !!event.player && p.event.x === event.x && p.event.y === event.y
+      const hit = event.followup && event.text === 'HIT' ? [...this.live].reverse().find(p => atAnchor(p) && p.event.kind === 'hit' && !p.event.followup) : undefined
+      if (hit) {
+        hit.event = { ...hit.event, tone: event.tone, followup: true }
+        hit.node.className = popupClass(hit.event)
+        continue
+      }
+      // A kill replaces generic hit words; an actual damage number can remain beside it.
+      if (event.kind === 'kill') this.live = this.live.filter(p => {
+        if (!atAnchor(p) || (p.event.kind === 'hit' && /^\d+$/.test(p.event.text))) return true
+        p.node.remove()
+        return false
+      })
+      const nearby = this.live.filter(atAnchor)
+      while (nearby.length >= MAX_AT_ANCHOR) {
+        const oldest = nearby.shift()!
+        oldest.node.remove()
+        this.live.splice(this.live.indexOf(oldest), 1)
+      }
       const slots = new Set(nearby.map(p => p.slot))
       let slot = 0
-      while (slots.has(slot) && slot < 5) slot++
-      const node = h('span', { class: `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}` }, event.text)
+      while (slots.has(slot)) slot++
+      const node = h('span', { class: popupClass(event) }, event.text)
       this.root.append(node)
       this.live.push({ event, node, born: now, slot })
     }

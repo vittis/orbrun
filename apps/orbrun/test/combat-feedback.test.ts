@@ -32,6 +32,7 @@ describe('combat sentences', () => {
     expect(combatText('You hit the goblin but do no damage.')[0]).toMatchObject({ text: '0', target: 'the goblin' })
     expect(combatText('The bolt of fire hits the goblin for 12!')[0]).toMatchObject({ text: '12', tone: 'fire' })
     expect(combatText('The puff of frost hits the goblin for 5.')[0]).toMatchObject({ text: '5', tone: 'cold' })
+    expect(combatText('The bolt hits the goblin!')[0]).toMatchObject({ tone: 'physical' })
   })
   it('distinguishes misses, shield blocks and kills from hits', () => {
     expect(combatText('You barely miss the goblin. The goblin closely misses you. You block the goblin\'s attack. You kill the goblin!').map(p => p.text)).toEqual(['MISS', 'DODGED', 'BLOCKED', 'SLAIN'])
@@ -44,6 +45,28 @@ describe('combat sentences', () => {
 })
 
 describe('combat updates', () => {
+  it('does not replay combat queued while the first scene and game data load', () => {
+    const state = initialState()
+    Object.assign(state.player, { hp: 30, hp_max: 30 })
+    const feedback = new CombatFeedback(state), scene = world(goblin())
+    for (let n = 0; n < 25; n++) {
+      const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin!' }] }
+      reduce(state, msg); feedback.observe(state, msg)
+      const hp = { msg: 'player', hp: 30 - n }
+      reduce(state, hp); feedback.observe(state, hp)
+    }
+    expect(feedback.flush(scene)).toEqual([])
+    const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin!' }] }
+    reduce(state, msg); feedback.observe(state, msg)
+    expect(feedback.flush(scene).map(p => p.text)).toEqual(['HIT'])
+  })
+  it('folds an unknown brand hit into its base hit, retaining actual damage', () => {
+    const { feedback, scene, text } = harness()
+    text('The bolt hits the goblin for 7! The bolt burns the goblin!')
+    expect(feedback.flush(scene)).toMatchObject([{ text: '7', tone: 'fire' }])
+    text('You hit the goblin. You freeze the goblin!')
+    expect(feedback.flush(scene)).toMatchObject([{ text: 'HIT', tone: 'cold' }])
+  })
   it('handles appended message rollbacks without repeating a hit', () => {
     const { feedback, scene, text } = harness()
     text('You hit the goblin for 5.')

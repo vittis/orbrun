@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.14 point at the `cloudflare-online-v1.11` release tag in
+Source links for 0.3.15 point at the `cloudflare-online-v1.12` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -264,3 +264,23 @@ Previous production Worker for rollback: `5e34462f-f97a-4016-b640-c91067cbd148`.
 Push main and the source tag atomically, wait for Workers Builds, then verify
 source links, the live entry bundle, strict CSP, proxy restrictions and anonymous
 spectating with combat feedback enabled.
+
+## 0.3.15 live combat integration correction — 2026-11-11
+
+The 0.3.14 source (`6317b15`, `cloudflare-online-v1.11`) was deployed as Worker
+`b6c64958-48b2-466e-909d-545c53138c6b`. Root/About source links, strict CSP,
+allowed/prohibited proxy routes and byte-identical entry bundle passed. Live
+anonymous CBRG spectating loaded the dungeon without console errors, but showed
+a crowded burst of combat buffered during gamedata loading.
+
+Corrected before finishing this rollout: no popup emission before a populated
+scene is presented; three popups per anchor and ten total; unknown weapon-brand
+follow-ups recolor the original hit; kills replace generic hit labels while
+retaining numeric damage. Ordinary crossbow bolts keep physical coloring.
+Regression tests exercise startup batches, delayed brands, limits and stacking.
+The corrective immutable source tag is `cloudflare-online-v1.12` (app 0.3.15).
+
+Validation: forced typecheck; 2,050 unit tests passed / two optional-engine
+skips; production build and ASSETS-only dry-run; diff check. Optional engine
+E2E remains 44 skips without artifacts. Publish the committed source and verify
+the corrected live spectator path before calling this task complete.

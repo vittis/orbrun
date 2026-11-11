@@ -13,6 +13,8 @@ export interface CombatPopup {
   height?: number
   player?: boolean
   heavy?: boolean
+  /** A weapon brand's extra sentence, which can recolor the preceding hit. */
+  followup?: boolean
 }
 
 const attacks = /^(?:hit|slash|slice|stab|pierce|impale|skewer|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast)$/i
@@ -22,7 +24,7 @@ function toneOf(s: string): PopupTone {
   if (/fire|flame|burn|lava|scorch/i.test(s)) return 'fire'
   if (/cold|frost|freez|ice|icicle/i.test(s)) return 'cold'
   if (/poison|acid|venom/i.test(s)) return 'poison'
-  if (/magic|bolt|lightning|electric|negative energy|drain|holy/i.test(s)) return 'magic'
+  if (/magic|lightning|electric|negative energy|drain|holy/i.test(s)) return 'magic'
   return 'physical'
 }
 
@@ -55,7 +57,8 @@ export function combatText(text: string): CombatPopup[] {
       const noDamage = /but (?:do|does) no damage/.test(s)
       target = target.replace(/(?: with | using | for | but |, ).*$/, '').trim()
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
-      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s) })
+      const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
+      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup })
     }
   }
   return out
@@ -86,6 +89,7 @@ export class CombatFeedback {
   private lines: string[]
   private ready: boolean
   private history: boolean
+  private presented = false
   private scene: Scene | null = null
 
   constructor(state: GameState) {
@@ -105,6 +109,7 @@ export class CombatFeedback {
       this.resets++
       this.pending = []
       this.scene = null
+      this.presented = false
       this.ready = false
       this.history = true
       this.lines = []
@@ -113,7 +118,7 @@ export class CombatFeedback {
     }
     if (msg.msg === 'player') {
       const next = this.snapshot(state), prev = this.previous
-      if (this.ready && next.place === prev.place) {
+      if (this.ready && this.presented && next.place === prev.place) {
         // Max-HP changes (berserk, forms, draining, levelling) aren't damage/healing.
         if (next.max === prev.max && next.hp !== prev.hp) {
           const change = next.hp - prev.hp
@@ -126,13 +131,14 @@ export class CombatFeedback {
         this.resets++
         this.pending = []
         this.scene = null
+        this.presented = false
       }
       this.previous = next
       this.ready = next.max > 0
     }
     if (msg.msg === 'msgs') {
       const lines = state.messages.lines.map(l => plain(l.text))
-      if (this.ready && !this.history && Array.isArray(msg.messages)) {
+      if (this.ready && this.presented && !this.history && Array.isArray(msg.messages)) {
         const incoming = msg.messages as { text?: string }[]
         // Crawl replaces the last line to append another sentence. Read only its suffix.
         const rollback = Math.min(this.lines.length, Math.max(0, Number(msg.rollback) || 0))
@@ -140,7 +146,11 @@ export class CombatFeedback {
         let fresh = incoming.map(l => plain(String(l?.text ?? ''))).join(' ')
         if (removed && fresh.startsWith(removed)) fresh = fresh.slice(removed.length).trim()
         else if (removed === fresh) fresh = ''
-        this.pending.push(...combatText(fresh))
+        for (const event of combatText(fresh)) {
+          const hit = event.followup && event.text === 'HIT' ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
+          if (hit) { hit.tone = event.tone; hit.followup = true }
+          else this.pending.push(event)
+        }
       }
       if (Array.isArray(msg.messages)) this.history = false
       this.lines = lines
@@ -152,6 +162,7 @@ export class CombatFeedback {
     const pending = this.pending.splice(0)
     const old = this.scene
     this.scene = scene
+    this.presented = scene.playerOnLevel && scene.cells.size > 0
     if (!scene.playerOnLevel || !pending.length) return []
     const candidates = new Map<string, Billboard>()
     for (const view of [old, scene]) if (view) for (const b of view.billboards) {
