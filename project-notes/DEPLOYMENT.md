@@ -810,3 +810,26 @@ Integrated main's 0.3.31 compact combat icons. Pixel results and real-art dungeo
 captures are in `evidence/release-0332-{canvas-checks.json,d1-fountains.png,room.png}`.
 Main and the immutable source tag will be pushed atomically; production rollout
 and hosted asset/source checks follow the Cloudflare Workers Builds result.
+
+
+## 0.3.33 combat celebration and receiver colors — prepared 2026-11-11
+
+User authorized committing to main and triggering deployment, with no deployment
+polling or hosted verification. Immutable source tag: `cloudflare-online-v1.30`.
+Physical damage numbers no longer carry a sword. Level-ups have larger gold
+text, 48 colorful confetti pieces and sparks, an expanding ring, and a 2.4-second
+lifetime. Confetti follows the popup frame clock and is suppressed in Still
+mode. Popup bounds and cleanup apply to the celebration as well.
+
+Player defenses use cyan and enemy defenses use amber; player damage is pink
+and player healing mint. Elemental/status feedback blends its type tint with
+the recipient palette so the affected actor remains distinguishable.
+
+Integrated the 0.3.32 wall-tile release. Local validation passed: forced
+TypeScript rebuild, 2,275 unit tests with two optional-engine skips, production
+build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff checks.
+Optional engine E2E reports 44 explicit skips for absent engine artifacts.
+Local Chrome checks confirmed distinct computed defense colors, no sword or
+level icon, 48 confetti pieces, readable desktop/phone presentation, and fully
+suppressed text/confetti motion in Still mode. Push main and the source tag
+atomically to trigger Workers Builds. The user will verify the deployment.

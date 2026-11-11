@@ -54,7 +54,6 @@
   75% { transform: translateY(0) scale(0.94); animation-timing-function: ease-out; }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-.combat-popup[data-motion="still"] .combat-number { animation: none; will-change: auto; }
 .combat-estimate {
   display: inline-block;
   margin-right: 0.09em;
@@ -146,6 +145,7 @@
 .combat-popup.cold .combat-value::after { border-radius: 2px; border-bottom: 1px solid var(--impact); }
 .combat-popup.poison .combat-value::after { box-shadow: 0 4px 7px -2px var(--impact); }
 .combat-popup.electric .combat-value::after { border-radius: 0; border-left: 1px solid var(--impact); transform: skewX(-15deg); }
+.combat-popup[data-motion="still"] .combat-number { animation: none; will-change: auto; }
 .combat-popup[data-motion="still"] .combat-value::after { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .combat-popup:not([data-motion="full"]) .combat-number { animation: none; }

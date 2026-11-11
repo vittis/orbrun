@@ -63,8 +63,9 @@ function celebrate(node: HTMLElement, age: number, reduced: boolean) {
     const delay = i % 7 * 0.008
     const t = Math.max(0, Math.min(1, (age - delay) / (0.9 - delay)))
     const angle = i * 2.39996
-    const x = Math.cos(angle) * (65 + i * 17 % 90) * t
-    const y = Math.sin(angle) * (35 + i % 6 * 16) * t - 130 * t + 200 * t * t
+    const burst = 1 - Math.pow(1 - t, 2)
+    const x = Math.cos(angle) * (95 + i * 17 % 130) * burst
+    const y = Math.sin(angle) * (35 + i % 6 * 16) * burst - 130 * t + 200 * t * t
     piece.style.transform = `translate(${x}px, ${y}px) rotate(${i * 47 + t * 540}deg) scaleX(${Math.cos(t * Math.PI * (2 + i % 4))})`
     piece.style.opacity = String(Math.min(1, t * 16) * Math.pow(1 - t, 0.6))
   })

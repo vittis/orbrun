@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.33 — 2026-11-11
+
+- Remove the sword beside physical damage numbers and celebrate level-ups with larger text, colorful confetti, sparks and an expanding ring.
+- Distinguish player and enemy combat feedback with different colors, including cyan player dodges/blocks and amber enemy dodges/blocks. Keep player damage pink and healing mint.
+
 ## 0.3.32 — 2026-11-11
 
 - Remove artificial lines and texture seams from Dungeon (2.5D) walls, keeping soft shading at their bases.
