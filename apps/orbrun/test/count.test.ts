@@ -157,10 +157,9 @@ describe('counts: stable or trunk, and the window size', () => {
 })
 
 describe('counts: the settings a game starts on', () => {
-  it('counts every setting the player is offered, with the same stops', () => {
-    // Swipe to turn is a side-by-side until one way is chosen, not a column of its own
-    // New local presentation options do not expand the fixed analytics schema.
-    const offered = ALL_SETTING_ROWS.filter((r) => r.key !== 'renderer' && r.key !== 'swipeTurn' && r.key !== 'predictiveMovement')
+  it('keeps counted settings in sync with the offered stops', () => {
+    // Projection, prediction and experimental swipe preferences remain local.
+    const offered = ALL_SETTING_ROWS.filter((r) => r.key !== 'renderer' && !r.key.startsWith('depth') && r.key !== 'swipeTurn' && r.key !== 'predictiveMovement')
     expect(SETTING_KEYS.slice().sort()).toEqual(offered.map((r) => r.key).sort())
     for (const r of offered) expect([...COUNTED_SETTINGS[r.key as keyof typeof COUNTED_SETTINGS]], r.key).toEqual([...r.values])
   })

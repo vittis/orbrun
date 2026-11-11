@@ -91,22 +91,29 @@ describe('camera rows', () => {
     expect(getSettings().eyeHeight).toBe(0.65)
   })
 
-  it('no row is ever off', () => {
-    for (const r of ALL_SETTING_ROWS) expect(rowOff(r)).toBe(false)
+  it('dungeon options are only enabled in 2.5D', () => {
+    for (const r of ALL_SETTING_ROWS) expect(rowOff(r)).toBe(r.label.startsWith('Dungeon '))
   })
 })
 
-describe('2D is temporarily out (VIEW_OPTIONS)', () => {
+describe('dungeon projections', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
-  it('the flag is off, so the Projection row is not offered', () => {
-    expect(VIEW_OPTIONS).toBe(false)
-    expect(row('Projection')).toBeDefined()
-    expect(SETTING_ROWS.find((r) => r.label === 'Projection')).toBeUndefined()
+  it('offers all three projections and persists the selected one', () => {
+    expect(VIEW_OPTIONS).toBe(true)
+    expect(SETTING_ROWS).toContain(row('Projection'))
+    expect(adjustSetting(row('Projection'), 1)).toBe('Dungeon (2.5D)')
+    expect(getSettings().renderer).toBe('2.5d')
+    expect(rowOff(row('Dungeon tilt'))).toBe(false)
+    expect(adjustSetting(row('Projection'), 1)).toBe('Top down (2D)')
+    expect(getSettings().renderer).toBe('2d')
+    expect(adjustSetting(row('Projection'), 1)).toBe('First person (3D)')
   })
 
-  it('a session saved in 2D comes back in 3D', () => {
+  it('keeps an existing flat view preference and rejects an unknown renderer', () => {
     saveSettings({ ...defaultSettings, renderer: '2d' })
+    expect(getSettings().renderer).toBe('2d')
+    store.set('orbrun.settings', JSON.stringify({ renderer: 'invalid' }))
     expect(getSettings().renderer).toBe('3d')
   })
 })

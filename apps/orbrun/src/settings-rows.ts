@@ -240,11 +240,14 @@ const leftRightRows: SettingRow[] = ([
 /** Every row, whatever is offered; `SETTING_ROWS` is what the player sees. */
 export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   // View
-  row('View', 'Projection', 'renderer', ['3d', '2d'], 'In the dungeon in 3D, or from above as the console shows it.', (v) => (v === '3d' ? '3D' : 'Top down (2D)')),
-  row('View', 'Camera height', 'eyeHeight', EYE_HEIGHTS, 'How high your eyes stand, from the floor to the ceiling.', (v) => (v as number).toFixed(2) + ' cells'),
-  row('View', 'Camera angle', 'restPitch', CAM_ANGLES, 'Where the view points at rest: level with the horizon, or tipped down toward the floor ahead.', (v) => ((v as number) === 0 ? 'Level' : Math.abs(v as number) + '° ' + ((v as number) < 0 ? 'down' : 'up'))),
-  row('View', 'Field of view', 'fov', FOVS, `How wide the first-person view opens. Auto is ${FOV_DESKTOP}°, or ${FOV_UPRIGHT}° on a phone held upright.`, autoOr((v) => v + '°', () => fovOf(defaultSettings))),
-  row('View', 'Hands', 'viewmodel', [true, false], 'The wielded weapon and off-hand item, drawn in view.', (v) => (v ? 'Weapon and shield shown' : 'Hidden')),
+  row('View', 'Projection', 'renderer', ['3d', '2.5d', '2d'], 'First-person, a slanted dungeon with raised walls and upright creatures, or traditional flat tiles. Overhead views use compass directions.', (v) => ({ '3d': 'First person (3D)', '2.5d': 'Dungeon (2.5D)', '2d': 'Top down (2D)' })[v]),
+  row('View', 'Dungeon tilt', 'depthTilt', [35, 50, 65], 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°', s => s.renderer !== '2.5d'),
+  row('View', 'Dungeon zoom', 'depthZoom', [0.8, 1, 1.2, 1.4], 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%', s => s.renderer !== '2.5d'),
+  row('View', 'Dungeon animation', 'depthAnimate', [true, false], 'Breathing creatures, drifting clouds, rippling water and rising embers. Respects your device’s reduced motion preference.', v => v ? 'On' : 'Still', s => s.renderer !== '2.5d'),
+  row('View', 'Camera height', 'eyeHeight', EYE_HEIGHTS, 'How high your eyes stand, from the floor to the ceiling.', (v) => (v as number).toFixed(2) + ' cells', s => s.renderer !== '3d'),
+  row('View', 'Camera angle', 'restPitch', CAM_ANGLES, 'Where the view points at rest: level with the horizon, or tipped down toward the floor ahead.', (v) => ((v as number) === 0 ? 'Level' : Math.abs(v as number) + '° ' + ((v as number) < 0 ? 'down' : 'up')), s => s.renderer !== '3d'),
+  row('View', 'Field of view', 'fov', FOVS, `How wide the first-person view opens. Auto is ${FOV_DESKTOP}°, or ${FOV_UPRIGHT}° on a phone held upright.`, autoOr((v) => v + '°', () => fovOf(defaultSettings)), s => s.renderer !== '3d'),
+  row('View', 'Hands', 'viewmodel', [true, false], 'The wielded weapon and off-hand item, drawn in view.', (v) => (v ? 'Weapon and shield shown' : 'Hidden'), s => s.renderer !== '3d'),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
   // Controls
   row('Controls', 'Predictive movement', 'predictiveMovement', [false, true], 'Online 3D play: start a step into clear, visible floor immediately. A refused step eases back. Predicts one step at a time; combat and uncertain terrain wait for the server.', (v) => (v ? 'On' : 'Off'), (s) => s.renderer !== '3d'),

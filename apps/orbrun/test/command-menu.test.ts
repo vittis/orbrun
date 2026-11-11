@@ -210,9 +210,9 @@ describe('the command menus', () => {
     const options = () => [...h.host.querySelectorAll('.sysrows .label')].map((r) => r.textContent)
     h.system()
     expect([...h.host.querySelectorAll('#command-panel-character .label')].map((r) => r.textContent)).toEqual(CHARACTER_COMMANDS.map((c) => c.label))
-    expect(options()).toEqual(['Resume', 'Repeat previous command', 'Game menu', 'Help', 'Chat', 'Gamepad controls', 'Settings', 'Save and exit'])
+    expect(options()).toEqual(['Resume', 'Repeat previous command', 'Game menu', 'Help', 'Chat', 'Change dungeon view', 'Gamepad controls', 'Settings', 'Save and exit'])
     // the game's key on the right, as the Character tab's commands carry theirs
-    expect([...h.host.querySelectorAll('.sysrows li')].map((r) => r.querySelector('.hotkey')?.textContent ?? '')).toEqual(['Esc', '`', 'F1', '?', 'F12', '', '', 'S'])
+    expect([...h.host.querySelectorAll('.sysrows li')].map((r) => r.querySelector('.hotkey')?.textContent ?? '')).toEqual(['Esc', '`', 'F1', '?', 'F12', '', '', '', 'S'])
     expect([...h.host.querySelectorAll('.sysrows li.sep .label')].map((r) => r.textContent)).toEqual(['Gamepad controls', 'Save and exit'])
     // the System tab, from its third row: the game's own menu
     h.ov.clientOverlayInput('right')

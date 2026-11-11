@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.11 — 2026-11-11
+
+- Add Dungeon (2.5D) in Settings → View: raised walls, upright creatures, shadows and environmental lighting, with adjustable tilt, zoom and animation.
+- Overhead views use compass movement and targeting; the level map stays flat.
+
 ## 0.3.10 — 2026-11-11
 
 - Add opt-in Predictive movement under Settings › Controls for online 3D play. A single step into clear visible floor starts immediately; matching replies keep the same animation and refused steps ease back.

@@ -537,7 +537,10 @@ export function leftRightTurns(source: DirSource, s: Settings = getSettings()): 
 }
 
 export interface Settings {
-  renderer: '3d' | '2d'
+  renderer: '3d' | '2.5d' | '2d'
+  depthTilt: number
+  depthZoom: number
+  depthAnimate: boolean
   /** How high the eye stands, in cells: 0 is the floor, 1 the lid (rendering-3d.md II.11). */
   eyeHeight: number
   /** The up-and-down field of view in degrees, 0 for Auto (settings-rows.ts `fovOf`). */
@@ -606,15 +609,8 @@ function leftRightFrom(saved: Partial<Settings> & OldLeftRight, now: keyof Setti
 }
 
 const SETTINGS_KEY = 'orbrun.settings'
-/**
- * Temporarily off (2026-09-06): the top-down (2D) view is not offered to the
- * player. It still works and is still built — the level map borrows the 2D
- * renderer — but nothing player-facing switches to it: the View settings row
- * is dropped (settings-rows.ts), the pause menu loses its toggle
- * (overlays.ts), and a session saved in 2D is read back as 3D
- * (`getSettings`). Set this to `true` to bring it back at once.
- */
-export const VIEW_OPTIONS: boolean = false
+/** All three dungeon projections are available in View settings. */
+export const VIEW_OPTIONS: boolean = true
 /**
  * Truncated corners (rendering-3d.md II.1): how far every convex wall corner
  * is cut back, in cells. Fixed at one texel of a 32-texel wall — every corner
@@ -630,6 +626,9 @@ export const CHAMFER = 1 / 32
 export const WALL_INSET = 12 / 32
 export const defaultSettings: Settings = {
   renderer: '3d',
+  depthTilt: 50,
+  depthZoom: 1,
+  depthAnimate: true,
   eyeHeight: 0.6,
   fov: 0,
   restPitch: -5,
@@ -657,7 +656,8 @@ export function getSettings(): Settings {
   s.hints = hintsFrom(saved)
   s.leftRightKeys = leftRightFrom(saved, 'leftRightKeys', ['leftRightArrows', 'leftRightVim', 'leftRightNumpad'])
   s.leftRightPad = leftRightFrom(saved, 'leftRightPad', ['leftRightDpad', 'leftRightStick'])
-  // while 2D is out, a session saved in it comes back in 3D
+  if (!['3d', '2.5d', '2d'].includes(s.renderer)) s.renderer = defaultSettings.renderer
+  // A build can still restrict available views.
   if (!VIEW_OPTIONS) s.renderer = '3d'
   return s
 }

@@ -3444,8 +3444,8 @@ export class Overlays {
       add(HELP_COMMAND.label, HELP_COMMAND.key, 'the manual, and what every key does', 'CMD_DISPLAY_COMMANDS', () => this.hooks.send(cm.input(HELP_COMMAND.key)))
     }
     if (opts.inGame && opts.chat !== false) add('Chat', 'F12', 'talk to whoever is watching', 'CMD_REPLAY_MESSAGES', () => this.hooks.onSystemAction('chat'))
-    // 2D is out for now (VIEW_OPTIONS in servers.ts)
-    if (playing && VIEW_OPTIONS) add('Toggle 2D / 3D view', undefined, 'the floor laid flat, or stood up around you', 'CMD_DISPLAY_MAP', () => this.hooks.onSystemAction('toggleRenderer'))
+    // Cycle the same projections offered in View settings.
+    if (playing && VIEW_OPTIONS) add('Change dungeon view', undefined, 'cycle first person, 2.5D and flat tiles', 'CMD_DISPLAY_MAP', () => this.hooks.onSystemAction('toggleRenderer'))
     add('Gamepad controls', undefined, 'what each button does, and how to change it', 'CMD_KEYBOARD', () => this.showBindings(this.hooks.padKind?.() ?? 'generic', again), true)
     add('Settings', undefined, "Orbrun's own options: the camera, the controls, the HUD", 'CMD_EDIT_PLAYER_TILE', () => this.showSettings(again))
     // a player saves (crawl's S, which asks first, then go_lobby brings the front end back); a spectator has nothing to

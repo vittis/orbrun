@@ -538,6 +538,8 @@ export interface SceneCursor {
 // Renderer contract
 
 export interface MapRenderer {
+  /** Whether presentation effects need another frame without a new game state. */
+  readonly animating?: boolean
   mount(target: HTMLCanvasElement | OffscreenCanvas): void
   setTiles(tiles: TileSource): void
   /** Optional presentation timestamps are seconds on the same monotonic clock. */

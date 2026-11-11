@@ -3,6 +3,7 @@ import { autofightTarget, cellKey, dirFromDelta, isThreat, type Billboard, type 
 import { ExploreDone, linesSince, namedInWarnings, namedMonster } from './warnings'
 import { Render3d } from '@orbrun/render-3d'
 import { viewmodelFor } from '@orbrun/scene-webtiles'
+import { Render25d } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
 import { RendererPark } from './park'
 import { escapeHtml, h, onDprChange } from './dom'
@@ -124,7 +125,8 @@ export class GameScreen {
   /** what the last layout was made from; the split is redone only when it changes */
   private layoutKey = ''
   private is3d = true
-  /** The level map (X) borrowed the 2D renderer while a 3D view is the setting. */
+  private renderMode: Settings['renderer'] = '3d'
+  /** The level map (X) borrowed flat tiles while a depth view is selected. */
   private mapBorrowed2d = false
   /** The 3D view kept aside while the level map is open, to come back with its level and crowd standing (park.ts). */
   private park = new RendererPark()
@@ -328,6 +330,7 @@ export class GameScreen {
     host.append(this.root)
     this.root.append(this.canvas, this.loading)
     const st = hooks.settings()
+    this.renderMode = st.renderer
     this.is3d = st.renderer === '3d'
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
@@ -344,7 +347,17 @@ export class GameScreen {
       this.relayout(true)
     }
     this.renderer = this.makeRenderer()
-    this.cam.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    this.cam.reducedMotion = motionPreference?.matches ?? false
+    const motionChanged = () => {
+      this.cam.reducedMotion = motionPreference?.matches ?? false
+      if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
+      else if (this.renderer instanceof Render3d) this.renderer.setOptions(this.render3dOptions(this.settings()))
+      this.needsRender = true
+      this.wake()
+    }
+    motionPreference?.addEventListener('change', motionChanged)
+    this.unsub.push(() => motionPreference?.removeEventListener('change', motionChanged))
     this.cam.setRestPitch(radians(st.restPitch))
     // face the camera the way the last session left it (the pitch starts at rest)
     const view = getSavedView()
@@ -411,6 +424,7 @@ export class GameScreen {
     this.prediction = new PredictiveMovement(session, this.cam, () => this.is3d && this.settings().predictiveMovement && !this.overlays.hasClientOverlay)
     this.runner = new Runner(session, this.cam, {
       context: () => this.ctx,
+      northUp: () => !this.is3d,
       ui: (op, arg, category, section) => this.uiOp(op, arg, category, section),
       osk: (op, dir) => this.overlays.oskOp(op, dir),
       menu: (op) => this.overlays.menuOp(this.session.state, op),
@@ -757,9 +771,13 @@ export class GameScreen {
     else setTimeout(run, 0)
   }
 
+  private render25dOptions(st: Settings) {
+    return { tilt: st.depthTilt, zoom: st.depthZoom, animate: st.depthAnimate && !(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) }
+  }
+
   private makeRenderer(): MapRenderer {
     const st = this.hooks.settings()
-    const r: MapRenderer = this.hooks.renderer?.() ?? (this.is3d ? new Render3d(this.render3dOptions(st)) : new Render2d({ cellSize: 32 }))
+    const r: MapRenderer = this.hooks.renderer?.() ?? (this.is3d ? new Render3d(this.render3dOptions(st)) : this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32 }))
     r.mount(this.canvas)
     this.viewmodelRev = ''
     if (this.session.gamedata) {
@@ -799,11 +817,13 @@ export class GameScreen {
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()
-    const want3d = st.renderer === '3d' && !this.mapBorrowed2d
+    const wanted = this.mapShown ? '2d' : st.renderer
+    this.mapBorrowed2d = this.mapShown && st.renderer !== '2d'
     // a 3D view parked for the map's close has no close to return to once the setting is 2D
     if (st.renderer !== '3d') this.park.clear()
-    if (want3d !== this.is3d) this.toggleRenderer()
+    if (wanted !== this.renderMode) this.toggleRenderer(wanted)
     else if (this.is3d) (this.renderer as Render3d).setOptions(this.render3dOptions(st))
+    else if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(st))
     // the minimap's size is the layout's to set
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
     // the engine read its delay at Play: a change reaches it as the client's set_option (Instant spelled out, as -1)
@@ -869,16 +889,17 @@ export class GameScreen {
   }
 
   /**
-   * Swap 2D ⇄ 3D. The outgoing view is destroyed, except a 3D view the level
+   * Swap projections. The outgoing view is destroyed, except a 3D view the level
    * map puts aside, which is parked, canvas and all, for the map's close
    * (park.ts).
    */
-  private toggleRenderer() {
+  private toggleRenderer(mode: Settings['renderer'] = this.is3d ? '2d' : '3d') {
     // a press on the outgoing canvas would never hear its release once the canvas leaves the page: the view
     // stayed tipped where the finger left it, and every press after was ignored as a second finger
     this.cancelDrag()
     const old = { canvas: this.canvas, renderer: this.renderer }
-    this.is3d = !this.is3d
+    this.renderMode = mode
+    this.is3d = mode === '3d'
     // the 3D view parked while the map was open comes back with its own canvas (park.ts); otherwise a fresh
     // canvas, since WebGL and 2D contexts cannot share one
     const kept = this.is3d ? this.park.take() : null
@@ -962,7 +983,7 @@ export class GameScreen {
       const yaw = Math.atan2(Math.sin(after.yaw - beforeLook.yaw), Math.cos(after.yaw - beforeLook.yaw))
       this.padHints.lookedBy(Math.hypot(yaw, after.pitch - beforeLook.pitch))
     }
-    if (this.is3d && (this.renderer as Render3d).animating) this.needsRender = true
+    if (this.renderer.animating) this.needsRender = true
     const st = this.session.state
     // overlays first: the popup's parsed actions and the focus cursor feed the context and the action bar
     // the device first: the overlays decide what to bring up with a server prompt by who spoke last
@@ -1055,7 +1076,8 @@ export class GameScreen {
       // centre (`vgrdc`), the player in normal play and the map cursor while the
       // level map is open, so the map scrolls under the cursor as WebTiles' does. A map borrowed from the
       // 3D view marks the way that view faces, which a north-up map otherwise loses.
-      if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
+      if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
+      if (this.renderer instanceof Render25d) this.renderer.setOptions({ center: st.map.viewCenter })
       this.renderer.setScene(this.session.scene, now / 1000)
       this.renderer.setCamera(this.cam.camera)
       const r3d = this.renderer instanceof Render3d ? this.renderer : null
@@ -1157,13 +1179,13 @@ export class GameScreen {
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
     if (this.cam.steering || this.padLooking) return true
-    if (this.is3d && (this.renderer as Render3d).animating) return true
+    if (this.renderer.animating) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 
   /**
    * The level map (X) is the WebTiles 2D view fullscreen: while it is open
-   * a 3D view swaps to the 2D renderer, and swaps back when it closes. The
+   * a depth view swaps to the 2D renderer, and swaps back when it closes. The
    * swap is a cut, in the frame the server's `ui_state` lands: the map is
    * there to be read, and nothing stands between the key and the reading.
    */
@@ -1172,15 +1194,15 @@ export class GameScreen {
     if (mapView === this.lastMapView) return
     this.lastMapView = mapView
     if (mapView) {
-      if (this.is3d) {
+      if (this.is3d || this.renderer instanceof Render25d) {
         this.mapBorrowed2d = true
-        this.toggleRenderer()
+        this.toggleRenderer('2d')
       }
       this.hud.hideMinimap()
     } else {
       if (this.mapBorrowed2d) {
         this.mapBorrowed2d = false
-        if (!this.is3d) this.toggleRenderer()
+        this.toggleRenderer(this.settings().renderer)
       }
       this.hud.showMinimap()
     }
@@ -1188,8 +1210,10 @@ export class GameScreen {
 
   /** A deliberate view switch by the player sticks, even inside the level map. */
   private userToggleRenderer() {
-    this.mapBorrowed2d = false
-    this.toggleRenderer()
+    const st = this.settings()
+    const modes: Settings['renderer'][] = ['3d', '2.5d', '2d']
+    saveSettings({ ...st, renderer: modes[(modes.indexOf(st.renderer) + 1) % modes.length] })
+    this.applySettings()
   }
 
   /**
@@ -1203,7 +1227,7 @@ export class GameScreen {
     const p = st.player
     const mapView = this.mapShown
     const key = JSON.stringify([
-      this.is3d,
+      this.renderMode,
       mapView,
       // the cell size is fitted to the view (`cellPixels`), so its size belongs to the key (`relayout` ran first in the frame)
       this.viewPx?.width,
@@ -1258,7 +1282,8 @@ export class GameScreen {
     }
     // cell_renderer.js draw_minibars: the player's bars, when tile_show_minihealthbar / tile_show_minimagicbar allow
     const minibars = { hp: p.hp, hpMax: p.hp_max, mp: p.mp, mpMax: p.mp_max, showHp: o.tile_show_minihealthbar !== false, showMp: o.tile_show_minimagicbar !== false }
-    if (!this.is3d) {
+    if (this.renderer instanceof Render25d) this.renderer.setOptions({ minibars, filterScaling: o.tile_filter_scaling === true })
+    if (this.renderer instanceof Render2d) {
       const num = (v: unknown, d: number) => (typeof v === 'number' && v > 0 ? v : d)
       const px = num(o.tile_cell_pixels, 32)
       const scale = mapView ? num(o.tile_map_scale, 60) : num(o.tile_viewport_scale, 100)
@@ -1310,7 +1335,7 @@ export class GameScreen {
    * spectated player's aim faces the cell itself.
    */
   private faceCursor(c: SceneCursor) {
-    if (c.mode === 'map' || this.cam.steering || this.viewHeld) return
+    if (!this.is3d || c.mode === 'map' || this.cam.steering || this.viewHeld) return
     if (cellKey(c.x, c.y) === this.lastTargetSent) return
     const scene = this.session.scene
     if (!scene.playerOnLevel) return
@@ -1583,13 +1608,14 @@ export class GameScreen {
     }
     const st = this.settings()
     if (ev.type === 'look') {
-      this.padLooking = ev.dx !== 0 || ev.dy !== 0
+      this.padLooking = this.is3d && (ev.dx !== 0 || ev.dy !== 0)
       if (this.ctx.mode === 'levelmap') {
         // the level map is north-up: the right stick pans it instead of the camera
         this.panMap(ev.dx, ev.dy)
         return
       }
       this.mapPan = { x: 0, y: 0 }
+      if (!this.is3d) return
       this.cam.look(ev.dx, ev.dy, st.lookSensitivity, st.invertLook)
       this.needsRender = true
       return
@@ -1948,7 +1974,7 @@ export class GameScreen {
       const d: Drag = (this.drag = { id: ev.pointerId, g: new LookDrag(touch, { t: ev.timeStamp, x: ev.clientX, y: ev.clientY }), button: ev.button, touch })
       // a finger held still on the view is R3, the stick click the touch bar has no cell for (bindings.ts TOUCH_CELLS):
       // what is ahead examined on the map, the overview on the level map; the lift then does nothing more
-      if (d.touch) {
+      if (d.touch && (this.is3d || this.ctx.mode === 'levelmap')) {
         d.hold = window.setTimeout(() => {
           if (this.drag !== d || d.g.moved) return
           d.held = true
@@ -1981,6 +2007,7 @@ export class GameScreen {
       if (!step || d.held) return
       clearTimeout(d.hold)
       if (d.touch && this.panMapBy(d, step.dx, step.dy)) return
+      if (!this.is3d) return
       const { dx, dy } = d.g.look(step.dx, step.dy)
       // a finger's swipe across turns the view with it, and onto whole headings as it lifts (swipe-turn.ts);
       // the dungeon goes the finger's way, so a swipe to the right turns left
@@ -2020,10 +2047,10 @@ export class GameScreen {
           this.cam.endLean(-swipeRest(dx, d.stepping, vx), (-vx * 1000 * HEADING) / d.stepping, Math.abs(dx) < SWIPE_FIRST_PX ? FLICK_TURN_RATE : undefined)
         }
         this.needsRender = true
-      } else if (d.g.moved) {
+      } else if (d.g.moved && this.is3d) {
         this.cam.endDrag(this.release(d, ev.timeStamp, ev.type === 'pointercancel'))
         this.needsRender = true
-      } else if (ev.type === 'pointerup') {
+      } else if (ev.type === 'pointerup' && !d.g.moved) {
         // the message pane lets the press through to here (hud.ts dismissesMoreAt): on a pending --more-- it is space
         if (this.hud.dismissesMoreAt(ev.clientX, ev.clientY)) return this.runner.execute(CONTINUE)
         if (d.touch && this.tapSteps()) return this.stepForward()
@@ -2049,7 +2076,7 @@ export class GameScreen {
       this.drag = null
       clearTimeout(d.hold)
       if (c.hasPointerCapture(d.id)) c.releasePointerCapture(d.id)
-      if (!d.g.moved || d.pan) return
+      if (!d.g.moved || d.pan || !this.is3d) return
       if (d.stepping !== undefined) this.cam.endLean()
       else this.cam.endDrag(this.release(d, performance.now(), true))
       this.needsRender = true
@@ -2280,7 +2307,7 @@ export class GameScreen {
    * map, a popup) it stays crawl's click on the cell, as a mouse's is.
    */
   private tapSteps(): boolean {
-    return this.ctx.mode === 'command' && !this.session.watching && !this.overlays.hasClientOverlay
+    return this.is3d && this.ctx.mode === 'command' && !this.session.watching && !this.overlays.hasClientOverlay
   }
 
   /**

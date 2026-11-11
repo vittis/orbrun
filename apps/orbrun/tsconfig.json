@@ -51,6 +51,9 @@
     },
     {
       "path": "../../packages/offline"
+    },
+    {
+      "path": "../../packages/render-2.5d"
     }
   ]
 }

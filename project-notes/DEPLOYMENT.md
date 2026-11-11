@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.10 point at the `cloudflare-online-v1.7` release tag in
+Source links for 0.3.11 point at the `cloudflare-online-v1.8` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -183,3 +183,20 @@ are not measured by this browser smoke check.
   is a separate anonymous connection, eight finite lightweight requests only.
 - Smooth-motion rollback if needed: 0.3.7 Worker
   `73ea14db-a8a4-478d-a859-c0fc2e5ec793`; 0.3.8 contains the reported choppiness.
+
+
+## 0.3.11 renderer release — 2026-11-11
+
+Prepared on current fork main (`60ee664` base), with the user's authorization
+to commit and deploy. The immutable source tag is `cloudflare-online-v1.8`.
+App 0.3.11 adds the selectable Dungeon (2.5D) renderer, compass controls and
+flat level-map switching while preserving the deployed transport, controller,
+fullscreen and first-person prediction behavior. Source links advance together.
+
+Prepublication validation: forced typecheck, 2,023 tests passed / two optional
+engine skips, production build, ASSETS-only Worker dry-run and diff checks.
+Optional engine E2E: 44 skips. The renderer was browser-checked at desktop and
+phone sizes; physical controller and authenticated gameplay checks remain manual.
+Push main and the source tag atomically, wait for Workers Builds to succeed,
+then verify hosted source links, 0.3.11 settings and anonymous 2.5D spectating.
+Testing instructions are in STATUS.md and packages/render-2.5d/README.md.

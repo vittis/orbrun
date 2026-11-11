@@ -1,5 +1,33 @@
 # Project status
 
+## 0.3.11 renderer release — 2026-11-11
+
+Prepared on fork `main`, based on production source `60ee664`, for the user's
+requested commit and deployment. Source tag: `cloudflare-online-v1.8`.
+Adds an independent Canvas 2.5D renderer through the shared Scene contract,
+projection/animation settings, compass input, and temporary flat level maps.
+Preserves the current controller, transport, fullscreen and opt-in first-person
+prediction behavior. Production stays online-only with the existing strict CSP.
+
+Prepublication checks passed: forced TypeScript rebuild, 2,023 unit tests
+(two optional-engine skips), production build, Worker dry-run and diff checks.
+The optional engine E2E lane reports 44 skips because no engine is built.
+
+Test the release at Settings → View → Projection → Dungeon (2.5D), then Watch
+a public game or play an existing character. Change Dungeon tilt, zoom and
+animation; reopen Settings to check persistence. In a playing game verify all
+eight movement directions, targeting with `f`/`x`, and `X` opening a flat level
+map and returning to 2.5D when closed. Cycle back to First person (3D) to check
+the existing view. No account or gameplay input is needed for a spectator smoke
+check. The standalone `/testbed/dungeon.html` preview is development-only.
+
+Current implementation uses confirmed positions without interpolating 2.5D
+movement. Atmospheric effects and server flashes are supported; element-specific
+combat animations and camera rotation are future work. Physical Odin controls
+still require the user's hardware check. Live rollout is verified after push;
+the following notes record earlier releases and retain their historical status.
+
+
 0.3.10 is prepared and validated; production remains 0.3.9 until rollout.
 New opt-in Settings / Controls / Predictive movement: complete visual step,
 matching confirmation without restart, smooth correction, one speculative step,

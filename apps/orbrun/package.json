@@ -1,6 +1,6 @@
 {
   "name": "orbrun",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "private": true,
   "description": "The Orbrun game: a first-person, controller-first WebTiles client for Dungeon Crawl Stone Soup",
   "license": "AGPL-3.0-or-later",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@orbrun/gamedata": "*",
     "@orbrun/offline": "*",
+    "@orbrun/render-2.5d": "*",
     "@orbrun/render-2d": "*",
     "@orbrun/render-3d": "*",
     "@orbrun/scene": "*",

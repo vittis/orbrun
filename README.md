@@ -34,6 +34,11 @@ Not yet: sound, and the feel layer (camera sway, hit shake).
 - **First-person 3D dungeon.** Walls, doors, stairs, altars, shops, water and
   lava; items and monsters as billboards; remembered squares dimmed; a
   minimap.
+- **2.5D dungeon view.** A slanted overhead camera, raised walls, upright
+  creatures, contact shadows, lantern and environmental lighting, animated
+  water, lava and clouds. Choose **Settings → View → Projection → Dungeon
+  (2.5D)**. Overhead views use compass movement and targeting; tilt, zoom
+  and animation are adjustable. The full level map stays flat.
 - **Full gamepad support.** A contextual A button, tap-or-hold buttons,
   command menus, an on-screen keyboard, and an action bar that shows what
   every button does right now. The bar is never guessing: the server says
@@ -81,6 +86,7 @@ recorder or a viewer can use it on its own. Each has a README.
 | [`@orbrun/scene`](packages/scene) | The world model a renderer draws: cells, billboards, camera, directions, minibars, and the `MapRenderer` and `TileSource` contracts | nothing |
 | [`@orbrun/scene-webtiles`](packages/scene-webtiles) | `GameState` + gamedata → `Scene`. All the DCSS knowledge: tile ranges, feature classification, monster list rules, the viewmodel | webtiles, gamedata, scene |
 | [`@orbrun/render-2d`](packages/render-2d) | Top-down Canvas 2D renderer of a `Scene`; also draws the minimap | scene |
+| [`@orbrun/render-2.5d`](packages/render-2.5d) | Slanted Canvas dungeon renderer with raised walls, upright sprites and environmental effects | scene |
 | [`@orbrun/render-3d`](packages/render-3d) | First-person three.js renderer of a `Scene` | scene, three |
 | [`@orbrun/vault`](packages/vault) | A subset of DCSS's `.des` vault format, compiled to a `Scene` | scene, scene-webtiles |
 | [`@orbrun/offline`](packages/offline) | Runs the WebAssembly engine in a Web Worker behind a WebTiles connection, and stands in for the server's lobby | webtiles |

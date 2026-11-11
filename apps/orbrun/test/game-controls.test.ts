@@ -464,7 +464,7 @@ describe('the right stick', () => {
   it('is free look', () => {
     const h = harness()
     const cam = { look: vi.fn() }
-    Object.assign(h.screen, { cam, mapPan: { x: 0, y: 0 }, hooks: { ...(h.screen as unknown as { hooks: object }).hooks, settings: () => ({ lookSensitivity: 1, invertLook: false }) } })
+    Object.assign(h.screen, { cam, is3d: true, mapPan: { x: 0, y: 0 }, hooks: { ...(h.screen as unknown as { hooks: object }).hooks, settings: () => ({ lookSensitivity: 1, invertLook: false }) } })
     h.event({ type: 'look', dx: 0.8, dy: 0.1 })
     expect(cam.look).toHaveBeenLastCalledWith(0.8, 0.1, 1, false)
   })

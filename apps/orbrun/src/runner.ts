@@ -60,6 +60,8 @@ export function stepIsOurs(last: LastStep | null, dx: number, dy: number, now: n
 
 export interface RunnerHooks {
   context(): Context
+  /** Overhead views send compass directions, independent of the first-person heading. */
+  northUp?(): boolean
   ui(op: string, arg?: number, category?: CommandCategory, section?: string): void
   osk(op: string, dir?: Dir8): void
   menu(op: string): void
@@ -316,7 +318,7 @@ export class Runner {
 
   /** Absolute direction for a relative one under the current facing. */
   absolute(rel: RelDir): Dir8 {
-    return rotateDir(this.cam.facing, rel)
+    return this.hooks.northUp?.() ? rel : rotateDir(this.cam.facing, rel)
   }
 
   /**
@@ -334,6 +336,7 @@ export class Runner {
    * they keep reading against the grid, `l` still up the right-hand edge.
    */
   absoluteAim(rel: RelDir, opts: { look?: boolean } = {}): Dir8 {
+    if (this.hooks.northUp?.()) return rel
     if (opts.look && (rel === 0 || rel === 4)) return rotateDir(this.cam.facing, rel)
     return rotateDir(this.cam.gridFacing, rel)
   }
@@ -440,7 +443,7 @@ export class Runner {
       // turns the view as any aim's does (game.ts `faceCursor`)
       if (ctx.mode === 'targeting') this.hold = { state: 'idle', t: 0 }
       // left and right walk the cursor round the player instead (`orbitStep`)
-      const orbit = (rel === 2 || rel === 6) && !opts.run && !opts.attack ? this.orbitStep(rel === 2 ? 1 : -1) : null
+      const orbit = !this.hooks.northUp?.() && (rel === 2 || rel === 6) && !opts.run && !opts.attack ? this.orbitStep(rel === 2 ? 1 : -1) : null
       this.send(dirMessage(orbit?.dir ?? this.absoluteAim(rel, { look: ctx.examining }), opts))
       // after the send, which drops the path any other cursor move invalidates
       if (orbit) this.orbitSent(orbit)
@@ -454,7 +457,7 @@ export class Runner {
     // left / right on an input set to turn is a pure turn: nothing is sent and
     // no time passes. Set to strafe, it falls through and steps sideways.
     // A run or an attack is always a step, whatever the setting says.
-    if ((rel === 2 || rel === 6) && opts.turns && !opts.attack && !opts.run) {
+    if (!this.hooks.northUp?.() && (rel === 2 || rel === 6) && opts.turns && !opts.attack && !opts.run) {
       this.cam.turn(rel === 2 ? 1 : -1)
       return
     }
