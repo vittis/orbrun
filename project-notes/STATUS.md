@@ -1,8 +1,13 @@
 # Project status
 
-Release **0.3.8 is prepared; publication in progress**. Production is still
-0.3.7 until rollout verification below is updated. Source links for the new
-release target immutable tag `cloudflare-online-v1.4`.
+Release **0.3.8 is LIVE** at https://dcss-client.vittis.workers.dev.
+Production commit `853a85bb34c8c87a04b04ba0dd0f497487d52188` and immutable source
+tag `cloudflare-online-v1.4`. Cloudflare build
+`b5325d8f-088a-4e49-9ad0-f84ec920bd0b` deployed successfully; Worker version
+`ee1bd592-271d-4865-9bfa-f645f31ed5ea` serves 100% of traffic. Live Chrome shows
+0.3.8; the entry bundle matches the tested local build byte for byte, with the
+expected strict CSP and immutable source links. CBRG 0.34 spectating rendered
+with textures, HUD and minimap; live evidence is under `evidence/release-038-*.png`.
 
 User confirmed the original comparison was offline. Follow-up original online
 screenshots on CBRG show response p50 147–150 ms (one p95 343 ms), consistent

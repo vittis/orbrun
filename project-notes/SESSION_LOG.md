@@ -31,6 +31,16 @@
   measures desktop presentation, not physical Odin or actual online response time.
 - Prepared package/changelog 0.3.8 and source links cloudflare-online-v1.4.
   Publication and live smoke verification follow.
+- Rollout verified: source `853a85bb34c8c87a04b04ba0dd0f497487d52188`, tag
+  `cloudflare-online-v1.4`; build `b5325d8f-088a-4e49-9ad0-f84ec920bd0b`
+  deployed Worker `ee1bd592-271d-4865-9bfa-f645f31ed5ea` at 100% traffic.
+  Live home shows 0.3.8; entry bundle matches local build byte for byte, strict
+  CSP/source tag verified. CBRG 0.34 spectator scene rendered with textures, HUD
+  and minimap. Saved release-038-live.png and release-038-spectating.png. No
+  gameplay commands or chat sent. Browser reused its existing account state.
+- Refused-step Chrome simulation returned exactly to the original position
+  83 ms after refusal, first visible motion 3.2 ms. Actual network/server delay
+  remains unchanged; physical Odin assessment is still required.
 
 ## 2026-11-11 — Odin screenshot evidence
 

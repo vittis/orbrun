@@ -154,3 +154,16 @@ no console errors. Evidence: `evidence/release-037-live.png` and
 `evidence/release-037-spectating.png`. Fullscreen activation and Odin input
 latency are covered by synthetic tests but physical Odin system bars/latency
 are not measured by this browser smoke check.
+
+## 0.3.8 rollout — 2026-11-11
+
+- Source `853a85bb34c8c87a04b04ba0dd0f497487d52188`, immutable tag
+  `cloudflare-online-v1.4`; pushed atomically with main and working branch.
+- Cloudflare build `b5325d8f-088a-4e49-9ad0-f84ec920bd0b` completed in 2m31s.
+- Worker `ee1bd592-271d-4865-9bfa-f645f31ed5ea`, 100% traffic, 05:55:38 UTC.
+- Live home shows 0.3.8. Entry `index-ChuGCf4h.js` matches the validated local
+  production build byte for byte; root returns HTTP 200, strict CSP, source v1.4.
+- Local validation: 1,987 passing tests / 2 optional engine skips, forced clean
+  TypeScript check, build, Worker dry-run. Optional engine E2E: 44 skips.
+- Camera preview simulation and hardware limits are recorded in SESSION_LOG.
+  Rollback: 0.3.7 Worker `73ea14db-a8a4-478d-a859-c0fc2e5ec793`.
