@@ -1,13 +1,19 @@
 # Project status
 
-0.3.10 is prepared and validated; production remains 0.3.9 until rollout.
+Release **0.3.10 is LIVE** at https://dcss-client.vittis.workers.dev.
+Source `60ee66410eb554a8e46d47e6f6d1da0e6d3c40f7`, immutable tag
+`cloudflare-online-v1.7`; Cloudflare build `4007d350-78fb-4077-96b2-c60e85443a22`
+completed in 2m25s. Worker `0e694c1f-0c9b-4894-b30e-fadc63a2e9ec` serves 100%.
+Live entry matches local validated build; home version and Controls row verified.
+
 New opt-in Settings / Controls / Predictive movement: complete visual step,
 matching confirmation without restart, smooth correction, one speculative step,
 conservative visible-floor eligibility. Default Off; all game state remains
 server-authoritative. No command buffering or replay, no actual RTT reduction.
 Full suite 2,005 pass / 2 skips, forced typecheck/build/dry-run pass; optional
-engine E2E 44 skips. Source release tag planned: cloudflare-online-v1.7.
+engine E2E 44 skips. Odin hardware feel still requires the user's on-device test.
 
+Previous release (rollback):
 
 Release **0.3.9 is LIVE** at https://dcss-client.vittis.workers.dev.
 Final source `d293a56bbade3e5ceeb80feb0fb74f0cecd2b570`, immutable tag

@@ -279,3 +279,12 @@
 - No actual server latency reduction, server configuration changes, game commands
   or Odin hardware measurements. Prediction can still visibly correct a wrong
   guess and a long reply can leave a pause between complete steps.
+
+- Rollout complete: source 60ee66410eb554a8e46d47e6f6d1da0e6d3c40f7,
+  immutable cloudflare-online-v1.7, build 4007d350-78fb-4077-96b2-c60e85443a22
+  (2m25s). Worker 0e694c1f-0c9b-4894-b30e-fadc63a2e9ec at 100%, 06:44:45 UTC.
+  Live main-DrHnKCer.js matches local byte for byte; HTTP 200 and strict CSP.
+  Chrome confirms home 0.3.10 and Controls / Predictive movement default Off.
+  Local UI On survives reload, then restored to Off. Evidence screenshots saved.
+  No game command sent. Rollback: 0.3.9 Worker
+  23664951-4aa6-472e-ab2a-a88cd9c4889b; disabling prediction is also immediate.

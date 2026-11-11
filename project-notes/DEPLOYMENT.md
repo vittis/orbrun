@@ -183,3 +183,17 @@ are not measured by this browser smoke check.
   is a separate anonymous connection, eight finite lightweight requests only.
 - Smooth-motion rollback if needed: 0.3.7 Worker
   `73ea14db-a8a4-478d-a859-c0fc2e5ec793`; 0.3.8 contains the reported choppiness.
+
+
+## 0.3.10 rollout — 2026-11-11
+
+- Source `60ee66410eb554a8e46d47e6f6d1da0e6d3c40f7`, immutable
+  `cloudflare-online-v1.7`; build `4007d350-78fb-4077-96b2-c60e85443a22` (2m25s).
+- Worker `0e694c1f-0c9b-4894-b30e-fadc63a2e9ec`, 100%, 06:44:45 UTC.
+- Live main-DrHnKCer.js matches local validated build, HTTP 200 + strict CSP.
+  Home 0.3.10 and Controls setting verified. Prediction defaults Off.
+- Full suite 2,005 pass / 2 optional engine skips; forced typecheck, production
+  build and Worker dry-run pass. Optional engine E2E 44 skips.
+- Actual server latency unchanged; Odin feel unverified. Settings / Controls /
+  Predictive movement can be disabled. Full rollback is 0.3.9 Worker
+  `23664951-4aa6-472e-ab2a-a88cd9c4889b`.
