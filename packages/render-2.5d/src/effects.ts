@@ -1,7 +1,9 @@
-import { cellKey, emittersFor, type Billboard, type Emitter, type MeleeAttack, type Scene } from '@orbrun/scene'
+import { cellKey, emittersFor, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance } from '@orbrun/scene'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
-export interface SpellTrace { source: Emitter; born: number; duration: number }
+export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
+interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
+interface ProjectileSample { billboard: Billboard; ended?: number }
 const visible = (scene: Scene, p: { x: number; y: number }) => scene.cells.get(cellKey(p.x, p.y))?.visibility === 'visible'
 const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 
@@ -9,7 +11,8 @@ const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 export class DungeonEffects {
   strokes: MeleeStroke[] = []
   traces: SpellTrace[] = []
-  private spells = new Map<string, Emitter>()
+  private spells = new Map<string, SpellSample>()
+  private shots = new Map<string, ProjectileSample>()
   private level: string | undefined
   private onLevel = false
 
@@ -17,17 +20,44 @@ export class DungeonEffects {
     if (!animate || !scene.playerOnLevel || !this.onLevel || scene.levelKey !== this.level) this.clear()
     this.level = scene.levelKey
     this.onLevel = scene.playerOnLevel
-    const next = new Map(emittersFor(scene).filter(s => s.transient).map(s => [signature(s), s]))
-    if (animate && scene.playerOnLevel) for (const [key, source] of this.spells) {
+    const next = new Map<string, SpellSample>(emittersFor(scene).filter(s => s.transient).map(source => [signature(source), { source }]))
+    const currentShots = new Set<string>()
+    if (animate && scene.playerOnLevel) for (const billboard of scene.billboards) {
+      if (billboard.kind !== 'projectile' || billboard.life?.projectile === false || !visible(scene, billboard)) continue
+      const key = `${billboard.x},${billboard.y}:${billboard.tile}`
+      currentShots.add(key)
+      this.shots.set(key, { billboard })
+      const appearance = billboard.life?.projectile
+      const light = billboard.life?.lights?.find(l => l.transient)
+      // Legacy producers may only provide lights. New producers describe even
+      // non-emissive projectiles, so physical spells don't depend on lighting.
+      const source: Emitter = light ? { ...light, x: billboard.x, y: billboard.y } : {
+        x: billboard.x, y: billboard.y, colour: appearance?.colour ?? [194, 177, 218], radius: 0.5, power: 0,
+      }
+      next.set(signature(source), { source, appearance })
+    }
+    for (const [key, shot] of this.shots) if (!currentShots.has(key) && shot.ended === undefined) shot.ended = now
+    if (animate && scene.playerOnLevel) for (const [key, { source, appearance }] of this.spells) {
       if (next.has(key) || !visible(scene, source)) continue
       // Fire smoulders longer; electrical/cold/magic traces dissipate sooner.
-      const duration = source.pulse === 'electric' ? 1.25 : source.pulse === 'fire' ? 2.8 : 2.1
+      const duration = appearance?.kind === 'sand' || appearance?.kind === 'stone' || appearance?.kind === 'metal' ? 1.7
+        : source.pulse === 'electric' ? 1.25 : source.pulse === 'fire' ? 2.8 : 2.1
       this.traces = this.traces.filter(t => signature(t.source) !== key)
-      this.traces.push({ source, born: now, duration })
+      this.traces.push({ source, appearance, born: now, duration })
     }
     this.spells = animate ? next : new Map()
     this.tick(scene, now)
     this.traces = this.traces.slice(-48)
+    while (this.shots.size > 128) this.shots.delete(this.shots.keys().next().value!)
+  }
+
+  /** Short minimum exposure for a frame received and removed before the next RAF.
+   * Alpha fades without delaying authoritative game state or queuing input. */
+  retainedProjectiles(now: number): Billboard[] {
+    return [...this.shots.values()].flatMap(({ billboard, ended }) => {
+      if (ended === undefined || now < ended || now - ended >= 0.18) return []
+      return [{ ...billboard, alpha: (billboard.alpha ?? 0.95) * (1 - (now - ended) / 0.18) ** 0.5 }]
+    })
   }
 
   melee(scene: Scene, attack: MeleeAttack, now: number) {
@@ -61,7 +91,8 @@ export class DungeonEffects {
   tick(scene: Scene, now: number) {
     this.strokes = this.strokes.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
     this.traces = this.traces.filter(t => now - t.born < t.duration && visible(scene, t.source))
+    for (const [key, shot] of this.shots) if (!visible(scene, shot.billboard) || shot.ended !== undefined && now - shot.ended >= 0.18) this.shots.delete(key)
   }
 
-  clear() { this.strokes = []; this.traces = []; this.spells.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.strokes = []; this.traces = []; this.spells.clear(); this.shots.clear(); this.onLevel = false; this.level = undefined }
 }

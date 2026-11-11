@@ -199,6 +199,15 @@ export class Render25d implements MapRenderer {
       const pos = this.actorPosition(entry.billboard, now)
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
+    if (this.opts.animate) {
+      for (const billboard of this.effects.retainedProjectiles(now)) {
+        const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
+        if (!cell || !this.inFrame(p, billboard)) continue
+        standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
+        this.active = true
+      }
+      standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
+    }
     this.life.tick(now)
     const emitters = this.life.emitters(now)
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now))
@@ -553,8 +562,10 @@ export class Render25d implements MapRenderer {
       // the ground plane; soften/trim its alpha instead of shrinking it and
       // opening gaps between segments. It has no creature shadow or hit box.
       const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
-      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = b.alpha ?? 0.88
-      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, true)
+      const appearance = b.life?.projectile
+      const thin = appearance ? appearance.beam : true
+      ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
+      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
       return
     }

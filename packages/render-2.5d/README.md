@@ -75,6 +75,11 @@ and picking regions. The existing first-person renderer remains independent.
   Disappearing transient spell lights leave faint fire, frost, electrical or
   magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
   Histories clear on level changes, remote maps, lost visibility and Still mode.
+  Projectile appearance is independent of light emission: Sandblast/rock/metal
+  spells leave dust or chips without glowing. Compact missiles preserve their
+  original texels; continuous beams retain alpha thinning. Short-lived server
+  overlays remain visible for up to 180 ms after removal, without delaying game
+  state, so a flight received entirely between frames cannot disappear unseen.
 
 Unexplored space uses neutral, world-anchored dark mist behind known geometry.
 Remembered tiles and standing art retain 44% of their ambient brightness,
@@ -132,6 +137,10 @@ Movement checks sample all three easing curves at the start, midpoint and
 landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
 a steady centred player and moving world under camera follow. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
+Open `/testbed/projectile-checks.html` for 20 additional real-art checks using
+the public server's Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost
+tiles. A synchronous protocol burst creates and removes each flight before the
+first draw; pixel comparisons verify projectile, impact, residue and expiry.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass

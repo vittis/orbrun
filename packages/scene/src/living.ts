@@ -2,7 +2,13 @@ import { cellKey, type Billboard, type CellKey, type Scene, type SceneCell } fro
 
 export type LifeMotion = 'breath' | 'plant' | 'undead' | 'float' | 'ooze' | 'swirl' | 'serpent' | 'skitter' | 'cloud' | 'flame' | 'water' | 'lava' | 'crystal' | 'portal' | 'altar' | 'fountain' | 'bog' | 'grass' | 'up' | 'down' | 'gold' | 'gem' | 'potion' | 'paper' | 'still'
 export interface TileLight { colour: [number, number, number]; radius: number; power: number; pulse?: 'fire' | 'slow' | 'electric'; transient?: boolean }
-export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[] }
+export interface ProjectileAppearance {
+  kind: 'sand' | 'stone' | 'metal' | 'air' | 'fire' | 'cold' | 'electric' | 'poison' | 'acid' | 'magic'
+  colour: [number, number, number]
+  /** Only continuous beam art may be alpha-thinned; compact missiles retain their texels. */
+  beam: boolean
+}
+export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[]; projectile?: ProjectileAppearance | false }
 export interface LivingPose { x: number; y: number; sx: number; sy: number; angle: number; glow: number }
 
 /** World-anchored, subpixel motion. Memory and immobilised creatures stay still.

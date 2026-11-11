@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.5D real spell projectile checks</title>
+<style>
+  body { margin: 24px; background: #080c13; color: #ddd; font: 14px system-ui, sans-serif; }
+  h1 { font-size: 21px; color: #e7c98f; }
+  #captures { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  figure { margin: 0; border: 1px solid #384354; }
+  figcaption { padding: 10px; }
+  canvas { display: block; width: 100%; }
+  pre { white-space: pre-wrap; }
+</style>
+<h1>Actual server artwork: projectile → impact → residue</h1>
+<p>Each spell arrives and clears in one synchronous protocol burst. The authoritative map is already clear before the first rendered frame.</p>
+<pre id="result">Loading public server tiles…</pre>
+<details><summary>Detailed pixel counts</summary><pre id="details"></pre></details>
+<div id="captures"></div>
+<script type="module" src="./projectile-checks.ts"></script>
+</html>

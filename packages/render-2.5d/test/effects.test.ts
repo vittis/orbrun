@@ -17,6 +17,48 @@ const spell = (x = 1): Billboard => ({ x, y: 0, kind: 'projectile', tile: 3, hei
   life: { lights: [{ colour: [255, 118, 30], radius: 2.8, power: 0.45, pulse: 'fire', transient: true }] } })
 
 describe('bounded dungeon combat presentation', () => {
+  it('retains sub-frame non-glowing projectile art and creates dust impact/residue once', () => {
+    const fx = new DungeonEffects(), scene = world()
+    const sand = { ...spell(), life: { projectile: { kind: 'sand' as const, colour: [216, 181, 116] as [number, number, number], beam: false } } }
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [sand] }, 1, true)
+    expect(fx.retainedProjectiles(1)).toHaveLength(0) // the live scene owns this tile
+    fx.observe({ ...scene, billboards: [] }, 1.001, true)
+    expect(fx.retainedProjectiles(1.016)).toMatchObject([{ tile: sand.tile, x: 1 }])
+    expect(fx.traces).toMatchObject([{ born: 1.001, appearance: { kind: 'sand' }, source: { power: 0 } }])
+    fx.observe({ ...scene, billboards: [] }, 1.05, true)
+    expect(fx.traces).toHaveLength(1)
+    expect(fx.traces[0].born).toBe(1.001)
+    fx.tick(scene, 1.2)
+    expect(fx.retainedProjectiles(1.2)).toHaveLength(0)
+    expect(fx.traces).toHaveLength(1)
+    fx.tick(scene, 3)
+    expect(fx.traces).toHaveLength(0)
+  })
+
+  it('clears retained projectiles on lost visibility, level changes, Still and remote maps', () => {
+    for (const reset of ['visibility', 'level', 'still', 'remote']) {
+      const fx = new DungeonEffects(), scene = world()
+      fx.observe(scene, 0, true)
+      fx.observe({ ...scene, billboards: [spell()] }, 1, true)
+      fx.observe(scene, 1.001, true)
+      if (reset === 'visibility') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+      if (reset === 'level') scene.levelKey = 'D:2'
+      if (reset === 'remote') scene.playerOnLevel = false
+      fx.observe(scene, 1.01, reset !== 'still')
+      expect(fx.retainedProjectiles(1.016)).toHaveLength(0)
+      expect(fx.traces).toHaveLength(0)
+    }
+  })
+
+  it('never creates visible effects for intentionally invisible projectile tiles', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [{ ...spell(), life: { projectile: false } }] }, 1, true)
+    fx.observe(scene, 1.001, true)
+    expect(fx.retainedProjectiles(1.016)).toHaveLength(0)
+    expect(fx.traces).toHaveLength(0)
+  })
   it('lunges and recoils without changing confirmed cells, settles, and ignores miss recoil', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)

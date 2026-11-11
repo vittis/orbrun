@@ -56,19 +56,38 @@ export function drawSpellTrace(ctx: Context2d, p: Projection, trace: SpellTrace,
   if (age < 0 || age >= 1) return
   const q = project(p, trace.source.x, trace.source.y), s = p.scale
   const seed = trace.source.x * 2.31 + trace.source.y * 1.73
-  const [r, g, b] = trace.source.colour
-  const fire = trace.source.pulse === 'fire', electric = trace.source.pulse === 'electric'
-  const cold = !electric && b > r * 1.25 && g > r
+  const [r, g, b] = trace.appearance?.colour ?? trace.source.colour
+  const kind = trace.appearance?.kind
+  const physical = kind === 'sand' || kind === 'stone' || kind === 'metal'
+  const air = kind === 'air'
+  const fire = kind === 'fire' || trace.source.pulse === 'fire', electric = kind === 'electric' || trace.source.pulse === 'electric'
+  const cold = kind === 'cold' || !kind && !electric && b > r * 1.25 && g > r
   const fade = (1 - age) ** 1.5
+  // A small arrival puff/spark burst is driven by the observed overlay ending,
+  // including misses and resisted hits. It makes no claim about damage.
+  const impact = (now - trace.born) / (physical ? 0.4 : 0.32)
+  if (impact >= 0 && impact < 1) {
+    ctx.save(); ctx.fillStyle = `rgb(${r},${g},${b})`
+    for (let i = 0; i < (physical ? 7 : 4); i++) {
+      const angle = seed + i * 2.4, radius = s * (0.045 + impact * 0.26)
+      const size = Math.max(0.9, s / (physical ? 28 : 55)) * (1 - impact * 0.35)
+      ctx.globalAlpha = (1 - impact) * (physical ? 0.8 : 0.45)
+      ctx.fillRect(q.x + Math.cos(angle) * radius, q.y + Math.sin(angle) * radius * Math.sin(p.tilt) - Math.sin(impact * Math.PI) * s * 0.18, size, size)
+    }
+    ctx.restore()
+  }
   ctx.save(); ctx.translate(q.x, q.y); ctx.scale(1, Math.sin(p.tilt))
-  ctx.globalAlpha = fade * 0.22
+  ctx.globalAlpha = fade * (physical ? 0.38 : 0.22)
   ctx.strokeStyle = `rgb(${r},${g},${b})`
   ctx.fillStyle = fire ? '#653523' : `rgb(${r},${g},${b})`
   ctx.lineWidth = Math.max(0.7, s / 65)
   for (let i = 0; i < 3; i++) {
     const x = Math.sin(seed + i * 4.1) * s * 0.21, y = Math.cos(seed + i * 3.7) * s * 0.19
     ctx.beginPath()
-    if (electric) {
+    if (physical) {
+      const size = s * (kind === 'sand' ? 0.025 : 0.04)
+      ctx.fillRect(x, y, Math.max(0.8, size), Math.max(0.7, size * 0.6))
+    } else if (electric) {
       ctx.moveTo(x - s * 0.1, y); ctx.lineTo(x, y - s * 0.04); ctx.lineTo(x + s * 0.025, y + s * 0.04); ctx.lineTo(x + s * 0.1, y)
     } else if (cold) {
       ctx.moveTo(x - s * 0.055, y); ctx.lineTo(x + s * 0.055, y)
@@ -81,11 +100,12 @@ export function drawSpellTrace(ctx: Context2d, p: Projection, trace: SpellTrace,
   ctx.restore()
   // A handful of sharp motes rise from the trace; no blur or full-cell wash.
   ctx.save(); ctx.fillStyle = `rgb(${r},${g},${b})`
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < (physical ? 5 : 3); i++) {
     const life = (age * 1.4 + i / 3) % 1
-    ctx.globalAlpha = Math.sin(life * Math.PI) * fade * 0.38
+    ctx.globalAlpha = Math.sin(life * Math.PI) * fade * (physical ? 0.45 : 0.38)
     const size = Math.max(0.7, s / 70)
-    ctx.fillRect(q.x + Math.sin(seed + i * 3.4 + life) * s * 0.22, q.y - life * s * 0.33, size, size)
+    const drift = physical || air ? life * s * 0.16 : 0
+    ctx.fillRect(q.x + Math.sin(seed + i * 3.4 + life) * s * 0.22 + drift, q.y - life * s * (physical ? 0.15 : 0.33), size, size)
   }
   ctx.restore()
 }
