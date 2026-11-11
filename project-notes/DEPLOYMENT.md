@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.27 point at the `cloudflare-online-v1.24` release tag in
+Source links for 0.3.28 point at the `cloudflare-online-v1.25` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -688,3 +688,42 @@ production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
 checks passed. Optional engine E2E reports 44 explicit skips. The atomic
 main/source-tag push triggers Cloudflare Workers Builds. No deployment polling
 or hosted checks will be performed, as requested.
+
+
+## 0.3.28 brief projectile and physical spell effects — prepared 2026-11-11
+
+User requested fixing invisible Sandblast visuals, covering similar cases and
+deploying the result. Source tag: `cloudflare-online-v1.25`. Integrated main's
+0.3.26 multi-cell movement and 0.3.27 wall-depth releases before publication.
+
+Root causes: Session batched map rebuilding until RAF, so a complete projectile
+flight could be overwritten by later map deltas. Residue depended exclusively
+on transient light emitters, excluding Sandblast/Stone Arrow/Iron Shot. All
+projectiles also received alpha thinning intended for continuous beam segments.
+Session now publishes confirmed projectile map frames immediately (excluding
+historical load-queue replay); 2.5D keeps removed artwork for up to 180 ms and
+uses independent projectile semantics for impact/dust/chip traces. Compact art
+keeps its texels. Histories remain bounded and respect visibility, remote maps,
+level changes, Still mode and explicitly invisible black bolt tiles.
+
+Official source confirms Sandblast uses TILE_BOLT_SANDBLAST rather than a fire
+or magical light. The ordinary WebTiles client honors presentation delays;
+this fix preserves effects without blocking this client's authoritative updates:
+- https://github.com/crawl/crawl/blob/master/crawl-ref/source/zap-data.h
+- https://github.com/crawl/crawl/blob/master/crawl-ref/source/webserver/static/scripts/client.js
+
+Regression coverage drives real Session/reducer/builder/renderer wiring with
+Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost added and removed in one
+synchronous message burst. `/testbed/projectile-checks.html` uses actual public
+server artwork: 20 pixel checks verify projectile, impact, residue and complete
+expiry. Existing terrain/movement/wall Canvas checks are retained. Final release
+checks and rollout evidence follow below.
+
+
+Final integrated validation: forced TypeScript, 2,238 unit tests/two optional
+engine skips, production build, ASSETS-only Worker dry-run (104 assets,
+20.95 KiB) and diff checks passed. Optional engine E2E reports 44 explicit skips.
+All 1,062 terrain/movement/wall Canvas checks and 20 real-art spell checks pass.
+Evidence: `evidence/release-0328-{canvas-checks,projectiles}.json` and
+`evidence/release-0328-projectiles.png`. The source tag and main will be pushed
+atomically, followed by a production asset/source/CSP/proxy verification.

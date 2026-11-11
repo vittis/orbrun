@@ -1,0 +1,148 @@
+{
+  "gamedataVersion": "0703b2fa62e821390161d95cf52f9da1183761d4",
+  "checks": 20,
+  "failures": [],
+  "passed": 20,
+  "results": [
+    {
+      "changedPixels": 1081,
+      "passed": true,
+      "phase": "Projectile",
+      "sleeping": false,
+      "spell": "BOLT_SANDBLAST"
+    },
+    {
+      "changedPixels": 364,
+      "passed": true,
+      "phase": "Impact",
+      "sleeping": false,
+      "spell": "BOLT_SANDBLAST"
+    },
+    {
+      "changedPixels": 108,
+      "passed": true,
+      "phase": "Residue",
+      "sleeping": false,
+      "spell": "BOLT_SANDBLAST"
+    },
+    {
+      "changedPixels": 0,
+      "passed": true,
+      "phase": "Expired",
+      "sleeping": true,
+      "spell": "BOLT_SANDBLAST"
+    },
+    {
+      "changedPixels": 1242,
+      "passed": true,
+      "phase": "Projectile",
+      "sleeping": false,
+      "spell": "BOLT_STONE_ARROW"
+    },
+    {
+      "changedPixels": 376,
+      "passed": true,
+      "phase": "Impact",
+      "sleeping": false,
+      "spell": "BOLT_STONE_ARROW"
+    },
+    {
+      "changedPixels": 129,
+      "passed": true,
+      "phase": "Residue",
+      "sleeping": false,
+      "spell": "BOLT_STONE_ARROW"
+    },
+    {
+      "changedPixels": 0,
+      "passed": true,
+      "phase": "Expired",
+      "sleeping": true,
+      "spell": "BOLT_STONE_ARROW"
+    },
+    {
+      "changedPixels": 2172,
+      "passed": true,
+      "phase": "Projectile",
+      "sleeping": false,
+      "spell": "BOLT_IRON_SHOT"
+    },
+    {
+      "changedPixels": 388,
+      "passed": true,
+      "phase": "Impact",
+      "sleeping": false,
+      "spell": "BOLT_IRON_SHOT"
+    },
+    {
+      "changedPixels": 137,
+      "passed": true,
+      "phase": "Residue",
+      "sleeping": false,
+      "spell": "BOLT_IRON_SHOT"
+    },
+    {
+      "changedPixels": 0,
+      "passed": true,
+      "phase": "Expired",
+      "sleeping": true,
+      "spell": "BOLT_IRON_SHOT"
+    },
+    {
+      "changedPixels": 16984,
+      "passed": true,
+      "phase": "Projectile",
+      "sleeping": false,
+      "spell": "BOLT_MAGIC_DART"
+    },
+    {
+      "changedPixels": 7123,
+      "passed": true,
+      "phase": "Impact",
+      "sleeping": false,
+      "spell": "BOLT_MAGIC_DART"
+    },
+    {
+      "changedPixels": 318,
+      "passed": true,
+      "phase": "Residue",
+      "sleeping": false,
+      "spell": "BOLT_MAGIC_DART"
+    },
+    {
+      "changedPixels": 0,
+      "passed": true,
+      "phase": "Expired",
+      "sleeping": true,
+      "spell": "BOLT_MAGIC_DART"
+    },
+    {
+      "changedPixels": 11905,
+      "passed": true,
+      "phase": "Projectile",
+      "sleeping": false,
+      "spell": "BOLT_FROST"
+    },
+    {
+      "changedPixels": 4458,
+      "passed": true,
+      "phase": "Impact",
+      "sleeping": false,
+      "spell": "BOLT_FROST"
+    },
+    {
+      "changedPixels": 333,
+      "passed": true,
+      "phase": "Residue",
+      "sleeping": false,
+      "spell": "BOLT_FROST"
+    },
+    {
+      "changedPixels": 0,
+      "passed": true,
+      "phase": "Expired",
+      "sleeping": true,
+      "spell": "BOLT_FROST"
+    }
+  ]
+}

@@ -1,5 +1,20 @@
 # Project status
 
+## 0.3.28 brief projectile and physical spell effects — prepared 2026-11-11
+
+User authorized fixing Sandblast and similar spell visuals and deploying when
+finished. New source tag: `cloudflare-online-v1.25`. Projectile map frames now
+reach the renderer before later deltas overwrite them; removed artwork remains
+visible briefly without holding game state or input. Non-emissive sand/stone/
+metal/air projectiles have independent impact and residue styles, and compact
+art avoids beam-only alpha thinning. Load history, invisible spells, Still,
+visibility and level-transition cleanup are preserved. Main's 0.3.26 movement
+and 0.3.27 wall-depth changes are integrated. Real server artwork passes all
+20 projectile/impact/residue/expiry checks. Final integrated validation: 2,238
+unit tests/two optional-engine skips; 1,062 existing Canvas checks; forced
+TypeScript, production build and ASSETS-only dry-run pass. Optional engine E2E
+reports 44 skips. Evidence and rollout details are in DEPLOYMENT.md.
+
 ## 0.3.26 multi-cell movement — prepared 2026-11-11
 
 User authorized commit to main and deployment and will check the result.

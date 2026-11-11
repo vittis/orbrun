@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.28 — 2026-11-11
+
+- Restore Sandblast and other brief spell projectiles that could be created and removed between rendered frames. Preserve confirmed flight artwork briefly without delaying game updates or input.
+- Give non-glowing sand, stone, metal and air spells their own subtle impacts and lingering dust/shard traces. Keep compact missiles crisp instead of applying continuous-beam thinning to them.
+- Apply the fix to other short-lived spell and missile overlays, with quiet fallbacks for new server art. Preserve intentionally invisible spells, Still mode, visibility and level-transition cleanup.
+
 ## 0.3.27 — 2026-11-11
 
 - Give Dungeon (2.5D) walls stronger base shadows, height-aware cast shadows, shaded faces and subtle roof edges so their depth is easier to read.
