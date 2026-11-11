@@ -91,6 +91,8 @@ export class Session {
     return this.loadingVersion !== null
   }
   private sceneDirty = false
+  /** Arrival time of the latest scene update, in performance.now() milliseconds. */
+  sceneChangedAt = 0
   private lastSceneRev = { map: -1, player: -1, ui: -1 }
   diagnostics: string[] = []
   closed = false
@@ -394,7 +396,10 @@ export class Session {
 
   private apply(m: ServerMessage) {
     reduce(this.state, m)
-    if (m.msg === 'map' || m.msg === 'player' || m.msg === 'game_client' || m.msg === 'go_lobby') this.sceneDirty = true
+    if (m.msg === 'map' || m.msg === 'player' || m.msg === 'game_client' || m.msg === 'go_lobby') {
+      this.sceneDirty = true
+      this.sceneChangedAt = performance.now()
+    }
     this.emit({ type: 'state', msg: m })
   }
 

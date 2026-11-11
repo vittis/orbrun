@@ -52,6 +52,25 @@ describe('the gamedata load', () => {
   beforeEach(() => void loads.splice(0))
   afterEach(() => vi.useRealTimers())
 
+  it('dates confirmed scene updates before notifying the view, without letting UI messages postpone motion', async () => {
+    const { s, handle } = await make()
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(100)
+    try {
+      const arrived: number[] = []
+      s.on((e) => { if (e.type === 'state') arrived.push(s.sceneChangedAt) })
+      handle({ msg: 'player', pos: { x: 1, y: 2 } })
+      clock.mockReturnValue(110)
+      handle({ msg: 'msgs', messages: [] })
+      expect(arrived).toEqual([100, 100])
+      clock.mockReturnValue(120)
+      handle({ msg: 'map', cells: [] })
+      expect(s.sceneChangedAt).toBe(120)
+    } finally {
+      clock.mockRestore()
+      s.close()
+    }
+  })
+
   it('closes a stalled load without applying queued messages with unavailable gamedata', async () => {
     vi.useFakeTimers()
     const { s, events, handle } = await make()

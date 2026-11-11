@@ -1,5 +1,51 @@
 # Session log
 
+## 2026-11-11 — Authorized 0.3.7 publication and launch fullscreen
+
+- User explicitly requested deploying 0.3.7 and making fullscreen automatic on
+  every launch. Added launch/resume requests plus capture-phase touch, mouse and
+  keyboard fallback when browser user activation is required. No input is consumed,
+  no setting needs persistence, pending requests are deduplicated, and explicit
+  fullscreen exits remain possible until the app is visited again.
+- Added seven fullscreen lifecycle tests. Updated immutable source links to
+  `cloudflare-online-v1.3`. Final prepublication validation: 1,950 tests passed,
+  two optional-engine tests skipped; forced TypeScript build, production build,
+  Worker dry-run, and diff whitespace checks passed. Original latency evidence
+  and physical-device limitation remain as documented below.
+- Verified remote main is the previous deployed code `970cdda`; v1.3 is unused.
+  Publishing via the configured main-branch Cloudflare build pipeline next.
+
+## 2026-11-11 — Odin 3 input latency follow-up
+
+- User reports a perceptible movement delay with analog and d-pad, and confirmed
+  both this fork and original Orbrun use online play on the same DCSS server.
+- Traced GamepadInput -> GameScreen.pad -> Runner -> Session -> RemoteConnection:
+  first direction events send synchronously; repeats have intentional hold delays;
+  commands connect directly to the selected server, not through Cloudflare.
+- Downloaded original public app bundles/source maps read-only. Deployed
+  `game-DtsQQ4du.js` and `index-Dkqmhn4R.js` contain game/runner/camera/main sources
+  identical to the fork baseline. Fork-specific controller changes correct Android
+  mapping; transport changes validate/bound traffic. No measured evidence yet
+  attributes the whole physical-device difference to a particular fork change.
+- Removed two concrete frame waits: a shared FrameScheduler polls controls before
+  rendering regardless of registration order and admits a screen woken by input
+  into that same frame; Session records scene-update receipt time so camera and
+  monster motion progress on the first eligible frame instead of starting at zero.
+  Animation time is bounded to the current frame interval, and frame dt cannot
+  become negative when a same-frame wake follows the browser's rAF timestamp.
+- Added 60/120 Hz ordering/wake/repeat/cancellation tests, first-frame camera and
+  monster synchronization tests, stale/future clock bounds, and a session test
+  proving unrelated UI messages cannot postpone the movement timestamp.
+- App/lockfile/changelog prepared as 0.3.7. An initial Unreleased changelog heading
+  failed three existing What's new tests; corrected to the app's numbered-release
+  format. Final `npm test`: 134 files / 1,943 tests passed, one optional engine
+  file / two tests skipped. `npm run typecheck`, `npm run build`, and
+  `git diff --check` passed. Build retains the existing >500 kB chunk advisory.
+- No deployment, push or commit performed. Production remains 0.3.6. Before
+  publication, update immutable source-release links/tag according to DEPLOYMENT.
+  Physical Odin validation remains pending; automated timing tests are not a
+  hardware latency measurement or proof that the entire reported difference is gone.
+
 ## 2026-11-11 — Phase 0 initialization
 
 - Read the complete user initialization brief from its attachment.

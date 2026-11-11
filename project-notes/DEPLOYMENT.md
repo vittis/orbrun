@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links point at the public `cloudflare-online-v1.2` release tag in
+Source links for 0.3.7 point at the `cloudflare-online-v1.3` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -125,3 +125,17 @@ touch activation and Odin system-bar behavior remain unverified.
 
 This post-rollout record is on `codex/odin-controller-fullscreen`; production
 `main` and immutable `cloudflare-online-v1.2` remain at the deployed code commit.
+
+## Input latency and automatic fullscreen release — 2026-11-11
+
+User authorized deploying 0.3.7 with fullscreen enabled automatically at launch.
+Prepared source tag: `cloudflare-online-v1.3`. Controller input precedes game
+rendering; confirmed movement uses update receipt time. Fullscreen requests
+hidden navigation immediately and retries on ordinary touch/keyboard input when
+the browser requires activation. Returning to the app requests fullscreen again;
+an explicit Escape/Back is respected until the next visit. No setting is required.
+
+Prepublication checks: `npm test` passed 1,950 tests (two optional engine tests
+skipped), `npx tsc -b --force`, `npm run build`, `npm run deploy:check`, and
+`git diff --check` passed. Deployment and physical Odin checks are pending at
+this release checkpoint; the post-rollout entry records the actual result.

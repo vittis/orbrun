@@ -32,6 +32,7 @@ import { FLICK_TURN_RATE, SWIPE_FIRST_PX, SWIPE_HEADING_PX, swipeRest, swipeView
 import { HEADING } from './fling'
 import { LookDrag } from './look-drag'
 import type { DragRelease } from './camera'
+import { requestRenderFrame, cancelFrame } from './frames'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
@@ -186,12 +187,12 @@ export class GameScreen {
       // the clock starts again with the loop: an easing's first frame must not be handed the whole sleep as its dt
       this.lastFrame = performance.now()
       this.perf?.profile.resume()
-      this.raf = requestAnimationFrame(this.loop)
+      this.raf = requestRenderFrame(this.loop)
     }
   }
   /** `rev.player|rev.map` the viewmodel was last built from */
   private viewmodelRev = ''
-  /** Scene callbacks flushed inside a frame share its timestamp with both animations. */
+  /** Scene callbacks start both animations at the confirmed update's arrival time. */
   private sceneTime: number | undefined
   private lastFrame = performance.now()
   private raf = 0
@@ -530,7 +531,7 @@ export class GameScreen {
     this.hooks.gamepad.fourWay = false
     this.saveView()
     window.removeEventListener('pagehide', this.saveView)
-    cancelAnimationFrame(this.raf)
+    cancelFrame(this.raf)
     clearTimeout(this.idleTimer)
     window.removeEventListener('keydown', this.onKeyDown, true)
     window.removeEventListener('resize', this.onResize)
@@ -908,10 +909,14 @@ export class GameScreen {
   // ------------------------------------------------------------- frame loop
 
   private loop(now: number) {
-    this.raf = requestAnimationFrame(this.loop)
-    const dt = Math.min(0.1, (now - this.lastFrame) / 1000)
+    this.raf = requestRenderFrame(this.loop)
+    const previousFrame = this.lastFrame
+    const dt = Math.max(0, Math.min(0.1, (now - previousFrame) / 1000))
     this.lastFrame = now
-    this.sceneTime = now / 1000
+    // The reply already spent time waiting for this frame. Starting its glide
+    // at `now` would draw no motion until the NEXT frame. Clamp to the last
+    // frame so a stale/load-time update cannot fast-forward a new animation.
+    this.sceneTime = Math.min(now, Math.max(previousFrame, this.session.sceneChangedAt ?? now)) / 1000
     const perf = this.perf?.enabled ? this.perf.profile : null
     perf?.begin(now)
     try {
@@ -928,7 +933,7 @@ export class GameScreen {
     perf?.mark('present')
     if (!this.awake(now)) {
       // nothing to do and nothing moving: no frames until something happens (`wake`) or the safety tick
-      cancelAnimationFrame(this.raf)
+      cancelFrame(this.raf)
       this.raf = 0
       this.idleTimer = window.setTimeout(this.idleTick, IDLE_TICK_MS)
       perf?.resume()
@@ -1109,7 +1114,7 @@ export class GameScreen {
     if (!this.raf && !this.destroyed) {
       this.lastFrame = performance.now()
       this.perf?.profile.resume()
-      this.raf = requestAnimationFrame(this.loop)
+      this.raf = requestRenderFrame(this.loop)
     }
   }
 

@@ -1,5 +1,14 @@
 # Project status
 
+Input latency follow-up (2026-11-11): local fixes schedule controller polling
+before game rendering, including wake-up in the same frame, and start movement
+animations at the confirmed update's arrival time. Automated 60/120 Hz timing
+regressions cover the removed frame waits. The user confirmed the comparison
+uses online play on the same server. Original public source maps match the
+fork's baseline game/runner/camera/main code; the entire device-specific
+difference is not yet reproduced. These changes are **not deployed**; physical
+Odin 3 comparison remains pending. See the latest SESSION_LOG entry.
+
 Current follow-up: controller/fullscreen release **LIVE** at
 https://dcss-client.vittis.workers.dev. Release `cloudflare-online-v1.2` points to
 `970cddacf9cd6ef68dcd4701b6416a6e7d9eeb2e` (app 0.3.6); Worker version

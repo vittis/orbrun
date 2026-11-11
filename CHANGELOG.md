@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.7 — 2026-11-11
+
+- Reduce controller response delay and show confirmed movement sooner, keeping camera and monster motion synchronized.
+- Enter fullscreen automatically at launch and on return; when the browser requires a gesture, any tap or key starts it.
+
 ## 0.3.6 — 2026-11-11
 
 - Keep Android controller buttons and d-pad aligned with the browser's mapping.

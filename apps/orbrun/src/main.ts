@@ -15,6 +15,10 @@ import { appSettled, engines, keepEngines } from './engines'
 import { HOME } from './site'
 import { ownWindow } from './quit'
 import { installBack } from './back'
+import { requestInputFrame, cancelFrame } from './frames'
+import { installFullscreen } from './fullscreen'
+
+installFullscreen()
 
 const app = document.getElementById('app')!
 const gamepad = new GamepadInput()
@@ -746,20 +750,20 @@ function tick(now: number) {
   lobby?.updateInputHints()
   syncBack()
   // a touch bar arrow held down repeats on the pad's timing, so it is polled as a pad would be
-  if (gamepad.connected || gamepad.virtualHeld) pollFrame = requestAnimationFrame(tick)
-  else pollTimer = window.setTimeout(() => { pollFrame = requestAnimationFrame(tick) }, IDLE_POLL_MS)
+  if (gamepad.connected || gamepad.virtualHeld) pollFrame = requestInputFrame(tick)
+  else pollTimer = window.setTimeout(() => { pollFrame = requestInputFrame(tick) }, IDLE_POLL_MS)
 }
 window.addEventListener('gamepadconnected', () => {
   clearTimeout(pollTimer)
-  cancelAnimationFrame(pollFrame)
-  pollFrame = requestAnimationFrame(tick)
+  cancelFrame(pollFrame)
+  pollFrame = requestInputFrame(tick)
 })
 gamepad.on((e) => {
   // a finger on the touch bar wakes the loop now rather than at the next idle look, for a held arrow's repeat
   if (e.type === 'press' && e.touch && !gamepad.connected) {
     clearTimeout(pollTimer)
-    cancelAnimationFrame(pollFrame)
-    pollFrame = requestAnimationFrame(tick)
+    cancelFrame(pollFrame)
+    pollFrame = requestInputFrame(tick)
   }
   if (isPadActivity(e)) {
     lastInput = 'pad'
@@ -767,7 +771,7 @@ gamepad.on((e) => {
   if (game) game.pad(e)
   else lobby?.pad(e)
 })
-pollFrame = requestAnimationFrame(tick)
+pollFrame = requestInputFrame(tick)
 
 window.addEventListener('beforeunload', (ev) => {
   if (session && session.playing) {

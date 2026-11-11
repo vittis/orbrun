@@ -39,6 +39,11 @@ Updated 2026-11-11. Status: done / partial / ready / queued / blocked / optional
 
 ## Explicit unfinished work
 
+- Odin 3 latency follow-up: local input-before-render scheduling and receipt-timed
+  movement fixes have automated 60/120 Hz coverage. Deploy and compare on physical
+  hardware with the same server/settings; the full reported difference from the
+  original is not yet reproduced. This does not close the broader P2-004 matrix.
+
 - No-engine harness gating is fixed; the historical Phase 0 command still failed as recorded. Current totals and hosted-deployment scope are in DEPLOYMENT.md.
 - Proxy policy/limits are implemented; DNS resolution pinning and distributed abuse budgets remain open. Source offer is prepared; exact bundled-art provenance remains open.
 - Engine E2E not executed successfully: artifacts, emsdk/PyYAML and JSPI-capable Node absent. Provision only for the dedicated test lane; do not block ordinary online-client development on a WASM build.
