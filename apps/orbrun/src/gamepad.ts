@@ -318,12 +318,17 @@ const BT_BUTTONS = [0, 1, -1, 2, 3, -1, 4, 5, -1, -1, 8, 9, 16, 10, 11]
 export function standardView(pad: Gamepad): { buttons: boolean[]; axes: number[] } {
   const raw = pad.buttons.map((b) => b.pressed || b.value > 0.5)
   if (pad.mapping === 'standard') return { buttons: raw, axes: pad.axes.slice(0, 4) }
-  const bt = pad.buttons.length >= BT_BUTTONS.length
-  const xpad = !bt && pad.buttons.length === XPAD_BUTTONS.length
+  // Android Chrome can supply canonical buttons/sticks while leaving mapping
+  // empty (UnknownGamepadMappings). In particular, 16/17 buttons are NOT the
+  // Linux Bluetooth layout. Remapping those drops the d-pad and moves triggers
+  // into bumper slots. Only recognize the raw layouts we actually support,
+  // including their six stick/trigger axes and two hat axes.
+  const bt = pad.buttons.length === BT_BUTTONS.length && pad.axes.length === 8
+  const xpad = pad.buttons.length === XPAD_BUTTONS.length && pad.axes.length === 8
   if (!bt && !xpad) {
-    // an unknown layout: its buttons as they come, the d-pad from a hat if it has one
+    // Preserve browser-supplied slots. Extra axes on an unknown controller are
+    // not necessarily a hat; guessing can create phantom d-pad presses.
     const buttons = raw.slice()
-    if (pad.axes.length >= 8) hat(buttons, pad.axes[6], pad.axes[7])
     return { buttons, axes: pad.axes.slice(0, 4) }
   }
   const buttons: boolean[] = new Array(BUTTON_INDEX.length).fill(false)

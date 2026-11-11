@@ -70,6 +70,33 @@ export function settingsPanel(group: SettingGroup, opts: { onchange?: () => void
     rows.push(r)
     ol.append(r)
   }
+  // A direct tap/key gesture is needed by the Fullscreen API. Keep this action
+  // available to existing standalone installs as well as ordinary browser tabs.
+  // It is deliberately an enter action: manifest fullscreen is separate from
+  // document.fullscreenElement and cannot be exited with exitFullscreen().
+  if (group === 'Interface' && document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+    const k = hotkey()
+    const status = h('div', { role: 'status', hidden: true })
+    const fullscreen = h('li', { class: 'row level2 selectable fg7 action', dataset: { hotkey: k, focus: 'fullscreen', hint: 'Hide the system bars. If using a controller, you may need to tap this row on the screen.' } },
+      h('span', { class: 'hotkey' }, k), h('span', { class: 'dash' }, '-'), h('span', { class: 'label' }, 'Go fullscreen'))
+    let pending = false
+    fullscreen.addEventListener('click', async () => {
+      if (pending) return
+      pending = true
+      status.hidden = true
+      try {
+        await document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+      } catch {
+        status.textContent = 'Fullscreen could not start. Tap Go fullscreen on the screen or press its letter on a keyboard to try again.'
+        status.hidden = false
+      } finally {
+        pending = false
+      }
+    })
+    rows.push(fullscreen)
+    ol.append(fullscreen)
+    body.append(status)
+  }
   // the tips are the pad's and the finger's, so they are a row of the page the Hints setting is on
   if (group === 'Controls') {
     const k = hotkey()

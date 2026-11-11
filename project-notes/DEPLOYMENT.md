@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links point at the public `cloudflare-online-v1.1` release tag in
+Source links point at the public `cloudflare-online-v1.2` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -101,3 +101,15 @@ The release review records external About-script delivery and strict script CSP.
 
 Post-rollout documentation is committed on the initialization branch without
 advancing production `main`; the live code remains exactly the release tag.
+
+## Controller and fullscreen release — 2026-11-11
+
+Prepared release `cloudflare-online-v1.2` (app 0.3.6) corrects Android canonical
+controller input being mistaken for raw Linux Bluetooth input. The PWA requests
+fullscreen at launch and Settings > Interface includes Go fullscreen for existing
+installs. Source links advance with the immutable release tag.
+
+Validation: 1,932 tests passed, two optional-engine tests skipped; TypeScript and
+production build passed. Android-shaped synthetic controllers cover each button,
+LT/RT isolation, d-pad repeat/release and front-menu navigation. Physical Odin 3
+verification remains with the user.

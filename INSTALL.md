@@ -8,6 +8,11 @@ top right, choose **Add to Home screen**, then **Install**.
 Orbrun appears with your other apps. Open it from there, not from the
 browser, to play full screen. Portrait and landscape both work.
 
+If the system bars are still visible, open **Settings › Interface › Go fullscreen**
+and tap that row. This also works in a browser tab or an older installed copy.
+The installed app now requests fullscreen by default; an existing installation
+may keep its previous display mode until Chrome updates its app manifest.
+
 ## Windows, Mac, Linux and ChromeOS
 
 On a computer the same thing is called installing. Open

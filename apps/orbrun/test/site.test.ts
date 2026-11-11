@@ -33,7 +33,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.1/issues')
+        expect(html).not.toContain('cloudflare-online-v1.2/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")

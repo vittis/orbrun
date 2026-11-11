@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.6 — 2026-11-11
+
+- Keep Android controller buttons and d-pad aligned with the browser's mapping.
+- Installed apps request fullscreen; Settings › Interface › Go fullscreen hides system bars on supported browsers.
+
 ## 0.3.5 — 2026-11-08
 
 - Add Hold RB key to gamepad to Reach with a primary attack.

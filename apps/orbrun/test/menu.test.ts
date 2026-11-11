@@ -5,6 +5,7 @@ import { accountConn, FrontEnd, navDir, exitReasonMessage, type Intent } from '.
 import { version } from '../package.json'
 import { engines } from '../src/engines'
 import { settingsPanel } from '../src/settings-panel'
+import { GamepadInput } from '../src/gamepad'
 import type { Session } from '../src/session'
 import { XOM_SPLASHES } from '../src/splash'
 import { findServer, OFFLINE_SERVER, setGames, setToken, type Account, type ServerInfo } from '../src/servers'
@@ -160,6 +161,29 @@ describe('the front end: the home screen', () => {
     expect(screen.root.querySelector('.home-footer')?.textContent).toBe('What’s newAbout & credits')
     expect(screen.root.querySelectorAll('a')).toHaveLength(0)
     expect(sub(screen, 'Play')).toBeNull()
+  })
+
+  it('navigates the front menu with an Android d-pad reported without a mapping flag', () => {
+    const { screen } = make(undefined, true)
+    const buttons = Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }))
+    const controller = { id: 'Odin Controller', index: 0, mapping: '', axes: [0, 0, 0, 0], buttons } as unknown as Gamepad
+    vi.stubGlobal('navigator', { getGamepads: () => [controller] })
+    const input = new GamepadInput()
+    input.on((ev) => screen.pad(ev))
+    input.poll(0)
+    const initial = focused(screen)
+    buttons[13] = { pressed: true, touched: true, value: 1 }
+    input.poll(16)
+    const next = focused(screen)
+    expect(next).toBeDefined()
+    expect(next).not.toBe(initial)
+    input.poll(400)
+    expect(focused(screen)).not.toBe(next)
+    buttons[13] = { pressed: false, touched: false, value: 0 }
+    input.poll(416)
+    buttons[12] = { pressed: true, touched: true, value: 1 }
+    input.poll(432)
+    expect(focused(screen)).toBe(next)
   })
 
   it('says how to look around the room: the right stick on a pad, a drag with a mouse, nothing on touch', () => {

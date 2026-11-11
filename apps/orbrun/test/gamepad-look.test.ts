@@ -145,6 +145,71 @@ describe('an unmapped pad is read in the standard layout', () => {
     expect(held(standardView(raw(11, [0, 0, -1, 0, 0, -1, 0, 0], [])))).toEqual([])
     expect(held(standardView(raw(15, [0, 0, 0, 0, -1, -1, 0, 0], [])))).toEqual([])
   })
+
+  it.each([16, 17])('preserves every Android canonical button with an empty mapping (%i buttons)', (count) => {
+    for (let i = 0; i < count; i++) {
+      const pad = { ...raw(count, [0.1, 0.2, 0.3, 0.4], [i]), id: 'Odin Controller' }
+      expect(held(standardView(pad))).toEqual([i])
+      expect(standardView(pad).axes).toEqual([0.1, 0.2, 0.3, 0.4])
+    }
+  })
+
+  it('does not mistake extra Android axes for Linux triggers or a d-pad hat', () => {
+    const pad = raw(17, [0, 0, 0, 0, -1, 1, -1, 1], [6])
+    expect(held(standardView(pad))).toEqual([6])
+  })
+
+  it.each([11, 15])('requires raw axes as well as a matching button count (%i)', (count) => {
+    expect(held(standardView(raw(count, [0, 0, 0, 0], [6])))).toEqual([6])
+  })
+
+  it.each([
+    [11, 2, 6], [11, 5, 7], [15, 5, 6], [15, 4, 7],
+  ])('keeps Linux %i-button trigger axis %i on button %i', (count, axis, button) => {
+    const axes = count === 11 ? [0, 0, -1, 0, 0, -1, 0, 0] : [0, 0, 0, 0, -1, -1, 0, 0]
+    axes[axis] = 1
+    expect(held(standardView(raw(count, axes, [])))).toEqual([button])
+  })
+
+  it('trusts an explicit browser standard mapping even when its dimensions match Linux', () => {
+    expect(held(standardView({ ...raw(15, [0, 0, 0, 0, 1, 1, 1, 1], [6]), mapping: 'standard' }))).toEqual([6])
+  })
+})
+
+describe('Android canonical input without a standard mapping flag', () => {
+  it('emits distinct LT/RT presses and d-pad directions, repeats and releases', () => {
+    const pad = { ...fakePad([0, 0, 0, 0]), id: 'Odin Controller', mapping: '' } as Gamepad
+    vi.stubGlobal('navigator', { getGamepads: () => [pad] })
+    const gp = new GamepadInput()
+    const events: PadEvent[] = []
+    gp.on((ev) => events.push(ev))
+    const set = (i: number, down: boolean) => { pad.buttons[i] = { pressed: down, touched: down, value: down ? 1 : 0 } }
+    gp.poll(0)
+    set(6, true)
+    gp.poll(16)
+    expect(gp.isHeld('LT')).toBe(true)
+    expect(gp.isHeld('RT')).toBe(false)
+    expect(gp.isHeld('LB')).toBe(false)
+    set(6, false)
+    set(7, true)
+    gp.poll(32)
+    expect(gp.isHeld('RT')).toBe(true)
+    expect(gp.isHeld('LT')).toBe(false)
+    expect(gp.isHeld('RB')).toBe(false)
+    set(7, false)
+    let now = 1000
+    for (const [button, dir] of [[12, 0], [13, 4], [14, 6], [15, 2]]) {
+      set(button, true)
+      gp.poll(now)
+      gp.poll(now + 400)
+      set(button, false)
+      gp.poll(now + 500)
+      expect(events).toContainEqual({ type: 'dir', source: 'dpad', dir })
+      expect(events).toContainEqual({ type: 'dirRepeat', source: 'dpad', dir, n: 1 })
+      expect(events.at(-1)).toEqual({ type: 'dir', source: 'dpad', dir: null })
+      now += 1000
+    }
+  })
 })
 
 describe('a pad that goes away', () => {
