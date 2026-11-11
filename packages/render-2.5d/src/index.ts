@@ -9,7 +9,7 @@ import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects } from './effects.js'
 import { drawMelee, drawSpellTrace } from './effects-draw.js'
-import { drawRoofEdges, drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
+import { drawWallShadows, shadeWallFace, WALL_HEIGHT } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 
 export { fittedScale, project, unproject } from './projection.js'
@@ -289,6 +289,10 @@ export class Render25d implements MapRenderer {
       drawSpellTrace(ctx, p, trace, now); ctx.restore()
       this.active = true
     }
+    // Ground haze must stay beneath raised terrain. Drawing it after walls
+    // projects a remembered neighbour's rectangular boundary across their art.
+    this.memoryFog(ctx, p, cells, time)
+    this.frontierFog(ctx, p, cells, time)
     drawWallShadows(ctx, p, this.scene, cells, this.dpr, cell => this.darkness(cell))
 
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
@@ -331,8 +335,6 @@ export class Render25d implements MapRenderer {
       this.active = true
     }
     this.impactRipples(ctx, p, time)
-    this.memoryFog(ctx, p, cells, time)
-    this.frontierFog(ctx, p, cells, time)
 
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {
@@ -535,23 +537,20 @@ export class Render25d implements MapRenderer {
   }
 
   private wall(ctx: Context2d, p: Projection, cell: SceneCell) {
-    // Cut foreground walls down beside known open ground, so actors behind them stay readable.
-    const height = wallHeight(this.scene, cell)
-    const roof = planeRect(p, cell.x, cell.y, height, this.dpr)
+    const roof = planeRect(p, cell.x, cell.y, WALL_HEIGHT, this.dpr)
     const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
-    const tile = cell.wallTile ?? cell.featureTile ?? cell.floorTile
+    const tile = cell.faceTiles?.s ?? cell.wallTile ?? cell.featureTile ?? cell.floorTile
+    const surface = { ...roof, height: ground.y + ground.height - roof.y }
+    const face = { ...roof, y: roof.y + roof.height, height: surface.height - roof.height }
     ctx.save()
     if (cell.wallStyle === 'transparent') ctx.globalAlpha = 0.65
-    // Texture the vertical face independently from the roof.
-    const face = { x: roof.x, y: roof.y + roof.height, width: roof.width, height: ground.y + ground.height - roof.y - roof.height }
     ctx.fillStyle = '#343039'
-    ctx.fillRect(face.x, face.y, face.width, face.height)
-    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), this.darkness(cell), cell.flash,
-      this.surfaceLighting(cell), face)
-    shadeWallFace(ctx, face, this.dpr)
-    this.plane(ctx, p, cell, [{ tile }], height)
-    ctx.globalAlpha *= 1 - this.darkness(cell)
-    drawRoofEdges(ctx, p, this.scene, cell, roof, this.dpr)
+    ctx.fillRect(surface.x, surface.y, surface.width, surface.height)
+    // Map the art once over the entire raised silhouette. Restarting it on a
+    // compressed front face produces a horizontal seam through every wall.
+    this.tiles.drawPlane(ctx, [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], surface,
+      this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), surface)
+    shadeWallFace(ctx, face)
     ctx.restore()
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }

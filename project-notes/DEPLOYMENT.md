@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.30 point at the `cloudflare-online-v1.27` release tag in
+Source links for 0.3.32 point at the `cloudflare-online-v1.29` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -785,3 +785,28 @@ readable numeric damage, statuses and a gallery of all expression symbols.
 
 Push main and the source tag atomically to trigger Workers Builds, then verify
 that the hosted release source, popup bundles and strict CSP match this build.
+
+## 0.3.32 coherent 2.5D walls — prepared 2026-11-11
+
+User requested fixing wall lines and undersized terrain, committing to main and
+deploying. Immutable source tag: `cloudflare-online-v1.29`. Integrates 0.3.30's
+LOS fading and stronger base shadows. Walls now use one consistent raised
+height for drawing, picking, lighting and shadows. Original artwork maps once
+over the whole silhouette instead of restarting on a compressed face. Removed
+cap bevels and the hard recess line; foot shading starts transparently. Ground
+fog now renders before standing geometry, preventing remembered neighbours from
+projecting rectangular mist boundaries over visible walls and creatures.
+
+Real Canvas regressions cover textured cap continuity, original foot texels,
+corner/foreground picking and stable geometry when neighbouring LOS changes,
+across tilts, zooms, fractional DPR and both filtering settings. Existing terrain,
+visibility, lighting and movement regressions remain in the browser harness.
+
+Final integrated checks: 2,271 unit tests passed / two optional-engine skips;
+1,374 real Canvas checks passed; forced TypeScript rebuild, production build,
+ASSETS-only Worker dry-run (104 assets, 20.95 KiB) and diff checks passed.
+Optional engine E2E reports 44 explicit skips because engine artifacts are absent.
+Integrated main's 0.3.31 compact combat icons. Pixel results and real-art dungeon
+captures are in `evidence/release-0332-{canvas-checks.json,d1-fountains.png,room.png}`.
+Main and the immutable source tag will be pushed atomically; production rollout
+and hosted asset/source checks follow the Cloudflare Workers Builds result.

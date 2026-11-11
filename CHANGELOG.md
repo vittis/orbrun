@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.32 — 2026-11-11
+
+- Remove artificial lines and texture seams from Dungeon (2.5D) walls, keeping soft shading at their bases.
+- Give walls a consistent height and artwork scale, including corners and foreground walls, so tiles no longer shrink as visibility changes.
+- Keep ground fog beneath walls and creatures so remembered terrain cannot paint rectangular bands across them.
+
 ## 0.3.31 — 2026-11-11
 
 - Replace NO DAMAGE with a subtle armor-block icon for players and enemies.

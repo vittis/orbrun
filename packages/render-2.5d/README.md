@@ -29,16 +29,17 @@ and picking regions. The existing first-person renderer remains independent.
   ratio, capped at two, so adjacent quads meet without gaps or overlap strips.
 - `index.ts` paints ground layers, continuous floor lighting, contact
   shadows, depth-sorted walls and sprites, and readable targeting markers.
-  Foreground walls lower beside visible open ground. Sprites retain doll
-  composition, atlas offsets, clipping, status badges and player minibars.
+  Walls share a consistent raised height, independent of neighbours and LOS.
+  Sprites retain doll composition, atlas offsets, clipping, status badges and
+  player minibars. Ground fog renders beneath raised terrain and upright art.
   Monsters and ordinary objects use the same atlas scale as the player;
   the artwork defines their relative proportions, independently of the
   first-person renderer's billboard heights. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
   Exposed wall bases have dense contact shadows and soft south/east cast
-  shadows that shorten with foreground cutaways. Wall faces darken toward
-  their feet, with a recessed cap and subtle bevels on exposed roof edges;
-  connected roofs stay continuous rather than outlining every tile.
+  shadows. Wall artwork maps once across each raised silhouette, with a soft
+  fade toward its foot. There are no cap outlines or separate compressed face
+  textures, so connected walls and corners stay visually consistent.
   Dense contact shadows and darker face bottoms emphasize the height change.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
@@ -163,7 +164,7 @@ the public server's Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost
 tiles. A synchronous protocol burst creates and removes each flight before the
 first draw; pixel comparisons verify projectile, impact, residue and expiry.
 
-Wall-depth checks also verify fading base shadows, shorter cutaway shadows,
+Wall-depth checks also verify fading base shadows, consistent wall heights,
 lighter transparent-wall shadows, face shading, hidden geometry and sleep
 at three elevations, zoom levels and device pixel ratios.
 Visibility checks sample actual floor, roof and sprite pixels through fades
@@ -173,6 +174,11 @@ Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass
 controls, persistence, and temporary level-map switching. Browser captures
 check real Canvas rendering at desktop and phone sizes.
+
+Wall coherence checks use striped artwork to detect texture restarts and hard
+cap seams at three tilts, zooms and device pixel ratios, with filtering on/off.
+They also verify original bottom texels, corner/foreground picking and stable
+wall silhouettes when the ground behind them leaves LOS.
 
 ## Extending the mode
 

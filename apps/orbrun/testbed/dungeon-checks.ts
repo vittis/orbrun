@@ -4,6 +4,7 @@ import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/sc
 import { surfaceLightChecks } from './surface-light-checks'
 import { movementChecks } from './movement-checks'
 import { wallDepthChecks } from './wall-depth-checks'
+import { wallCoherenceChecks } from './wall-coherence-checks'
 import { visibilityChecks } from './visibility-checks'
 
 const atlas = document.createElement('canvas')
@@ -172,4 +173,6 @@ const depth = wallDepthChecks(source)
 checks += depth.checks; failures.push(...depth.failures)
 const visibility = visibilityChecks(source)
 checks += visibility.checks; failures.push(...visibility.failures)
+const coherence = wallCoherenceChecks()
+checks += coherence.checks; failures.push(...coherence.failures)
 document.querySelector('#result')!.textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)

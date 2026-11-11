@@ -2,7 +2,7 @@ import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
-/** Raster checks for depth cues, including cutaways and hidden neighbours. */
+/** Raster checks for depth cues, including consistent height and hidden neighbours. */
 export function wallDepthChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
@@ -43,7 +43,7 @@ export function wallDepthChecks(source: TileSource) {
     behind.kind = 'floor'; behind.occluder = false
     scene.revision++; r.setScene(scene); r.render(0)
     const short = shadowInk()
-    assert('cutaway wall casts a shorter shadow', tall > short + 20, { tall, short })
+    assert('opening ground behind a wall preserves its height and shadow', tall === short, { tall, short })
     const wall = scene.cells.get(cellKey(0, 0))!
     wall.wallStyle = 'transparent'
     scene.revision++; r.setScene(scene); r.render(0)

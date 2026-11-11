@@ -159,9 +159,9 @@ describe('picking and visibility', () => {
     r.render(1.05)
     const q = r.project(0.5, 0.3), size = fittedScale(900, 700, 50 * Math.PI / 180)
     expect(r.pick(q.x, q.y - size * 0.6)).toBe(cellKey(1, 0))
-    const shadow = vi.mocked(ctx.translate).mock.calls[0]
-    expect(shadow[0]).toBeCloseTo(r.project(0.5, 0.28).x)
-    expect(shadow[1]).toBeCloseTo(r.project(0.5, 0.28).y)
+    expect(vi.mocked(ctx.translate).mock.calls).toContainEqual([
+      expect.closeTo(r.project(0.5, 0.28).x), expect.closeTo(r.project(0.5, 0.28).y),
+    ])
     expect(r.animating).toBe(true)
     r.render(1.1)
     expect(r.animating).toBe(false)
