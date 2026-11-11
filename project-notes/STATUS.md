@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.23 synchronized player/camera and native combat text — prepared 2026-11-11
+## 0.3.23 synchronized player/camera and native combat text — deployed 2026-11-11
 
 User authorized fixing player movement, checking missing live combat text, and
 committing/deploying when done. Source tag: `cloudflare-online-v1.20`.
@@ -14,7 +14,14 @@ the hornet like a sieve”; missing verbs and descriptive suffixes prevented
 popup target matching. Added native wording coverage and presentation-position
 popup anchoring. Checks: 2,170 tests / two optional-engine skips; 900 real
 Canvas checks; actual GameScreen fixture confirms centred walking and visible
-popups. Release build/dry-run and hosted rollout follow below in DEPLOYMENT.md.
+popups, including a visible ≈54 number from native strong-hit wording. Forced
+TypeScript, production build and ASSETS-only dry-run pass; optional engine E2E
+reports 44 skips. Main/tag point to `ac3a4c0`. Cloudflare build
+`7be02191-43c7-4476-acb3-217bef2f3738` succeeded; Worker
+`c420b95c-c942-4c55-a622-b96852572c9c` serves 100% of traffic. All 15 hosted
+checks pass, including three JS/two CSS bundles matching local bytes.
+Evidence: `evidence/release-0323-{http-checks,game-loop,canvas-checks}.json`.
+Details: DEPLOYMENT.md.
 
 ## 0.3.22 configurable 2.5D movement — deployed 2026-11-11
 

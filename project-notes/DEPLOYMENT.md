@@ -578,3 +578,22 @@ The real game loop produces a visible ≈54 popup from native strong-hit wording
 three receipt-style steps keep player-centre drift within 0.24 CSS pixels
 (including clientWidth rounding). Evidence: `evidence/release-0323-game-loop.json`
 and `evidence/release-0323-canvas-checks.json`. Hosted rollout follows publication.
+
+
+### Successful 0.3.23 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.20` point to
+  `ac3a4c063c422914685ff3824d088f3b3f487742`, pushed atomically after validation.
+- Cloudflare build `7be02191-43c7-4476-acb3-217bef2f3738` succeeded. Worker
+  `c420b95c-c942-4c55-a622-b96852572c9c` serves 100% of traffic; deployment
+  created 2026-11-11 at 17:02:28 America/Sao_Paulo.
+- All 15 hosted checks pass: release/source/CSP, scripts/licenses/fonts,
+  allowed gamedata and rejected offline/unlisted proxy routes. Three JavaScript
+  and two CSS entry bundles match the local production build byte for byte.
+- Evidence: `evidence/release-0323-http-checks.json`,
+  `evidence/release-0323-game-loop.json`,
+  `evidence/release-0323-canvas-checks.json`.
+- Rollback: 0.3.22 Worker `6e108e3a-538a-4dc8-8b68-c95c6035740a`.
+
+Post-rollout evidence remains on the working branch; main and the immutable
+tag retain the exact deployed source commit.

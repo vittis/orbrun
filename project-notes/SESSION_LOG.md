@@ -434,3 +434,29 @@ to `ab1a9f5`. Cloudflare build `4e3ba95d-5d66-4a85-9dbb-67108e9d435e` succeeded;
 Worker `6e108e3a-538a-4dc8-8b68-c95c6035740a` serves 100% of traffic. All 13
 hosted checks pass, including exact local/live hashes for all three entry
 bundles. Evidence: `evidence/release-0322-http-checks.json`.
+
+
+## 0.3.23 synchronized camera/player and combat text — 2026-11-11
+
+User reported delayed/uneven player motion while enemy tweening looked fine,
+and asked to check missing live combat text, then commit and deploy. Found a
+receipt-time scene observer using the old 2.5D centre; the later centre update
+snapped the camera while the doll still tweened. Centralized delivery of centre
+and scene across receipt/advance/draw; the following camera now shares the
+player curve. Default repeated steps carry velocity and adapt to arrival cadence.
+Enemy easing and Still/reduced motion remain supported.
+
+An anonymous CDI trace contained “You perforate the hornet like a sieve!!!”.
+Missing native verbs and unstripped strong-hit descriptions prevented target
+matching. Added official Crawl wording coverage and interpolated popup anchors.
+The actual GameScreen fixture confirms a visible ≈54 popup from that native
+wording and subpixel player-centre stability through three receipt-style moves.
+No login, chat or gameplay commands were sent to a public server.
+
+Forced TypeScript, 2,170 tests / two optional-engine skips, 900 real Canvas
+checks, production build and ASSETS-only dry-run pass; engine E2E has 44 skips.
+Main and `cloudflare-online-v1.20` point to `ac3a4c0`. Cloudflare build
+`7be02191-43c7-4476-acb3-217bef2f3738` succeeded; Worker
+`c420b95c-c942-4c55-a622-b96852572c9c` serves 100% of traffic. All 15 hosted
+checks pass, including exact three-JS/two-CSS bundle hashes. Evidence:
+`evidence/release-0323-{http-checks,game-loop,canvas-checks}.json`.
