@@ -862,39 +862,44 @@ describe('the eye glides after a step', () => {
     expect(c.camera.eyeX).toBe(1)
     expect(c.camera.eyeY).toBe(-1)
   })
-  it('bounds fast travel to two grid steps behind and lands within 100 ms of its final update', () => {
+  it('keeps fast travel continuous and lands within one tween of its final update', () => {
     const c = new CameraController()
     c.snapTo(0, 0)
     // a cell every frame, as `travel_delay 20` sends them
     for (let i = 1; i <= 20; i++) {
+      const drawn = c.camera.eyeX
       c.walkTo(i, 0, [{ dx: 1, dy: 0 }])
+      expect(c.camera.eyeX).toBe(drawn)
       c.update(0.02)
-      expect(i - c.camera.eyeX).toBeLessThanOrEqual(2 + 1e-9)
+      expect(c.camera.eyeX).toBeGreaterThan(drawn)
       expect(c.camera.eyeX).toBeLessThanOrEqual(i)
     }
-    // two hops in one frame: the same catch-up ceiling, not two full animations
+    // Two hops in one frame still share one animation duration.
     c.walkTo(22, 0, [{ dx: 1, dy: 0 }, { dx: 1, dy: 0 }])
     c.update(0.02)
-    expect(22 - c.camera.eyeX).toBeLessThanOrEqual(2 + 1e-9)
+    expect(c.camera.eyeX).toBeLessThan(22)
     for (let i = 0; i < 4; i++) c.update(0.02)
     expect(c.camera.eyeX).toBe(22)
     expect(c.update(0.02)).toBe(false)
   })
-  it('snaps a jump: several cells with no hops, hops that do not add up, a level change, reduced motion', () => {
+  it.each([[], [{ dx: 1, dy: 0 }], [{ dx: 5, dy: 0 }]].map(hops => ({ hops })))('glides a multi-cell move with missing or incomplete hops ($hops)', ({ hops }) => {
     const c = new CameraController()
     c.snapTo(0, 0)
-    c.walkTo(5, 0, [])
-    expect(c.camera.eyeX).toBe(5)
-    expect(c.update(0.02)).toBe(false)
-    // hops that do not reach the destination: a single cell falls back to the straight line
-    c.walkTo(6, 1, [{ dx: 0, dy: 1 }])
+    c.walkTo(5, 0, hops, 1)
+    expect(c.camera.x).toBe(5)
+    expect(c.camera.eyeX).toBe(0)
+    c.update(0.000001, 1.000001)
+    expect(c.camera.eyeX).toBeCloseTo(0, 3)
     c.update(0.02)
-    expect(c.camera.eyeX).toBeGreaterThan(5)
-    expect(c.camera.eyeX).toBeLessThan(6)
-    for (let i = 0; i < 100; i++) c.update(0.02)
-    // ...and a longer one is a jump
-    c.walkTo(9, 1, [{ dx: 1, dy: 0 }])
-    expect(c.camera.eyeX).toBe(9)
+    expect(c.camera.eyeX).toBeGreaterThan(0)
+    expect(c.camera.eyeX).toBeLessThan(5)
+    c.update(0.1)
+    expect(c.camera.eyeX).toBe(5)
+  })
+
+  it('snaps explicit resets and reduced motion, dropping the remaining path', () => {
+    const c = new CameraController()
+    c.snapTo(9, 1)
     // a snap mid-glide drops the rest of the path
     c.walkTo(10, 1, [{ dx: 1, dy: 0 }])
     c.snapTo(20, 20)
@@ -1020,11 +1025,14 @@ describe('movement timing', () => {
     expect(c.update(0.01)).toBe(false)
   })
 
-  it('bounds delayed diagonal batches in grid steps and finishes the whole batch in 100 ms', () => {
+  it('tweens the full delayed diagonal batch and finishes it in 100 ms', () => {
     const c = new CameraController()
     c.walkTo(20, -20, Array.from({ length: 20 }, () => ({ dx: 1, dy: -1 })))
-    c.update(0.01)
-    expect(20 - c.camera.eyeX).toBeLessThanOrEqual(2 + 1e-9)
+    c.update(0.000001)
+    expect(c.camera.eyeX).toBeLessThan(0.001)
+    c.update(0.009999)
+    expect(c.camera.eyeX).toBeGreaterThan(0)
+    expect(c.camera.eyeX).toBeLessThan(10)
     let previous = c.camera.eyeX
     for (let i = 0; i < 9; i++) {
       c.update(0.01)
@@ -1060,9 +1068,16 @@ describe('movement timing', () => {
     expect(c.update(0.01)).toBe(false)
   })
 
-  it('drops a malformed hop list rather than accepting a valid prefix', () => {
+  it('falls back to a tween to the confirmed destination for malformed hops', () => {
     const c = walking()
-    c.walkTo(3, 0, [{ dx: 1, dy: 0 }, { dx: 1, dy: 0 }, { dx: NaN, dy: 0 }])
+    c.walkTo(3, 0, [{ dx: 0, dy: 1 }, { dx: 1, dy: 0 }, { dx: NaN, dy: 0 }])
+    expect(c.camera.eyeX).toBe(0)
+    for (let i = 0; i < 10; i++) {
+      c.update(0.01)
+      expect(c.camera.eyeY).toBe(0)
+      expect(c.camera.eyeX).toBeGreaterThan(0)
+      expect(c.camera.eyeX).toBeLessThanOrEqual(3)
+    }
     expect(c.camera.eyeX).toBe(3)
     expect(c.update(0.01)).toBe(false)
   })

@@ -1,5 +1,16 @@
 # Project status
 
+## 0.3.26 multi-cell movement — prepared 2026-11-11
+
+User authorized commit to main and deployment and will check the result.
+New immutable source tag: `cloudflare-online-v1.23`. Fast enemies, projectiles
+and rampage tween across multiple cells. Player/camera follow shares the curve;
+repeated moves retarget from the drawn position without distance-based snaps.
+Release checks: 2,219 tests / two optional-engine skips, forced TypeScript,
+production build and Worker dry-run passed; optional engine E2E has 44 skips.
+The main/source-tag push triggers Cloudflare deployment. No post-deployment
+checks are requested; details are recorded in DEPLOYMENT.md.
+
 ## 0.3.25 2.5D animation and combat polish — deployed 2026-11-11
 
 User authorized committing to main and deploying the completed animation work.

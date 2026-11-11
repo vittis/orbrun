@@ -35,6 +35,10 @@ and picking regions. The existing first-person renderer remains independent.
   the artwork defines their relative proportions, independently of the
   first-person renderer's billboard heights. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
+  Exposed wall bases have dense contact shadows and soft south/east cast
+  shadows that shorten with foreground cutaways. Wall faces darken toward
+  their feet, with a recessed cap and subtle bevels on exposed roof edges;
+  connected roofs stay continuous rather than outlining every tile.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
@@ -50,9 +54,10 @@ and picking regions. The existing first-person renderer remains independent.
   `Billboard.id` values identify entities across art changes (WebTiles supplies
   monster IDs); anonymous art only pairs unambiguous matching arrivals and
   departures after reserving stationary copies. Spawns, ambiguous matches,
-  teleports, level changes and transitions into/out of visibility snap. Fast
-  travel retargets from the current drawn position with at most two cells of
-  visual lag and no animation queue. The default player curve carries velocity
+  level changes and transitions into/out of visibility snap. Moves of any
+  distance tween, including fast enemies, projectiles and rampage. Fast
+  travel retargets from the current drawn position over one duration without
+  skipping ahead or queuing full animations. The default player curve carries velocity
   through repeated steps and adapts to observed arrival cadence within 1–1.4×
   the configured duration; the camera uses that exact curve. Targeting pans
   snap for immediate feedback. The app delivers the centre before every scene
@@ -122,14 +127,14 @@ synthetic lava patch because the small room atlas has no lava tile. Live
 games use their server's complete tileset.
 Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
-player directly; long-distance moves demonstrate teleport snapping.
+player directly; long-distance moves demonstrate multi-cell tweening.
 **Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
 **Cast** previews four spell trace families. Append `?effectFrame=0.1` to freeze
 each triggered effect 100 ms into its lifetime for deterministic captures.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 900 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist.
@@ -141,6 +146,10 @@ Open `/testbed/projectile-checks.html` for 20 additional real-art checks using
 the public server's Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost
 tiles. A synchronous protocol burst creates and removes each flight before the
 first draw; pixel comparisons verify projectile, impact, residue and expiry.
+
+Wall-depth checks also verify fading base shadows, shorter cutaway shadows,
+lighter transparent-wall shadows, face shading, hidden geometry and sleep
+at three elevations, zoom levels and device pixel ratios.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass

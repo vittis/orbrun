@@ -169,15 +169,20 @@ describe('a monster stepping', () => {
     }
   })
 
-  it('snaps a jump: a blink leaves nothing gliding', () => {
-    let now = 1000
-    vi.spyOn(performance, 'now').mockImplementation(() => now)
+  it('keeps a multi-cell move outside the baked crowd until it lands', () => {
     const { r, g } = stubbed({ motion: true }, tiles)
     r.setCamera(makeCamera(2, 2))
     const s = room(monster(5, 5))
-    r.setScene(s)
-    r.render()
-    step(r, s, monster(8, 8))
+    r.setScene(s, 1)
+    r.render(1)
+    s.billboards = [monster(8, 8)]
+    s.revision++
+    r.setScene(s, 1.1)
+    expect(r.monsterPosition(s.billboards[0], 1.1)).toEqual({ x: 5, y: 5 })
+    r.render(1.15)
+    expect(r.animating).toBe(true)
+    for (const p of drawn(g)) expect(p.x).toBeCloseTo(8.125, 6)
+    r.render(1.2)
     expect(r.animating).toBe(false)
     for (const p of drawn(g)) expect(p.x).toBeCloseTo(8.5, 6)
     r.destroy()

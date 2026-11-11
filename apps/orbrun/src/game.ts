@@ -1510,11 +1510,10 @@ export class GameScreen {
         // cells (`travel_delay -1`, a blink, a teleport) has no hops: the
         // travel trail tells the last step, else the displacement stands in.
         const walk = sameLevel && hops.length > 0 && !jumped
-        // the eye glides after a walk, by the hops the server drew (the rc's
-        // `travel_delay`: a positive one sends every step, -1 sends the
-        // arrival alone, which is a jump here as it is a jump there)
+        // Glide all confirmed movement on this level, including rampage and
+        // arrivals spanning several cells. Use the route when it is known.
         if (!predicted) {
-          if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
+          if (sameLevel) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
           else this.cam.snapTo(p.x, p.y)
         }
         if (!sameLevel) {
