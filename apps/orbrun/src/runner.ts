@@ -72,8 +72,6 @@ export interface RunnerHooks {
   swing(): void
   /** Keys that leave the level map for another screen went out: keep the map drawn till it is up (map-hold.ts). */
   keepMap?(): void
-  /** Presentation hint only, just before the unchanged command goes out. */
-  beforeSend?(preview: Dir8 | null): void
 }
 
 /**
@@ -116,10 +114,9 @@ export class Runner {
     this.hooks = hooks
   }
 
-  send(msg: ClientMessage, preview: Dir8 | null = null) {
+  send(msg: ClientMessage) {
     if (this.session.watching) return
     const ctx = this.hooks.context()
-    this.hooks.beforeSend?.(ctx.mode === 'command' ? preview : null)
     if (ctx.mode === 'targeting' && !ctx.examining) this.faceAim(msg)
     // anything but the walk's own key may move the cursor itself (a click, a
     // grid direction, the key that ends the aim): the walk's unechoed path is
@@ -477,7 +474,7 @@ export class Runner {
     // a step of the player's own: whatever autofight was closing on, this walk is theirs
     this.cam.stopClosing()
     if (target) this.hooks.swing()
-    this.send(dirMessage(abs, opts), !opts.run && !opts.attack && !target ? abs : null)
+    this.send(dirMessage(abs, opts))
   }
 
   /**

@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { emptyScene } from '@orbrun/scene'
 import { initialState, MouseMode } from '@orbrun/webtiles'
 import { CameraController } from '../src/camera'
 import { GameScreen } from '../src/game'
 import { OWN_STEP_WINDOW_MS, Runner, type RunnerHooks } from '../src/runner'
 import type { Session } from '../src/session'
+
+afterEach(() => vi.restoreAllMocks())
 
 /** Real input, hop tracking and scene-to-camera routing; no socket, DOM or renderer. */
 function harness() {
@@ -38,6 +40,29 @@ function harness() {
 }
 
 describe('forward input and confirmed camera motion', () => {
+  it.each([150, 250, 350])('keeps a delayed (%i ms) step in one uninterrupted glide instead of a preview and rush', (delay) => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000)
+    const h = harness()
+    h.runner.step(0)
+    for (let elapsed = 0; elapsed < delay; elapsed += 1000 / 120) {
+      h.cam.update(1 / 120, (1000 + elapsed) / 1000)
+      expect(h.cam.camera.eyeY).toBe(0)
+    }
+    clock.mockReturnValue(1000 + delay)
+    h.echo(0, -1)
+    let previous = 0
+    for (let frame = 1; frame <= 12; frame++) {
+      h.cam.update(1 / 120, (1000 + delay) / 1000 + frame / 120)
+      const progress = -h.cam.camera.eyeY
+      expect(progress).toBeGreaterThan(previous) // no plateau inside the move
+      expect(progress).toBeLessThanOrEqual(1)
+      if (frame < 12) expect(progress).toBeLessThan(1) // no 60 ms catch-up rush
+      previous = progress
+    }
+    expect(h.cam.camera.eyeY).toBe(-1)
+    expect(h.send).toHaveBeenCalledTimes(1)
+  })
+
   it('moves in the intended grid direction during a turn, without waiting for the animation', () => {
     const h = harness()
     h.cam.turn(1)

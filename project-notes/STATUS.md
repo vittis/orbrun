@@ -1,36 +1,33 @@
 # Project status
 
-Release **0.3.8 is LIVE** at https://dcss-client.vittis.workers.dev.
-Production commit `853a85bb34c8c87a04b04ba0dd0f497487d52188` and immutable source
-tag `cloudflare-online-v1.4`. Cloudflare build
-`b5325d8f-088a-4e49-9ad0-f84ec920bd0b` deployed successfully; Worker version
-`ee1bd592-271d-4865-9bfa-f645f31ed5ea` serves 100% of traffic. Live Chrome shows
-0.3.8; the entry bundle matches the tested local build byte for byte, with the
-expected strict CSP and immutable source links. CBRG 0.34 spectating rendered
-with textures, HUD and minimap; live evidence is under `evidence/release-038-*.png`.
+Release **0.3.9 prepared; rollout verification pending**. Live remains 0.3.8
+until this paragraph is updated. New immutable source tag: `cloudflare-online-v1.5`.
 
-User confirmed the original comparison was offline. Follow-up original online
-screenshots on CBRG show response p50 147–150 ms (one p95 343 ms), consistent
-with our online response delay. The user authorized the recommended movement
-tweaks: a bounded camera preview and faster completion after delayed confirmation.
+User reports 0.3.8's move–pause–move animation. Confirmed cause: preview stops at
+0.18 tiles after 100 ms, waits for the reply, then the remaining move is squeezed
+into 60 ms. Removed that entire preview and wait-subtraction path, restoring the
+0.3.7 continuous confirmed glide. Input-before-render and receipt-timed first-frame
+motion remain. No new commands or authoritative position changes.
 
-Implemented an online-only 18%-tile eye preview on visible ordinary empty floor,
-without changing player position or commands. Repeats cannot accumulate distance
-or refresh the timeout; missing replies return within 430 ms. Refusals, prompts,
-visible monsters, status effects, overlays and connection closure cancel it.
-Reduced motion, offline play and 2D retain their behavior. Confirmed single manual
-steps subtract response wait from their 100–140 ms glide, keeping a 60 ms minimum.
-Batched paths, travel and monster timing retain their existing cadence.
+Added `/connection-check.html`: eight spaced anonymous WebTiles lobby requests
+on a separate connection, without login, account state or gameplay. Supports
+bundled servers only; five-second timeout, cancel, and hidden-page cleanup.
+Use it on Odin Wi-Fi versus hotspot, compare to game `?perf` response times.
+The production app already sends commands directly over WSS without a timer.
 
-Validation: 1,987 tests passed / 2 optional engine skips; forced TypeScript check,
-production build and Worker dry-run passed. Optional engine E2E: 44 skips.
-Chrome camera simulation: first visible motion 4 ms, response at 154 ms,
-landing 67 ms later, max unconfirmed offset 0.18 tiles. This is a desktop
-simulation, not an Odin or live server latency measurement. Screenshot:
-`evidence/release-038-preview.png`. Temporary testbed removed.
+Desktop CBRG observations: Node WebSocket control p50 37.9 ms (proxy may answer),
+lobby response p50 42.1 ms; Chrome lobby median 38 ms, range 35–74 ms. This is
+not Odin Wi-Fi or game-turn timing, so neither Wi-Fi nor server processing is
+proven to be responsible for the remaining ~150 ms game response. Official
+WebTiles code flushes directly; server TCP/turn processing changes require its
+operator. No server configuration changed or credentials/game commands used.
 
-0.3.7 rollback: commit `2aada9317dedd33108d675466890068a9cebb488`, tag
-`cloudflare-online-v1.3`, Worker `73ea14db-a8a4-478d-a859-c0fc2e5ec793`.
+Validation: 1,960 tests pass / 2 optional engine skips, forced TypeScript check,
+production build, Worker dry-run. Added delayed-response glide regressions and
+connection-check success/cancellation/timeout/closure coverage. Evidence:
+`evidence/release-039-connection-check.png`, `evidence/release-039-latency.json`.
+0.3.8 rollback: `853a85bb34c8c87a04b04ba0dd0f497487d52188`, tag v1.4, Worker
+`ee1bd592-271d-4865-9bfa-f645f31ed5ea` (contains the reported choppiness).
 The Phase 0 snapshot below is historical.
 
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**

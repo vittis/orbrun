@@ -3,10 +3,17 @@ import { gamedataProxy } from './gamedata-proxy'
 import { engineFiles } from './engine-files'
 import { sitePages } from './site-pages'
 import { keepShell } from './shell'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   plugins: [gamedataProxy(), engineFiles(), sitePages(), keepShell()],
   server: { port: 5173 },
   preview: { port: 4173 },
-  build: { target: 'es2022', sourcemap: true },
+  build: {
+    target: 'es2022', sourcemap: true,
+    rollupOptions: { input: {
+      main: fileURLToPath(new URL('./index.html', import.meta.url)),
+      connectionCheck: fileURLToPath(new URL('./connection-check.html', import.meta.url)),
+    } },
+  },
 })

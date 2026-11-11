@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.9 — 2026-11-11
+
+- Remove the partial movement preview that caused a move–pause–move effect online. Confirmed steps use one continuous glide again, retaining input-before-render scheduling and first-frame motion.
+- Add a separate connection check at /connection-check.html to compare server response times across networks without touching your game.
+
 ## 0.3.8 — 2026-11-11
 
 - Give online walking an immediate, small camera preview on clear visible floor. The server still decides every step; refused moves ease back, and previews are disabled around visible monsters, special terrain, prompts and status effects.

@@ -1,5 +1,35 @@
 # Session log
 
+## 2026-11-11 — 0.3.9 smooth movement correction and connection diagnostics
+
+- User reports two-phase forward motion after 0.3.8. Confirmed exact cause in
+  our implementation: the bounded preview saturates at 100 ms, then waits for
+  confirmation; the rest is completed in 60 ms. Prior first-motion/landing tests
+  measured responsiveness but missed this mid-step plateau.
+- Removed 0.3.8 preview/latency-subtraction code and its obsolete tests. Restored
+  the camera/runner/game presentation paths from verified 0.3.7, preserving its
+  input scheduling and receipt-time improvements. New integration regressions
+  test 150/250/350 ms replies: no pre-response movement, strictly advancing
+  confirmed glide, full 100 ms first-step duration, exactly one command.
+- Checked direct client WSS send path: no game-command delay timer. Read official
+  DCSS ws_handler/process_handler sources at db4a5d7c48a0f64f07877f388aa74329e1e89d15.
+  Lobby requests flush directly; gameplay buffers flush on the engine marker.
+  No inference about deployed CBRG TCP configuration or game CPU from this alone.
+- Anonymous host-only probe (8 samples): CBRG transport ping p50 37.9 ms, WebTiles
+  go_lobby p50 42.1 ms. No login or active game, so go_lobby cannot stop a game.
+  Control ping may be answered by a proxy; lobby reply reaches WebTiles.
+- Added bundled-server-only /connection-check.html with a separate anonymous
+  connection and eight 300-ms-spaced go_lobby requests. It closes after completion,
+  timeout, cancel, socket closure or backgrounding. No account/game state read.
+  Chrome validation: lobby median 38 ms, fastest 35, slowest 74. Device-side
+  comparison is needed to separate Odin network conditions from turn processing.
+- Validation: 1,960 tests pass / 2 optional engine skips; forced tsc, production
+  multi-page build, Worker dry-run pass. Seven diagnostic tests cover bounded
+  requests, unrelated traffic, cancellation, timeouts and socket closure. The
+  first test run exposed a missing close-event payload in its fake; corrected.
+- Prepared version 0.3.9, immutable source tag cloudflare-online-v1.5. No claim of
+  reduced actual network delay; publication and live verification follow.
+
 ## 2026-11-11 — 0.3.8 online movement anticipation
 
 - Follow-up original screenshots show online CBRG (`/play/cbrg/dcss-git`),

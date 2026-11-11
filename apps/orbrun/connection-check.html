@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Connection check · Orbrun</title>
+  <style>
+    body { margin: 0; padding: 24px; background: #13171d; color: #eef2f7; font: 18px/1.5 system-ui, sans-serif; }
+    main { max-width: 680px; margin: auto; }
+    h1 { font-size: 28px; }
+    select, button { font: inherit; padding: 10px; margin: 8px 8px 8px 0; max-width: 100%; }
+    select { display: block; width: 100%; }
+    pre { white-space: pre-wrap; background: #202832; padding: 16px; min-height: 70px; }
+    a { color: #9ed2ff; }
+  </style>
+</head>
+<body><main>
+  <h1>Connection check</h1>
+  <p>Measure eight responses from a game server. This opens a separate connection without logging in or touching your game.</p>
+  <label for="server">Server</label><select id="server"></select>
+  <button id="start">Start check</button><button id="cancel" disabled>Cancel</button>
+  <pre id="result" role="status" aria-live="polite">Ready.</pre>
+  <p>These timings include the connection and a small server request. Game actions may take longer.</p>
+  <p>Run on the Odin using your normal Wi-Fi, then repeat on a phone hotspot. Keep the same server selected and this page visible. Compare the typical and slowest responses with the game's performance overlay.</p>
+  <p><a href="/">Back to the app</a></p>
+</main><script type="module" src="/src/connection-check-page.ts"></script></body>
+</html>

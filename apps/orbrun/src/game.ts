@@ -1,5 +1,5 @@
 import { cm, mapKey, MouseMode, MSGCH, UiState, formattedStringToText, keyMessage, topMenu, type ClientMessage, type GameMessage, type GameState } from '@orbrun/webtiles'
-import { autofightTarget, cellKey, dirFromDelta, isThreat, type Billboard, type CellKey, type Dir8, type MapRenderer, type Scene, type SceneCursor } from '@orbrun/scene'
+import { autofightTarget, cellKey, dirFromDelta, isThreat, type Billboard, type CellKey, type MapRenderer, type Scene, type SceneCursor } from '@orbrun/scene'
 import { ExploreDone, linesSince, namedInWarnings, namedMonster } from './warnings'
 import { Render3d } from '@orbrun/render-3d'
 import { viewmodelFor } from '@orbrun/scene-webtiles'
@@ -8,7 +8,6 @@ import { RendererPark } from './park'
 import { escapeHtml, h, onDprChange } from './dom'
 import type { Session } from './session'
 import { CameraController } from './camera'
-import { canPreviewStep } from './movement-preview'
 import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
@@ -417,7 +416,6 @@ export class GameScreen {
       confirmDangerous: () => this.hooks.settings().confirmStairs,
       now: () => performance.now(),
       swing: () => this.swing(),
-      beforeSend: (dir) => this.previewMovement(dir),
       keepMap: () => {
         this.mapHold.begin(performance.now())
         // a frame after the wait, so a hold nothing came for is let go even on a still screen
@@ -459,9 +457,6 @@ export class GameScreen {
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
-          // Reconcile after flushScene: the position and this marker may be
-          // different messages in the same response batch.
-          if (e.msg.msg === 'input_mode' && e.msg.mode === MouseMode.COMMAND) this.previewReply = true
           this.trackActions(performance.now(), false)
           if (e.msg.msg === 'input_mode') this.payOwedTurn()
           // a new game on the same version reuses the loaded gamedata, so no
@@ -472,7 +467,6 @@ export class GameScreen {
           }
         } else if (e.type === 'sent') {
           this.lastSent = performance.now()
-          if (['key', 'input', 'text_input', 'click_cell'].includes(e.msg.msg)) this.previewPending = true
         } else if (e.type === 'gamedata') {
           if (e.status === 'ready') {
             this.hideLoading()
@@ -934,7 +928,6 @@ export class GameScreen {
       this.sceneTime = undefined
     }
     perf?.mark('scene')
-    this.reconcilePreview(now / 1000)
     const beforeLook = { yaw: this.cam.camera.yaw, pitch: this.cam.camera.pitch }
     if (this.advancePresentation(dt, now / 1000)) this.needsRender = true
     perf?.mark('present')
@@ -1096,34 +1089,6 @@ export class GameScreen {
   private advancePresentation(dt: number, now: number): boolean {
     this.renderer.setScene(this.session.scene, now)
     return this.cam.update(dt, now)
-  }
-
-  private previewReply = false
-  private previewPending = false
-
-  private previewAllowed(dir: Dir8): boolean {
-    const { session } = this
-    const pos = session.state.player.pos
-    return this.is3d && !session.watching && !session.server.offline && !session.closed && !session.loading &&
-      !this.overlays.hasClientOverlay && !this.chat.capturing &&
-      deriveMode(session.state) === 'command' && session.state.player.status.length === 0 &&
-      !!pos && pos.x === session.scene.player.x && pos.y === session.scene.player.y &&
-      pos.x === this.cam.camera.x && pos.y === this.cam.camera.y && canPreviewStep(session.scene, dir)
-  }
-
-  private previewMovement(dir: Dir8 | null): void {
-    const now = performance.now() / 1000
-    if (dir !== null && !this.previewReply && this.previewAllowed(dir) &&
-      (!this.previewPending || this.cam.previewDirection === dir)) this.cam.previewStep(dir, now)
-    else this.cam.cancelPreview(now)
-    this.wake()
-  }
-
-  private reconcilePreview(now: number): void {
-    const dir = this.cam.previewDirection
-    if (dir !== null && (this.previewReply || !this.previewAllowed(dir))) this.cam.cancelPreview(now)
-    if (this.previewReply) this.previewPending = false
-    this.previewReply = false
   }
 
   /**
@@ -1463,8 +1428,7 @@ export class GameScreen {
         // the eye glides after a walk, by the hops the server drew (the rc's
         // `travel_delay`: a positive one sends every step, -1 sends the
         // arrival alone, which is a jump here as it is a jump there)
-        if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now,
-          ownStep && !this.session.watching && !this.session.server.offline ? ownStep.t / 1000 : undefined)
+        if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
         else this.cam.snapTo(p.x, p.y)
         if (!sameLevel) {
           // level change: never nose-to-wall

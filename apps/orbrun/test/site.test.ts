@@ -33,7 +33,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.4/issues')
+        expect(html).not.toContain('cloudflare-online-v1.5/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")
@@ -52,7 +52,7 @@ describe('the site’s pages', () => {
 
   it('tells pages from the app’s screens from nothing at all', () => {
     for (const p of ['/', '/about', '/about/new', '/about/steam', '/about/install']) expect(addressKind(p), p).toBe('page')
-    for (const p of ['/settings', '/settings/camera', '/accounts/add', '/watch', '/watch/cdi', '/watch/cdi/bob', '/play/cdi/dcss-0.34', '/play/cdi/orbrun/dcss-0.34', '/login/cdi', '/register/crg', '/accounts/versions/cdi', '/accounts/rc/cdi/dcss-0.34', '/accounts/rc/offline', '/accounts/cdi', '/accounts/offline', '/accounts/morgues/cdi', '/accounts/morgues/offline/20261025-160942', '/whats-new'])
+    for (const p of ['/connection-check.html', '/settings', '/settings/camera', '/accounts/add', '/watch', '/watch/cdi', '/watch/cdi/bob', '/play/cdi/dcss-0.34', '/play/cdi/orbrun/dcss-0.34', '/login/cdi', '/register/crg', '/accounts/versions/cdi', '/accounts/rc/cdi/dcss-0.34', '/accounts/rc/offline', '/accounts/cdi', '/accounts/offline', '/accounts/morgues/cdi', '/accounts/morgues/offline/20261025-160942', '/whats-new'])
       expect(addressKind(p), p).toBe('app')
     for (const p of ['/wp-admin', '/about/nope', '/about/controls', '/about/how-it-works', '/index.php', '/play', '/settings/controls/gamepad/x', '/versions/cdi', '/accounts/versions', '/accounts/rc', '/accounts/rc/cdi/dcss-0.34/more', '/accounts/morgues', '/accounts/morgues/cdi/1/2']) expect(addressKind(p), p).toBe('none')
   })
