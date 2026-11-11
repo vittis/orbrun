@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.19 2.5D refinements — prepared 2026-11-11
+## 0.3.19 2.5D refinements — deployed 2026-11-11
 
 User authorized commit to main and deployment. App 0.3.19 uses immutable
 source tag `cloudflare-online-v1.16`. Removes player halo bands and blue
@@ -12,7 +12,15 @@ Release validation: 2,118 tests pass / two optional engine skips; forced
 TypeScript, production build and ASSETS-only dry-run pass. Optional engine
 E2E: 44 skips. Prior feature checks include 558 Canvas checks, 14 animation/
 impact browser checks, and desktop/phone layout checks with wrapped statuses.
-Hosted rollout verification follows the atomic main/source-tag push.
+Production main and source tag point to `76d8357`. Cloudflare build
+`301f8794-e0bc-4738-ab5d-2e968ba3af73` succeeded; Worker version
+`7cb1ac6d-32d5-4dcf-a350-215734799308` serves 100% of traffic. Hosted source
+links, release notes, strict CSP and proxy restrictions pass; all three
+production JS bundles match the validated local build byte for byte.
+The live browser loaded 0.3.19 and an anonymous CBRG 2.5D game with the character
+pane on the right and the nearby list below it. No console warnings/errors.
+Evidence: `evidence/release-0319-http-checks.json` and
+`evidence/release-0319-spectating.png`.
 
 ## 0.3.18 living dungeon — deployed 2026-11-11
 

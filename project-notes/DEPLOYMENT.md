@@ -376,3 +376,25 @@ previous verified deployment is 0.3.18 (`6214854`, `cloudflare-online-v1.15`).
 Final release checks: 2,118 unit tests passed / two optional engine skips;
 forced TypeScript, production build, ASSETS-only dry-run and diff checks pass.
 Optional engine E2E: 44 skips because local engine artifacts are absent.
+
+
+### Successful 0.3.19 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.16` point to
+  `76d8357f0f7bc2753990ce7033c0333781669f55`; the main/branch/tag push was atomic.
+- Cloudflare build `301f8794-e0bc-4738-ab5d-2e968ba3af73` succeeded. Worker
+  `7cb1ac6d-32d5-4dcf-a350-215734799308` serves 100% of traffic; deployment
+  created at 15:10:12 America/Sao_Paulo on 2026-11-11.
+- Root, About and release notes serve the new version/source tag with strict
+  CSP. All three production JS bundles match the validated local build byte
+  for byte. Allowed gamedata works; unlisted proxy/offline routes return 404.
+- Live browser verified 0.3.19, the CBRG lobby and an anonymous 2.5D game.
+  At 1280px viewport width, character bounds are x=871..1276, y=8..236;
+  the nearby column starts at y=274. No warning/error console logs were captured.
+  No gameplay or chat commands were sent.
+- Evidence: `evidence/release-0319-http-checks.json` and
+  `evidence/release-0319-spectating.png`. Rollback: 0.3.18 Worker
+  `949eb1af-d00e-4224-b08e-1f7b5ea53656`.
+
+Post-rollout evidence stays on the working branch, preserving production main
+and the immutable source tag at the exact deployed code commit.

@@ -6,7 +6,22 @@ Deployed 2026-11-11: production main and source tag point to `6214854`.
 Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded; hosted
 verification is recorded in `DEPLOYMENT.md` and `evidence/release-0318-*`.
 
-## Changes
+## 0.3.19 refinements
+
+Deployed `76d8357`, source tag `cloudflare-online-v1.16`, on 2026-11-11.
+2.5D now uses uniform LOS ambient brightness, neutral black remembered shading
+and faint dark fog. Player light bands are removed. Living poses use stronger
+continuous motion and smooth skitter/undead/fleeing variants; still/reduced
+motion remains supported. Redundant SLAIN/HIT popups are suppressed in 2.5D,
+with damage numbers and useful feedback retained. The character pane moves to
+the top right and its nearby column follows the height of wrapped statuses.
+Right-click item descriptions use the server's hovered-item examine command.
+
+Current checks: 2,118 unit tests pass, forced TypeScript/build/Worker dry-run
+pass, 558 Canvas checks and desktop/phone browser checks pass. Hosted bundle,
+version/source, CSP/proxy and spectator checks are recorded in `DEPLOYMENT.md`.
+
+## Original 0.3.18 changes
 
 - Add environmental light from torches, elemental clouds, glowing creatures and spell bolts across dungeon views, with warm line of sight, cool memory and curling shadows at unexplored edges.
 - Animate creatures by body and state, trees, liquids, clouds, gold and magical terrain; confirmed hits, water steps and teleport arrivals send out ripples. Respect reduced motion and keep remembered tiles still.

@@ -343,3 +343,23 @@ bundle, allowed versioned gamedata and rejected unlisted/offline routes. Chrome
 showed 0.3.18 release notes, CBRG lobby and live spectator dungeon with no
 warning/error logs. No gameplay or chat sent. Evidence and detailed deployment
 record remain on `codex/living-dungeon`, without triggering another main build.
+
+
+## 0.3.19 refinements committed and deployed — 2026-11-11
+
+User authorized committing to main and deploying. Released `76d8357` with
+immutable source tag `cloudflare-online-v1.16` and matching 0.3.19 app metadata,
+release notes and source links. Fast-forwarded the clean main worktree and
+atomically pushed main, working branch and tag.
+
+Forced typecheck, 2,118 unit tests/two optional-engine skips, production build
+and ASSETS-only Worker dry-run pass. Optional engine E2E: 44 skips. Prior
+Canvas/browser verification covers neutral fog, no player spotlight, fluid
+motion, still mode, impacts and panel placement including wrapped statuses.
+
+Cloudflare build `301f8794-e0bc-4738-ab5d-2e968ba3af73` succeeded. Worker
+`7cb1ac6d-32d5-4dcf-a350-215734799308` serves 100% of traffic. All three hosted
+JS bundles match the validated build; CSP, source/version and allowed/rejected
+routes pass. Live browser showed 0.3.19 and anonymous CBRG 2.5D spectating with
+right-side character pane and nearby list below it; no console warnings/errors
+and no gameplay/chat sent. Evidence remains on the working branch only.
