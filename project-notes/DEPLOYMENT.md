@@ -139,3 +139,18 @@ Prepublication checks: `npm test` passed 1,950 tests (two optional engine tests
 skipped), `npx tsc -b --force`, `npm run build`, `npm run deploy:check`, and
 `git diff --check` passed. Deployment and physical Odin checks are pending at
 this release checkpoint; the post-rollout entry records the actual result.
+
+Rollout succeeded: commit `2aada9317dedd33108d675466890068a9cebb488`, immutable
+tag `cloudflare-online-v1.3`, Cloudflare build
+`a2664106-0498-4bb8-897d-5ed9ec3504ca`, Worker version
+`73ea14db-a8a4-478d-a859-c0fc2e5ec793` at 100% traffic. Production main and the
+release tag remain on that exact commit; verification notes are committed only
+on the working branch to avoid an unnecessary second production build.
+
+Live checks: root 200 with strict CSP and v1.3 source links; entry bundle
+`index-BqHFsOKe.js` byte-identical to the validated local build. Chrome showed
+0.3.7, loaded the CBRG public lobby and a fully rendered anonymous 0.34 game with
+no console errors. Evidence: `evidence/release-037-live.png` and
+`evidence/release-037-spectating.png`. Fullscreen activation and Odin input
+latency are covered by synthetic tests but physical Odin system bars/latency
+are not measured by this browser smoke check.

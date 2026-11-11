@@ -40,7 +40,7 @@ Updated 2026-11-11. Status: done / partial / ready / queued / blocked / optional
 ## Explicit unfinished work
 
 - Odin 3 latency follow-up: local input-before-render scheduling and receipt-timed
-  movement fixes have automated 60/120 Hz coverage. Deploy and compare on physical
+  movement fixes have automated 60/120 Hz coverage and are live in 0.3.7. Compare on physical
   hardware with the same server/settings; the full reported difference from the
   original is not yet reproduced. This does not close the broader P2-004 matrix.
 

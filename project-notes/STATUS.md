@@ -1,21 +1,25 @@
 # Project status
 
-Input latency follow-up (2026-11-11): local fixes schedule controller polling
-before game rendering, including wake-up in the same frame, and start movement
-animations at the confirmed update's arrival time. Automated 60/120 Hz timing
-regressions cover the removed frame waits. The user confirmed the comparison
-uses online play on the same server. Original public source maps match the
-fork's baseline game/runner/camera/main code; the entire device-specific
-difference is not yet reproduced. These changes are **not deployed**; physical
-Odin 3 comparison remains pending. See the latest SESSION_LOG entry.
+Release **0.3.7 is LIVE** at https://dcss-client.vittis.workers.dev.
+Source tag `cloudflare-online-v1.3` and production `main` point to
+`2aada9317dedd33108d675466890068a9cebb488`. Worker version
+`73ea14db-a8a4-478d-a859-c0fc2e5ec793` serves 100% of traffic.
 
-Current follow-up: controller/fullscreen release **LIVE** at
-https://dcss-client.vittis.workers.dev. Release `cloudflare-online-v1.2` points to
-`970cddacf9cd6ef68dcd4701b6416a6e7d9eeb2e` (app 0.3.6); Worker version
-`e9312e9b-c339-45fd-9ba7-6fd2149cf4b1`. Clean typecheck, 1,932 tests, build,
-Cloudflare CI and live source/CSP/manifest/proxy/spectating checks passed.
-Physical Odin controller and touch fullscreen verification remain with the user.
-See [DEPLOYMENT.md](DEPLOYMENT.md); the Phase 0 snapshot below is historical.
+The release includes input-before-render scheduling, receipt-timed confirmed
+movement, and automatic launch/resume fullscreen with first-tap/key fallback.
+Validation: 1,950 tests passed, two optional-engine tests skipped; forced clean
+TypeScript check, production build and Worker dry-run passed. Cloudflare build
+`a2664106-0498-4bb8-897d-5ed9ec3504ca` deployed successfully. Live Chrome shows
+0.3.7 and loaded anonymous CBRG 0.34 spectating with no console errors. The live
+entry bundle matches the locally validated build byte for byte; source links
+and strict CSP are correct.
+
+Physical Odin 3 input latency and system-bar behavior remain to be checked by
+the user. Original deployed game/runner/camera/main sources match the pre-fix
+fork baseline, so the whole reported device-specific difference is not yet
+attributed. Browser fullscreen can require touch/keyboard activation; no
+Settings visit is needed. See DEPLOYMENT and SESSION_LOG for release evidence.
+The Phase 0 snapshot below is historical.
 
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**
 

@@ -14,6 +14,16 @@
   and physical-device limitation remain as documented below.
 - Verified remote main is the previous deployed code `970cdda`; v1.3 is unused.
   Publishing via the configured main-branch Cloudflare build pipeline next.
+- Rollout completed: commit `2aada9317dedd33108d675466890068a9cebb488` pushed
+  atomically to main/working branch with `cloudflare-online-v1.3`. Cloudflare
+  build `a2664106-0498-4bb8-897d-5ed9ec3504ca` deployed Worker version
+  `73ea14db-a8a4-478d-a859-c0fc2e5ec793` at 100% traffic (02:01 local time).
+  Root/source/CSP checks passed; live entry JavaScript matches the local build
+  byte for byte. Chrome showed 0.3.7 and rendered CBRG anonymous 0.34 spectating
+  without console errors. Screenshots saved under evidence/release-037-*.png.
+  No gameplay commands, account credentials or chat messages were sent.
+  Physical Odin verification remains with the user. Post-rollout notes do not
+  advance production main or the immutable source tag.
 
 ## 2026-11-11 — Odin 3 input latency follow-up
 
