@@ -50,3 +50,5 @@
 - Deployment settings prepared in Chrome: vittis/orbrun, dcss-client, root/, pinned Node24.11.1, install/typecheck/test/build pipeline, npx wrangler deploy, preview builds off. Final commit/push and hosted smoke checks pending.
 
 - Final integrated suite after Session changes:1,916 passed/2skipped. Independent release review caught unsafe-inline CSP permitting server-dialog handlers; removed it, externalized About controls as /site-controls.js, added frame-src none and script-src-attr none.18 site/analytics tests, full typecheck/build and final dry-run passed (96assets,20.86KiB Worker).
+
+- Published initial source31bfef3/tag cloudflare-online-v1. Cloudflare build a56e43d7 failed before deployment: clean TypeScript consumers lacked allowImportingTsExtensions (TS5097); previous incremental local checks missed it. Moved the setting to shared base (all projects emit declarations only). Kept v1 immutable, updated source links for corrective release cloudflare-online-v1.1, and forced full typecheck.
