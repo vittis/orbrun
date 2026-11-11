@@ -743,3 +743,25 @@ frame in Still mode. Integrated release checks passed: forced TypeScript rebuild
 Worker dry-run (104 assets, 20.95 KiB), and diff checks. Optional engine E2E
 reports 44 explicit skips. The atomic main/source-tag push triggers Cloudflare
 Workers Builds; the GitHub check reports the hosted deployment result.
+
+
+### Successful 0.3.29 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.26` point to
+  `835847874232f8dd75f3b57458eaf1e08ddd3c0b`, pushed atomically after validation.
+- Cloudflare build `5be1164b-2a1b-4782-b5aa-bdbeaee19b77` succeeded. Worker
+  `cf9dbd2d-fc1f-4a99-9a7e-f56058310420` serves 100% of production traffic;
+  deployed 2026-11-11 at 18:13:35 America/Sao_Paulo.
+- All 15 hosted checks pass: 0.3.29 notes, immutable source links, strict CSP,
+  scripts/fonts/licenses, allowed gamedata and rejected offline/unlisted proxy
+  routes. Three JavaScript and two CSS entry bundles match local bytes.
+- Real server spell artwork passed 20 projectile/impact/residue/expiry checks,
+  in addition to the 1,062 terrain/movement/wall raster checks. Unit tests:
+  2,239 passed / two optional-engine skips. Optional engine E2E: 44 skips.
+- Evidence: `evidence/release-0329-{http-checks,projectiles,canvas-checks}.json`
+  and `evidence/release-0329-projectiles.png`.
+- Pre-release deployment snapshot: Worker
+  `f9397969-d5d2-45da-9075-581c7db5c2ca`.
+
+Post-rollout records are committed on the working branch; main and the immutable
+release tag retain the exact validated/deployed code commit.

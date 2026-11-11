@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.29 brief projectile and physical spell effects — prepared 2026-11-11
+## 0.3.29 brief projectile and physical spell effects — deployed 2026-11-11
 
 User authorized fixing Sandblast and similar spell visuals and deploying when
 finished. New source tag: `cloudflare-online-v1.26`. Projectile map frames now
@@ -13,7 +13,12 @@ and 0.3.27 wall-depth and 0.3.28 breathing changes are integrated. Real server a
 20 projectile/impact/residue/expiry checks. Final integrated validation: 2,239
 unit tests/two optional-engine skips; 1,062 existing Canvas checks; forced
 TypeScript, production build and ASSETS-only dry-run pass. Optional engine E2E
-reports 44 skips. Evidence and rollout details are in DEPLOYMENT.md.
+reports 44 skips. Main and tag point to `8358478`. Cloudflare build
+`5be1164b-2a1b-4782-b5aa-bdbeaee19b77` succeeded; Worker
+`cf9dbd2d-fc1f-4a99-9a7e-f56058310420` serves 100% of production traffic.
+All 15 hosted checks pass, including source/version/CSP, proxy behavior and
+three JavaScript/two CSS bundles matching local bytes. Evidence:
+`evidence/release-0329-http-checks.json`. Rollout details are in DEPLOYMENT.md.
 
 ## 0.3.28 smoother idle breathing — prepared 2026-11-11
 
