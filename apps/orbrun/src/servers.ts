@@ -541,6 +541,10 @@ export interface Settings {
   depthTilt: number
   depthZoom: number
   depthAnimate: boolean | 'auto'
+  depthMovement: boolean
+  /** Seconds per confirmed move in the 2.5D view. */
+  depthMovementDuration: number
+  depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
   combatPopups: boolean
   /** How high the eye stands, in cells: 0 is the floor, 1 the lid (rendering-3d.md II.11). */
   eyeHeight: number
@@ -630,6 +634,9 @@ export const defaultSettings: Settings = {
   depthTilt: 50,
   depthZoom: 1,
   depthAnimate: 'auto',
+  depthMovement: true,
+  depthMovementDuration: 0.1,
+  depthMovementEasing: 'ease-out',
   combatPopups: true,
   eyeHeight: 0.6,
   fov: 0,
@@ -660,6 +667,10 @@ export function getSettings(): Settings {
   s.leftRightPad = leftRightFrom(saved, 'leftRightPad', ['leftRightDpad', 'leftRightStick'])
   if (!['3d', '2.5d', '2d'].includes(s.renderer)) s.renderer = defaultSettings.renderer
   if (![true, false, 'auto'].includes(s.depthAnimate)) s.depthAnimate = 'auto'
+  if (typeof s.depthMovement !== 'boolean') s.depthMovement = defaultSettings.depthMovement
+  if (typeof s.depthMovementDuration !== 'number' || !Number.isFinite(s.depthMovementDuration)) s.depthMovementDuration = defaultSettings.depthMovementDuration
+  s.depthMovementDuration = Math.max(0.04, Math.min(0.25, s.depthMovementDuration))
+  if (!['ease-out', 'smooth', 'linear'].includes(s.depthMovementEasing)) s.depthMovementEasing = defaultSettings.depthMovementEasing
   // A build can still restrict available views.
   if (!VIEW_OPTIONS) s.renderer = '3d'
   return s

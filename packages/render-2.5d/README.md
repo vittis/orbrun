@@ -2,7 +2,10 @@
 
 A north-up, slanted dungeon view using the existing DCSS tile art. Select
 **Settings → View → Projection → Dungeon (2.5D)**. Tilt, zoom and animation
-are in the same settings page. The pause menu also cycles all three views.
+are in the same settings page, alongside movement, move duration and easing.
+Movement defaults to a snappy 100 ms ease-out; Smooth and Linear curves and
+60–250 ms presets are available. Movement can be disabled independently of
+atmosphere. The pause menu also cycles all three views.
 At 100% zoom the full 17-cell field of view fits, including sprite headroom.
 Higher zoom values deliberately trade coverage for larger tiles.
 
@@ -40,6 +43,18 @@ and picking regions. The existing first-person renderer remains independent.
   smooth per-frame flicker and afterglow fading. Known occluders block light;
   unseen and remembered terrain never receives it. The player emits no light.
   LOS has uniform bright ambient exposure and a gentle vignette.
+- `movement.ts` tweens confirmed entity positions and the following camera on
+  the renderer's existing clock. Every billboard kind shares the same motion;
+  shadows, glows, depth sorting, upright badges/bars and hit regions follow the
+  drawn position. Picking still returns the confirmed destination cell. Stable
+  `Billboard.id` values identify entities across art changes (WebTiles supplies
+  monster IDs); anonymous art only pairs unambiguous matching arrivals and
+  departures after reserving stationary copies. Spawns, ambiguous matches,
+  teleports, level changes and transitions into/out of visibility snap. Fast
+  travel retargets from the current drawn position with at most two cells of
+  visual lag and no animation queue. Targeting pans snap for immediate feedback.
+  `Render25dOptions.movement`, `movementDuration` (seconds, clamped to 0.04–0.25)
+  and `movementEasing` (`ease-out`, `smooth`, `linear`) configure the tween.
 - `tiles.ts` caches composed, tinted tiles, including transparent and tall
   artwork. Terrain uses unpadded composites so filtering cannot sample a
   transparent border; standing artwork keeps its tall/offset padding.
@@ -64,6 +79,8 @@ effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
 Server flashes are rendered as supplied; spell types and damage are not
 guessed from message text.
+Movement also stops in Still/reduced-motion mode. Only visible, on-screen
+tweens keep frames awake, and motion history is discarded on destroy.
 
 ## Input and integration
 
@@ -82,13 +99,18 @@ using the bundled Antechamber artwork; no server account is needed. The
 lantern stands in for the player, fungi for actors, and a dirt tile for the
 synthetic lava patch because the small room atlas has no lava tile. Live
 games use their server's complete tileset.
+Use **Move entities ↔** to compare tween durations/easing on real artwork,
+or the arrow keys to walk the player with a following camera. Clicks place the
+player directly; long-distance moves demonstrate teleport snapping.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 576 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for 738 real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
-alignment, independent ground badges, LOS contrast and neutral unexplored mist. These
+alignment, independent ground badges, LOS contrast and neutral unexplored mist.
+Movement checks sample all three easing curves at the start, midpoint and
+landing, checking sprite pixels, item cursors, badges, picking and sleep. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
@@ -101,8 +123,7 @@ check real Canvas rendering at desktop and phone sizes.
 For richer combat effects, add typed, confirmed presentation events to the
 shared scene contract, with stable identities and timestamps. Keep their
 bounded lifetimes in a separate effect layer and respect visibility and
-reduced motion. Do not parse combat prose in the renderer. Movement currently
-follows confirmed scene positions without interpolation. Camera rotation,
+reduced motion. Do not parse combat prose in the renderer. Camera rotation,
 perspective projection, full shadow maps and element-specific spell effects
 are not implemented; a future GPU backend can reuse the same scene and input
 contracts if those become necessary.

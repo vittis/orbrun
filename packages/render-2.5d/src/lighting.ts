@@ -1,5 +1,5 @@
 export { lightingFor, lightPulse, type Light, type Emitter, type LightPool } from '@orbrun/scene'
-import { cellKey, lightReaches, lightingFor, type Emitter, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
+import { cellKey, lightReaches, lightingFor, type Billboard, type Emitter, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect, project, type Projection, type SurfaceRect } from './projection.js'
 import type { Context2d, SurfaceLighting } from './tiles.js'
 export function lightField(scene: Scene) { return lightingFor(scene).field }
@@ -7,7 +7,8 @@ export function lightField(scene: Scene) { return lightingFor(scene).field }
 export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(1.35, source.radius * 0.32))
 
 /** Locate the visible art, rather than the floor below a standing emitter. */
-export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?: TileSource | null) {
+type ActorPosition = (b: Billboard) => { x: number; y: number }
+export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?: TileSource | null, position?: ActorPosition) {
   const cell = scene.cells.get(cellKey(source.x, source.y))
   const billboard = scene.billboards.find(b => b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
   if (!billboard && cell?.occluder) {
@@ -17,7 +18,8 @@ export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?:
     return { x: roof.x + roof.width / 2, y: roof.y + roof.height * 0.4 }
   }
   if (billboard || cell?.stance === 'upright' || cell?.freestanding) {
-    const q = project(p, source.x, source.y + 0.3)
+    const anchor = billboard && position ? position(billboard) : source
+    const q = project(p, anchor.x, anchor.y + 0.3)
     const id = billboard?.tile ?? cell?.featureTile
     const art = id === undefined ? undefined : tiles?.tile(id)
     return {
@@ -48,7 +50,7 @@ export class DungeonLighting implements SurfaceLighting {
   private pad = 0
   active = false
 
-  build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null) {
+  build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null, position?: ActorPosition) {
     this.active = false
     if (!sources.length) return
     const key = sources.map(s => `${s.x},${s.y},${s.radius}`).join(';')
@@ -77,7 +79,7 @@ export class DungeonLighting implements SurfaceLighting {
     ctx.translate(this.pad, this.pad)
     for (let i = 0; i < sources.length; i++) {
       const source = sources[i], cells = this.reachable[i]
-      const q = glowCenter(scene, p, source, tiles), radius = glowRadius(source) * p.scale
+      const q = glowCenter(scene, p, source, tiles, position), radius = glowRadius(source) * p.scale
       if (!cells.length || q.x + radius < -this.pad || q.x - radius > p.width + this.pad || q.y + radius < -this.pad || q.y - radius > p.height + this.pad) continue
       const phase = source.x * 2.31 + source.y * 1.73
       const pulse = !animate ? 1 : source.pulse === 'fire'
@@ -107,6 +109,12 @@ export class DungeonLighting implements SurfaceLighting {
           const foot = project(p, cell.x, cell.y + 0.3)
           mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
         }
+      }
+      // Retain headroom at each drawn position while actors travel between cells.
+      if (position) for (const b of scene.billboards) {
+        if (!cells.some(c => c.x === b.x && c.y === b.y)) continue
+        const anchor = position(b), foot = project(p, anchor.x, anchor.y + 0.3)
+        mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
       }
       mask.fillStyle = '#fff'; mask.fill()
       ink.setTransform(1, 0, 0, 1, 0, 0); ink.globalCompositeOperation = 'source-over'; ink.clearRect(0, 0, size, size)

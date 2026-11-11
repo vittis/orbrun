@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.21 point at the `cloudflare-online-v1.18` release tag in
+Source links for 0.3.22 point at the `cloudflare-online-v1.19` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -514,3 +514,21 @@ Production rollout verification is recorded below.
 
 Post-rollout evidence remains on the working branch only; main and the
 immutable tag retain the exact deployed source commit.
+
+
+## 0.3.22 configurable 2.5D movement — prepared 2026-11-11
+
+User authorized commit and deployment to main. App 0.3.22 uses new immutable
+source tag `cloudflare-online-v1.19`. Entity movement and the following camera
+use a configurable, bounded tween on the existing presentation clock. Shadows,
+glows, depth order, badges, item cursors and picking follow the drawn position.
+Fast travel retargets without a queue; teleports, level changes and ambiguous
+anonymous matches snap. Still mode and Auto reduced motion disable tweening.
+
+Feature verification: 2,153 tests passed / two optional-engine skips; all 738
+real Canvas checks passed; TypeScript and production build passed. The first
+unbounded-worker suite timed out once in the unchanged 3D geometry test; that
+test passed in isolation, and the complete suite passed with four workers.
+Release verification also passed: forced TypeScript rebuild, 2,153 unit tests
+(two optional-engine skips), production build and ASSETS-only Worker dry-run
+(20.95 KiB Worker). Hosted rollout verification follows publication.

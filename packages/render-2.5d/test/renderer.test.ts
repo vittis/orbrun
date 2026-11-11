@@ -64,6 +64,74 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it('sorts crossing actors by their drawn depth on every frame', () => {
+    const { r } = renderer()
+    const order: number[] = []
+    const draw = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((_ctx, layers) => { order.push(layers[0].tile); return true })
+    r.setOptions({ movementEasing: 'linear' })
+    const start = sceneOf(cell(0, -1), cell(0, 0))
+    start.billboards = [
+      { id: 1, x: 0, y: -1, kind: 'monster', tile: 2, height: 1, life: { motion: 'still' } },
+      { id: 2, x: 0, y: 0, kind: 'monster', tile: 3, height: 1, life: { motion: 'still' } },
+    ]
+    r.setScene(start, 0)
+    r.setScene({ ...start, revision: 1, billboards: start.billboards.map(b => ({ ...b, y: b.y === 0 ? -1 : 0 })) }, 1)
+    r.render(1.01)
+    expect(order).toEqual([2, 3])
+    order.length = 0
+    r.render(1.09)
+    expect(order).toEqual([3, 2])
+    draw.mockRestore()
+  })
+
+  it('moves sprite picking and contact shadows together while retaining the confirmed destination', () => {
+    const { r, ctx } = renderer()
+    r.setOptions({ center: { x: 0, y: 0 }, movementDuration: 0.1, movementEasing: 'linear' })
+    const start = sceneOf(cell(0, 0), cell(1, 0))
+    start.billboards = [{ id: 1, x: 0, y: 0, tile: 2, kind: 'monster', height: 1, life: { motion: 'still' } }]
+    r.setScene(start, 0)
+    const next = { ...start, revision: 1, billboards: [{ ...start.billboards[0], x: 1 }] }
+    r.setScene(next, 1)
+    r.render(1.05)
+    const q = r.project(0.5, 0.3), size = fittedScale(900, 700, 50 * Math.PI / 180)
+    expect(r.pick(q.x, q.y - size * 0.6)).toBe(cellKey(1, 0))
+    const shadow = vi.mocked(ctx.translate).mock.calls[0]
+    expect(shadow[0]).toBeCloseTo(r.project(0.5, 0.28).x)
+    expect(shadow[1]).toBeCloseTo(r.project(0.5, 0.28).y)
+    expect(r.animating).toBe(true)
+    r.render(1.1)
+    expect(r.animating).toBe(false)
+    expect(next.billboards[0].x).toBe(1)
+  })
+
+  it('immediately settles an active tween when movement or animation is disabled', () => {
+    for (const toggle of [{ movement: false }, { animate: false }]) {
+      const { r } = renderer()
+      r.setOptions({ center: { x: 0, y: 0 } })
+      const start = sceneOf(cell(0, 0), cell(1, 0))
+      start.billboards = [{ id: 1, x: 0, y: 0, tile: 2, kind: 'item', height: 1 }]
+      r.setScene(start, 0)
+      r.setScene({ ...start, revision: 1, billboards: [{ ...start.billboards[0], x: 1 }] }, 1)
+      r.render(1.01)
+      expect(r.animating).toBe(true)
+      r.setOptions(toggle)
+      r.render(1.02)
+      expect(r.animating).toBe(false)
+      const q = r.project(1, 0.3), size = fittedScale(900, 700, 50 * Math.PI / 180)
+      expect(r.pick(q.x, q.y - size * 0.6)).toBe(cellKey(1, 0))
+    }
+  })
+
+  it('an offscreen moving entity does not keep the scheduler awake', () => {
+    const { r } = renderer()
+    const start = sceneOf(cell(100, 100), cell(101, 100))
+    start.billboards = [{ id: 1, x: 100, y: 100, tile: 2, kind: 'item', height: 1 }]
+    r.setScene(start, 0)
+    r.setScene({ ...start, revision: 1, billboards: [{ ...start.billboards[0], x: 101 }] }, 1)
+    r.render(1.05)
+    expect(r.animating).toBe(false)
+  })
+
   it.each([1, 1.25, 2])('picks the rendered ground on both sides of snapped edges at DPR %s', dpr => {
     const { r } = renderer()
     const cells = [-1, 0, 1].flatMap(y => [-1, 0, 1].map(x => cell(x, y)))
@@ -178,6 +246,9 @@ describe('environmental lighting', () => {
     expect(center.x).toBe(200)
     expect(center.y).toBeCloseTo(project(p, 0, 0.3).y - 40 + 14 * 40 / 32)
     expect(center.y).toBeLessThan(project(p, 0, 0).y)
+    const movingCenter = glowCenter(scene, p, source, undefined, () => ({ x: -0.5, y: -0.25 }))
+    expect(movingCenter.x).toBeCloseTo(project(p, -0.5, 0.05).x)
+    expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
   it('filters live subpixel motion even when static server tile scaling is unfiltered', () => {

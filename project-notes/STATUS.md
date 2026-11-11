@@ -1,5 +1,16 @@
 # Project status
 
+## 0.3.22 configurable 2.5D movement — prepared 2026-11-11
+
+User authorized commit to main and production deployment. New immutable source
+tag: `cloudflare-online-v1.19`. Adds confirmed movement tweens for all billboard
+kinds, a synchronized following camera, and View settings for movement, duration
+and easing. Defaults to 100 ms ease-out. Visual anchors and picking follow the
+tween; fast travel has no animation queue. Teleports/level changes snap, and
+Still/Auto reduced motion stop movement. Feature verification: 2,153 unit tests
+passed / two optional-engine skips, 738 real Canvas checks, typecheck and build.
+Release checks and live rollout are recorded in DEPLOYMENT.md.
+
 ## 0.3.21 original exposure and live animation — deployed 2026-11-11
 
 User authorized commit to main and production deployment. App 0.3.21 uses

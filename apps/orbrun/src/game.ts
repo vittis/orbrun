@@ -787,7 +787,10 @@ export class GameScreen {
   }
 
   private render25dOptions(st: Settings) {
-    return { tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.cam.reducedMotion) }
+    return {
+      tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.cam.reducedMotion),
+      movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
+    }
   }
 
   private makeRenderer(): MapRenderer {

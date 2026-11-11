@@ -6,8 +6,10 @@ import {
 import { fittedScale, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer } from './tiles.js'
 import { DungeonLighting } from './lighting.js'
+import { DungeonMovement, type MovementEasing } from './movement.js'
 
 export { fittedScale, project, unproject } from './projection.js'
+export type { MovementEasing } from './movement.js'
 
 export interface Render25dOptions {
   /** Camera elevation above the ground, in degrees. */
@@ -16,13 +18,19 @@ export interface Render25dOptions {
   zoom?: number
   /** Animated atmosphere, automatically disabled by the app for reduced motion. */
   animate?: boolean
+  /** Tween confirmed movement; still/reduced-motion mode also disables this. */
+  movement?: boolean
+  /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
+  movementDuration?: number
+  /** Monotone curves without overshoot, for readable grid movement. */
+  movementEasing?: MovementEasing
   center?: { x: number; y: number } | null
   minibars?: Minibars | null
   filterScaling?: boolean
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; depth: number }
+type Standing = { cell: SceneCell; billboard?: Billboard; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -36,6 +44,8 @@ export class Render25d implements MapRenderer {
   private revision = -1
   private lighting = new DungeonLighting()
   private life = new DungeonLife()
+  private movement = new DungeonMovement()
+  private frameTime = 0
   private cursor: SceneCursor | null = null
   private tiles = new TileCache()
   private width = 1
@@ -47,6 +57,7 @@ export class Render25d implements MapRenderer {
   private active = false
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
+    movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
   }
 
   constructor(options: Render25dOptions = {}) { this.setOptions(options) }
@@ -55,6 +66,9 @@ export class Render25d implements MapRenderer {
     Object.assign(this.opts, options)
     this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(30, Math.min(75, this.opts.tilt)) : 50
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.6, Math.min(1.6, this.opts.zoom)) : 1
+    this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
+    if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
+    if (!this.opts.animate || !this.opts.movement) this.movement.finish()
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -81,14 +95,17 @@ export class Render25d implements MapRenderer {
     this.standing = []
     const cloudCells = new Set(scene.billboards.filter(b => b.kind === 'cloud').map(b => cellKey(b.x, b.y)))
     for (const cell of this.cells) {
-      if (cell.occluder || this.upright(cell)) this.standing.push({ cell, depth: cell.y + (cell.occluder ? 0.5 : 0.25) })
-      if (cell.cloud !== undefined && !cloudCells.has(cellKey(cell.x, cell.y))) this.standing.push({ cell, depth: cell.y + 0.4, billboard: { x: cell.x, y: cell.y, tile: cell.cloud, kind: 'cloud', height: 1, alpha: 0.7 } })
+      if (cell.occluder || this.upright(cell)) this.standing.push({ cell, x: cell.x, y: cell.y, depth: cell.y + (cell.occluder ? 0.5 : 0.25) })
+      if (cell.cloud !== undefined && !cloudCells.has(cellKey(cell.x, cell.y))) this.standing.push({ cell, x: cell.x, y: cell.y, depth: cell.y + 0.4, billboard: { x: cell.x, y: cell.y, tile: cell.cloud, kind: 'cloud', height: 1, alpha: 0.7 } })
     }
     for (const billboard of scene.billboards) {
       const cell = scene.cells.get(cellKey(billboard.x, billboard.y))
-      if (cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown') this.standing.push({ cell, billboard, depth: billboard.y + 0.3 + (billboard.kind === 'cloud' ? 0.1 : 0) })
+      if (cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown') this.standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 + (billboard.kind === 'cloud' ? 0.1 : 0) })
     }
     this.standing.sort((a, b) => a.depth - b.depth || a.cell.x - b.cell.x)
+    this.movement.observe({ ...scene, billboards: this.standing.flatMap(entry => entry.billboard ? [entry.billboard] : []) }, this.opts.center ?? scene.player, now, {
+      enabled: this.opts.animate && this.opts.movement, duration: this.opts.movementDuration, easing: this.opts.movementEasing,
+    })
   }
 
   // The server view centre owns this north-up camera; first-person look never rotates it.
@@ -108,7 +125,8 @@ export class Render25d implements MapRenderer {
   private projection(): Projection {
     const tilt = this.opts.tilt * Math.PI / 180
     // Server view centre also follows a targeting cursor outside the player's LOS.
-    const center = this.opts.center ?? this.scene.player
+    const target = this.opts.center ?? this.scene.player
+    const center = this.movement.center(target, this.frameTime)
     return { x: center.x, y: center.y, width: this.width, height: this.height, tilt, scale: fittedScale(this.width, this.height, tilt, this.opts.zoom) }
   }
 
@@ -120,7 +138,7 @@ export class Render25d implements MapRenderer {
     return project(this.projection(), x, y, height)
   }
 
-  private inFrame(p: Projection, cell: SceneCell) {
+  private inFrame(p: Projection, cell: { x: number; y: number }) {
     const q = project(p, cell.x, cell.y)
     return q.x > -p.scale * 2 && q.x < this.width + p.scale * 2 && q.y > -p.scale * 2 && q.y < this.height + p.scale * 2
   }
@@ -152,10 +170,17 @@ export class Render25d implements MapRenderer {
     const ctx = this.ctx
     if (!ctx) return
     const time = this.opts.animate ? now : 0
+    this.frameTime = now
     const p = this.projection(), s = p.scale, sy = Math.sin(p.tilt)
-    this.active = false
+    this.active = this.movement.cameraMoving(now)
+    // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
+    const standing = this.standing.map(entry => {
+      if (!entry.billboard) return entry
+      const pos = this.movement.position(entry.billboard, now)
+      return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
+    }).sort((a, b) => a.depth - b.depth || a.x - b.x)
     this.life.tick(now)
-    this.lighting.build(this.scene, p, this.life.emitters(now), time, this.opts.animate, this.tiles.source)
+    this.lighting.build(this.scene, p, this.life.emitters(now), time, this.opts.animate, this.tiles.source, b => this.movement.position(b, now))
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
@@ -202,10 +227,10 @@ export class Render25d implements MapRenderer {
     this.wallShadows(ctx, p, cells)
 
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
-    for (const entry of this.standing) {
-      if (!this.inFrame(p, entry.cell)) continue
+    for (const entry of standing) {
+      if (!this.inFrame(p, entry)) continue
       if (entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
-      const q = project(p, entry.cell.x, entry.cell.y + 0.28)
+      const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
       ctx.scale(1, sy * 0.3)
@@ -218,9 +243,10 @@ export class Render25d implements MapRenderer {
       ctx.restore()
     }
 
-    for (const entry of this.standing) {
-      if (!this.inFrame(p, entry.cell)) continue
-      if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time)
+    for (const entry of standing) {
+      if (!this.inFrame(p, entry)) continue
+      if (entry.moving) this.active = true
+      if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
       else if (entry.cell.occluder) { this.wall(ctx, p, entry.cell); if (entry.cell.visibility === 'visible') this.environment(ctx, p, entry.cell, time) }
       else this.actor(ctx, p, entry.cell, { x: entry.cell.x, y: entry.cell.y, tile: entry.cell.featureTile!, height: 1, kind: 'doll', scenery: true, life: entry.cell.life }, time)
     }
@@ -235,8 +261,9 @@ export class Render25d implements MapRenderer {
       for (const tile of cell.icons ?? []) {
         // Item cursors frame the upright atlas art. Travel/exclusion/stair
         // badges retain their ground anchor, even when sharing an item cell.
-        if (tile === cell.cursorTile && this.standing.some(entry => entry.cell === cell && entry.billboard?.kind === 'item' && !entry.billboard.lying)) {
-          const item = project(p, cell.x, cell.y + 0.3)
+        const cursorItem = tile === cell.cursorTile && standing.find(entry => entry.cell === cell && entry.billboard?.kind === 'item' && !entry.billboard.lying)
+        if (cursorItem) {
+          const item = project(p, cursorItem.x, cursorItem.y + 0.3)
           drawTile(ctx, this.tiles.source, { tile }, item.x - s / 2, item.y - s, s)
         } else drawTile(ctx, this.tiles.source, { tile }, q.x, q.y, s)
       }
@@ -474,14 +501,14 @@ export class Render25d implements MapRenderer {
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }
 
-  private actor(ctx: Context2d, p: Projection, cell: SceneCell, b: Billboard, time: number) {
+  private actor(ctx: Context2d, p: Projection, cell: SceneCell, b: Billboard, time: number, position: { x: number; y: number; moving?: boolean } = b) {
     const s = p.scale, visible = cell.visibility === 'visible'
     if (b.kind === 'projectile') {
       if (!visible) return
       // Server beam art spans neighbouring cells. Keep its full length on
       // the ground plane; soften/trim its alpha instead of shrinking it and
       // opening gaps between segments. It has no creature shadow or hit box.
-      const rect = planeRect(p, b.x, b.y, 0.28, this.dpr)
+      const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
       ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = b.alpha ?? 0.88
       this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, true)
       ctx.restore()
@@ -490,9 +517,9 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: 2, smooth: true })
+    const pose = livingPose(life, position.x, position.y, time, this.opts.animate && visible, { strength: 2, smooth: true })
     if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
-    const q = project(p, b.x, b.y + 0.3)
+    const q = project(p, position.x, position.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre. First-person
     // billboard heights shrink that art a second time and must not scale it here.
     const size = s
@@ -501,10 +528,10 @@ export class Render25d implements MapRenderer {
     ctx.save()
     // Subpixel breathing/sway must remain visible when the server's static
     // tile scaling preference is nearest-neighbour (the default in live play).
-    if (this.opts.animate && visible && life.motion && life.motion !== 'still' && !life.held) ctx.imageSmoothingEnabled = true
+    if (position.moving || this.opts.animate && visible && life.motion && life.motion !== 'still' && !life.held) ctx.imageSmoothingEnabled = true
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
     if (b.lying) {
-      this.plane(ctx, p, cell, b.layers ?? [{ tile: b.tile }], 0.02)
+      this.plane(ctx, p, { ...cell, x: position.x, y: position.y }, b.layers ?? [{ tile: b.tile }], 0.02)
     } else {
       if (b.kind === 'player' || b.attitude === 'friendly') {
         ctx.strokeStyle = b.kind === 'player' ? '#e3c88a' : '#8bd0ab'
@@ -611,6 +638,7 @@ export class Render25d implements MapRenderer {
   }
 
   destroy() {
+    this.movement.clear()
     this.life.clear()
     this.tiles.clear()
     this.tiles.source = null

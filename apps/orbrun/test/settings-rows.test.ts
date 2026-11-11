@@ -110,6 +110,31 @@ describe('camera rows', () => {
 describe('dungeon projections', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
+  it('persists movement options, gates them in still mode, and resets the View defaults', () => {
+    saveSettings({ ...defaultSettings, renderer: '2.5d' })
+    expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')
+    expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
+    adjustSetting(row('Dungeon move duration'), 1)
+    adjustSetting(row('Dungeon move easing'), 1)
+    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.14, depthMovementEasing: 'smooth' })
+    adjustSetting(row('Dungeon movement'), 1)
+    expect(getSettings().depthMovement).toBe(false)
+    expect(rowOff(row('Dungeon move duration'))).toBe(true)
+    saveSettings({ ...getSettings(), depthMovement: true, depthAnimate: false })
+    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing']) expect(rowOff(row(label))).toBe(true)
+    resetGroup('View')
+    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
+  })
+
+  it('validates stored movement settings and bounds presentation delay', () => {
+    store.set('orbrun.settings', JSON.stringify({ depthMovement: 'true', depthMovementDuration: 'slow', depthMovementEasing: 'bounce' }))
+    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
+    for (const [input, expected] of [[-5, 0.04], [5, 0.25]]) {
+      store.set('orbrun.settings', JSON.stringify({ depthMovementDuration: input }))
+      expect(getSettings().depthMovementDuration).toBe(expected)
+    }
+  })
+
   it('offers all three projections and persists the selected one', () => {
     expect(VIEW_OPTIONS).toBe(true)
     expect(SETTING_ROWS).toContain(row('Projection'))

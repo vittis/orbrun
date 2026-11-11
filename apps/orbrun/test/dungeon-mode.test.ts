@@ -27,6 +27,12 @@ describe('compass controls in overhead views', () => {
 })
 
 describe('effective dungeon animation', () => {
+  it('passes configured movement properties to the renderer', () => {
+    const screen = Object.assign(Object.create(GameScreen.prototype), { cam: { reducedMotion: false } })
+    expect(screen.render25dOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth' })).toMatchObject({
+      movement: false, movementDuration: 0.18, movementEasing: 'smooth',
+    })
+  })
   it.each([
     ['auto', false, true], ['auto', true, false],
     [true, false, true], [true, true, true],

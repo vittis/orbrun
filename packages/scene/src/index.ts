@@ -237,6 +237,8 @@ export interface SceneCell {
 export type BillboardKind = 'monster' | 'item' | 'cloud' | 'doll' | 'projectile' | 'player'
 
 export interface Billboard {
+  /** Stable entity identity within a level, when supplied by the producer. */
+  id?: string | number
   life?: import('./living.js').TileLife
   x: number
   y: number

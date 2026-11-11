@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.22 — 2026-11-11
+
+- Add smooth movement tweens for entities in Dungeon (2.5D), with a synchronized following camera and a snappy 100 ms ease-out default.
+- Configure movement, duration and Snappy/Smooth/Linear easing in Settings → View. Rapid travel retargets immediately without queuing animations; teleports and level changes snap.
+- Keep shadows, lighting, depth ordering, badges, item cursors and picking aligned during movement. Respect Still mode and the device's reduced motion preference in Auto mode.
+
 ## 0.3.21 — 2026-11-11
 
 - Restore original WebTiles tile brightness in line of sight, removing the extra exposure lift.

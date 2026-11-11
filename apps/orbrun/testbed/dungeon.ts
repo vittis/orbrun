@@ -1,4 +1,4 @@
-import { Render25d, fittedScale } from '@orbrun/render-2.5d'
+import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
 import { cellKey, makeCamera, type TileSource } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
@@ -73,8 +73,10 @@ function fit() {
   wake()
 }
 new ResizeObserver(fit).observe(canvas)
-for (const id of ['tilt', 'zoom', 'animate', 'original']) document.getElementById(id)!.addEventListener('change', () => {
-  renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value), animate: animate.checked })
+for (const id of ['tilt', 'zoom', 'animate', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
+  const duration = Number((document.getElementById('duration') as HTMLSelectElement).value)
+  renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value), animate: animate.checked,
+    movement: duration > 0, movementDuration: duration || 0.1, movementEasing: (document.getElementById('easing') as HTMLSelectElement).value as MovementEasing })
   fit()
 })
 const roomScene = scene
@@ -102,9 +104,10 @@ document.getElementById('scene')!.addEventListener('change', async () => {
     scene.billboards = [...scene.billboards, { ...scene.player, tile: -1, kind: 'player', height: 0.7 }]
   }
   const center = id === 'room' ? { x: 9, y: 4 } : scene.player
+  scene.levelKey = id
   renderer.setTiles(source)
-  renderer.setScene(scene)
   renderer.setOptions({ center })
+  renderer.setScene(scene)
   original.setTiles(source)
   original.setScene(scene)
   original.setOptions({ center })
@@ -132,6 +135,46 @@ canvas.addEventListener('click', event => {
   renderer.setScene({ ...scene, revision: ++scene.revision })
   original.setScene(scene)
   original.setCamera(makeCamera(scene.player.x, scene.player.y))
+  wake()
+})
+let moveDirection = 1
+document.getElementById('move')!.addEventListener('click', () => {
+  // Give all demo entities a stable identity, including items with identical art.
+  for (const [i, b] of scene.billboards.entries()) b.id ??= `preview:${i}`
+  renderer.setScene({ ...scene, revision: ++scene.revision })
+  scene.billboards = scene.billboards.map(b => {
+    if (b.scenery || !['player', 'monster', 'item'].includes(b.kind)) return b
+    const next = scene.cells.get(cellKey(b.x + moveDirection, b.y))
+    if (next?.visibility !== 'visible' || next.occluder) return b
+    if (b.kind === 'item') {
+      const before = scene.cells.get(cellKey(b.x, b.y))!
+      before.icons = before.icons?.filter(tile => tile !== -2)
+      before.cursorTile = undefined
+      next.cursorTile = -2
+      next.icons = [...(next.icons ?? []).filter(tile => tile !== -2), -2]
+    }
+    return { ...b, x: next.x }
+  })
+  const player = scene.billboards.find(b => b.kind === 'player')
+  if (player) scene.player = { x: player.x, y: player.y }
+  moveDirection *= -1
+  renderer.setScene({ ...scene, revision: ++scene.revision })
+  original.setScene(scene)
+  wake()
+})
+document.addEventListener('keydown', event => {
+  if ((event.target as HTMLElement).matches('select, input, button')) return
+  const step = ({ ArrowUp: [0, -1], ArrowRight: [1, 0], ArrowDown: [0, 1], ArrowLeft: [-1, 0] } as Record<string, number[]>)[event.key]
+  if (!step) return
+  event.preventDefault()
+  const next = scene.cells.get(cellKey(scene.player.x + step[0], scene.player.y + step[1]))
+  if (!next || next.occluder || next.visibility !== 'visible') return
+  scene.player = { x: next.x, y: next.y }
+  scene.billboards = scene.billboards.map(b => b.kind === 'player' ? { ...b, ...scene.player } : b)
+  renderer.setOptions({ center: scene.player })
+  renderer.setScene({ ...scene, revision: ++scene.revision })
+  original.setOptions({ center: scene.player })
+  original.setScene(scene)
   wake()
 })
 fit()
