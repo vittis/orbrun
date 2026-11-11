@@ -23,12 +23,13 @@ export function drawTile(ctx: Context2d, source: TileSource | null, layer: Layer
 /** Bounded, readback-free cache. Padding preserves tall and offset tile art. */
 export class TileCache {
   private entries = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+  private pixels = 0
   source: TileSource | null = null
 
-  clear() { this.entries.clear() }
+  clear() { this.entries.clear(); this.pixels = 0 }
 
-  draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect): boolean {
-    const surface = this.composite(layers, light, memory, false, flash)
+  draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, rasterScale = 1): boolean {
+    const surface = this.composite(layers, light, memory, false, flash, false, rasterScale)
     if (!surface) return false
     ctx.drawImage(surface, x - size, y - size, size * 3, size * 3)
     lighting?.draw(ctx, { x: x - size, y: y - size, width: size * 3, height: size * 3 }, surface, sample)
@@ -44,17 +45,21 @@ export class TileCache {
     return true
   }
 
-  private composite(layers: Layer[], light: number, memory: boolean, flat: boolean, flash?: { r: number; g: number; b: number; a: number }, thin = false) {
+  private composite(layers: Layer[], light: number, memory: boolean, flat: boolean, flash?: { r: number; g: number; b: number; a: number }, thin = false, rasterScale = 1) {
     if (!layers.some(l => this.source?.tile(l.tile))) return null
     if (layers.some(l => { const r = this.source?.tile(l.tile); return r && !this.source?.atlas(r.atlas) })) return null
     const shade = Math.round(Math.max(0.2, Math.min(1, light)) * 16) / 16
-    const key = JSON.stringify([layers, shade, memory, flat, flash, thin])
+    const key = JSON.stringify([layers, shade, memory, flat, flash, thin, rasterScale])
     let surface = this.entries.get(key)
     if (!surface) {
       const size = flat ? 32 : 96, origin = flat ? 0 : 32
-      surface = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(size, size) : Object.assign(document.createElement('canvas'), { width: size, height: size })
+      surface = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(size * rasterScale, size * rasterScale) : Object.assign(document.createElement('canvas'), { width: size * rasterScale, height: size * rasterScale })
       const c = surface.getContext('2d') as Context2d | null
       if (!c) return null
+      // Enlarge whole source pixels first. Filtering this surface then softens
+      // only a narrow pixel edge instead of blurring entire atlas texels.
+      c.imageSmoothingEnabled = false
+      c.scale(rasterScale, rasterScale)
       let painted = false
       for (const layer of layers) painted = drawTile(c, this.source, layer, origin, origin, 32) || painted
       // Atlases may still be loading: a missing image must never poison the cache.
@@ -84,8 +89,16 @@ export class TileCache {
         c.fillStyle = `rgba(${flash.r},${flash.g},${flash.b},${flash.a / 255})`
         c.fillRect(0, 0, size, size)
       }
-      if (this.entries.size >= 1024) this.entries.delete(this.entries.keys().next().value!)
+      // Keep the same pixel budget when animation uses larger cached sprites.
+      const pixels = surface.width * surface.height
+      while (this.entries.size && (this.entries.size >= 1024 || this.pixels + pixels > 1024 * 96 * 96)) {
+        const oldest = this.entries.keys().next().value!
+        const previous = this.entries.get(oldest)!
+        this.pixels -= previous.width * previous.height
+        this.entries.delete(oldest)
+      }
       this.entries.set(key, surface)
+      this.pixels += pixels
     }
     return surface
   }

@@ -1,19 +1,30 @@
 # Project status
 
-## 0.3.28 brief projectile and physical spell effects — prepared 2026-11-11
+## 0.3.29 brief projectile and physical spell effects — prepared 2026-11-11
 
 User authorized fixing Sandblast and similar spell visuals and deploying when
-finished. New source tag: `cloudflare-online-v1.25`. Projectile map frames now
+finished. New source tag: `cloudflare-online-v1.26`. Projectile map frames now
 reach the renderer before later deltas overwrite them; removed artwork remains
 visible briefly without holding game state or input. Non-emissive sand/stone/
 metal/air projectiles have independent impact and residue styles, and compact
 art avoids beam-only alpha thinning. Load history, invisible spells, Still,
 visibility and level-transition cleanup are preserved. Main's 0.3.26 movement
-and 0.3.27 wall-depth changes are integrated. Real server artwork passes all
+and 0.3.27 wall-depth and 0.3.28 breathing changes are integrated. Real server artwork passes all
 20 projectile/impact/residue/expiry checks. Final integrated validation: 2,238
 unit tests/two optional-engine skips; 1,062 existing Canvas checks; forced
 TypeScript, production build and ASSETS-only dry-run pass. Optional engine E2E
 reports 44 skips. Evidence and rollout details are in DEPLOYMENT.md.
+
+## 0.3.28 smoother idle breathing — prepared 2026-11-11
+
+User authorized commit and deployment. New immutable source tag:
+`cloudflare-online-v1.25`. Integrates 0.3.27 wall depth. Breathing is slower and
+shallower, without sideways stretching; integer-enlarged sprites receive narrow
+edge smoothing while the cache keeps its pixel budget. The actual GameScreen
+preview confirms motion and Still-mode freezing. Forced TypeScript rebuild,
+2,220 unit tests / two optional-engine skips, build, and Worker dry-run pass;
+optional engine E2E has 44 skips. Main/source-tag publication triggers Cloudflare
+Workers Builds. See DEPLOYMENT.md for release details.
 
 ## 0.3.26 multi-cell movement — prepared 2026-11-11
 

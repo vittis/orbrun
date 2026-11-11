@@ -289,15 +289,21 @@ describe('environmental lighting', () => {
     expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
-  it('preserves crisp sprite filtering during idle motion and honours explicit smoothing', () => {
-    const { r } = renderer(), samples: boolean[] = []
-    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation(ctx => { samples.push(ctx.imageSmoothingEnabled); return true })
+  it('smooths breathing from crisp enlarged pixels and honours still mode and explicit smoothing', () => {
+    const { r } = renderer(), samples: { smooth: boolean; rasterScale: number }[] = []
+    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, _layers, _x, _y, _size, _light, _memory, _flash, _lighting, _sample, rasterScale = 1) => {
+      samples.push({ smooth: ctx.imageSmoothingEnabled, rasterScale }); return true
+    })
     const scene = sceneOf(cell(0, 0))
     scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life: { motion: 'breath' } }]
     r.setScene(scene); r.setOptions({ animate: false, filterScaling: false }); r.render(1)
     r.setOptions({ animate: true }); r.render(2)
     r.setOptions({ filterScaling: true }); r.render(3)
-    expect(samples).toEqual([false, false, true])
+    expect(samples[0]).toEqual({ smooth: false, rasterScale: 1 })
+    expect(samples[1].smooth).toBe(true)
+    expect(samples[1].rasterScale).toBeGreaterThanOrEqual(2)
+    expect(samples[1].rasterScale).toBeLessThanOrEqual(4)
+    expect(samples[2]).toEqual({ smooth: true, rasterScale: 1 })
     tile.mockRestore()
   })
   it('the player never emits a light pool or lights ordinary dungeon cells', () => {

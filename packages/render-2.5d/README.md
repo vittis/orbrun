@@ -100,9 +100,11 @@ effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
 Server flashes are rendered as supplied; spell types and damage are not
 guessed from message text.
-Idle motion is slightly stronger than before, with device-pixel-snapped offsets
-and the selected tile filter preserved during motion. Severe wound flags add a
-guarded lean and uneven breathing without obscuring identifying sprite art.
+Idle motion uses device-pixel-snapped offsets. Breathing is a shallow vertical
+rise; in crisp mode, sprites are enlarged by whole pixels before narrow edge
+smoothing eases the animation. Still sprites retain the selected tile filter.
+Severe wound flags add a guarded lean and uneven breathing without obscuring
+identifying sprite art.
 Lights have compact bright cores and up to six embers or four magical motes each,
 with an 88-mote frame budget; fountains add five small spray droplets.
 Movement also stops in Still/reduced-motion mode. Only visible, on-screen
