@@ -484,4 +484,33 @@ explicit skips. The real GameScreen fixture shows continuously changing actor
 pixels with no incoming messages. Explicit On continues under simulated device
 reduced motion, Auto/Still stop the clock, and the popup entrance is confirmed
 in computed CSS (initial scale 0.25 with an 8px rise; 21px maximum normal size).
-Production rollout verification will be recorded after publication.
+Production rollout verification is recorded below.
+
+
+### Successful 0.3.21 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.18` point to
+  `a8c5fbb0c7921f523fce1dcbc17a65ae0f661a66`; main, branch and tag were pushed
+  atomically after the user's explicit commit/deploy instruction.
+- Cloudflare build `1f87c358-94af-4863-91f5-a3b462b3faa4` succeeded. Worker
+  `086e982a-3e9c-4c7d-bf09-4ef4e0d12a3b` serves 100% of traffic; deployment
+  created at 16:05:47 America/Sao_Paulo on 2026-11-11.
+- All 13 hosted checks pass: version, immutable source, strict CSP, public
+  scripts/licenses, allowed gamedata and rejected unlisted/offline routes.
+  Both font/license assets and all three entry JS bundles match local bytes.
+- Browser verified 0.3.21 release notes/source tag and anonymous CBRG 2.5D
+  spectating (yunli). Native LOS floor colors, black remembered terrain,
+  compact torch glow, right-side character panel and nearby list are visible.
+  No gameplay or chat was sent. Earlier vittisXX spectating had ended; the
+  current roster's public game was opened through its normal UI.
+- Evidence: `evidence/release-0321-http-checks.json`,
+  `evidence/release-0321-canvas-checks.json`,
+  `evidence/release-0321-surface-checks.json`,
+  `evidence/release-0321-live-animation.json`,
+  `evidence/release-0321-live-loop.png`,
+  `evidence/release-0321-effects-preview.png`, and
+  `evidence/release-0321-spectating.png`.
+- Rollback: 0.3.20 Worker `b49a55cf-3c28-454a-ba06-923fb45ff43c`.
+
+Post-rollout evidence remains on the working branch only; main and the
+immutable tag retain the exact deployed source commit.

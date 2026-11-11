@@ -1,0 +1,109 @@
+{
+  "release": "0.3.21",
+  "commit": "a8c5fbb0c7921f523fce1dcbc17a65ae0f661a66",
+  "tag": "cloudflare-online-v1.18",
+  "checkedAt": "2026-11-11T19:06:49.315037+00:00",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 9485,
+      "type": "text/html",
+      "passed": true,
+      "releaseSource": true,
+      "strictCsp": true
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 63158,
+      "type": "text/html",
+      "passed": true,
+      "releaseSource": true,
+      "strictCsp": true
+    },
+    {
+      "path": "/about/new",
+      "status": 200,
+      "bytes": 61848,
+      "type": "text/html",
+      "passed": true,
+      "releaseSource": true,
+      "strictCsp": true,
+      "releaseVersion": true
+    },
+    {
+      "path": "/site-controls.js",
+      "status": 200,
+      "bytes": 10486,
+      "type": "text/javascript",
+      "passed": true
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "bytes": 1099,
+      "type": "text/plain",
+      "passed": true
+    },
+    {
+      "path": "/fonts/barlow-condensed-700.ttf",
+      "status": 200,
+      "bytes": 87120,
+      "type": "font/ttf",
+      "passed": true,
+      "matchesLocal": true
+    },
+    {
+      "path": "/fonts/BARLOW-OFL.txt",
+      "status": 200,
+      "bytes": 4377,
+      "type": "text/plain",
+      "passed": true,
+      "matchesLocal": true
+    },
+    {
+      "path": "/engine/stable/engine.json",
+      "status": 404,
+      "bytes": 47,
+      "type": "text/plain;charset=UTF-8",
+      "passed": true
+    },
+    {
+      "path": "/gamedata-proxy/127.0.0.1/gamedata/abc/enums.js",
+      "status": 404,
+      "bytes": 9,
+      "type": "text/plain;charset=UTF-8",
+      "passed": true
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js",
+      "status": 200,
+      "bytes": 9710,
+      "type": "text/javascript; charset=utf-8",
+      "passed": true,
+      "amdData": true
+    },
+    {
+      "path": "/assets/main-C5s5Mx_5.js",
+      "status": 200,
+      "localSha256": "586656399e9b6615c92b362cae0bc9efcec2028cb7685b2b4cd7e33dc81cccc2",
+      "liveSha256": "586656399e9b6615c92b362cae0bc9efcec2028cb7685b2b4cd7e33dc81cccc2",
+      "passed": true
+    },
+    {
+      "path": "/assets/index-CDW78BkD.js",
+      "status": 200,
+      "localSha256": "cee9b6c3af7265077a0743db0e655e1bfcd4f35faf7d0840a5f63d3e0d230ab0",
+      "liveSha256": "cee9b6c3af7265077a0743db0e655e1bfcd4f35faf7d0840a5f63d3e0d230ab0",
+      "passed": true
+    },
+    {
+      "path": "/assets/game-DHp_DfXi.js",
+      "status": 200,
+      "localSha256": "36a5d29392888f3c054428b9e00e2cb4c2aeb29e7b0006ca009f6ba33770016c",
+      "liveSha256": "36a5d29392888f3c054428b9e00e2cb4c2aeb29e7b0006ca009f6ba33770016c",
+      "passed": true
+    }
+  ]
+}

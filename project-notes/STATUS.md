@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.21 original exposure and live animation — prepared 2026-11-11
+## 0.3.21 original exposure and live animation — deployed 2026-11-11
 
 User authorized commit to main and production deployment. App 0.3.21 uses
 immutable source tag `cloudflare-online-v1.18`. LOS retains original atlas
@@ -13,7 +13,15 @@ Forced TypeScript, 2,128 unit tests/two optional-engine skips, production build
 and ASSETS-only Worker dry-run pass. All 576 Canvas checks pass. The actual
 GameScreen fixture verifies idle actor animation, On overriding reduced motion,
 Auto/Still stopping motion and the CSS popup entrance. Optional engine E2E:
-44 explicit skips. Production rollout verification follows publication.
+44 explicit skips.
+
+Main and immutable source tag point to `a8c5fbb`. Cloudflare build
+`1f87c358-94af-4863-91f5-a3b462b3faa4` succeeded. Worker
+`086e982a-3e9c-4c7d-bf09-4ef4e0d12a3b` serves 100% of traffic. Thirteen
+hosted checks pass; fonts and all three JS entry bundles match local bytes.
+Browser verified 0.3.21 release notes and anonymous CBRG 2.5D spectating with
+native floor colors, compact torch glow and the right-side character panel.
+Evidence: `evidence/release-0321-*`. No gameplay or chat was sent.
 
 ## 0.3.20 smooth lighting and effects — deployed 2026-11-11
 

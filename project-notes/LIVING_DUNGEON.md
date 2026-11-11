@@ -6,6 +6,27 @@ Deployed 2026-11-11: production main and source tag point to `6214854`.
 Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded; hosted
 verification is recorded in `DEPLOYMENT.md` and `evidence/release-0318-*`.
 
+## 0.3.21 native exposure, compact lights and live animation
+
+Deployed `a8c5fbb`, source tag `cloudflare-online-v1.18`, on 2026-11-11.
+Visible tiles use native atlas colors; the 10% white lift is removed. Light
+centers follow emitting artwork with a radius capped at 1.35 cells. Circular
+screen-space gradients use feathered reachability masks, and wall faces now
+sample their actual rectangle instead of stretching one strip over a face.
+
+Animation Auto follows device motion preferences; explicit On overrides them,
+and Still freezes the scene. Living sprites use filtered subpixel movement
+even when the server selects nearest-neighbor scaling for static art. Smaller
+numbers use a CSS entrance (rise, scale overshoot, settle), with their stable
+wrapper preserved across delayed estimate/brand refinements.
+
+Validation: 2,128 unit tests/two optional-engine skips; forced TypeScript,
+production build and Worker dry-run; 576 real Canvas checks; 13 hosted checks.
+The real GameScreen fixture runs without testbed RAF or server messages and
+records changing actor pixels, On under reduced motion, Auto/Still stopping
+motion, and animated/still popup CSS. See `/testbed/live-animation.html`,
+`DEPLOYMENT.md` and `evidence/release-0321-*`.
+
 ## 0.3.20 smooth surface lighting and VFX
 
 Deployed `114c077`, source tag `cloudflare-online-v1.17`, on 2026-11-11.

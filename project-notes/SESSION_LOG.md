@@ -387,3 +387,32 @@ main/branch/tag atomically; Cloudflare build
 and JS bundles match local bytes; source/version/CSP/proxy checks and live
 anonymous CBRG 2.5D spectating pass with no console warnings/errors. No gameplay
 or chat sent. Post-rollout evidence stays on the working branch.
+
+
+## Native LOS brightness, compact glows and working On animation — 2026-11-11
+
+User reported over-bright LOS, still live animation despite On, oversized
+numbers without an entrance, and tile-shaped torch lighting. Reconfirmed
+explicit instruction to commit main and deploy once complete.
+
+Released 0.3.21 / `a8c5fbb` / `cloudflare-online-v1.18`. Removed white exposure
+lift, centered compact circular light on emitter art, feathered source masks,
+and corrected roof/face sample coordinates (faces previously stretched a
+one-pixel strip over the whole wall). Explicit animation On now overrides
+device reduced motion; Auto follows it. Animated sprites get smooth subpixel
+sampling independently of static server scaling. Smaller numbers use a stable
+CSS entrance wrapper with rise, overshoot and settle.
+
+2,128 unit tests/two optional-engine skips, forced TypeScript, build and
+ASSETS-only dry-run pass. Engine E2E: 44 explicit skips. All 576 Canvas checks
+and the actual GameScreen fixture pass, including idle actor pixel changes,
+On under simulated reduced motion, Auto/Still and popup CSS entrance/still.
+
+Main/branch/tag published atomically. Cloudflare build
+`1f87c358-94af-4863-91f5-a3b462b3faa4` succeeded; Worker
+`086e982a-3e9c-4c7d-bf09-4ef4e0d12a3b` serves 100% traffic. Thirteen hosted
+checks pass, including local/live entry bundle and font equality. Browser
+verified 0.3.21 notes and anonymous CBRG 2.5D spectating, with native colors,
+compact torch glow and the right-side pane. No gameplay/chat sent. Evidence
+and completed rollout notes stay on the working branch, preserving the exact
+main/source-tag release commit.
