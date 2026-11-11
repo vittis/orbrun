@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.30 — 2026-11-11
+
+- Strengthen wall-base shadows in Dungeon (2.5D) so wall height is easier to read.
+- Fade terrain smoothly as it enters and leaves line of sight, including lighting and memory fog. Rapid LOS changes reverse smoothly; Still mode keeps instant changes.
+
 ## 0.3.29 — 2026-11-11
 
 - Restore Sandblast and other brief spell projectiles that could be created and removed between rendered frames. Preserve confirmed flight artwork briefly without delaying game updates or input.

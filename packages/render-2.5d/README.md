@@ -39,13 +39,16 @@ and picking regions. The existing first-person renderer remains independent.
   shadows that shorten with foreground cutaways. Wall faces darken toward
   their feet, with a recessed cap and subtle bevels on exposed roof edges;
   connected roofs stay continuous rather than outlining every tile.
+  Dense contact shadows and darker face bottoms emphasize the height change.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
   emitters. Floors, wall roofs/faces and alpha-masked sprites all sample that
   field, without per-cell colour steps. Reachability is cached separately from
   smooth per-frame flicker and afterglow fading. Known occluders block light;
-  unseen and remembered terrain never receives it. The player emits no light.
+  unseen and settled remembered terrain never receives it. A departing LOS
+  tile fades its exposure to still-visible emitters with its terrain brightness.
+  The player emits no light.
   LOS has uniform bright ambient exposure and a gentle vignette.
 - `movement.ts` tweens confirmed entity positions and the following camera on
   the renderer's existing clock. Every billboard kind shares the same motion;
@@ -73,6 +76,15 @@ and picking regions. The existing first-person renderer remains independent.
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
   replacement; frames cull outside the viewport and reuse tile composites.
+- `visibility.ts` fades LOS brightness over 220 ms with a smooth curve. It
+  snapshots scalar visibility values, so mutable scenes and rapid reversals
+  continue from the drawn brightness. Floors, walls, standing art, light
+  exposure and memory fog follow the same fade. First discoveries brighten
+  from black; the initial view, level changes, remote maps and Still mode
+  snap. Hidden entities disappear immediately; picking uses confirmed LOS.
+  Reusable scratch surfaces per raster size preserve alpha and flashes without
+  growing the tile cache or quantizing fade steps. Only on-screen fades keep
+  the renderer awake, alongside existing atmosphere and movement.
 - `effects.ts` keeps bounded melee and spell histories on the existing frame
   clock. Confirmed `MeleeAttack` events produce a small lunge/recoil and sword,
   thrust, axe, blunt or unarmed gestures. The app resolves these from combat
@@ -133,6 +145,8 @@ player directly; long-distance moves demonstrate multi-cell tweening.
 **Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
 **Cast** previews four spell trace families. Append `?effectFrame=0.1` to freeze
 each triggered effect 100 ms into its lifetime for deterministic captures.
+**Toggle LOS** dims/reveals the area around the player; press again mid-fade
+to inspect a continuous reversal, or disable Animation to compare Still mode.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
@@ -152,6 +166,8 @@ first draw; pixel comparisons verify projectile, impact, residue and expiry.
 Wall-depth checks also verify fading base shadows, shorter cutaway shadows,
 lighter transparent-wall shadows, face shading, hidden geometry and sleep
 at three elevations, zoom levels and device pixel ratios.
+Visibility checks sample actual floor, roof and sprite pixels through fades
+and reversals, including alpha preservation, flash ordering and cache bounds.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass

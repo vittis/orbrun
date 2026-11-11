@@ -64,6 +64,32 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {
+    const { r } = renderer()
+    const c = cell(0, 0, { visibility: 'remembered' }), scene = sceneOf(c)
+    r.setScene(scene, 0)
+    c.visibility = 'visible'; scene.revision++
+    r.setScene(scene, 1); r.render(1.1)
+    expect(r.animating).toBe(true)
+    expect(r.pick(450, 350)).toBe(cellKey(0, 0))
+    r.render(1.23)
+    expect(r.animating).toBe(false)
+    c.visibility = 'remembered'; scene.revision++; r.setScene(scene, 2)
+    c.visibility = 'visible'; scene.revision++; r.setScene(scene, 2.1)
+    r.setOptions({ animate: false }); r.render(2.11)
+    r.setOptions({ animate: true }); r.render(2.12)
+    expect(r.animating).toBe(false)
+  })
+
+  it('does not keep rendering for offscreen visibility fades', () => {
+    const { r } = renderer()
+    const c = cell(100, 100, { visibility: 'remembered' }), scene = sceneOf(cell(0, 0), c)
+    r.setScene(scene, 0)
+    c.visibility = 'visible'; scene.revision++
+    r.setScene(scene, 1); r.render(1.1)
+    expect(r.animating).toBe(false)
+  })
+
   it('keeps melee sprites, shadows and picking together, then sleeps after the stroke', () => {
     const { r } = renderer()
     const scene = sceneOf(cell(0, 0), cell(1, 0))

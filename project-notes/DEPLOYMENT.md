@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.29 point at the `cloudflare-online-v1.26` release tag in
+Source links for 0.3.30 point at the `cloudflare-online-v1.27` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -743,3 +743,24 @@ frame in Still mode. Integrated release checks passed: forced TypeScript rebuild
 Worker dry-run (104 assets, 20.95 KiB), and diff checks. Optional engine E2E
 reports 44 explicit skips. The atomic main/source-tag push triggers Cloudflare
 Workers Builds; the GitHub check reports the hosted deployment result.
+
+
+## 0.3.30 stronger wall bases and smooth LOS — prepared 2026-11-11
+
+User authorized committing to main and deployment, leaving post-deployment
+checks to the user. Immutable source tag: `cloudflare-online-v1.27`. Wall-base
+contact shadows and face bottoms are darker. LOS brightness fades over 220 ms
+for floors, roofs, faces and standing art, with matching memory fog and exposure
+to visible lights. Rapid reversals continue from the drawn brightness. Initial
+views, level transitions, remote maps and Still mode snap; hidden entities
+disappear immediately and picking follows confirmed visibility.
+
+Integrated the latest main, retaining crisp breathing raster sizes, bounded
+cache pixel budgets and short-lived spell projectile effects. Feature
+validation passed 1,157 real Canvas checks before integration. Final integrated
+checks passed: 2,250 unit tests / two optional-engine skips, 1,158 real Canvas
+checks (including enlarged breathing rasters), forced TypeScript rebuild,
+production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
+checks. Optional engine E2E reports 44 explicit skips. The atomic main/source-tag
+push triggers Cloudflare Workers Builds. No deployment polling or hosted checks
+will be performed, as requested.

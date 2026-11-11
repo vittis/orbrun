@@ -156,6 +156,14 @@ canvas.addEventListener('click', event => {
   wake()
 })
 let moveDirection = 1
+let dimmedLOS = false
+document.getElementById('los')!.addEventListener('click', () => {
+  dimmedLOS = !dimmedLOS
+  for (const cell of scene.cells.values()) {
+    if (Math.abs(cell.x - scene.player.x) <= 3 && Math.abs(cell.y - scene.player.y) <= 3) cell.visibility = dimmedLOS ? 'remembered' : 'visible'
+  }
+  syncDemo()
+})
 document.getElementById('move')!.addEventListener('click', () => {
   // Give all demo entities a stable identity, including items with identical art.
   for (const [i, b] of scene.billboards.entries()) b.id ??= `preview:${i}`
