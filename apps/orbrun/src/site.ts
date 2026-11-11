@@ -118,7 +118,7 @@ export function pageAt(pathname: string): Page | null {
  */
 export function addressKind(pathname: string): 'page' | 'app' | 'none' {
   if (pageAt(pathname)) return 'page'
-  if (pathname === '/connection-check.html') return 'app'
+  if (pathname === '/connection-check' || pathname === '/connection-check.html') return 'app'
   const parts = segments(pathname)
   if (MENU_PATH.test(parts.join('/').toLowerCase())) return 'app'
   if (parts.length >= 2 && SERVER_VERBS.has(parts[0].toLowerCase())) return 'app'

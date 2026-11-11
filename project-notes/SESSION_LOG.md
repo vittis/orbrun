@@ -232,3 +232,11 @@
 - Corrective source8fe675d/tag cloudflare-online-v1.1 pushed to main; automatic Cloudflare build af20b64e passed install, clean typecheck, full tests, Vite build and Wrangler deploy. Live Worker version d62c2edf-0b19-4bb5-940b-a3c9fb99a9d5 at https://dcss-client.vittis.workers.dev.
 - Hosted checks passed: strict script/frame CSP, immutable source offer, external About JS MIME+interactive slider, license notice, rejected unlisted proxy/offline paths, real CDI enums and CBRG0.34 anonymous rendering. Screenshot and sanitized HTTP evidence retained. Python's local certificate store failed; Node's verified TLS fetch succeeded without disabling validation.
 - No main-account login, new character, chat, save/rc mutation or physical-controller test performed. Production-only runtime remains first person and bundled-server only. Documentation follow-up stays off production main to avoid a redundant deployment.
+
+- Initial 0.3.9 rollout: c057b2b / cloudflare-online-v1.5, build
+  fb70ba69-80a2-4a3d-abd8-a92b33a068e7, Worker 14f04cc1-9dfb-4f15-97ab-f03103070b2c.
+  Live entry matches local. Hosted smoke exposed Cloudflare's .html-to-extensionless
+  redirect: diagnostic rendered but our route classifier set HTTP 404 at the
+  canonical /connection-check URL. Added that exact route and test coverage;
+  source links advance to immutable v1.6, retaining v1.5 unchanged. App version
+  remains 0.3.9; no further gameplay code changed.

@@ -1,7 +1,7 @@
 # Project status
 
 Release **0.3.9 prepared; rollout verification pending**. Live remains 0.3.8
-until this paragraph is updated. New immutable source tag: `cloudflare-online-v1.5`.
+until this paragraph is updated. New immutable source tag: `cloudflare-online-v1.6`.
 
 User reports 0.3.8's move–pause–move animation. Confirmed cause: preview stops at
 0.18 tiles after 100 ms, waits for the reply, then the remaining move is squeezed
