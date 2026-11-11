@@ -1,11 +1,11 @@
 # Project status
 
-Current follow-up: online Cloudflare deployment **LIVE and verified** at
-https://dcss-client.vittis.workers.dev. Release `cloudflare-online-v1.1` points to
-`8fe675d9059bc5a262b7f2acc2439783aa72da0f`; Worker version
-`d62c2edf-0b19-4bb5-940b-a3c9fb99a9d5`. Cloudflare install, clean typecheck,
-full tests, build and deploy passed. Hosted CSP, source notice, proxy restrictions,
-About script controls and anonymous CBRG0.34 rendering were verified.
+Current follow-up: controller/fullscreen release **LIVE** at
+https://dcss-client.vittis.workers.dev. Release `cloudflare-online-v1.2` points to
+`970cddacf9cd6ef68dcd4701b6416a6e7d9eeb2e` (app 0.3.6); Worker version
+`e9312e9b-c339-45fd-9ba7-6fd2149cf4b1`. Clean typecheck, 1,932 tests, build,
+Cloudflare CI and live source/CSP/manifest/proxy/spectating checks passed.
+Physical Odin controller and touch fullscreen verification remain with the user.
 See [DEPLOYMENT.md](DEPLOYMENT.md); the Phase 0 snapshot below is historical.
 
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**

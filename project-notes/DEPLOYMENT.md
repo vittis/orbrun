@@ -113,3 +113,15 @@ Validation: 1,932 tests passed, two optional-engine tests skipped; TypeScript an
 production build passed. Android-shaped synthetic controllers cover each button,
 LT/RT isolation, d-pad repeat/release and front-menu navigation. Physical Odin 3
 verification remains with the user.
+
+Rollout succeeded: commit `970cddacf9cd6ef68dcd4701b6416a6e7d9eeb2e`,
+Cloudflare build `c3d604fc-ce8d-4772-a923-d47ae7374c07` completed successfully,
+and Worker version `e9312e9b-c339-45fd-9ba7-6fd2149cf4b1` serves 100% of traffic.
+Root/About source links and strict CSP, fullscreen manifest, allowed gamedata
+(200) and unlisted proxy rejection (404) passed live checks. Chrome showed 0.3.6,
+the Interface fullscreen action, and a loaded anonymous CBRG 0.34 game. Automated
+fullscreen activations were rejected and displayed the retry guidance; actual
+touch activation and Odin system-bar behavior remain unverified.
+
+This post-rollout record is on `codex/odin-controller-fullscreen`; production
+`main` and immutable `cloudflare-online-v1.2` remain at the deployed code commit.
