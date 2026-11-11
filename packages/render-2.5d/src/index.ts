@@ -164,9 +164,9 @@ export class Render25d implements MapRenderer {
     return 1
   }
 
-  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }) {
+  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1) {
     return this.tiles.draw(ctx, layers, x, y, size, this.light(), cell.visibility !== 'visible', cell.flash, cell.visibility === 'visible' ? this.lighting : undefined,
-      { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 })
+      { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 }, rasterScale)
   }
 
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
@@ -536,6 +536,7 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
+    const breathing = creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
     const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 2.5, smooth: true })
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
@@ -562,9 +563,10 @@ export class Render25d implements MapRenderer {
     const foot = q.y - snap(pose.y * s)
     const y = foot - size - (cloud ? s * 0.15 : 0)
     ctx.save()
-    // Preserve the tile filtering preference during motion too. Forced linear
-    // filtering washed out one-texel eyes, weapon edges and other small details.
-    ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling
+    // Breathing filters an integer-enlarged sprite, keeping solid pixel centres
+    // while easing row transitions. Explicit smooth scaling uses the atlas directly.
+    const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
+    ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || breathing
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
     if (b.lying) {
       this.plane(ctx, p, { ...cell, x: position.x, y: position.y }, b.layers ?? [{ tile: b.tile }], 0.02)
@@ -581,7 +583,7 @@ export class Render25d implements MapRenderer {
       ctx.rotate(pose.angle)
       ctx.scale(pose.sx, pose.sy)
       ctx.translate(-size / 2, 0)
-      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y })) {
+      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y }, rasterScale)) {
         ctx.fillStyle = b.kind === 'player' ? '#fff0ba' : '#e5c4ae'
         ctx.font = `${size * 0.75}px monospace`
         ctx.textAlign = 'center'

@@ -1,5 +1,16 @@
 # Project status
 
+## 0.3.28 smoother idle breathing — prepared 2026-11-11
+
+User authorized commit and deployment. New immutable source tag:
+`cloudflare-online-v1.25`. Integrates 0.3.27 wall depth. Breathing is slower and
+shallower, without sideways stretching; integer-enlarged sprites receive narrow
+edge smoothing while the cache keeps its pixel budget. The actual GameScreen
+preview confirms motion and Still-mode freezing. Forced TypeScript rebuild,
+2,220 unit tests / two optional-engine skips, build, and Worker dry-run pass;
+optional engine E2E has 44 skips. Main/source-tag publication triggers Cloudflare
+Workers Builds. See DEPLOYMENT.md for release details.
+
 ## 0.3.26 multi-cell movement — prepared 2026-11-11
 
 User authorized commit to main and deployment and will check the result.

@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.27 point at the `cloudflare-online-v1.24` release tag in
+Source links for 0.3.28 point at the `cloudflare-online-v1.25` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -672,3 +672,20 @@ production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
 checks passed. Optional engine E2E reports 44 explicit skips. The atomic
 main/source-tag push triggers Cloudflare Workers Builds. No deployment polling
 or hosted checks will be performed, as requested.
+
+
+## 0.3.28 smoother idle breathing — prepared 2026-11-11
+
+User authorized committing and deploying the completed breathing changes.
+Source tag: `cloudflare-online-v1.25`. Integrates the 0.3.27 wall-depth release.
+Breathing is slower and shallower without sideways stretching. Crisp sprites
+are enlarged by whole pixels before narrow edge smoothing eases row transitions;
+the cache retains its bounded pixel budget. Still mode and explicit filtering
+preferences remain supported.
+
+The actual GameScreen preview confirms animated frames and a single frozen
+frame in Still mode. Integrated release checks passed: forced TypeScript rebuild,
+2,220 unit tests / two optional-engine skips, production build, ASSETS-only
+Worker dry-run (104 assets, 20.95 KiB), and diff checks. Optional engine E2E
+reports 44 explicit skips. The atomic main/source-tag push triggers Cloudflare
+Workers Builds; the GitHub check reports the hosted deployment result.
