@@ -1,21 +1,23 @@
 # Project status
 
-## Local 2.5D visibility fixes — 2026-11-11
+## 0.3.17 visibility release — 2026-11-11
 
 Implemented in worktree `60b1/dcss-client`, branch `codex/2-5d-presentation`,
-on top of `956681d` (0.3.13). Server item cursors now share the upright sprite
+rebased on production `97b49ee` (0.3.16), preserving combat feedback.
+Prepared source tag `cloudflare-online-v1.14`. Server item cursors now share the upright sprite
 frame; travel/stair/exclusion markers keep their ground position. Unexplored
 space uses neutral dark mist, remembered artwork is more strongly dimmed, and
 the player lantern and distance-based sprite spotlight are removed.
 Environmental lava/portal/altar lighting remains.
 
-Validation: 2,034 unit tests pass, 2 optional engine skips; forced TypeScript
+Integrated release validation: 2,072 unit tests pass, 2 optional engine skips; forced TypeScript
 check and production build pass. All 504 real Canvas pixel checks pass across
 elevation/zoom/DPR/filtering, including marker placement, LOS contrast, fog,
 seams and sprite sizes. Local preview has synthetic pickup markers on real
 item art; no browser warning/error logs. Existing build warnings about JSON
-import attributes and large chunks remain. Changes are local, uncommitted and
-not deployed; no user game/account commands were sent.
+import attributes and large chunks remain. User authorized commit and deployment. Worker dry-run passes (ASSETS only,
+20.95 KiB). Optional engine E2E reports 44 skips. Live rollout verification
+follows publication. No user game/account commands were sent.
 
 ## 0.3.11 renderer release — 2026-11-11
 

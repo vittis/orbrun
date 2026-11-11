@@ -308,3 +308,18 @@
   use a wider stroke so sub-texel atlas sampling does not obscure placement.
   Production cursor artwork remains server supplied. No commit, push,
   deployment, authenticated session or gameplay commands performed.
+
+
+## 2026-11-11 — Authorized 0.3.17 publication
+
+- User requested commit and deploy. Committed the visibility fixes and rebased
+  the new commit on production `97b49ee` (0.3.16), retaining all combat-popup
+  work. Prepared app 0.3.17 and immutable tag `cloudflare-online-v1.14` with
+  matching public source links, changelog and lockfile metadata.
+- Integrated checks: `npm test` 2,072 pass / 2 optional engine skips (141 files
+  pass, one optional file skipped); forced typecheck, build and Worker dry-run
+  pass. Worker is 20.95 KiB with ASSETS only. Optional engine E2E 44 skips.
+  Local browser real Canvas checks remain 504/504. Build retains its existing
+  JSON import-attribute and chunk-size warnings.
+- Main and source tag are published atomically. Live deployment verification
+  is recorded after rollout, without advancing main for documentation alone.

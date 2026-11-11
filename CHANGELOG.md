@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.17 — 2026-11-11
+
+- Align green item borders with upright sprites in Dungeon (2.5D), keeping travel and other ground markers in place.
+- Fill unexplored space with dark neutral mist and make remembered terrain clearly dimmer than tiles in line of sight.
+- Remove the player lantern glow and distance-based sprite lighting; keep environmental lava, portal and altar effects.
+
 ## 0.3.16 — 2026-11-11
 
 - Show estimated public-server damage as ≈ numbers using hit strength and visible wounds; group same-turn hits and keep exact server numbers when available.

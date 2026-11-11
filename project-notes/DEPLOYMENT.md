@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.16 point at the `cloudflare-online-v1.13` release tag in
+Source links for 0.3.17 point at the `cloudflare-online-v1.14` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -310,3 +310,13 @@ per-turn grouping, same-name targets, exact damage, zero damage, kills, brands,
 stack limits and delayed observations. All three views were inspected, with a
 phone-sized viewport and reduced-motion presentation. Engine binary artifacts
 remain absent; this release changes only client feedback and is not a new engine.
+
+
+## 0.3.17 visibility correction — 2026-11-11
+
+User authorized commit and deployment. Visual fix commit rebased on production
+0.3.16 (`97b49ee`) to preserve combat feedback. App version 0.3.17; immutable
+source tag `cloudflare-online-v1.14`. Includes raised item cursor alignment,
+neutral unexplored mist, stronger LOS/memory contrast and removal of player
+lighting. Current release validation and rollout results are recorded in STATUS
+and SESSION_LOG; automatic Workers Builds follows the main-branch push.
