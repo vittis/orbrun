@@ -126,8 +126,8 @@ export class Render25d implements MapRenderer {
   }
 
   private light() {
-    const tint = this.scene.level.tint
-    return Math.min(1, 0.96 + 0.04 * (tint.r + tint.g + tint.b) / 3)
+    // WebTiles draws visible atlas colours directly, without an exposure lift.
+    return 1
   }
 
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }) {
@@ -139,7 +139,7 @@ export class Render25d implements MapRenderer {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
     // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
     return this.tiles.drawPlane(ctx, layers, rect, this.light(), cell.visibility !== 'visible', cell.flash, illuminate && cell.visibility === 'visible' ? this.lighting : undefined,
-      { ...rect, y: rect.y + z * Math.cos(p.tilt) * p.scale })
+      rect)
   }
 
   impact(x: number, y: number, strength: number, now: number) {
@@ -155,7 +155,7 @@ export class Render25d implements MapRenderer {
     const p = this.projection(), s = p.scale, sy = Math.sin(p.tilt)
     this.active = false
     this.life.tick(now)
-    this.lighting.build(this.scene, p, this.life.emitters(now), time, this.opts.animate)
+    this.lighting.build(this.scene, p, this.life.emitters(now), time, this.opts.animate, this.tiles.source)
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
@@ -262,7 +262,7 @@ export class Render25d implements MapRenderer {
     }
     const vignette = ctx.createRadialGradient(this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.3, this.width / 2, this.height / 2, Math.max(this.width, this.height) * 0.65)
     vignette.addColorStop(0, 'rgba(0,0,0,0)')
-    vignette.addColorStop(1, 'rgba(0,0,0,0.16)')
+    vignette.addColorStop(1, 'rgba(0,0,0,0.08)')
     ctx.fillStyle = vignette
     ctx.fillRect(0, 0, this.width, this.height)
   }
@@ -466,7 +466,7 @@ export class Render25d implements MapRenderer {
     ctx.fillStyle = '#343039'
     ctx.fillRect(face.x, face.y, face.width, face.height)
     this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), cell.visibility !== 'visible', cell.flash,
-      cell.visibility === 'visible' ? this.lighting : undefined, { x: ground.x, y: ground.y + ground.height * 0.5, width: ground.width, height: 1 })
+      cell.visibility === 'visible' ? this.lighting : undefined, face)
     ctx.fillStyle = 'rgba(0,0,0,0.22)'
     ctx.fillRect(face.x, face.y, face.width, face.height)
     this.plane(ctx, p, cell, [{ tile }], height)
@@ -490,7 +490,7 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: 1.7, smooth: true })
+    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: 2, smooth: true })
     if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
     const q = project(p, b.x, b.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre. First-person
@@ -499,6 +499,9 @@ export class Render25d implements MapRenderer {
     const x = q.x - size / 2 + pose.x * s
     const y = q.y - size - (cloud ? s * 0.15 : 0) - pose.y * s
     ctx.save()
+    // Subpixel breathing/sway must remain visible when the server's static
+    // tile scaling preference is nearest-neighbour (the default in live play).
+    if (this.opts.animate && visible && life.motion && life.motion !== 'still' && !life.held) ctx.imageSmoothingEnabled = true
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
     if (b.lying) {
       this.plane(ctx, p, cell, b.layers ?? [{ tile: b.tile }], 0.02)

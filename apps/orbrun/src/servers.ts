@@ -540,7 +540,7 @@ export interface Settings {
   renderer: '3d' | '2.5d' | '2d'
   depthTilt: number
   depthZoom: number
-  depthAnimate: boolean
+  depthAnimate: boolean | 'auto'
   combatPopups: boolean
   /** How high the eye stands, in cells: 0 is the floor, 1 the lid (rendering-3d.md II.11). */
   eyeHeight: number
@@ -629,7 +629,7 @@ export const defaultSettings: Settings = {
   renderer: '3d',
   depthTilt: 50,
   depthZoom: 1,
-  depthAnimate: true,
+  depthAnimate: 'auto',
   combatPopups: true,
   eyeHeight: 0.6,
   fov: 0,
@@ -659,6 +659,7 @@ export function getSettings(): Settings {
   s.leftRightKeys = leftRightFrom(saved, 'leftRightKeys', ['leftRightArrows', 'leftRightVim', 'leftRightNumpad'])
   s.leftRightPad = leftRightFrom(saved, 'leftRightPad', ['leftRightDpad', 'leftRightStick'])
   if (!['3d', '2.5d', '2d'].includes(s.renderer)) s.renderer = defaultSettings.renderer
+  if (![true, false, 'auto'].includes(s.depthAnimate)) s.depthAnimate = 'auto'
   // A build can still restrict available views.
   if (!VIEW_OPTIONS) s.renderer = '3d'
   return s

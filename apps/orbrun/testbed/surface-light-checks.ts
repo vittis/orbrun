@@ -31,8 +31,8 @@ export function surfaceLightChecks() {
     const fire = { colour: [255, 158, 64] as [number, number, number], radius: 4.2, power: 0.7, pulse: 'fire' as const }
     r.setScene(scene); r.render(0)
     const ambient = sample(0, 0.2), memory = sample(5, 0.2)
-    assert('readable LOS without tinting memory', ambient[0] >= 80 && memory[0] < ambient[0] * 0.5 && Math.max(...memory.slice(0, 3)) - Math.min(...memory.slice(0, 3)) <= 1, { dpr, ambient, memory })
-    scene.cells.get(cellKey(-2, 0))!.life = { lights: [fire] }; scene.revision++
+    assert('LOS uses original WebTiles atlas brightness', ambient[0] === 64 && memory[0] < ambient[0] * 0.5 && Math.max(...memory.slice(0, 3)) - Math.min(...memory.slice(0, 3)) <= 1, { dpr, ambient, memory })
+    scene.cells.get(cellKey(-1, 0))!.life = { lights: [fire] }; scene.revision++
     r.setScene(scene); r.render(0)
     const edge = [-0.56, -0.52, -0.48, -0.44].map(x => sample(x, 0.2)[0])
     assert('continuous falloff across floor boundary', Math.max(...edge.slice(1).map((v, i) => Math.abs(v - edge[i]))) <= 3 && edge[0] > ambient[0], { dpr, edge, ambient })
@@ -45,24 +45,27 @@ export function surfaceLightChecks() {
     assert('continuous falloff across raised wall boundary', Math.max(...roof.slice(1).map((v, i) => Math.abs(v - roof[i]))) <= 3, { dpr, roof })
     const blocked = sample(-2, -2.3)
     assert('known walls block the shared light field', Math.abs(blocked[0] - ambient[0]) <= 1 && blocked[0] === blocked[2], { dpr, blocked, ambient })
-    const outsideBefore = sample(0.45, -0.6)
-    scene.billboards = [{ kind: 'monster', tile: 2, x: 0, y: 0, height: 0.7, life: { motion: 'still' } }]
+    const outsideBefore = sample(-0.55, 0.4)
+    scene.billboards = [{ kind: 'monster', tile: 2, x: -1, y: 1, height: 0.7, life: { motion: 'still' } }]
     scene.revision++; r.setScene(scene); r.render(0)
-    assert('sprite lighting preserves transparent art', JSON.stringify(sample(0.45, -0.6)) === JSON.stringify(outsideBefore), { dpr, before: outsideBefore, after: sample(0.45, -0.6) })
+    assert('sprite lighting preserves transparent art', JSON.stringify(sample(-0.55, 0.4)) === JSON.stringify(outsideBefore), { dpr, before: outsideBefore, after: sample(-0.55, 0.4) })
     r.setOptions({ animate: true })
     const lightFrames: number[] = []
     for (let frame = 0; frame < 60; frame++) { r.render(10 + frame / 60); lightFrames.push(sample(-1, 0.2)[0]) }
     assert('torch flicker changes smoothly each frame', Math.max(...lightFrames.slice(1).map((v, i) => Math.abs(v - lightFrames[i]))) <= 2 && new Set(lightFrames).size > 1, { dpr, lightFrames })
-    scene.cells.get(cellKey(-2, 0))!.life = { lights: [{ ...fire, transient: true }] }
+    scene.cells.get(cellKey(-1, 0))!.life = undefined
+    scene.revision++; r.setScene(scene); r.render(19)
+    const fadeAmbient = sample(-1, 0.2)[0]
+    scene.cells.get(cellKey(-1, 0))!.life = { lights: [{ ...fire, transient: true }] }
     scene.revision++; r.setScene(scene, 20); r.render(20)
-    scene.cells.get(cellKey(-2, 0))!.life = undefined
+    scene.cells.get(cellKey(-1, 0))!.life = undefined
     scene.revision++; r.setScene(scene, 20.01)
     const fade: number[] = []
     for (let frame = 0; frame <= 22; frame++) { r.render(20.01 + frame / 60); fade.push(sample(-1, 0.2)[0]) }
-    assert('spell afterglow fades without stepped updates', new Set(fade).size > 12 && Math.max(...fade.slice(1).map((v, i) => Math.abs(v - fade[i]))) <= 5 && Math.abs(fade.at(-1)! - ambient[0]) <= 1, { dpr, fade })
+    assert('spell afterglow fades without stepped updates', new Set(fade).size > 12 && Math.max(...fade.slice(1).map((v, i) => Math.abs(v - fade[i]))) <= 5 && Math.abs(fade.at(-1)! - fadeAmbient) <= 1, { dpr, fade, fadeAmbient })
     // No lights: isolate beam pixels from the terrain and compare with the
     // projected cell. Its width stays cell-long while its thickness shrinks.
-    scene.cells.get(cellKey(-2, 0))!.life = undefined
+    scene.cells.get(cellKey(-1, 0))!.life = undefined
     scene.billboards = [0, 1].map(x => ({ kind: 'projectile' as const, tile: 3, x, y: 1, height: 0.5 }))
     scene.revision++; r.setOptions({ animate: false }); r.setScene(scene); r.render(0)
     const q = project(p, 0.5, 1, 0.28), half = p.scale

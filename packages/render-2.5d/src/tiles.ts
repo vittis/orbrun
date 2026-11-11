@@ -80,11 +80,6 @@ export class TileCache {
         c.fillStyle = 'rgba(0,0,0,0.56)'
         c.fillRect(0, 0, size, size)
       }
-      if (!memory && !thin) {
-        // Lift dark atlas texels without washing out their texture or hue.
-        c.fillStyle = 'rgba(255,255,255,0.10)'
-        c.fillRect(0, 0, size, size)
-      }
       if (flash) {
         c.fillStyle = `rgba(${flash.r},${flash.g},${flash.b},${flash.a / 255})`
         c.fillRect(0, 0, size, size)

@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.21 — 2026-11-11
+
+- Restore original WebTiles tile brightness in line of sight, removing the extra exposure lift.
+- Keep torch and magical light compact and centered on the emitting sprite. Feather light and shadows across floors and walls instead of stretching light over individual faces.
+- Make Dungeon animation On work independently of device reduced motion; Auto follows the device preference. Smooth subpixel creature motion during live play.
+- Make damage numbers smaller and add a quick rise, overshoot and settle when they appear. Keep still mode and elemental styles.
+
 ## 0.3.20 — 2026-11-11
 
 - Brighten Dungeon (2.5D) ambient lighting and dark floor artwork, with lighter contact shadows and a gentler vignette.

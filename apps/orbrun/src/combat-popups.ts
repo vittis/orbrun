@@ -10,8 +10,12 @@ interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot:
 const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}`
 function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.className = popupClass(event)
-  if (event.estimated) node.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
-  else node.replaceChildren(h('span', { class: 'combat-value' }, event.text))
+  let number = node.querySelector('.combat-number')
+  if (!number) { number = h('span', { class: 'combat-number' }); node.append(number) }
+  // Keep this wrapper mounted when an estimate/brand refines the same hit,
+  // so its compositor entrance runs once instead of restarting.
+  if (event.estimated) number.replaceChildren(h('span', { class: 'combat-estimate' }, '≈'), h('span', { class: 'combat-value' }, String(event.amount)))
+  else number.replaceChildren(h('span', { class: 'combat-value' }, event.text))
 }
 
 /** Bounded trajectories driven by the same frame clock as placement/fading.
@@ -30,7 +34,7 @@ export function popupMotion(event: CombatPopup, age: number, direction: number, 
   else if (tone === 'heal') y = -Math.sin(age * Math.PI / 2) * 7
   else { x = direction * 5 * Math.sin(Math.min(1, age / 0.28) * Math.PI) * settle; sy -= settle * 0.08; sx += settle * 0.06 }
   const kick = Math.sin(Math.min(1, age / 0.22) * Math.PI)
-  return { x, y, sx, sy, angle, scale: 1 + kick * (event.heavy ? 0.34 : 0.2), glow: (tone === 'physical' ? 0.12 : 0.45) + settle * 0.4 }
+  return { x, y, sx, sy, angle, scale: 1 + kick * (event.heavy ? 0.08 : 0.03), glow: (tone === 'physical' ? 0.12 : 0.45) + settle * 0.4 }
 }
 
 /** A bounded, pointer-transparent layer, positioned from the renderer after each frame. */

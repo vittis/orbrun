@@ -12,6 +12,7 @@ import { CameraController } from './camera'
 import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
+import { dungeonAnimation } from './effects-motion'
 import { ORBIT_WINDOW_MS, Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
 import { GridHost, isPhone } from './grid/host'
@@ -786,7 +787,7 @@ export class GameScreen {
   }
 
   private render25dOptions(st: Settings) {
-    return { tilt: st.depthTilt, zoom: st.depthZoom, animate: st.depthAnimate && !(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) }
+    return { tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.cam.reducedMotion) }
   }
 
   private makeRenderer(): MapRenderer {
@@ -1117,7 +1118,8 @@ export class GameScreen {
       this.hud.renderPips(this.session.scene, st, this.session.gamedata, r3d ? r3d.projector() : null, nearby === 'pips' ? 'all' : 'off')
       perf?.mark('pips')
     }
-    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d, this.cam.reducedMotion)
+    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d,
+      this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.cam.reducedMotion) : this.cam.reducedMotion)
     perf?.end()
   }
 

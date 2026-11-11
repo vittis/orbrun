@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, makeCamera, type SceneCell } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
-import { drawTile } from '../src/tiles.js'
+import { drawTile, TileCache } from '../src/tiles.js'
+import { glowCenter, glowRadius } from '../src/lighting.js'
 import { planeRect } from '../src/projection.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
@@ -166,6 +167,29 @@ describe('picking and visibility', () => {
 })
 
 describe('environmental lighting', () => {
+  it('centres compact glows on standing artwork rather than the cell beneath it', () => {
+    const scene = sceneOf(cell(0, 0))
+    const fire = { colour: [255, 158, 64] as [number, number, number], radius: 4.2, power: 0.7 }
+    scene.billboards = [{ kind: 'doll', x: 0, y: 0, tile: 5, height: 1, life: { lights: [fire] } }]
+    const p = { x: 0, y: 0, width: 400, height: 300, scale: 40, tilt: 50 * Math.PI / 180 }
+    const source = { ...fire, x: 0, y: 0 }
+    expect(glowRadius(source)).toBeLessThanOrEqual(1.35)
+    const center = glowCenter(scene, p, source, { tile: () => ({ atlas: 'a', sx: 0, sy: 0, w: 12, h: 20, ox: 10, oy: 4, cell: 32 }), atlas: () => null, atlasNames: () => [] })
+    expect(center.x).toBe(200)
+    expect(center.y).toBeCloseTo(project(p, 0, 0.3).y - 40 + 14 * 40 / 32)
+    expect(center.y).toBeLessThan(project(p, 0, 0).y)
+  })
+
+  it('filters live subpixel motion even when static server tile scaling is unfiltered', () => {
+    const { r } = renderer(), samples: boolean[] = []
+    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation(ctx => { samples.push(ctx.imageSmoothingEnabled); return true })
+    const scene = sceneOf(cell(0, 0))
+    scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life: { motion: 'breath' } }]
+    r.setScene(scene); r.setOptions({ animate: false, filterScaling: false }); r.render(1)
+    r.setOptions({ animate: true }); r.render(2)
+    expect(samples).toEqual([false, true])
+    tile.mockRestore()
+  })
   it('the player never emits a light pool or lights ordinary dungeon cells', () => {
     const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
     expect(lightField(scene).size).toBe(0)

@@ -134,10 +134,12 @@ describe('estimated number UX', () => {
     const { popups } = preview()
     const hit = { kind: 'hit' as const, text: '≈4', amount: 4, estimated: true, turn: 10, x: 1, y: 0 }
     popups.add([hit], 0)
+    const entrance = popups.root.querySelector('.combat-number')
     popups.add([{ ...hit, text: '≈12', amount: 12, tone: 'fire', followup: true, brandOnly: true }], 100)
     expect(popups.root.childElementCount).toBe(1)
     expect(popups.root.textContent).toBe('≈4')
     expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
+    expect(popups.root.querySelector('.combat-number')).toBe(entrance)
   })
   it('does not mark exact damage as approximate', () => {
     const { popups, render } = preview()

@@ -1,5 +1,20 @@
 # Project status
 
+## 0.3.21 original exposure and live animation — prepared 2026-11-11
+
+User authorized commit to main and production deployment. App 0.3.21 uses
+immutable source tag `cloudflare-online-v1.18`. LOS retains original atlas
+brightness; small sprite-centered lights and feathered visibility masks
+replace stretched wall-face lighting. Explicit animation On overrides the
+device motion preference; Auto follows it. Animated sprites use smooth
+subpixel sampling. Smaller damage numbers rise, overshoot and settle on entry.
+
+Forced TypeScript, 2,128 unit tests/two optional-engine skips, production build
+and ASSETS-only Worker dry-run pass. All 576 Canvas checks pass. The actual
+GameScreen fixture verifies idle actor animation, On overriding reduced motion,
+Auto/Still stopping motion and the CSS popup entrance. Optional engine E2E:
+44 explicit skips. Production rollout verification follows publication.
+
 ## 0.3.20 smooth lighting and effects — deployed 2026-11-11
 
 User authorized commit and production deployment. App 0.3.20 uses immutable

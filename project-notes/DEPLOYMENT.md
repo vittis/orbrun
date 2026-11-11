@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.20 point at the `cloudflare-online-v1.17` release tag in
+Source links for 0.3.21 point at the `cloudflare-online-v1.18` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -456,3 +456,32 @@ console warnings/errors. Rollout follows the atomic main/source-tag push.
 
 Post-rollout evidence is on the working branch only; main and the release tag
 remain at the exact deployed source commit.
+
+
+## 0.3.21 original exposure, compact glows and live motion — prepared 2026-11-11
+
+User explicitly authorized commit to main and production deployment after
+verification. App 0.3.21 uses immutable source tag `cloudflare-online-v1.18`.
+Visible atlas pixels keep their native WebTiles brightness. Compact circular
+light fields originate at the visible emitter art; floors, roofs, faces and
+masked sprites sample their actual screen coordinates. Blurred reachability
+masks soften shadows without illuminating remembered art. Wall faces no
+longer stretch a one-pixel strip of light across their entire surface.
+
+Dungeon animation now offers Auto/On/Still. Auto follows device reduced
+motion; explicit On enables animation even with that device setting. Living
+sprites use smooth subpixel sampling independently of static tile scaling.
+Smaller damage numbers have a CSS entrance with rise, overshoot and settle;
+late brand updates preserve the entrance wrapper and do not restart it.
+
+The `/testbed/live-animation.html` fixture uses the actual GameScreen loop,
+with no testbed RAF or server updates. It records rendered actor pixels,
+advancing clock and active popup animation for On/Auto/Still checks.
+Release checks pass: forced TypeScript, 2,128 unit tests/two optional-engine
+skips, production build, and ASSETS-only Worker dry-run. Eighteen updated
+surface checks and all 576 Canvas checks pass. Optional engine E2E reports 44
+explicit skips. The real GameScreen fixture shows continuously changing actor
+pixels with no incoming messages. Explicit On continues under simulated device
+reduced motion, Auto/Still stop the clock, and the popup entrance is confirmed
+in computed CSS (initial scale 0.25 with an 8px rise; 21px maximum normal size).
+Production rollout verification will be recorded after publication.

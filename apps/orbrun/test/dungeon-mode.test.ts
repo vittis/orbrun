@@ -26,6 +26,17 @@ describe('compass controls in overhead views', () => {
   })
 })
 
+describe('effective dungeon animation', () => {
+  it.each([
+    ['auto', false, true], ['auto', true, false],
+    [true, false, true], [true, true, true],
+    [false, false, false], [false, true, false],
+  ] as const)('honours %s with device reduced motion %s', (depthAnimate, reducedMotion, expected) => {
+    const screen = Object.assign(Object.create(GameScreen.prototype), { cam: { reducedMotion } })
+    expect(screen.render25dOptions({ ...defaultSettings, depthAnimate }).animate).toBe(expected)
+  })
+})
+
 describe('the 2.5D level map', () => {
   it('borrows flat tiles and restores the selected dungeon view on close', () => {
     const screen = Object.assign(Object.create(GameScreen.prototype), {

@@ -18,7 +18,7 @@
   position: absolute;
   white-space: nowrap;
   color: var(--impact);
-  font: 700 clamp(19px, 2.5vw, 27px)/1 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  font: 700 clamp(16px, 2vw, 21px)/1 'Barlow Condensed', 'Arial Narrow', sans-serif;
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   text-shadow: -1px -1px #100e16, 1px -1px #100e16, -1px 1px #100e16, 1px 2px #100e16, 0 2px 6px #000;
@@ -27,6 +27,19 @@
   --glow: 0;
 }
 .combat-value { position: relative; display: inline-block; }
+.combat-number {
+  display: inline-block;
+  transform-origin: 50% 75%;
+  animation: combat-number-enter 280ms both;
+  will-change: transform, opacity;
+}
+@keyframes combat-number-enter {
+  0% { opacity: 0; transform: translateY(8px) scale(0.25); animation-timing-function: cubic-bezier(0.16, 0.8, 0.35, 1); }
+  45% { opacity: 1; transform: translateY(-3px) scale(1.2); animation-timing-function: ease-in-out; }
+  75% { transform: translateY(0) scale(0.94); animation-timing-function: ease-out; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.combat-popup[data-motion="still"] .combat-number { animation: none; will-change: auto; }
 .combat-estimate {
   display: inline-block;
   margin-right: 0.09em;
@@ -54,7 +67,7 @@
 .combat-popup.acid { --impact: #e3ed79; }
 .combat-popup.electric { --impact: #b2e9ff; }
 .combat-popup.magic { --impact: #d0b4ff; }
-.combat-popup.heavy { font-size: clamp(24px, 3.2vw, 35px); }
+.combat-popup.heavy { font-size: clamp(19px, 2.5vw, 26px); }
 .combat-popup.hurt { --impact: #ff7878; }
 .combat-popup.heal { --impact: #8fe4ad; }
 .combat-popup.miss, .combat-popup.block {
@@ -99,6 +112,7 @@
 .combat-popup[data-motion="still"] .combat-value::after { display: none; }
 .combat-popup[data-motion="still"]::before { display: none; }
 @media (prefers-reduced-motion: reduce) {
+  .combat-popup:not([data-motion="full"]) .combat-number { animation: none; }
   .combat-popup { will-change: opacity; }
   .combat-popup::before { display: none; }
   .combat-value::after { display: none; }
