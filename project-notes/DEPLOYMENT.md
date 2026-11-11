@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.12 point at the `cloudflare-online-v1.9` release tag in
+Source links for 0.3.13 point at the `cloudflare-online-v1.10` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -214,3 +214,26 @@ metadata and manifest updates. Final forced typecheck, 22 site/news/Markdown
 checks (including standalone display), production build, ASSETS-only Worker
 dry-run and diff checks passed. Push main and the source tag atomically, then
 verify the deployed version, source links and fullscreen control.
+
+## 0.3.13 seam and sprite-scale correction — 2026-11-11
+
+Follow-up to the user's screenshot of remaining seams and request for stronger
+2.5D presentation inspired by Super Dungeon Crawl. Source tag:
+`cloudflare-online-v1.10`. Shared terrain boundaries snap to device pixels and
+flat terrain composites have no transparent padding. The flat-view wall-shadow
+decals and targeting grid are replaced by the raised view's contact shadows and
+single-cell cursor. Continuous lighting avoids per-cell distance-shade bands.
+Monsters and upright items use the same original atlas scale as the player;
+first-person HP-derived heights no longer shrink monster art again. Corpses
+remain flat. Water ripples cross cell boundaries, fountains ripple, and faint
+black fog drifts along remembered terrain. Reduced motion freezes atmosphere.
+
+The development preview includes a recorded fountain dungeon and an Original
+2D comparison. `/testbed/dungeon-checks.html` runs 342 real Canvas pixel checks
+for floor/wall joins, filtering, fractional DPR/zoom and sprite proportions and
+picking. Unit tests cover shared edges and fountain visibility as well.
+Validation: full unit suite 2,029 passed / two optional-engine skips; after
+the final snapped-edge picking correction, all 23 renderer tests passed. All
+342 real Canvas pixel checks, forced TypeScript check, production build,
+ASSETS-only Worker dry-run and diff checks passed. Desktop/phone previews and
+the recorded fountain scene were inspected; live rollout is checked after push.

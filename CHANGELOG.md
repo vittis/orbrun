@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.13 — 2026-11-11
+
+- Fix remaining 2.5D tile seams at fractional zoom and display density, including filtered terrain edges and inherited flat-view wall shadows.
+- Draw monsters and ordinary objects at their original atlas scale relative to the player; keep corpses flat and make upright items clickable across their visible height.
+- Add soft contact shadows, continuous water ripples, fountain ripples and faint drifting black fog at explored boundaries. Atmosphere still respects reduced motion.
+
 ## 0.3.12 — 2026-11-11
 
 - Blend the Dungeon (2.5D) view by removing raised-tile outlines and the duplicate corner 2D view.

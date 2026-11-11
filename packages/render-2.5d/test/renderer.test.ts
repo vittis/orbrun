@@ -3,6 +3,7 @@ import { cellKey, emptyScene, makeCamera, type SceneCell } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile } from '../src/tiles.js'
+import { planeRect } from '../src/projection.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
   return { x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
@@ -13,7 +14,7 @@ function sceneOf(...cells: SceneCell[]) {
 }
 function renderer() {
   const gradient = { addColorStop: vi.fn() }
-  const ctx = new Proxy({ createRadialGradient: () => gradient } as Record<string, unknown>, {
+  const ctx = new Proxy({ createRadialGradient: () => gradient, createLinearGradient: () => gradient } as Record<string, unknown>, {
     get(target, key: string) { return target[key] ??= vi.fn() },
   })
   const r = new Render25d()
@@ -24,6 +25,24 @@ function renderer() {
 }
 
 describe('the north-up projection', () => {
+  it.each([1, 1.25, 2])('shares exact device-pixel boundaries at DPR %s', dpr => {
+    for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
+      const tilt = degrees * Math.PI / 180
+      const p = { x: -13, y: 27, width: 903, height: 701, tilt, scale: fittedScale(903, 701, tilt, zoom) }
+      for (let x = -20; x < -5; x++) for (let y = 19; y < 35; y++) {
+        for (const z of [0, 0.18, 0.58]) {
+          const a = planeRect(p, x, y, z, dpr)
+          const east = planeRect(p, x + 1, y, z, dpr)
+          const south = planeRect(p, x, y + 1, z, dpr)
+          expect(a.x + a.width).toBeCloseTo(east.x, 10)
+          expect(a.y + a.height).toBeCloseTo(south.y, 10)
+          expect(a.x * dpr).toBeCloseTo(Math.round(a.x * dpr), 10)
+          expect(a.y * dpr).toBeCloseTo(Math.round(a.y * dpr), 10)
+        }
+      }
+    }
+  })
+
   it.each([35, 50, 65])('round-trips ground coordinates at %s degrees on desktop and phone', degrees => {
     for (const [width, height] of [[1280, 800], [390, 600]]) {
       const tilt = degrees * Math.PI / 180
@@ -44,6 +63,41 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it.each([1, 1.25, 2])('picks the rendered ground on both sides of snapped edges at DPR %s', dpr => {
+    const { r } = renderer()
+    const cells = [-1, 0, 1].flatMap(y => [-1, 0, 1].map(x => cell(x, y)))
+    r.resize(903, 701, dpr)
+    r.setScene(sceneOf(...cells))
+    r.render(0)
+    const tilt = 50 * Math.PI / 180
+    const p = { x: 0, y: 0, width: 903, height: 701, tilt, scale: fittedScale(903, 701, tilt) }
+    for (const cell of cells) {
+      const rect = planeRect(p, cell.x, cell.y, 0, dpr)
+      for (const x of [rect.x + 0.001, rect.x + rect.width - 0.001]) {
+        for (const y of [rect.y + 0.001, rect.y + rect.height - 0.001]) expect(r.pick(x, y)).toBe(cellKey(cell.x, cell.y))
+      }
+    }
+  })
+
+  it('uses the original atlas scale for the player, weak monsters and ordinary items', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(-1, 0), cell(0, 0), cell(1, 0))
+    scene.billboards = [
+      { x: -1, y: 0, kind: 'player', tile: 2, height: 0.7 },
+      { x: 0, y: 0, kind: 'monster', tile: 2, height: 0.4 },
+      { x: 1, y: 0, kind: 'item', tile: 2, height: 0.28 },
+    ]
+    const sizes: string[] = []
+    vi.mocked(ctx.fillText).mockImplementation(() => { sizes.push(String(ctx.font)) })
+    r.setOptions({ animate: false })
+    r.setScene(scene)
+    r.render(0)
+    expect(sizes).toHaveLength(6) // three terrain glyphs, then three upright sprites
+    expect(new Set(sizes.slice(3)).size).toBe(1)
+    // Items own their upright footprint too, instead of picking the floor behind their heads.
+    expect(r.pick(500, 325)).toBe(cellKey(1, 0))
+  })
+
   it('picks in CSS pixels regardless of DPR or first-person heading', () => {
     const { r, canvas } = renderer()
     r.setScene(sceneOf(cell(0, 0), cell(1, 0)))
@@ -112,6 +166,20 @@ describe('picking and visibility', () => {
 })
 
 describe('environmental lighting', () => {
+  it.each([
+    ['visible', 'blue', 2],
+    ['visible', 'dry_fountain', 0],
+    ['remembered', 'blue', 0],
+    ['unseen', 'blue', 0],
+  ] as const)('animates %s %s fountains only when water is in sight', (visibility, kind, strokes) => {
+    const { r, ctx } = renderer()
+    r.setScene(sceneOf(cell(0, 0, { visibility, featureTile: 2, stance: 'upright', feature: { type: 'fountain', kind } })))
+    r.render(2)
+    expect(ctx.stroke).toHaveBeenCalledTimes(strokes)
+    r.setOptions({ animate: false })
+    expect(r.animating).toBe(false)
+  })
+
   it('lights nearby visible ground, stops at walls, and leaves memory cold', () => {
     const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0, { kind: 'wall', occluder: true }), cell(3, 0), cell(0, 1, { visibility: 'remembered' }))
     const field = lightField(scene)

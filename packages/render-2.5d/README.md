@@ -22,11 +22,16 @@ and picking regions. The existing first-person renderer remains independent.
 
 - `projection.ts` owns ground projection, its inverse, and viewport fitting.
   World coordinates are cell centres. Input and drawing use CSS pixels;
-  device pixel ratio only changes the backing surface, capped at two.
+  shared terrain edges snap to backing pixels at each zoom and device pixel
+  ratio, capped at two, so adjacent quads meet without gaps or overlap strips.
 - `index.ts` paints ground layers, continuous floor lighting, contact
   shadows, depth-sorted walls and sprites, and readable targeting markers.
   Foreground walls lower beside visible open ground. Sprites retain doll
   composition, atlas offsets, clipping, status badges and player minibars.
+  Monsters and ordinary objects use the same atlas scale as the player;
+  the artwork defines their relative proportions, independently of the
+  first-person renderer's billboard heights. Only corpses lie flat.
+  Contact shadows replace the original flat-view wall-shadow decals.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` derives a bounded set of lantern, lava, altar and portal
@@ -35,12 +40,15 @@ and picking regions. The existing first-person renderer remains independent.
   Floor lights use continuous gradients clipped to reachable cells. Sprite
   lighting is quantized for reuse in the tile cache.
 - `tiles.ts` caches composed, tinted tiles, including transparent and tall
-  artwork. The cache is bounded to 1,024 surfaces, does no pixel readback,
+  artwork. Terrain uses unpadded composites so filtering cannot sample a
+  transparent border; standing artwork keeps its tall/offset padding.
+  The cache is bounded to 1,024 surfaces, does no pixel readback,
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
   replacement; frames cull outside the viewport and reuse tile composites.
 
-Time is presentation-only: breathing, drifting clouds, water ripples,
+Time is presentation-only: breathing, drifting clouds and remembered-terrain fog,
+continuous water ripples, fountain ripples,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
 effects need it. Still mode and the operating system's reduced motion
@@ -65,6 +73,13 @@ using the bundled Antechamber artwork; no server account is needed. The
 lantern stands in for the player, fungi for actors, and a dirt tile for the
 synthetic lava patch because the small room atlas has no lava tile. Live
 games use their server's complete tileset.
+
+The Scene chooser also loads a recorded fountain dungeon. Original 2D
+switches to the standard renderer at the same atlas scale for comparison.
+Open `/testbed/dungeon-checks.html` for 342 real Canvas pixel checks: uniform
+floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
+equal-atlas player/monster/item silhouettes with upright picking. These
+checks complement unit tests, whose DOM mocks cannot detect raster seams.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass
