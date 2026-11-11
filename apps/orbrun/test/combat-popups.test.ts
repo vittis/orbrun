@@ -14,6 +14,22 @@ function preview() {
 }
 
 describe('popup presentation', () => {
+  it('keeps damage and useful feedback in concise mode without generic hit or slain labels', () => {
+    const { popups } = preview()
+    popups.add([
+      { kind: 'hit', text: 'HIT', x: 1, y: 0 },
+      { kind: 'hit', text: '≈7', amount: 7, estimated: true, x: 1, y: 0 },
+      { kind: 'hit', text: 'HIT', followup: true, tone: 'fire', x: 1, y: 0 },
+      { kind: 'kill', text: 'SLAIN', x: 1, y: 0 },
+      { kind: 'hurt', text: '-3', player: true },
+      { kind: 'miss', text: 'DODGED', player: true },
+    ], 0, true)
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['≈7', '-3', 'DODGED'])
+    expect(popups.root.querySelector('.hit')?.classList.contains('fire')).toBe(true)
+    popups.clear()
+    popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 10, true)
+    expect(popups.active).toBe(false)
+  })
   it('renders text, follows camera projection, clips behind the lens and expires', () => {
     const { popups, render, move } = preview()
     popups.add([{ kind: 'hit', text: '23', x: 1, y: 0 }], 0)

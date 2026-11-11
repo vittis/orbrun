@@ -1098,6 +1098,16 @@ export class Overlays {
             this.hooks.send(cm.key(menu.flags & MenuFlag.MULTISELECT ? 32 : 13))
           } else if (it.hotkeys && it.hotkeys.length) this.hooks.send(cm.key(it.hotkeys[0]))
         })
+        li.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault()
+          // menu.js item_click_handler: apostrophe examines the hovered item
+          // in both single-select inventory/action lists and multiselect lists.
+          if (!top || this.hooks.watching() || !it.hotkeys?.length) return
+          const forceHover = !arrows && menu.last_hovered === i
+          this.setHover(menu, i, true)
+          if (forceHover) this.hooks.send(cm.menuHover(i, true))
+          this.hooks.send(cm.textInput("'"))
+        })
       }
       if (it.preselected) li.classList.add('preselected')
       if (i === menu.last_hovered) li.classList.add('hovered')

@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, lanternAt, lightPulse,
+  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, lightPulse,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource,
 } from '@orbrun/scene'
@@ -133,30 +133,25 @@ export class Render25d implements MapRenderer {
     return q.x > -p.scale * 2 && q.x < this.width + p.scale * 2 && q.y > -p.scale * 2 && q.y < this.height + p.scale * 2
   }
 
-  private light(cell?: SceneCell) {
+  private light() {
     const tint = this.scene.level.tint
-    return Math.min(1, (0.9 + (cell ? lanternAt(this.scene, cell) * 0.2 : 0)) * (tint.r + tint.g + tint.b) / 3)
+    return Math.min(1, 0.9 * (tint.r + tint.g + tint.b) / 3)
   }
 
   private cellGlow(cell: SceneCell): Light | undefined {
-    const environmental = this.lighting.get(cellKey(cell.x, cell.y))
-    const warm = lanternAt(this.scene, cell)
-    if (!warm) return environmental
-    if (!environmental) return { colour: [255, 192, 112], strength: Math.round(warm * 32) / 32 }
-    const sum = environmental.strength + warm
-    return { colour: environmental.colour.map((c, i) => Math.round((c * environmental.strength + [255,192,112][i] * warm) / sum / 16) * 16).map(c => Math.min(255, c)) as Light['colour'], strength: Math.round(Math.min(0.5, sum) * 32) / 32 }
+    return this.lighting.get(cellKey(cell.x, cell.y))
   }
 
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, illuminate = true) {
-    return this.tiles.draw(ctx, layers, x, y, size, this.light(cell), cell.visibility !== 'visible', cell.flash, illuminate ? this.cellGlow(cell) : undefined)
+    return this.tiles.draw(ctx, layers, x, y, size, this.light(), cell.visibility !== 'visible', cell.flash, illuminate ? this.cellGlow(cell) : undefined)
   }
 
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
     // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
     const tint = this.scene.level.tint
-    const ambient = (0.86 + lanternAt(this.scene, cell) * 0.2) * (tint.r + tint.g + tint.b) / 3
-    const glow = illuminate ? this.cellGlow(cell) : cell.visibility === 'visible' ? { colour: [255,192,112] as [number,number,number], strength: Math.round(lanternAt(this.scene, cell) * 32) / 32 } : undefined
+    const ambient = 0.86 * (tint.r + tint.g + tint.b) / 3
+    const glow = illuminate ? this.cellGlow(cell) : undefined
     return this.tiles.drawPlane(ctx, layers, rect, ambient, cell.visibility !== 'visible', cell.flash, glow)
   }
 
@@ -469,7 +464,7 @@ export class Render25d implements MapRenderer {
       const q = project(p, x + Math.sin(time * 0.14 + phase) * 0.6, y + Math.cos(time * 0.11 + phase) * 0.4)
       const cy = q.y / Math.sin(p.tilt), radius = p.scale * 2.8
       const mist = ctx.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
-      mist.addColorStop(0, 'rgba(28,43,70,0.13)')
+      mist.addColorStop(0, 'rgba(0,0,0,0.045)')
       mist.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.fillStyle = mist
       ctx.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
@@ -489,9 +484,9 @@ export class Render25d implements MapRenderer {
         ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
         ctx.scale(rect.width, rect.height); ctx.rotate(turn); ctx.translate(-0.5, -0.5)
         const fog = ctx.createLinearGradient(0, 0, 0, 0.26)
-        fog.addColorStop(0, 'rgba(1,3,8,0.6)'); fog.addColorStop(1, 'rgba(1,3,8,0)')
+        fog.addColorStop(0, 'rgba(0,0,0,0.35)'); fog.addColorStop(1, 'rgba(0,0,0,0)')
         ctx.fillStyle = fog; ctx.fillRect(0, 0, 1, 0.26)
-        ctx.fillStyle = 'rgba(1,3,8,0.22)'
+        ctx.fillStyle = 'rgba(0,0,0,0.08)'
         for (const offset of [0.17, 0.69]) {
           ctx.beginPath(); ctx.moveTo(offset - 0.1, 0)
           ctx.bezierCurveTo(offset + 0.12, 0.05, offset + 0.16 + curl, 0.24, offset + curl, 0.3)
@@ -516,7 +511,7 @@ export class Render25d implements MapRenderer {
     const face = { x: roof.x, y: roof.y + roof.height, width: roof.width, height: ground.y + ground.height - roof.y - roof.height }
     ctx.fillStyle = '#343039'
     ctx.fillRect(face.x, face.y, face.width, face.height)
-    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(cell), cell.visibility !== 'visible', cell.flash, this.cellGlow(cell))
+    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), cell.visibility !== 'visible', cell.flash, this.cellGlow(cell))
     ctx.fillStyle = 'rgba(0,0,0,0.38)'
     ctx.fillRect(face.x, face.y, face.width, face.height)
     this.plane(ctx, p, cell, [{ tile }], height)
@@ -529,7 +524,7 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible)
+    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: 1.7, smooth: true })
     if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
     const q = project(p, b.x, b.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre. First-person

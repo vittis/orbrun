@@ -81,7 +81,7 @@ export interface GameLayout {
   messages: CellRect
   /** the right column: the minimap at its top, the monster list under it, the chat at its foot */
   sidebar: CellRect
-  /** the stats pane: the view's top-left corner, as wide as the sidebar, as many rows as the pane prints */
+  /** the stats pane: a top corner, as wide as the sidebar, as many rows as the pane prints */
   stats: CellRect
 }
 
@@ -165,8 +165,10 @@ export function touchBeside(grid: Grid): boolean {
  * is `columnWidth` cells wide (`touchColumn`), wider than the stats pane.
  * `under` rows under the messages, left of the column, are the spell bar's
  * (hud.ts renderSpellBar): the messages stand on it, in both orientations.
+ * `statsOnRight` puts the character in the top-right corner and the sidebar
+ * below it for the 2.5D view, which has no minimap.
  */
-export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, foot = 0, sideFoot = 0, columnWidth = statWidth, band = 0, mapCols = PORTRAIT_MAP_COLS, under = 0): GameLayout {
+export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, foot = 0, sideFoot = 0, columnWidth = statWidth, band = 0, mapCols = PORTRAIT_MAP_COLS, under = 0, statsOnRight = false): GameLayout {
   const rows = Math.max(MIN_ROWS - 4, grid.rows - foot)
   // the messages stand on what is under them (the spell bar), the view and the column running on beside it
   const lower = Math.max(MIN_ROWS - 4, rows - under)
@@ -176,24 +178,28 @@ export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, f
   if (isPortrait(grid)) {
     const top = Math.max(0, Math.min(band, clearH))
     const side = Math.max(0, Math.min(grid.cols, mapCols))
+    const statsW = Math.max(0, grid.cols - side - 1)
     return {
       view: { x: 0, y: top, w: grid.cols, h: grid.rows - top },
       band: { x: 0, y: 0, w: grid.cols, h: top },
       clear: { x: 0, y: top, w: grid.cols - side, h: clearH - top },
       messages: { x: 0, y: clearH, w: grid.cols, h: msgs },
       sidebar: { x: grid.cols - side, y: top, w: side, h: clearH - top },
-      stats: { x: 0, y: 0, w: Math.max(0, grid.cols - side - 1), h: top },
+      stats: { x: statsOnRight ? grid.cols - statsW : 0, y: 0, w: statsW, h: top },
     }
   }
   const side = Math.max(0, Math.min(columnWidth, grid.cols - MIN_VIEW_COLS))
   const leftW = grid.cols - side
+  const statsW = Math.min(side, statWidth)
+  const statsH = Math.min(STATS_ROWS, rows)
+  const sideTop = statsOnRight ? statsH + 1 : 0
   return {
     view,
     band: { x: 0, y: 0, w: 0, h: 0 },
     clear: { x: 0, y: 0, w: leftW, h: clearH },
     messages: { x: 0, y: clearH, w: leftW, h: msgs },
-    sidebar: { x: leftW, y: 0, w: side, h: Math.max(0, rows - sideFoot) },
-    stats: { x: 0, y: 0, w: Math.min(side, statWidth), h: Math.min(STATS_ROWS, rows) },
+    sidebar: { x: leftW, y: sideTop, w: side, h: Math.max(0, rows - sideFoot - sideTop) },
+    stats: { x: statsOnRight ? grid.cols - statsW : 0, y: 0, w: statsW, h: statsH },
   }
 }
 

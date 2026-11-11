@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.18 point at the `cloudflare-online-v1.15` release tag in
+Source links for 0.3.19 point at the `cloudflare-online-v1.16` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -356,3 +356,23 @@ main/source-tag push; hosted verification is recorded after rollout.
 
 Post-rollout evidence is committed on the working branch only, keeping main
 and the immutable source tag at the exact deployed code commit.
+
+
+## 0.3.19 2.5D refinement release — 2026-11-11
+
+User authorized commit to main and deployment. Prepared immutable source tag:
+`cloudflare-online-v1.16`, app 0.3.19. Removes player lighting bands and the
+blue memory overlay from 2.5D, uses faint black fog, strengthens and smooths
+living motion, suppresses redundant SLAIN/HIT labels while retaining damage
+numbers, moves the character panel to the top right with the list below it,
+and restores right-click item descriptions in server menus.
+
+Feature verification: the full unit suite and added wrapped-status regression
+pass, along with TypeScript, the production build, 558 real Canvas checks,
+14 animation/impact browser checks and desktop/phone panel placement checks.
+Final release validation precedes the atomic main/source-tag push. The
+previous verified deployment is 0.3.18 (`6214854`, `cloudflare-online-v1.15`).
+
+Final release checks: 2,118 unit tests passed / two optional engine skips;
+forced TypeScript, production build, ASSETS-only dry-run and diff checks pass.
+Optional engine E2E: 44 skips because local engine artifacts are absent.

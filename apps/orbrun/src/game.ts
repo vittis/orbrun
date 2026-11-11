@@ -619,7 +619,8 @@ export class GameScreen {
    */
   private relayout(force = false) {
     if (!this.hud) return
-    this.hud.setMinimapEnabled(this.settings().renderer !== '2.5d')
+    const dungeon = this.settings().renderer === '2.5d'
+    this.hud.setMinimapEnabled(!dungeon)
     const st = this.session.state
     const o = st.options
     const g = this.grid.grid
@@ -650,10 +651,10 @@ export class GameScreen {
     const underPx = (spells ? SPELL_ROW_PX : 0) + (glance ? glanceRowPx(g.ch) + GLANCE_GAP_PX : 0)
     // the log's last row, the --more-- line's, is bare but for a --more--, so what stands under the log takes it (hud.ts placeLog)
     const spellRows = underPx ? Math.max(0, Math.ceil(underPx / g.ch) - 1) : 0
-    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance].join(',')
+    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance, dungeon].join(',')
     if (!force && key === this.layoutKey) return
     this.layoutKey = key
-    const cells = gameSplit(g, msgRows, undefined, beside ? 0 : barRows, beside ? barRows : 0, beside && barRows ? touchColumn(g) : undefined, band.rows, band.cols, spellRows)
+    const cells = gameSplit(g, msgRows, undefined, beside ? 0 : barRows, beside ? barRows : 0, beside && barRows ? touchColumn(g) : undefined, band.rows, band.cols, spellRows, dungeon)
     this.hud.touchBeside = beside
     // the level map's canvas runs on under the touch bar; what rides the map's edges keeps to the part the bar leaves
     const map = mapView ? levelMapSplit(g, cells, { hideSidebar, hideMessages }) : null
@@ -1047,7 +1048,7 @@ export class GameScreen {
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
     if (popups.some(p => p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
-    if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now)
+    if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now, this.renderMode === '2.5d')
     else this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are

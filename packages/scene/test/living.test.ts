@@ -13,6 +13,25 @@ function room() {
 const fire = { colour: [255, 100, 20] as [number, number, number], radius: 3, power: 0.6 }
 
 describe('living dungeon visibility', () => {
+  it('offers stronger fluid motion with bounded frame-to-frame changes and respects still states', () => {
+    const presentation = { strength: 1.7, smooth: true }
+    for (const motion of ['breath', 'plant', 'float', 'ooze', 'cloud', 'serpent', 'undead', 'skitter'] as const) {
+      const life = { motion, fleeing: true }
+      for (let frame = 0; frame < 600; frame++) {
+        const a = livingPose(life, 2, 3, frame / 60, true, presentation)
+        const b = livingPose(life, 2, 3, (frame + 1) / 60, true, presentation)
+        expect(Math.abs(a.x - b.x)).toBeLessThan(0.006)
+        expect(Math.abs(a.sy - b.sy)).toBeLessThan(0.006)
+        expect(Math.abs(a.x)).toBeLessThan(0.1)
+        expect(Math.abs(a.sy - 1)).toBeLessThan(0.1)
+      }
+      expect(livingPose(life, 2, 3, 1, false, presentation)).toEqual(livingPose(undefined, 2, 3, 1))
+      expect(livingPose({ ...life, held: true }, 2, 3, 1, true, presentation)).toEqual(livingPose(undefined, 2, 3, 1))
+    }
+    const subtle = livingPose({ motion: 'breath' }, 2, 3, 1)
+    const fluid = livingPose({ motion: 'breath' }, 2, 3, 1, true, presentation)
+    expect(fluid.sy - 1).toBeCloseTo((subtle.sy - 1) * 1.7)
+  })
   it('lights walls on their near face but neither memory nor cells behind a wall', () => {
     const s = room()
     s.cells.get(cellKey(0, 0))!.life = { lights: [fire] }

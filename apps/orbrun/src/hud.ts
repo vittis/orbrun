@@ -650,7 +650,9 @@ export class Hud {
     const portrait = isPortrait(host.grid)
     const sidePx = host.px(cells.sidebar)
     const statsPx = host.px(cells.stats)
-    const statsRight = this.stats.hidden ? null : statsPx.left + statsPx.width
+    const statsOnRight = cells.stats.x > cells.view.x
+    const statsRight = this.stats.hidden || statsOnRight ? null : statsPx.left + statsPx.width
+    const statsLeft = this.stats.hidden || !statsOnRight ? null : statsPx.left
     const gridW = host.grid.cols * host.grid.cw
     const short = screenShort(host.grid)
     const barBeside = this.touchBeside && !this.touchbar.hidden
@@ -749,7 +751,7 @@ export class Hud {
     // cell's gutter away; the minimap's left edge is where it hangs from the column's right edge, not the column's own
     const minimapLeft = this.sidebar.hidden || w === 0 ? null : sidePx.left + sidePx.width - w
     // a phone has no strip to spare: the panel stands nowhere, its items are a tap away in the pack
-    this.panelBox = host.phone ? { left: 0, top: 0, width: 0, height: 0 } : panelSpan(this.freePx, statsRight, minimapLeft, host.grid.cw, PANEL_CELL)
+    this.panelBox = host.phone ? { left: 0, top: 0, width: 0, height: 0 } : panelSpan(this.freePx, statsRight, statsLeft ?? minimapLeft, host.grid.cw, PANEL_CELL)
     // the status strip runs leftward from the minimap's left edge, a cell's gutter away: squares STATUS_BADGE_ROWS tall,
     // as many across as fit between the stats pane and the map, another row down past that; with no room for one there,
     // they run leftward under the map from its right edge instead, a cell's gutter down, as many across as the map is wide
@@ -758,11 +760,12 @@ export class Hud {
     // the monster list's column
     const stripLeft = statsRight === null ? this.freePx.left : statsRight + host.grid.cw
     const besideCols = minimapLeft === null || portrait ? 0 : Math.floor((minimapLeft - host.grid.cw - stripLeft) / this.statusPx)
-    if (portrait) this.statusAt = this.sidebar.hidden || !sidePx.width ? null : { right: across, top: host.px(cells.band).top + size + host.grid.ch, below: host.grid.ch }
+    if (!this.minimapEnabled) this.statusAt = this.sidebar.hidden || !sidePx.width ? null : { right: sidePx.left + sidePx.width, top: sidePx.top + host.grid.ch, below: host.grid.ch }
+    else if (portrait) this.statusAt = this.sidebar.hidden || !sidePx.width ? null : { right: across, top: host.px(cells.band).top + size + host.grid.ch, below: host.grid.ch }
     else if (minimapLeft === null) this.statusAt = null
     else if (besideCols >= 1) this.statusAt = { right: minimapLeft - host.grid.cw, top: Math.max(sidePx.top, at.top), below: 0 }
     else this.statusAt = { right: sidePx.left + sidePx.width, top: sidePx.top + size + host.grid.ch, below: host.grid.ch }
-    const underW = portrait ? sidePx.width : w
+    const underW = portrait || !this.minimapEnabled ? sidePx.width : w
     this.statusCols = !this.statusAt ? 1 : this.statusAt.below ? Math.max(1, Math.floor(underW / this.statusPx)) : besideCols
     this.statusKey = ''
     this.trappedKey = ''
@@ -926,6 +929,17 @@ export class Hud {
       for (let i = 0; i < keys.length; i++) if (keys[i] !== this.statsKeys[i]) lines[i + 1].replaceWith(paintRow(rows[i]))
     }
     this.statsKeys = keys
+    // Status lights can wrap beyond the character pane's reserved rows.
+    // Keep the 2.5D list and badges below its actual text as conditions change.
+    const host = this.host
+    if (host && !this.minimapEnabled && !corner && this.cells.stats.x > 0) {
+      const sidebar = host.px(this.cells.sidebar)
+      const stats = host.px(this.cells.stats)
+      const top = Math.max(sidebar.top, stats.top + (rows.length + 1) * host.grid.ch)
+      this.sidebar.style.top = top + 'px'
+      this.sidebar.style.height = Math.max(0, sidebar.height - (top - sidebar.top)) + 'px'
+      if (this.statusAt && this.statusAt.top !== top + host.grid.ch) this.statusAt = { ...this.statusAt, top: top + host.grid.ch }
+    }
   }
 
   /**

@@ -20,7 +20,7 @@ export class CombatPopups {
   private live: LivePopup[] = []
   get active() { return this.live.length > 0 }
 
-  add(events: CombatPopup[], now: number) {
+  add(events: CombatPopup[], now: number, concise = false) {
     this.live = this.live.filter(p => {
       if (now - p.born < LIFETIME) return true
       p.node.remove()
@@ -50,6 +50,9 @@ export class CombatPopups {
         p.node.remove()
         return false
       })
+      // Retain kill events for damage estimation and cleanup, without adding
+      // a redundant death label. Unknown brand hits can still recolor a number above.
+      if (concise && (event.kind === 'kill' || event.kind === 'hit' && event.amount === undefined && !/^\d+$/.test(event.text))) continue
       const nearby = this.live.filter(atAnchor)
       while (nearby.length >= MAX_AT_ANCHOR) {
         const oldest = nearby.shift()!

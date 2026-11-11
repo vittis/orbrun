@@ -122,6 +122,8 @@ for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (
   const memory = sample(a.x, a.y), visible = sample(b.x, b.y), distant = sample(far.x, far.y)
   checks++
   if (memory[0] > visible[0] * 0.5 || Math.abs(visible[0] - distant[0]) > 1) failures.push({ kind: 'LOS brightness / no player spotlight', dpr, filterScaling, degrees, zoom, memory, visible, distant })
+  checks++
+  if ([memory, visible, distant].some(pixel => Math.max(...pixel.slice(0, 3)) - Math.min(...pixel.slice(0, 3)) > 1) || memory[0] < visible[0] * 0.35) failures.push({ kind: 'neutral readable memory / no player halo', dpr, filterScaling, degrees, zoom, memory, visible, distant })
 
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data
   let left = Infinity, top = Infinity, right = -1, bottom = -1, redLeft = Infinity, redTop = Infinity

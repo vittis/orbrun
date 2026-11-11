@@ -50,11 +50,11 @@ and picking regions. The existing first-person renderer remains independent.
 
 Unexplored space uses neutral, world-anchored dark mist behind known geometry.
 Remembered tiles and standing art retain 44% of their ambient brightness,
-with a subtle fog overlay; visible tiles remain bright. Server item cursors
+with neutral black shading and faint dark fog; visible tiles remain bright. Server item cursors
 share the upright item frame, while other cell badges keep their ground anchor.
 The unexplored mist is static, so it does not keep idle scenes awake.
 
-Time is presentation-only: breathing, drifting clouds and remembered-terrain fog,
+Time is presentation-only: fluid breathing and swaying, drifting clouds and remembered-terrain fog,
 continuous water ripples, fountain ripples,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
@@ -83,7 +83,7 @@ games use their server's complete tileset.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 504 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for 558 real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist. These

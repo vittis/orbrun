@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.19 — 2026-11-11
+
+- Remove player lighting halos in Dungeon (2.5D), use neutral black shading with faint fog outside line of sight, and make living animations smoother and more pronounced.
+- Keep damage numbers while hiding redundant SLAIN and generic HIT popups in Dungeon (2.5D).
+- Move the 2.5D character panel to the top right and keep the nearby list below it, including when status labels wrap.
+- Show item descriptions on right-click in inventory, equipment and other item lists without selecting or using the item.
+
 ## 0.3.18 — 2026-11-11
 
 - Add colored light from torches, elemental clouds, glowing creatures and spell bolts across dungeon views, with warm line of sight, cool memory and curling shadows at unexplored edges.

@@ -1,5 +1,19 @@
 # Project status
 
+## 0.3.19 2.5D refinements — prepared 2026-11-11
+
+User authorized commit to main and deployment. App 0.3.19 uses immutable
+source tag `cloudflare-online-v1.16`. Removes player halo bands and blue
+memory shading in 2.5D, uses faint black fog, smooths and strengthens living
+motion, reduces popup clutter, moves the character pane to the top right,
+and enables right-click item descriptions in server menus.
+
+Release validation: 2,118 tests pass / two optional engine skips; forced
+TypeScript, production build and ASSETS-only dry-run pass. Optional engine
+E2E: 44 skips. Prior feature checks include 558 Canvas checks, 14 animation/
+impact browser checks, and desktop/phone layout checks with wrapped statuses.
+Hosted rollout verification follows the atomic main/source-tag push.
+
 ## 0.3.18 living dungeon — deployed 2026-11-11
 
 Production main and immutable tag `cloudflare-online-v1.15` point to `6214854`.

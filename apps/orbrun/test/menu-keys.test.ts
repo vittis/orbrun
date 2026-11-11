@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { initialState, reduce, MouseMode, Keys, type ClientMessage, type GameState } from '@orbrun/webtiles'
+import { initialState, reduce, MouseMode, MenuFlag, Keys, type ClientMessage, type GameState } from '@orbrun/webtiles'
 import { Overlays } from '../src/overlays'
 import { deriveContext, type Context } from '../src/context'
 import { actionLabel, buttonAction, resolve, screenKey } from '../src/bindings'
@@ -24,14 +24,14 @@ const cam = { facing: 0 } as never
 
 type Fixture = { msgs: Record<string, unknown>[] }
 
-function setup() {
+function setup(watching = false) {
   const sent: ClientMessage[] = []
   const host = document.createElement('div')
   document.body.append(host)
   const ov = new Overlays(host, {
     send: (m) => sent.push(m),
     gamedata: () => null,
-    watching: () => false,
+    watching: () => watching,
     onClientOverlayChange: () => {},
     onSystemAction: () => {},
     settingsPanel: () => ({ el: document.createElement('div'), rows: [] }),
@@ -75,6 +75,44 @@ function setup() {
 
 beforeEach(() => {
   document.body.innerHTML = ''
+})
+
+describe('right-click item descriptions', () => {
+  it.each([
+    ['inventory', MenuFlag.SINGLESELECT | MenuFlag.ARROWS_SELECT],
+    ['use_item', MenuFlag.SINGLESELECT | MenuFlag.ARROWS_SELECT],
+    ['pickup', MenuFlag.MULTISELECT | MenuFlag.ARROWS_SELECT],
+    ['shop', MenuFlag.MULTISELECT],
+  ])('examines a row in %s without selecting or using it', (tag, flags) => {
+    const { st, sent, host, frame } = setup()
+    reduce(st, { msg: 'menu', tag, flags, last_hovered: 1, items: [
+      { text: 'Armour', level: 1 },
+      { text: 'a - robe', level: 2, hotkeys: [97] },
+      { text: 'b - leather armour', level: 2, hotkeys: [98] },
+    ] })
+    frame()
+    sent.length = 0
+    const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 })
+    host.querySelectorAll('li span')[2].dispatchEvent(ev)
+    expect(ev.defaultPrevented).toBe(true)
+    expect(sent).toEqual([{ msg: 'menu_hover', hover: 2, mouse: true }, { msg: 'text_input', text: "'" }])
+    expect(st.menus).toHaveLength(1)
+  })
+
+  it('ignores headers and spectators', () => {
+    for (const watching of [false, true]) {
+      const { st, sent, host, frame } = setup(watching)
+      reduce(st, { msg: 'menu', tag: 'inventory', flags: watching ? MenuFlag.SINGLESELECT | MenuFlag.ARROWS_SELECT : MenuFlag.SINGLESELECT, items: [
+        { text: 'Armour', level: 1 }, { text: 'a - robe', level: 2, hotkeys: [97] },
+      ] })
+      frame()
+      sent.length = 0
+      const rows = host.querySelectorAll('li')
+      rows[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+      if (watching) rows[1].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+      expect(sent).toEqual([])
+    }
+  })
 })
 
 /**

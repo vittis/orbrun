@@ -5,8 +5,9 @@ export interface TileLight { colour: [number, number, number]; radius: number; p
 export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[] }
 export interface LivingPose { x: number; y: number; sx: number; sy: number; angle: number; glow: number }
 
-/** World-anchored, subpixel motion. Memory and immobilised creatures stay still. */
-export function livingPose(life: TileLife | undefined, x: number, y: number, time: number, moving = true): LivingPose {
+/** World-anchored, subpixel motion. Memory and immobilised creatures stay still.
+ * Overhead views can strengthen motion and replace jitter with slower, fluid poses. */
+export function livingPose(life: TileLife | undefined, x: number, y: number, time: number, moving = true, presentation: { strength?: number; smooth?: boolean } = {}): LivingPose {
   const p = { x: 0, y: 0, sx: 1, sy: 1, angle: 0, glow: 0 }
   if (!moving || !life || life.held || life.motion === 'still') return p
   const phase = x * 2.31 + y * 1.73, t = time * (life.rate ?? 1), a = life.amplitude ?? 1
@@ -14,12 +15,14 @@ export function livingPose(life: TileLife | undefined, x: number, y: number, tim
   switch (life.motion) {
     case 'breath': p.sy += wave * 0.012 * a; p.sx += wave * 0.004 * a; break
     case 'plant': case 'grass': p.angle = Math.sin(t * 0.9 + phase) * 0.018 * a; break
-    case 'undead': p.x = Math.sin(t * 0.7 + phase) ** 15 * 0.009 * a; break
+    case 'undead': p.x = Math.sin(t * 0.7 + phase) ** (presentation.smooth ? 3 : 15) * 0.009 * a; break
     case 'float': p.y = Math.sin(t * 1.3 + phase) * 0.023 * a; break
     case 'ooze': p.sy += wave * 0.025 * a; p.sx -= wave * 0.025 * a; break
     case 'swirl': case 'portal': p.angle = Math.sin(t + phase) * 0.025 * a; p.glow = 0.5 + wave * 0.5; break
     case 'serpent': p.x = wave * 0.012 * a; p.angle = Math.sin(t * 1.4 + phase) * 0.012 * a; break
-    case 'skitter': p.x = Math.sin(t * 19 + phase) * Math.max(0, Math.sin(t * 0.7 + phase) - 0.8) * 0.04 * a; break
+    case 'skitter': p.x = presentation.smooth
+      ? Math.sin(t * 3.2 + phase) * (0.65 + Math.sin(t * 0.7 + phase) * 0.35) * 0.009 * a
+      : Math.sin(t * 19 + phase) * Math.max(0, Math.sin(t * 0.7 + phase) - 0.8) * 0.04 * a; break
     case 'cloud': p.x = Math.sin(t * 0.6 + phase) * 0.04; p.y = Math.cos(t * 0.45 + phase) * 0.018; p.sx += Math.sin(t * 0.7 + phase) * 0.035; p.sy += wave * 0.025; p.angle = Math.sin(t * 0.4 + phase) * 0.025; break
     case 'flame': p.sy += (wave + Math.sin(t * 7.1 + phase) * 0.4) * 0.023; p.x = Math.sin(t * 4 + phase) * 0.006; break
     case 'water': case 'fountain': p.glow = Math.sin(t * 1.5 + phase) * 0.5 + 0.5; break
@@ -31,9 +34,12 @@ export function livingPose(life: TileLife | undefined, x: number, y: number, tim
     case 'bog': p.glow = Math.max(0, wave) ** 6; break
   }
   if (life.weary) p.x += Math.sin(t * 0.8 + phase) * 0.006
-  if (life.fleeing) p.x += Math.sin(t * 23 + phase) * 0.002
+  if (life.fleeing) p.x += Math.sin(t * (presentation.smooth ? 4 : 23) + phase) * 0.002
   if (life.wading && !life.flying) p.y += Math.sin(t * 1.1 + phase) * 0.008
   if (life.flying) p.y += Math.sin(t * 1.7 + phase) * 0.016
+  const strength = presentation.strength ?? 1
+  p.x *= strength; p.y *= strength; p.angle *= strength
+  p.sx = 1 + (p.sx - 1) * strength; p.sy = 1 + (p.sy - 1) * strength
   return p
 }
 
