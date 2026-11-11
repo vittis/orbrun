@@ -1,7 +1,6 @@
 import {
   StepCadence,
   STEP_SECONDS,
-  MAX_WALK_LAG,
   planStep,
   sampleStep,
   type StepCurve,
@@ -42,7 +41,7 @@ export interface DragRelease {
  * points, a stick letting go settles the yaw on the nearest heading, its
  * pitch kept, and a finger lifting springs on to the next heading the way it
  * swiped and the pitch back to rest, fling.ts), and the eye's
- * glide after a step along the path the feet took (`walkTo`); a jump snaps.
+ * glide along the path the feet took (`walkTo`).
  */
 /** The yaw in radians; enough to put the camera back facing where it faced (the pitch is not kept). */
 export interface CameraView {
@@ -180,8 +179,8 @@ export class CameraController {
    * (`update`) rather than jumping the cell, and along the real path rather
    * than the straight line, so two hops through a doorway do not cut the
    * corner into the wall. Hops that do not add up to the destination (a
-   * missed message) are replaced by the straight line where it is a single
-   * cell, else the walk is a jump and the eye snaps. Arrival time (`now`,
+   * missed message or multi-cell move) are replaced by the straight line.
+   * Arrival time (`now`,
    * seconds) adjusts repeated steps within 100–140 ms; it never adds a hop.
    */
   walkTo(x: number, y: number, hops: readonly { dx: number; dy: number }[], now = performance.now() / 1000) {
@@ -207,10 +206,6 @@ export class CameraController {
       pts.push({ x: px, y: py })
     }
     if (!valid || px !== x || py !== y) {
-      if (Math.abs(x - c.x) > 1 || Math.abs(y - c.y) > 1) {
-        this.snapTo(x, y)
-        return
-      }
       pts.length = 0
       if (x !== c.x || y !== c.y) pts.push({ x, y })
     }
@@ -714,12 +709,9 @@ export class CameraController {
     }
     const { distance: position, speed } = sampleStep(walk, walk.elapsed)
     this.walkSpeed = speed
-    const planned = Math.max(0, position - walk.travelled)
-    // Leave room for an ordinary next step without a position jump. Only a
-    // fast travel or burst of replies forces catch-up; it still follows the
-    // real path, and rebasing keeps the original landing deadline.
-    let step = Math.max(planned, this.pathLength() - MAX_WALK_LAG)
-    const caughtUp = step > planned
+    // Cover the full confirmed route on this curve, without skipping cells
+    // to enforce a distance limit on multi-cell movement.
+    let step = Math.max(0, position - walk.travelled)
     while (step > 0 && this.path.length > 0) {
       const p = this.path[0]
       const d = Math.max(Math.abs(p.x - c.eyeX), Math.abs(p.y - c.eyeY))
@@ -734,8 +726,7 @@ export class CameraController {
         step = 0
       }
     }
-    if (caughtUp) this.planWalk(this.pathLength(), walk.duration - walk.elapsed, this.walkSpeed, walk.continuous)
-    else walk.travelled = position
+    walk.travelled = position
     return true
   }
 

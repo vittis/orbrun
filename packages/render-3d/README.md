@@ -28,15 +28,15 @@ nothing.
   conservative bounding spheres for frustum culling, and blended batches
   ordered back to front by chunk each frame.
 - `motion.ts`: the monsters mid-step. WebTiles sends no move message, so a
-  step is read as a monster's client id changing cell between two scenes; only
-  a single step glides, and a blink, a teleport or a burst of turns snaps. A
+  move is read as a monster's client id changing cell between two scenes.
+  Moves of any distance glide, including fast monsters crossing several cells. A
   sprite in flight stands out of the baked crowd for the length of its step
   and goes back into it on landing, so moving it every frame never rewrites
   a chunk's buffers. Player and monster timing share `scene/motion.ts`:
   isolated steps take 100 ms; repeated steps adapt to arrival cadence within
   100–140 ms, carrying speed and braking late. Only confirmed cells are
-  followed, including corners; bursts are caught up to at most two steps
-  behind and stalled replies always leave the sprite stopped at its last cell.
+  followed, including corners; bursts retarget the full remaining route within
+  one duration and stalled replies leave the sprite stopped at its last cell.
 - `mesh.ts`: exact merging of one-colour texel faces (the hulls, the ghost
   rings, the hands' ink) into rectangles and runs; textured rim faces merge
   only where neighbouring texels hold the very same colour.

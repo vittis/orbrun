@@ -282,11 +282,18 @@ describe('forward input and confirmed camera motion', () => {
     expect(h.cam.camera.yaw).toBe(0)
   })
 
-  it('snaps unknown jumps and level changes, dropping any old glide', () => {
+  it('glides multi-cell arrivals and snaps level changes, dropping any old glide', () => {
     const h = harness()
     h.echo(0, -1)
     h.cam.update(0.02)
+    const drawn = { x: h.cam.camera.eyeX, y: h.cam.camera.eyeY }
     h.echo(10, 10)
+    expect(h.cam.camera.eyeX).toBe(drawn.x)
+    expect(h.cam.camera.eyeY).toBe(drawn.y)
+    h.cam.update(0.02)
+    expect(h.cam.camera.eyeX).toBeGreaterThan(drawn.x)
+    expect(h.cam.camera.eyeX).toBeLessThan(10)
+    h.cam.update(0.18)
     expect(h.cam.camera.eyeX).toBe(10)
     expect(h.cam.camera.eyeY).toBe(10)
     h.echo(11, 10)

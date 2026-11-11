@@ -15,16 +15,16 @@ function scene(...billboards: Billboard[]): Scene {
 function observe(m: DungeonMovement, s: Scene, now: number, opts = options, center = s.player) { m.observe(s, center, now, opts) }
 
 describe('confirmed entity movement', () => {
-  it.each(['player', 'monster', 'item', 'cloud', 'doll', 'projectile'] as const)('tweens %s art and lands exactly without changing the scene', kind => {
-    const m = new DungeonMovement(), a = actor(0, 0, { kind }), b = actor(1, 1, { kind })
+  it.each((['player', 'monster', 'item', 'cloud', 'doll', 'projectile'] as const).flatMap(kind => [1, 4].map(steps => ({ kind, steps }))))('tweens $kind art over $steps cells and lands exactly without changing the scene', ({ kind, steps }) => {
+    const m = new DungeonMovement(), a = actor(0, 0, { kind }), b = actor(steps, steps, { kind })
     observe(m, scene(a), 0); observe(m, scene(b), 1)
     expect(m.position(b, 1)).toEqual({ x: 0, y: 0 })
-    expect(m.position(b, 1.05).x).toBeCloseTo(0.875)
-    expect(m.position(b, 1.05).y).toBeCloseTo(0.875)
+    expect(m.position(b, 1.05).x).toBeCloseTo(0.875 * steps)
+    expect(m.position(b, 1.05).y).toBeCloseTo(0.875 * steps)
     expect(m.moving(b, 1.05)).toBe(true)
-    expect(m.position(b, 1.1)).toEqual({ x: 1, y: 1 })
+    expect(m.position(b, 1.1)).toEqual({ x: steps, y: steps })
     expect(m.moving(b, 1.1)).toBe(false)
-    expect(b.x).toBe(1)
+    expect(b.x).toBe(steps)
   })
 
   it.each([['ease-out', 0.875], ['smooth', 0.5], ['linear', 0.5]] as const)('supports %s easing and custom duration', (easing, halfway) => {
@@ -50,6 +50,17 @@ describe('confirmed entity movement', () => {
     expect(m.moving(d, 1.16)).toBe(false)
   })
 
+  it('retargets repeated multi-cell moves without skipping ahead to limit visual lag', () => {
+    const m = new DungeonMovement(), b = actor(3), c = actor(5)
+    observe(m, scene(actor()), 0); observe(m, scene(b), 1)
+    const drawn = m.position(b, 1.01)
+    observe(m, scene(c), 1.01)
+    expect(m.position(c, 1.01)).toEqual(drawn)
+    expect(m.position(c, 1.06).x).toBeGreaterThan(drawn.x)
+    expect(m.position(c, 1.06).x).toBeLessThan(5)
+    expect(m.position(c, 1.11)).toEqual({ x: 5, y: 0 })
+  })
+
   it('uses stable IDs when identical monsters cross and when mutable art changes', () => {
     const m = new DungeonMovement(), a = actor(), b = actor(1, 0, { id: 2 })
     const s = scene(a, b)
@@ -60,10 +71,10 @@ describe('confirmed entity movement', () => {
     expect(m.position(b, 1)).toEqual({ x: 1, y: 0 })
   })
 
-  it('matches unique anonymous moving art while reserving stationary copies', () => {
+  it.each([1, 3])('matches unique anonymous art moving %i cells while reserving stationary copies', steps => {
     const m = new DungeonMovement(), a = actor(0, 0, { id: undefined }), fixed = actor(4, 0, { id: undefined })
     observe(m, scene(a, fixed), 0)
-    const b = actor(1, 0, { id: undefined }), same = { ...fixed }
+    const b = actor(steps, 0, { id: undefined }), same = { ...fixed }
     observe(m, scene(same, b), 1)
     expect(m.position(b, 1)).toEqual({ x: 0, y: 0 })
     expect(m.position(same, 1)).toEqual({ x: 4, y: 0 })
@@ -84,11 +95,11 @@ describe('confirmed entity movement', () => {
     expect(single.position(second, 1)).toEqual({ x: 1, y: 0 })
   })
 
-  it('snaps teleports, new identities, level changes and remote level views', () => {
-    for (const change of ['teleport', 'identity', 'level', 'remote'] as const) {
+  it('snaps new identities, level changes and remote level views', () => {
+    for (const change of ['identity', 'level', 'remote'] as const) {
       const m = new DungeonMovement()
       observe(m, scene(actor()), 0)
-      const b = actor(change === 'teleport' ? 4 : 1, 0, { id: change === 'identity' ? 2 : 1 }), s = scene(b)
+      const b = actor(1, 0, { id: change === 'identity' ? 2 : 1 }), s = scene(b)
       if (change === 'level') s.levelKey = 'D:2'
       if (change === 'remote') s.playerOnLevel = false
       observe(m, s, 1)
@@ -125,6 +136,18 @@ describe('confirmed entity movement', () => {
 })
 
 describe('the following camera', () => {
+  it.each(['ease-out', 'smooth', 'linear'] as const)('follows multi-cell player moves on the same %s curve', easing => {
+    const m = new DungeonMovement(), a = actor(0, 0, { kind: 'player' }), b = actor(4, 2, { kind: 'player' })
+    const start = scene(a), next = scene(b)
+    next.player = { x: 4, y: 2 }
+    const opts = { ...options, easing }
+    observe(m, start, 0, opts); observe(m, next, 1, opts)
+    expect(m.center(next.player, 1)).toEqual({ x: 0, y: 0 })
+    for (const t of [1, 1.025, 1.05, 1.1]) expect(m.center(next.player, t)).toEqual(m.position(b, t))
+    expect(m.cameraMoving(1.05)).toBe(true)
+    expect(m.center(next.player, 1.1)).toEqual(next.player)
+  })
+
   it('carries player velocity into repeated steps and keeps the camera on that exact curve', () => {
     const m = new DungeonMovement()
     const a = actor(0, 0, { kind: 'player' }), b = actor(1, 0, { kind: 'player' }), c = actor(2, 0, { kind: 'player' })

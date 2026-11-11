@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.26 — 2026-11-11
+
+- Tween multi-cell movement for fast enemies, projectiles and rampage instead of snapping to the destination. Keep the following camera synchronized with the player.
+- Continue repeated moves from the drawn position and animate the full remaining route within one tween duration.
+
 ## 0.3.25 — 2026-11-11
 
 - Make Dungeon (2.5D) idle motion slightly stronger and preserve crisp sprite filtering during animation. Wounded enemies lean and breathe unevenly as their health drops.

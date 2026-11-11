@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.25 point at the `cloudflare-online-v1.22` release tag in
+Source links for 0.3.26 point at the `cloudflare-online-v1.23` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -639,3 +639,19 @@ production build, ASSETS-only Worker dry-run (104 asset files, 20.95 KiB), and
 diff checks. Optional engine E2E reports 44 explicit skips. Prior production
 Worker `2f08c8fc-f899-417b-a546-4f43133e7304` is the rollback target. Hosted
 rollout follows publication.
+
+
+## 0.3.26 multi-cell movement — prepared 2026-11-11
+
+User authorized committing to main and deployment, with post-deployment checks
+left to the user. Source tag: `cloudflare-online-v1.23`. Confirmed multi-cell
+movement now tweens in Dungeon (2.5D), first-person monsters and the camera,
+including fast enemies, projectiles and rampage. Repeated updates preserve the
+drawn position and animate the remaining confirmed route over one duration.
+Level resets, visibility rules and reduced motion retain their existing behavior.
+
+Release checks passed: 2,219 unit tests / two optional-engine skips, forced
+TypeScript rebuild, production build, ASSETS-only Worker dry-run (104 assets,
+20.95 KiB), and diff checks. Optional engine E2E reports 44 explicit skips.
+The atomic main/source-tag push triggers Cloudflare Workers Builds. No
+deployment polling or hosted checks will be performed, as requested.

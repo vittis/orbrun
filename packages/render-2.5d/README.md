@@ -50,9 +50,10 @@ and picking regions. The existing first-person renderer remains independent.
   `Billboard.id` values identify entities across art changes (WebTiles supplies
   monster IDs); anonymous art only pairs unambiguous matching arrivals and
   departures after reserving stationary copies. Spawns, ambiguous matches,
-  teleports, level changes and transitions into/out of visibility snap. Fast
-  travel retargets from the current drawn position with at most two cells of
-  visual lag and no animation queue. The default player curve carries velocity
+  level changes and transitions into/out of visibility snap. Moves of any
+  distance tween, including fast enemies, projectiles and rampage. Fast
+  travel retargets from the current drawn position over one duration without
+  skipping ahead or queuing full animations. The default player curve carries velocity
   through repeated steps and adapts to observed arrival cadence within 1–1.4×
   the configured duration; the camera uses that exact curve. Targeting pans
   snap for immediate feedback. The app delivers the centre before every scene
@@ -117,7 +118,7 @@ synthetic lava patch because the small room atlas has no lava tile. Live
 games use their server's complete tileset.
 Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
-player directly; long-distance moves demonstrate teleport snapping.
+player directly; long-distance moves demonstrate multi-cell tweening.
 **Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
 **Cast** previews four spell trace families. Append `?effectFrame=0.1` to freeze
 each triggered effect 100 ms into its lifetime for deterministic captures.
