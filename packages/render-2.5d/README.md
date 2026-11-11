@@ -35,6 +35,10 @@ and picking regions. The existing first-person renderer remains independent.
   the artwork defines their relative proportions, independently of the
   first-person renderer's billboard heights. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
+  Exposed wall bases have dense contact shadows and soft south/east cast
+  shadows that shorten with foreground cutaways. Wall faces darken toward
+  their feet, with a recessed cap and subtle bevels on exposed roof edges;
+  connected roofs stay continuous rather than outlining every tile.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
@@ -125,7 +129,7 @@ each triggered effect 100 ms into its lifetime for deterministic captures.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 900 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist.
@@ -133,6 +137,9 @@ Movement checks sample all three easing curves at the start, midpoint and
 landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
 a steady centred player and moving world under camera follow. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
+Wall-depth checks also verify fading base shadows, shorter cutaway shadows,
+lighter transparent-wall shadows, face shading, hidden geometry and sleep
+at three elevations, zoom levels and device pixel ratios.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass

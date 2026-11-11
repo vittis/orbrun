@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.26 point at the `cloudflare-online-v1.23` release tag in
+Source links for 0.3.27 point at the `cloudflare-online-v1.24` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -655,3 +655,20 @@ TypeScript rebuild, production build, ASSETS-only Worker dry-run (104 assets,
 20.95 KiB), and diff checks. Optional engine E2E reports 44 explicit skips.
 The atomic main/source-tag push triggers Cloudflare Workers Builds. No
 deployment polling or hosted checks will be performed, as requested.
+
+
+## 0.3.27 2.5D wall depth — prepared 2026-11-11
+
+User authorized committing to main and deployment, with post-deployment checks
+left to the user. Source tag: `cloudflare-online-v1.24`. Exposed wall bases
+have stronger contact shadows and soft cast shadows that scale with wall height.
+Faces darken toward their feet and exposed roof edges have subtle bevels;
+connected roofs remain continuous. Transparent walls cast lighter shadows,
+and unseen geometry does not affect visible depth cues.
+
+Feature validation: 1,062 real Canvas checks passed. After integrating main,
+2,219 unit tests / two optional-engine skips, forced TypeScript rebuild,
+production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
+checks passed. Optional engine E2E reports 44 explicit skips. The atomic
+main/source-tag push triggers Cloudflare Workers Builds. No deployment polling
+or hosted checks will be performed, as requested.

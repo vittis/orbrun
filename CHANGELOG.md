@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.27 — 2026-11-11
+
+- Give Dungeon (2.5D) walls stronger base shadows, height-aware cast shadows, shaded faces and subtle roof edges so their depth is easier to read.
+
 ## 0.3.26 — 2026-11-11
 
 - Tween multi-cell movement for fast enemies, projectiles and rampage instead of snapping to the destination. Keep the following camera synchronized with the player.

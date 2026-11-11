@@ -3,6 +3,7 @@ import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { surfaceLightChecks } from './surface-light-checks'
 import { movementChecks } from './movement-checks'
+import { wallDepthChecks } from './wall-depth-checks'
 
 const atlas = document.createElement('canvas')
 atlas.width = 128
@@ -166,4 +167,6 @@ const surfaces = surfaceLightChecks()
 checks += surfaces.checks; failures.push(...surfaces.failures)
 const movement = movementChecks(source)
 checks += movement.checks; failures.push(...movement.failures)
+const depth = wallDepthChecks(source)
+checks += depth.checks; failures.push(...depth.failures)
 document.querySelector('#result')!.textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)

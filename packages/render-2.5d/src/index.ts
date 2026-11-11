@@ -9,6 +9,7 @@ import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects } from './effects.js'
 import { drawMelee, drawSpellTrace } from './effects-draw.js'
+import { drawRoofEdges, drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -254,7 +255,7 @@ export class Render25d implements MapRenderer {
       drawSpellTrace(ctx, p, trace, now); ctx.restore()
       this.active = true
     }
-    this.wallShadows(ctx, p, cells)
+    drawWallShadows(ctx, p, this.scene, cells, this.dpr)
 
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
@@ -429,31 +430,6 @@ export class Render25d implements MapRenderer {
     }
   }
 
-  private wallShadows(ctx: Context2d, p: Projection, cells: SceneCell[]) {
-    for (const cell of cells) {
-      if (cell.occluder) continue
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      const north = this.scene.cells.get(cellKey(cell.x, cell.y - 1))
-      const west = this.scene.cells.get(cellKey(cell.x - 1, cell.y))
-      if (north?.occluder && north.visibility !== 'unseen') {
-        const depth = rect.height * 0.34
-        const shadow = ctx.createLinearGradient(0, rect.y, 0, rect.y + depth)
-        shadow.addColorStop(0, 'rgba(0,0,0,0.18)')
-        shadow.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = shadow
-        ctx.fillRect(rect.x, rect.y, rect.width, depth)
-      }
-      if (west?.occluder && west.visibility !== 'unseen') {
-        const depth = rect.width * 0.22
-        const shadow = ctx.createLinearGradient(rect.x, 0, rect.x + depth, 0)
-        shadow.addColorStop(0, 'rgba(0,0,0,0.12)')
-        shadow.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = shadow
-        ctx.fillRect(rect.x, rect.y, depth, rect.height)
-      }
-    }
-  }
-
   private memoryFog(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
     const memory = cells.filter(cell => cell.visibility === 'remembered')
     if (!memory.length) return
@@ -525,8 +501,7 @@ export class Render25d implements MapRenderer {
 
   private wall(ctx: Context2d, p: Projection, cell: SceneCell) {
     // Cut foreground walls down beside known open ground, so actors behind them stay readable.
-    const behind = this.scene.cells.get(cellKey(cell.x, cell.y - 1))
-    const height = behind?.visibility === 'visible' && !behind.occluder ? 0.18 : 0.58
+    const height = wallHeight(this.scene, cell)
     const roof = planeRect(p, cell.x, cell.y, height, this.dpr)
     const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
     const tile = cell.wallTile ?? cell.featureTile ?? cell.floorTile
@@ -538,9 +513,9 @@ export class Render25d implements MapRenderer {
     ctx.fillRect(face.x, face.y, face.width, face.height)
     this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), cell.visibility !== 'visible', cell.flash,
       cell.visibility === 'visible' ? this.lighting : undefined, face)
-    ctx.fillStyle = 'rgba(0,0,0,0.22)'
-    ctx.fillRect(face.x, face.y, face.width, face.height)
+    shadeWallFace(ctx, face, this.dpr)
     this.plane(ctx, p, cell, [{ tile }], height)
+    drawRoofEdges(ctx, p, this.scene, cell, roof, this.dpr)
     ctx.restore()
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }

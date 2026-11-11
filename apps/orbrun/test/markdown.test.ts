@@ -44,7 +44,7 @@ describe('the repository’s documents, drawn in the front end', () => {
     const doc = renderMarkdown('See [ABOUT.md](ABOUT.md), [the site](https://orbrun.app), [below](#steam-deck), <https://crawl.develz.org/> and <someone@example.com>: **bold** `code` *em*.')
     const links = Array.from(doc.querySelectorAll('a'))
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-      ['ABOUT.md', 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.23/ABOUT.md'],
+      ['ABOUT.md', 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.24/ABOUT.md'],
       ['the site', 'https://orbrun.app'],
       ['https://crawl.develz.org/', 'https://crawl.develz.org/'],
       ['someone@example.com', 'mailto:someone@example.com'],
