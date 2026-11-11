@@ -547,6 +547,14 @@ export interface SceneCursor {
 // ---------------------------------------------------------------------------
 // Renderer contract
 
+/** Confirmed melee presentation. Coordinates remain the authoritative cells. */
+export interface MeleeAttack {
+  from: { x: number; y: number }
+  to: { x: number; y: number }
+  style: 'slash' | 'thrust' | 'cleave' | 'crush' | 'unarmed'
+  hit: boolean
+}
+
 export interface MapRenderer {
   /** Whether presentation effects need another frame without a new game state. */
   readonly animating?: boolean
@@ -558,6 +566,7 @@ export interface MapRenderer {
   setCursor(cursor: SceneCursor | null): void
   /** A confirmed visible impact, in cell coordinates and monotonic seconds. */
   impact?(x: number, y: number, strength: number, now: number): void
+  melee?(attack: MeleeAttack, now: number): void
   render(now?: number): void
   /** Cell centre at height (0 floor, 1 wall top), in CSS pixels; null behind the lens. */
   project?(x: number, y: number, height?: number): { x: number; y: number } | null

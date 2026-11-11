@@ -26,10 +26,15 @@
     <label>Move <select id="duration"><option value="0">Instant</option><option value="0.06">60 ms</option><option value="0.1" selected>100 ms</option><option value="0.18">180 ms</option><option value="0.25">250 ms</option></select></label>
     <label>Easing <select id="easing"><option value="ease-out">Snappy</option><option value="smooth">Smooth</option><option value="linear">Linear</option></select></label>
     <button id="move" type="button">Move entities ↔</button>
+    <label>Weapon <select id="weapon"><option value="slash">Sword</option><option value="thrust">Spear</option><option value="cleave">Axe</option><option value="crush">Mace</option><option value="unarmed">Unarmed</option></select></label>
+    <button id="melee" type="button">Melee</button>
+    <label>Wounds <select id="wound"><option value="uninjured">Healthy</option><option value="moderately_damaged">Damaged</option><option value="almost_dead">Almost dead</option></select></label>
+    <label>Spell <select id="spell"><option value="fire">Fire</option><option value="cold">Frost</option><option value="electric">Lightning</option><option value="magic">Magic</option></select></label>
+    <button id="cast" type="button">Cast</button>
     <label><input type="checkbox" id="original"> Original 2D</label>
   </header>
   <canvas id="view" aria-label="Interactive 2.5D dungeon renderer preview"></canvas>
-  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Move entities to compare tweens · <span id="cell">—</span></footer>
+  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Melee/Wounds place a practice enemy nearby · Cast leaves a fading trace · <span id="cell">—</span></footer>
   <script type="module" src="./dungeon.ts"></script>
 </body>
 </html>

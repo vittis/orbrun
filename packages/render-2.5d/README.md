@@ -68,6 +68,13 @@ and picking regions. The existing first-person renderer remains independent.
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
   replacement; frames cull outside the viewport and reuse tile composites.
+- `effects.ts` keeps bounded melee and spell histories on the existing frame
+  clock. Confirmed `MeleeAttack` events produce a small lunge/recoil and sword,
+  thrust, axe, blunt or unarmed gestures. The app resolves these from combat
+  feedback and the wielded inventory item, independently of popup settings.
+  Disappearing transient spell lights leave faint fire, frost, electrical or
+  magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
+  Histories clear on level changes, remote maps, lost visibility and Still mode.
 
 Unexplored space uses neutral, world-anchored dark mist behind known geometry.
 Remembered tiles and standing art retain 44% of their ambient brightness,
@@ -83,6 +90,11 @@ effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
 Server flashes are rendered as supplied; spell types and damage are not
 guessed from message text.
+Idle motion is slightly stronger than before, with device-pixel-snapped offsets
+and the selected tile filter preserved during motion. Severe wound flags add a
+guarded lean and uneven breathing without obscuring identifying sprite art.
+Lights have compact bright cores and up to six embers or four magical motes each,
+with an 88-mote frame budget; fountains add five small spray droplets.
 Movement also stops in Still/reduced-motion mode. Only visible, on-screen
 tweens keep frames awake, and motion history is discarded on destroy.
 
@@ -106,6 +118,9 @@ games use their server's complete tileset.
 Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
 player directly; long-distance moves demonstrate teleport snapping.
+**Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
+**Cast** previews four spell trace families. Append `?effectFrame=0.1` to freeze
+each triggered effect 100 ms into its lifetime for deterministic captures.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
@@ -125,13 +140,12 @@ check real Canvas rendering at desktop and phone sizes.
 
 ## Extending the mode
 
-For richer combat effects, add typed, confirmed presentation events to the
-shared scene contract, with stable identities and timestamps. Keep their
-bounded lifetimes in a separate effect layer and respect visibility and
-reduced motion. Do not parse combat prose in the renderer. Camera rotation,
-perspective projection, full shadow maps and element-specific spell effects
-are not implemented; a future GPU backend can reuse the same scene and input
-contracts if those become necessary.
+For richer combat effects, extend the typed, confirmed presentation contract
+with stable identities and timestamps. Keep bounded lifetimes in the effect
+layer and respect visibility and reduced motion. Do not parse combat prose in
+the renderer. Spell traces use semantic light colours and pulses; they do not
+invent persistent hazards. Camera rotation, perspective projection and full
+shadow maps are not implemented; a future GPU backend can reuse these contracts.
 
 Visual inspiration: [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl/),
 particularly its raised walls, standing creatures and environmental lighting.

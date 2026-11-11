@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.25 — 2026-11-11
+
+- Make Dungeon (2.5D) idle motion slightly stronger and preserve crisp sprite filtering during animation. Wounded enemies lean and breathe unevenly as their health drops.
+- Animate confirmed melee attacks with small lunges and recoil, plus sword, thrust, axe, blunt and unarmed gestures. Enemy melee attempts animate independently of damage-popup settings.
+- Leave faint, short-lived fire, frost, lightning and magical traces after spells. Add compact light cores, more embers and magical motes, and fountain spray while keeping sprites and targeting readable.
+- Bound effect histories and particle counts; respect visibility, level changes and Still/reduced-motion settings.
+
 ## 0.3.24 — 2026-11-11
 
 - Show damage popups when enemies step on Ice Thorns from Crawl trunk, including its plural “skewer” hit messages.

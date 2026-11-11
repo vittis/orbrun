@@ -1,5 +1,23 @@
 # Project status
 
+## 0.3.25 2.5D animation and combat polish — prepared 2026-11-11
+
+User authorized committing to main and deploying the completed animation work.
+New immutable source tag: `cloudflare-online-v1.22`. Idle poses are 25% stronger
+with crisp sprite filtering and pixel-snapped idle offsets. Wound flags add a
+small guarded lean and uneven breathing. Confirmed player/enemy melee uses
+bounded lunges, recoil and five weapon gestures, independently of popup settings.
+Transient semantic spell lights leave faint floor traces for 1.25–2.8 seconds.
+Light sources gain compact cores and capped motes; fountains add small droplets.
+Visibility, level transitions, Still and reduced-motion behavior remain covered.
+
+Feature verification: 2,204 unit tests passed / two optional-engine skips;
+900 real Canvas checks passed; typecheck and production build passed. The full
+suite used two workers after a concurrent build caused an unrelated 3D meshing
+test timeout. The interactive dungeon testbed includes weapon, wound and spell
+controls plus deterministic effect captures. Final release checks and deployment
+are recorded in DEPLOYMENT.md.
+
 ## 0.3.24 trunk Ice Thorns and no-damage feedback — prepared 2026-11-11
 
 User identified Ice Thorns from trunk and requested damage/no-damage popups,

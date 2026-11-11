@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.24 point at the `cloudflare-online-v1.21` release tag in
+Source links for 0.3.25 point at the `cloudflare-online-v1.22` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -619,3 +619,23 @@ used. Release checks passed: forced TypeScript, 2,185 unit tests/two optional
 engine skips, production build, and ASSETS-only Worker dry-run (20.95 KiB).
 Optional engine E2E reports 44 skips. Evidence:
 `evidence/release-0324-ice-thorns.json`. Hosted rollout follows publication.
+
+
+## 0.3.25 2.5D animation and combat polish — prepared 2026-11-11
+
+User explicitly requested committing to main and deploying the animation changes.
+New immutable source tag: `cloudflare-online-v1.22`. Adds slightly stronger,
+crisper idle motion; wound-dependent strain; confirmed player/enemy melee with
+five weapon gestures; faint elemental spell traces; compact emitter cores and
+capped embers/motes/fountain spray. Presentation histories are visibility-gated,
+bounded, and cleared by Still mode and level transitions. Damage popups remain
+independent of melee effects. The dungeon testbed previews all variants.
+
+Feature checks: 2,204 unit tests pass / two optional-engine skips, 900 real Canvas
+checks pass, typecheck and production build pass. Full tests use two workers to
+avoid unrelated 3D mesh timeouts under concurrent build/Canvas load. Final release
+validation passed: forced TypeScript, 2,204 unit tests/two optional-engine skips,
+production build, ASSETS-only Worker dry-run (104 asset files, 20.95 KiB), and
+diff checks. Optional engine E2E reports 44 explicit skips. Prior production
+Worker `2f08c8fc-f899-417b-a546-4f43133e7304` is the rollback target. Hosted
+rollout follows publication.
