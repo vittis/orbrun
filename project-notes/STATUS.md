@@ -1,9 +1,12 @@
 # Project status
 
-Current follow-up: user-authorized Cloudflare online deployment is in final validation.
-See [DEPLOYMENT.md](DEPLOYMENT.md) and the Cloudflare review reports for changes
-since the historical Phase 0 snapshot below. Default tests now pass with explicit
-missing-engine skips; public deployment is not yet confirmed.
+Current follow-up: online Cloudflare deployment **LIVE and verified** at
+https://dcss-client.vittis.workers.dev. Release `cloudflare-online-v1.1` points to
+`8fe675d9059bc5a262b7f2acc2439783aa72da0f`; Worker version
+`d62c2edf-0b19-4bb5-940b-a3c9fb99a9d5`. Cloudflare install, clean typecheck,
+full tests, build and deploy passed. Hosted CSP, source notice, proxy restrictions,
+About script controls and anonymous CBRG0.34 rendering were verified.
+See [DEPLOYMENT.md](DEPLOYMENT.md); the Phase 0 snapshot below is historical.
 
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**
 

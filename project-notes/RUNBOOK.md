@@ -28,7 +28,7 @@ Visit [local app](http://127.0.0.1:5173/). Keep development listeners loopback-o
 In another terminal:
 
 ```sh
-npm run typecheck
+npm run typecheck -- --force
 npm run build
 npm run preview -w apps/orbrun -- --host 127.0.0.1
 ```

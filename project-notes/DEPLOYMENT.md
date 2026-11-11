@@ -74,3 +74,30 @@ passed and one optional engine file skipped. Optional engine E2E reports44 skips
 Typecheck passed. Production preview successfully spectated CBRG0.34. Final site/CSP tests pass18/18; typecheck and rebuilt production bundle pass.
 Final Worker dry-run:96 asset files,20.86KiB Worker (6.24KiB gzip),ASSETS only.
 The release review records external About-script delivery and strict script CSP.
+
+## Successful rollout — 2026-11-11
+
+- Public client: https://dcss-client.vittis.workers.dev
+- Deployed commit: `8fe675d9059bc5a262b7f2acc2439783aa72da0f`.
+- Public immutable tag: `cloudflare-online-v1.1` (verified GitHub ref).
+- Worker version: `d62c2edf-0b19-4bb5-940b-a3c9fb99a9d5`.
+- Cloudflare successful build: `af20b64e-bd5e-4d31-a86b-643b34920dfa`.
+- Pushes to fork `main` now trigger install/typecheck/test/build/deploy. Cloudflare
+  completed all stages on Node24.11.1/npm10.9.2. Preview branch builds are off;
+  Wrangler still enables per-version preview URLs by default.
+- Initial release31bfef3/v1 failed CI TypeScript before deployment. Local incremental
+  state had hidden TS5097 in consumers. The correction moves the `.ts` import
+  option to the shared base (declaration-only projects); `tsc -b --force` passed.
+  Keep v1 unchanged; it is historical, not the live release.
+- Hosted GET checks: root/About200 with strict CSP and v1.1 source link;
+  site-controls.js200 JavaScript; Acorn notice200; offline engine404; unlisted
+  proxy host404; live CDI stable enums200 generated AMD data.
+- Chrome successfully loaded the public home, CBRG lobby and anonymous0.34
+  spectating, including textured3D, minimap, HUD and messages. About comparison
+  slider changed from50 to51 and its rendered split updated to51%, verifying
+  the external page script under CSP. No credentials/chat/gameplay commands sent.
+- Evidence: `evidence/cloudflare-http-checks.json` and
+  `evidence/cloudflare-live-spectating.jpg`.
+
+Post-rollout documentation is committed on the initialization branch without
+advancing production `main`; the live code remains exactly the release tag.
