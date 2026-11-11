@@ -6,6 +6,26 @@ Deployed 2026-11-11: production main and source tag point to `6214854`.
 Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded; hosted
 verification is recorded in `DEPLOYMENT.md` and `evidence/release-0318-*`.
 
+## 0.3.20 smooth surface lighting and VFX
+
+Deployed `114c077`, source tag `cloudflare-online-v1.17`, on 2026-11-11.
+`render-2.5d/src/lighting.ts` now builds a single continuous light texture;
+floors, raised roofs/faces and masked sprites sample it, replacing per-cell
+tinting. Reachability is cached, and pulse/afterglow intensity updates every
+frame. LOS uses full ambient art exposure plus a 10% lift of dark texels,
+weaker contact shadows and a gentle vignette. Remembered art remains neutral.
+
+Spell overlays lie on the plane and use a thinned alpha mask with clamped
+edges to preserve joined segments. Clouds, impact rings and particles are
+quieter. Popups use self-hosted Barlow Condensed Bold and bounded per-type
+motion/glow, including distinct acid and electricity. Reduced motion keeps
+the trajectories and flame glow position still.
+
+Validation: 2,120 passing unit tests; forced TypeScript/build/Worker dry-run;
+576 real Canvas checks; 14 animation/impact checks; live source/bundle/font,
+CSP/proxy and anonymous 2.5D checks. Evidence is in `DEPLOYMENT.md` and
+`evidence/release-0320-*`. Interactive preview: `/testbed/effects.html`.
+
 ## 0.3.19 refinements
 
 Deployed `76d8357`, source tag `cloudflare-online-v1.16`, on 2026-11-11.

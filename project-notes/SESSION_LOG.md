@@ -363,3 +363,27 @@ JS bundles match the validated build; CSP, source/version and allowed/rejected
 routes pass. Live browser showed 0.3.19 and anonymous CBRG 2.5D spectating with
 right-side character pane and nearby list below it; no console warnings/errors
 and no gameplay/chat sent. Evidence remains on the working branch only.
+
+
+## Smoother lighting, slimmer VFX and damage typography — 2026-11-11
+
+User requested brighter 2.5D LOS/floors, uniform smooth torch/ambient lighting,
+smaller/thinner spell VFX, and another damage font with elemental effects,
+then explicitly authorized commit and production deployment.
+
+Released app 0.3.20 as `114c077` / `cloudflare-online-v1.17`. One continuous
+world-space light texture replaces quantized per-tile wall/sprite colours;
+exposure and softer shadows/vignette brighten the scene. Ground-plane beam
+art is alpha-thinned while clamped mask edges preserve connected segments.
+Per-frame flicker/afterglows, quieter ambient VFX, Barlow Condensed Bold and
+seven damage styles are implemented with reduced-motion support.
+
+Forced TypeScript, 2,120 unit tests/two optional-engine skips, build and
+ASSETS-only dry-run pass. Engine E2E: 44 explicit skips. Real Canvas: 576 pass;
+14 animation/impact checks and interactive typography preview pass. Published
+main/branch/tag atomically; Cloudflare build
+`fad70707-ac6d-4ef7-b4c7-3090e1926a8a` succeeded. Worker
+`b49a55cf-3c28-454a-ba06-923fb45ff43c` is at 100% traffic. Hosted font/license
+and JS bundles match local bytes; source/version/CSP/proxy checks and live
+anonymous CBRG 2.5D spectating pass with no console warnings/errors. No gameplay
+or chat sent. Post-rollout evidence stays on the working branch.

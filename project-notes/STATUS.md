@@ -1,6 +1,6 @@
 # Project status
 
-## 0.3.20 smooth lighting and effects — prepared 2026-11-11
+## 0.3.20 smooth lighting and effects — deployed 2026-11-11
 
 User authorized commit and production deployment. App 0.3.20 uses immutable
 source tag `cloudflare-online-v1.17`. 2.5D LOS ambience is brighter; floors,
@@ -14,7 +14,13 @@ Validation: 2,120 unit tests pass / two optional-engine skips; forced
 TypeScript, production build and ASSETS-only Worker dry-run pass. Optional
 engine E2E: 44 skips. The Canvas suite has 576 checks, including 18 targeted
 surface-light/beam checks. 14 animation/impact checks and the interactive
-`/testbed/effects.html` preview pass. Hosted verification follows rollout.
+`/testbed/effects.html` preview pass. Production main and immutable source tag
+point to `114c077`; build `fad70707-ac6d-4ef7-b4c7-3090e1926a8a` succeeded.
+Worker `b49a55cf-3c28-454a-ba06-923fb45ff43c` serves 100% of traffic. Thirteen
+hosted checks pass, including source/version/CSP, bundled font/license,
+proxy restrictions and all three JS bundles matching the local build.
+Live browser verified 0.3.20 and a brighter anonymous CBRG 2.5D dungeon with
+no warning/error console logs. Evidence: `evidence/release-0320-*`.
 
 ## 0.3.19 2.5D refinements — deployed 2026-11-11
 

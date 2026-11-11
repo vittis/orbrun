@@ -427,3 +427,32 @@ explicit skips. All 558 original raster checks, the 18 new surface/beam checks
 and 14 animation/impact checks pass; the complete current raster suite is 576.
 The effects preview shows the new font and seven damage styles without
 console warnings/errors. Rollout follows the atomic main/source-tag push.
+
+
+### Successful 0.3.20 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.17` point to
+  `114c077c9822aec4cfc6cb1c8948306c1b7c2ad5`; main, branch and tag were pushed
+  atomically after the user authorized publication.
+- Cloudflare build `fad70707-ac6d-4ef7-b4c7-3090e1926a8a` succeeded. Worker
+  `b49a55cf-3c28-454a-ba06-923fb45ff43c` serves 100% traffic; deployment
+  created at 15:36:58 America/Sao_Paulo on 2026-11-11.
+- Thirteen hosted checks pass: version/source links and strict CSP on
+  root/About/release notes; public scripts/licenses; allowed versioned gamedata
+  and rejected unlisted/offline routes; the font/license and all three entry
+  JS bundles are byte-identical to the validated local build.
+- Live browser loaded 0.3.20, CBRG lobby and an anonymous live 2.5D game.
+  Brighter floor/terrain, right-side character pane and nearby list verified;
+  no warning/error logs captured. No gameplay or chat was sent.
+- Current full real Canvas run: 576 passed / zero failures. Eighteen focused
+  checks cover continuous surface lighting, wall occlusion, protected memory,
+  transparent sprite masks, smooth flicker/afterglows and connected thin beams.
+- Evidence: `evidence/release-0320-http-checks.json`,
+  `evidence/release-0320-canvas-checks.json`,
+  `evidence/release-0320-surface-checks.json`,
+  `evidence/release-0320-effects-preview.png` and
+  `evidence/release-0320-spectating.png`.
+- Rollback: 0.3.19 Worker `7cb1ac6d-32d5-4dcf-a350-215734799308`.
+
+Post-rollout evidence is on the working branch only; main and the release tag
+remain at the exact deployed source commit.
