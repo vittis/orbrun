@@ -22,6 +22,7 @@ import type { WoundLevel } from './bars.js'
 
 export * from './bars.js'
 export * from './motion.js'
+export * from './living.js'
 
 /** 8 compass headings, clockwise from north. North is -y. */
 export type Dir8 = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
@@ -101,6 +102,8 @@ export type Feature =
   | { type: 'other'; name: string }
 
 export interface SceneCell {
+  /** Tile semantics resolved by the producer, independent of atlas ids. */
+  life?: import('./living.js').TileLife
   x: number
   y: number
   kind: CellKind
@@ -234,6 +237,7 @@ export interface SceneCell {
 export type BillboardKind = 'monster' | 'item' | 'cloud' | 'doll' | 'projectile' | 'player'
 
 export interface Billboard {
+  life?: import('./living.js').TileLife
   x: number
   y: number
   tile: TileId
@@ -306,6 +310,8 @@ export interface SceneLevel {
 }
 
 export interface Scene {
+  /** Producer identity used to discard transient effects at level transitions. */
+  levelKey?: string
   bounds: Rect
   cells: Map<CellKey, SceneCell>
   player: { x: number; y: number }
@@ -548,6 +554,8 @@ export interface MapRenderer {
   setScene(scene: Scene, now?: number): void
   setCamera(cam: Camera): void
   setCursor(cursor: SceneCursor | null): void
+  /** A confirmed visible impact, in cell coordinates and monotonic seconds. */
+  impact?(x: number, y: number, strength: number, now: number): void
   render(now?: number): void
   /** Cell centre at height (0 floor, 1 wall top), in CSS pixels; null behind the lens. */
   project?(x: number, y: number, height?: number): { x: number; y: number } | null

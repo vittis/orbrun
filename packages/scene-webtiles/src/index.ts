@@ -1,5 +1,6 @@
 import { MapFeature, MenuFlag, MouseMode, UiState, mapKey, type CellTiles, type GameState, type InvItem, type MapCell, type Monster } from '@orbrun/webtiles'
 import { verifyEnums, type Gamedata, type FlagWord } from '@orbrun/gamedata'
+import { decorateLiving } from './living.js'
 import {
   cellKey,
   cellLayoutEquals,
@@ -297,6 +298,7 @@ interface BuildRecord {
   gd: Gamedata
   player: { x: number; y: number }
   playerOnLevel: boolean
+  playerLife: string
   place: string
   demonTier: unknown
   /** Per known map cell: the scene cell and billboards built from it, in the order they were pushed. */
@@ -327,10 +329,12 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     gd,
     player: scene.player,
     playerOnLevel: scene.playerOnLevel,
+    playerLife: JSON.stringify([state.player.hp, state.player.hp_max, state.player.status.map(s => s.light || s.text || '')]),
     place: state.player.place || '',
     demonTier: state.options.tile_show_demon_tier,
     cells: new Map(),
   }
+  scene.levelKey = `${state.player.place}:${state.player.depth}`
   const prev = opts.previous
   const was = prev && builtFrom.get(prev)
   // the previous build stands for this state and gamedata, nothing global changed, and the reducer says what moved
@@ -340,6 +344,7 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
   /** The cells to build afresh: the reducer's, and the player's old and new cells (`isPlayerCell` reads the position). */
   const rebuild = incremental ? new Set<number>(opts.dirty!.cells) : null
   if (rebuild && was) {
+    if (was.playerLife !== record.playerLife) rebuild.add(mapKey(scene.player.x, scene.player.y))
     if (was.player.x !== scene.player.x || was.player.y !== scene.player.y) {
       rebuild.add(mapKey(was.player.x, was.player.y))
       rebuild.add(mapKey(scene.player.x, scene.player.y))
@@ -378,6 +383,7 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     // billboards
     const from = scene.billboards.length
     addBillboards(scene, mc, cell, gd, state)
+    decorateLiving(cell, scene.billboards.slice(from), mc, gd, state)
     record.cells.set(key, { mc, cell, billboards: scene.billboards.slice(from) })
   }
   if (rebuild && was) {

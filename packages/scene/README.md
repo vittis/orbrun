@@ -19,6 +19,11 @@ Also here, because every consumer needs them:
 - The camera: `makeCamera`, `REST_PITCH`.
 - `motion.ts`: shared player/monster arrival cadence and finite movement curves
   (`StepCadence`, `planStep`, `sampleStep`), using only confirmed movement.
+- `living.ts`: semantic tile motion and light descriptors, deterministic poses,
+  geometry-aware light pools, warm LOS illumination, and bounded transient
+  afterglows/ripples. The producer sets `Scene.levelKey` so level changes clear
+  effects; renderers can accept confirmed hit cues through `MapRenderer.impact`.
+  Invisible and remembered cells never emit light. A held actor stays still.
 - `bars.ts`: the health and magic minibar rules ported from the official
   client's cell renderer (`woundLevel`, `minibarRects`, `fillRun`, colours).
 

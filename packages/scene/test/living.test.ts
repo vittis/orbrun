@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest'
+import { cellKey, DungeonLife, emptyScene, lanternAt, lightingFor, livingPose, type SceneCell, type TileLife } from '../src/index.js'
+
+function room() {
+  const scene = emptyScene()
+  scene.playerOnLevel = true
+  for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) scene.cells.set(cellKey(x, y), {
+    x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
+    flags: { water: false, lava: false },
+  } as SceneCell)
+  return scene
+}
+const fire = { colour: [255, 100, 20] as [number, number, number], radius: 3, power: 0.6 }
+
+describe('living dungeon visibility', () => {
+  it('lights walls on their near face but neither memory nor cells behind a wall', () => {
+    const s = room()
+    s.cells.get(cellKey(0, 0))!.life = { lights: [fire] }
+    for (let y = -4; y <= 4; y++) s.cells.get(cellKey(1, y))!.occluder = true
+    s.cells.get(cellKey(0, 1))!.visibility = 'remembered'
+    const { field } = lightingFor(s)
+    expect(field.has(cellKey(1, 0))).toBe(true)
+    expect(field.has(cellKey(2, 0))).toBe(false)
+    expect(field.has(cellKey(0, 1))).toBe(false)
+    expect(lanternAt(s, s.cells.get(cellKey(0, 1))!)).toBe(0)
+    s.playerOnLevel = false
+    expect(lanternAt(s, s.cells.get(cellKey(0, 0))!)).toBe(0)
+  })
+  it('accepts elemental cloud, monster and projectile emitters and ignores remembered ones', () => {
+    const s = room()
+    s.billboards = [{ kind: 'cloud', x: 0, y: 0, tile: 10, height: 1, life: { lights: [fire] } }]
+    expect(lightingFor(s).field.get(cellKey(1, 0))?.strength).toBeGreaterThan(0)
+    s.cells.get(cellKey(0, 0))!.visibility = 'remembered'
+    expect(lightingFor(s).field.size).toBe(0)
+  })
+  it.each(['breath', 'plant', 'float', 'ooze', 'cloud', 'serpent'] as const)('keeps %s still in memory, reduced motion and held states', motion => {
+    const life: TileLife = { motion }
+    const still = livingPose(undefined, 1, 1, 1)
+    expect(livingPose(life, 1, 1, 1, false)).toEqual(still)
+    expect(livingPose({ ...life, held: true }, 1, 1, 1)).toEqual(still)
+    expect(livingPose(life, 1, 1, 1)).not.toEqual(livingPose(life, 1, 1, 2))
+  })
+  it('uses a short afterglow after a spell bolt disappears, then releases it', () => {
+    const life = new DungeonLife(), a = room()
+    a.billboards = [{ kind: 'projectile', x: 0, y: 0, tile: 10, height: 1, life: { lights: [{ ...fire, transient: true }] } }]
+    life.observe(a, 1)
+    life.observe(room(), 2)
+    expect(life.emitters(2)).toHaveLength(1)
+    expect(life.emitters(2.2)[0].power).toBeLessThan(fire.power)
+    expect(life.emitters(2.4)).toEqual([])
+    expect(life.emitters(3)).toEqual([])
+  })
+  it('makes one bounded impact ripple per observed wound decline and clears on teardown', () => {
+    const life = new DungeonLife(), a = room(), b = room()
+    a.billboards = [{ kind: 'monster', x: 1, y: 0, tile: 10, height: 1, damage: 'uninjured', ref: { id: 1 } }]
+    b.billboards = [{ ...a.billboards[0], damage: 'heavily_damaged' }]
+    life.observe(a, 1); life.observe(b, 2); life.observe(b, 2.1)
+    expect(life.ripples).toHaveLength(1)
+    life.tick(4)
+    expect(life.ripples).toEqual([])
+    life.clear()
+    expect(life.emitters(4)).toEqual([])
+  })
+  it('discards afterglows and ripples on a level change at identical coordinates', () => {
+    const life = new DungeonLife(), a = room(), b = room()
+    a.levelKey = 'D:1'; b.levelKey = 'D:2'
+    a.billboards = [{ kind: 'projectile', x: 0, y: 0, tile: 10, height: 1, life: { lights: [{ ...fire, transient: true }] } }]
+    life.observe(a, 1); life.ripple(0, 0, 1, 1); life.observe(b, 1.1)
+    expect(life.emitters(1.1)).toEqual([])
+    expect(life.ripples).toEqual([])
+  })
+  it('follows revised mutable scenes and coalesces the wound ring with its reported hit', () => {
+    const life = new DungeonLife(), scene = room()
+    scene.billboards = [{ kind: 'monster', x: 1, y: 0, tile: 10, height: 1, damage: 'uninjured', ref: { id: 1 } }]
+    life.observe(scene, 1)
+    scene.billboards[0].damage = 'moderately_damaged'; scene.revision++
+    life.observe(scene, 2); life.ripple(1, 0, 2.05, 1)
+    expect(life.ripples).toHaveLength(1)
+    expect(life.ripples[0].strength).toBe(1)
+  })
+  it('does not let a fading beam emit after its source leaves LOS', () => {
+    const s = room()
+    s.cells.get(cellKey(0, 0))!.visibility = 'remembered'
+    expect(lightingFor(s, [{ ...fire, x: 0, y: 0 }]).field.size).toBe(0)
+  })
+})

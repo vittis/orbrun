@@ -1,5 +1,6 @@
 import {
   cellKey,
+  DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
   dirToYaw,
   flashOf,
   minibarRects,
@@ -24,6 +25,9 @@ import {
  */
 
 export interface Render2dOptions {
+  /** Enable atmosphere in the main dungeon, leaving maps and thumbnails static. */
+  living?: boolean
+  animate?: boolean
   /** Cell size in CSS pixels. */
   cellSize?: number
   /**
@@ -234,9 +238,18 @@ export class Render2d implements MapRenderer {
    * two half-covered edges leave a seam of what lies behind the canvas.
    */
   private seam = 0
+  private life = new DungeonLife()
+  private active = false
+  private sceneRevision = -1
+  private time: number | null = null
+  private glow = new Map<CellKey, import('@orbrun/scene').Light>()
+  private lightTime = -Infinity
+  private lightPools: import('@orbrun/scene').LightPool[] = []
 
   constructor(opts: Render2dOptions = {}) {
     this.opts = {
+      living: opts.living ?? false,
+      animate: opts.animate ?? true,
       cellSize: opts.cellSize ?? 32,
       mode: opts.mode ?? 'tiles',
       follow: opts.follow ?? true,
@@ -262,7 +275,11 @@ export class Render2d implements MapRenderer {
     return this.opts.cellSize
   }
 
+  get animating() { return this.opts.living && this.opts.animate && this.active }
+
   setOptions(opts: Render2dOptions) {
+    if (opts.living !== undefined) this.opts.living = opts.living
+    if (opts.animate !== undefined) this.opts.animate = opts.animate
     if (opts.cellSize !== undefined) this.opts.cellSize = opts.cellSize
     if (opts.mode !== undefined) this.opts.mode = opts.mode
     if (opts.follow !== undefined) this.opts.follow = opts.follow
@@ -289,8 +306,10 @@ export class Render2d implements MapRenderer {
   setTiles(tiles: TileSource): void {
     this.tiles = tiles
   }
-  setScene(scene: Scene): void {
+  setScene(scene: Scene, now = performance.now() / 1000): void {
+    if (this.opts.living && (scene !== this.scene || scene.revision !== this.sceneRevision)) { this.life.observe(scene, now); this.lightTime = -Infinity }
     this.scene = scene
+    this.sceneRevision = scene.revision
   }
   setCamera(cam: Camera): void {
     this.camera = cam
@@ -308,6 +327,8 @@ export class Render2d implements MapRenderer {
     }
   }
   destroy(): void {
+    this.life.clear()
+    this.active = false
     this.canvas = null
     this.ctx = null
   }
@@ -332,6 +353,7 @@ export class Render2d implements MapRenderer {
     const ctx = this.ctx
     const scene = this.scene
     if (!ctx || !scene) return
+    this.time = null
     const cell = scene.cells.get(cellKey(x, y))
     if (!cell) return
     const dpr = this.dpr
@@ -443,10 +465,26 @@ export class Render2d implements MapRenderer {
     return this.scene.cells.has(k) ? k : null
   }
 
-  render(): void {
+  impact(x: number, y: number, strength: number, now: number) {
+    if (!this.opts.living || !this.opts.animate || this.scene?.cells.get(cellKey(x, y))?.visibility !== 'visible') return
+    this.life.ripple(x, y, now, strength)
+    this.active = true
+  }
+
+  render(now = performance.now() / 1000): void {
     const ctx = this.ctx
     const scene = this.scene
     if (!ctx || !scene || !this.canvas) return
+    this.active = false
+    const living = this.opts.living && this.opts.mode === 'tiles' && !!this.tiles
+    this.time = living && this.opts.animate ? now : null
+    this.life.tick(now)
+    if (living && now - this.lightTime > 0.1) {
+      const lighting = lightingFor(scene, this.life.emitters(now))
+      this.glow = lighting.field
+      this.lightPools = lighting.pools
+      this.lightTime = now
+    }
     const cs = this.opts.cellSize
     const dpr = this.dpr
     ctx.save()
@@ -601,8 +639,25 @@ export class Render2d implements MapRenderer {
         const alpha = b.alpha ?? (b.kind === 'cloud' ? 0.75 : 1)
         if (alpha !== 1) ctx.globalAlpha = alpha
         upright(sx, sy, () => {
+          const visible = scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible'
+          const pose = livingPose(b.life, b.x, b.y, now, living && this.opts.animate && visible)
+          if (living && visible && b.life?.motion && b.life.motion !== 'still' && !b.life.held) this.active = true
+          ctx.save()
+          if (living && this.opts.animate && visible && b.life) {
+            ctx.translate(sx + cs / 2 + pose.x * cs, sy + cs - pose.y * cs)
+            ctx.rotate(pose.angle); ctx.scale(pose.sx, pose.sy)
+            ctx.translate(-sx - cs / 2, -sy - cs)
+          }
           if (b.layers) for (const l of b.layers) this.drawTile(ctx, l.tile, sx, sy, cs, l.ox, l.oy, l.ymax)
           else this.drawTile(ctx, b.tile, sx, sy, cs)
+          if (living && visible && (b.life?.motion === 'gold' || b.life?.motion === 'gem') && pose.glow > 0.05) {
+            ctx.globalAlpha = pose.glow * 0.8
+            ctx.fillStyle = b.life.motion === 'gold' ? '#fff0b0' : '#c4f4ff'
+            const size = Math.max(1, cs / 32)
+            ctx.fillRect(sx + cs * 0.5 - size * 2, sy + cs * 0.7, size * 5, size)
+            ctx.fillRect(sx + cs * 0.5, sy + cs * 0.7 - size * 2, size, size * 5)
+          }
+          ctx.restore()
         })
         if (alpha !== 1) ctx.globalAlpha = 1
       }
@@ -641,6 +696,20 @@ export class Render2d implements MapRenderer {
         }
       }
     }
+    if (living) for (const { source, cells } of this.lightPools) {
+      const x = (source.x - ox + 0.5) * cs, y = (source.y - oy + 0.5) * cs, radius = source.radius * cs
+      if (!inView(x - cs / 2, y - cs / 2) && (x + radius < 0 || y + radius < 0 || x - radius > this.width || y - radius > this.height)) continue
+      this.active = true
+      ctx.save(); ctx.beginPath()
+      for (const cell of cells) ctx.rect((cell.x - ox) * cs, (cell.y - oy) * cs, cs, cs)
+      ctx.clip(); ctx.globalCompositeOperation = 'screen'
+      const power = source.power * (this.opts.animate ? lightPulse(source, now) : 1)
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
+      gradient.addColorStop(0, `rgba(${source.colour},${power * 0.5})`)
+      gradient.addColorStop(0.45, `rgba(${source.colour},${power * 0.12})`)
+      gradient.addColorStop(1, `rgba(${source.colour},0)`)
+      ctx.fillStyle = gradient; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2); ctx.restore()
+    }
     // cell badges (travel trail, new stairs, exclusions) and veils, above everything at the cell
     if (!minimap) {
       for (const cell of scene.cells.values()) {
@@ -650,12 +719,13 @@ export class Render2d implements MapRenderer {
         if (cell.icons && !glyphs) for (const i of cell.icons) this.drawTile(ctx, i, sx, sy, cs)
         if (cell.kind === 'unknown') continue
         if (cell.visibility !== 'visible') {
-          ctx.fillStyle = cell.flags.magicMapped ? 'rgba(0,0,40,0.45)' : 'rgba(0,0,0,0.45)'
+          ctx.fillStyle = living ? 'rgba(10,20,42,0.62)' : cell.flags.magicMapped ? 'rgba(0,0,40,0.45)' : 'rgba(0,0,0,0.45)'
           ctx.fillRect(sx, sy, cs, cs)
         } else if (cell.flags.outOfRange) {
           ctx.fillStyle = 'rgba(0,0,0,0.3)'
           ctx.fillRect(sx, sy, cs, cs)
         }
+        if (living) this.livingCell(ctx, cell, sx, sy, cs, now)
         // the flash covers the whole cell, over everything drawn in it
         // (cell_renderer.js `render_flash`); the 3D view carries the same
         // wash through the cell's air
@@ -752,6 +822,46 @@ export class Render2d implements MapRenderer {
    * that stands on the dungeon (`SceneCell.freestanding`): a statue, a tree
    * stands in its cell like them, where a door or a staircase is built in.
    */
+  private livingCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number, now: number) {
+    if (cell.visibility !== 'visible' || !this.scene) return
+    const time = this.opts.animate ? now : 0
+    ctx.save(); ctx.beginPath(); ctx.rect(sx, sy, cs, cs); ctx.clip()
+    const warm = lanternAt(this.scene, cell)
+    ctx.globalCompositeOperation = 'screen'
+    ctx.fillStyle = `rgba(255,191,110,${warm})`; ctx.fillRect(sx, sy, cs, cs)
+    const light = this.glow.get(cellKey(cell.x, cell.y))
+    if (light && cell.occluder) { ctx.fillStyle = `rgba(${light.colour},${light.strength})`; ctx.fillRect(sx, sy, cs, cs); this.active = true }
+    ctx.globalCompositeOperation = 'source-over'
+    const motion = cell.life?.motion
+    if (cell.flags.water || cell.flags.lava) {
+      this.active = true
+      ctx.strokeStyle = cell.flags.lava ? 'rgba(255,173,52,0.23)' : 'rgba(173,231,245,0.15)'
+      ctx.lineWidth = Math.max(0.7, cs / 48)
+      for (let i = 0; i < 3; i++) {
+        const phase = time * (cell.flags.lava ? 0.5 : 1.2) + cell.x * 1.7 + cell.y + i * 2
+        ctx.beginPath(); ctx.ellipse(sx + cs * (0.5 + Math.sin(phase) * 0.2), sy + cs * (i + 0.5) / 3, cs * 0.24, cs * 0.055, 0, 0, Math.PI * 2); ctx.stroke()
+      }
+    }
+    if (motion && motion !== 'still') this.active = true
+    const pose = livingPose(cell.life, cell.x, cell.y, time, this.opts.animate)
+    if (pose.glow) { ctx.fillStyle = `rgba(180,215,255,${pose.glow * 0.035})`; ctx.fillRect(sx, sy, cs, cs) }
+    for (const ripple of this.opts.animate ? this.life.ripples : []) {
+      const age = now - ripple.born
+      if (age < 0 || age >= 1.5) continue
+      this.active = true; ctx.strokeStyle = `rgba(225,235,245,${ripple.strength * (1 - age / 1.5) * 0.4})`
+      ctx.beginPath(); ctx.arc(sx + (ripple.x - cell.x + 0.5) * cs, sy + (ripple.y - cell.y + 0.5) * cs, cs * (0.1 + age * 1.6), 0, Math.PI * 2); ctx.stroke()
+    }
+    // Dark, curling fingers sit only along unknown neighbours; no hidden tiles are sampled.
+    for (const [dx, dy] of [[0,-1],[1,0],[0,1],[-1,0]]) {
+      const n = this.scene.cells.get(cellKey(cell.x + dx, cell.y + dy))
+      if (n && n.kind !== 'unknown' && n.visibility !== 'unseen') continue
+      const x = sx + cs * (dx > 0 ? 1 : dx < 0 ? 0 : 0.5), y = sy + cs * (dy > 0 ? 1 : dy < 0 ? 0 : 0.5)
+      const g = ctx.createLinearGradient(x, y, x - dx * cs * 0.23, y - dy * cs * 0.23)
+      g.addColorStop(0, 'rgba(0,0,0,0.42)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(sx, sy, cs, cs)
+    }
+    ctx.restore()
+  }
+
   private drawTileCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number, upright?: (sx: number, sy: number, draw: () => void) => void) {
     if (cell.kind === 'unknown') return
     // the base tile fills the square, so it alone takes the seam margin
@@ -765,7 +875,12 @@ export class Render2d implements MapRenderer {
     if (cell.underlays) for (const o of cell.underlays) this.drawTile(ctx, o, sx, sy, cs)
     if (cell.featureTile !== undefined) {
       const feature = cell.featureTile
-      if (upright) upright(sx, sy, () => this.drawTile(ctx, feature, sx, sy, cs))
+      if (upright) upright(sx, sy, () => {
+        if (this.time === null || cell.visibility !== 'visible' || !cell.life) return this.drawTile(ctx, feature, sx, sy, cs)
+        const pose = livingPose(cell.life, cell.x, cell.y, this.time)
+        ctx.save(); ctx.translate(sx + cs / 2, sy + cs); ctx.rotate(pose.angle); ctx.scale(pose.sx, pose.sy)
+        ctx.translate(-sx - cs / 2, -sy - cs); this.drawTile(ctx, feature, sx, sy, cs); ctx.restore()
+      })
       else this.drawTile(ctx, feature, sx, sy, cs)
     }
     if (cell.kind === 'door' && cell.wallOverlays) for (const o of cell.wallOverlays) this.drawTile(ctx, o, sx, sy, cs)

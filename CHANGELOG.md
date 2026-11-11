@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.18 — 2026-11-11
+
+- Add colored light from torches, elemental clouds, glowing creatures and spell bolts across dungeon views, with warm line of sight, cool memory and curling shadows at unexplored edges.
+- Animate creatures by body and state, trees, liquids, clouds, gold and magical terrain; hits, water steps and teleport arrivals send out ripples. Respect reduced motion and keep remembered tiles still.
+- Prevent duplicate damage numbers when an attack message and its monster wound-status update arrive in separate frames. Wound flags inform hit estimates without producing another damage popup.
+
 ## 0.3.17 — 2026-11-11
 
 - Align green item borders with upright sprites in Dungeon (2.5D), keeping travel and other ground markers in place.

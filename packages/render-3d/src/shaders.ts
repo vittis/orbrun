@@ -11,12 +11,56 @@
 
 /** Uniforms and helpers for the cell fields. */
 const FIELDS = /* glsl */ `
+uniform sampler2D lightMap;
+uniform float lifeTime;
+uniform float lifeMoving;
+uniform vec4 ripples[12];
+uniform int rippleCount;
 uniform sampler2D shadeMap;
 uniform sampler2D flashMap;
 uniform vec2 fieldOrigin;
 uniform vec2 fieldSize;
 float shadeAt(vec2 cell) {
   return texture(shadeMap, (cell - fieldOrigin + 0.5) / fieldSize).r;
+}
+vec3 livingLight(vec3 c, vec3 world, vec2 cell) {
+  vec2 uv = (cell - fieldOrigin + 0.5) / fieldSize;
+  vec4 light = texture(lightMap, uv);
+  float material = floor(light.a * 255.0 + 0.5);
+  c *= light.rgb;
+  if (material > 127.0) return c;
+  float t = lifeTime;
+  float phase = world.x * 9.0 + world.z * 7.0;
+  if (world.y < 0.03 && material > 0.5 && material < 2.5) {
+    float wave = sin(phase + t * (material < 1.5 ? 1.6 : 0.6)) * sin(world.z * 14.0 - t);
+    c += (material < 1.5 ? vec3(0.025, 0.045, 0.055) : vec3(0.07, 0.025, 0.002)) * (wave * 0.5 + 0.5) * lifeMoving;
+  }
+  if (material > 2.5 && material < 5.5) c *= 1.0 + sin(t * (material < 3.5 ? 8.0 : 1.5) + phase) * 0.045 * lifeMoving;
+  if (world.y < 0.04) for (int i = 0; i < 12; i++) {
+    if (i >= rippleCount) break;
+    float age = t - ripples[i].z;
+    if (age < 0.0 || age > 1.5 || ripples[i].w <= 0.0) continue;
+    float d = length(world.xz - ripples[i].xy - 0.5);
+    float ring = exp(-pow((d - age * 1.6) * 18.0, 2.0));
+    c += vec3(0.16, 0.18, 0.2) * ring * ripples[i].w * (1.0 - age / 1.5) * lifeMoving;
+  }
+  // Unknown neighbours grow soft, curling shadow fingers along known ground.
+  if (world.y < 0.04) {
+    vec2 local = world.xz - cell;
+    vec2 directions[4] = vec2[4](vec2(0,-1),vec2(1,0),vec2(0,1),vec2(-1,0));
+    float fog = 0.0;
+    for (int i = 0; i < 4; i++) {
+      vec2 d = directions[i];
+      float neighbour = texture(lightMap, (cell + d - fieldOrigin + 0.5) / fieldSize).a;
+      if (neighbour < 0.99) continue;
+      float edge = d.x > 0.5 ? 1.0-local.x : d.x < -0.5 ? local.x : d.y > 0.5 ? 1.0-local.y : local.y;
+      float along = abs(d.x) > 0.5 ? world.z : world.x;
+      float curl = 0.11 + 0.055 * sin(along * 17.0 + sin(along * 7.0 + t * 0.4));
+      fog = max(fog, 1.0 - smoothstep(0.0, curl, edge));
+    }
+    c *= 1.0 - fog * 0.5;
+  }
+  return c;
 }
 vec3 flashed(vec3 c, vec3 world) {
   vec4 flash = texture(flashMap, (world.xz - fieldOrigin) / fieldSize);
@@ -165,7 +209,7 @@ void main() {
   vec4 t = texture(map, vUv);
 #endif
   if (t.a < alphaTest) discard;
-  vec3 c = t.rgb * vColor * shadeAt(vCell);
+  vec3 c = livingLight(t.rgb * vColor * shadeAt(vCell), vWorld, vCell);
   fragColor = outColor(vec4(flashed(c, vWorld) * overhead(vWorld, vView, vCut), t.a * opacity));
 }`
 
@@ -499,6 +543,7 @@ void main() {
   else {
     out3 = colour * fColor.rgb;
     if ((mode & 16) != 0) out3 *= shadeAt(fCell);
+    if ((mode & 32) == 0) out3 = livingLight(out3, world, fCell);
   }
   // the hands stand in a frame of their own, with no world to read the field at: they take the flash handed to them
   out3 = (mode & 32) != 0 ? mix(out3, flashOverride.rgb, flashOverride.a) : flashed(out3, world);

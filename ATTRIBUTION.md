@@ -11,6 +11,16 @@ Licensed under the GNU Affero General Public License, version 3 or (at your
 option) any later version (AGPL-3.0-or-later). See [LICENSE](LICENSE) for the
 full text.
 
+## Living dungeon inspiration
+
+The environmental lighting and living-tile behavior are inspired by
+[Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl),
+especially its [alive.js](https://github.com/vimuston/super-dungeon-crawl/blob/main/overlay/webserver/game_data/static/alive.js)
+and [light.js](https://github.com/vimuston/super-dungeon-crawl/blob/main/overlay/webserver/game_data/static/light.js).
+This client adapts those presentation ideas to its own scene metadata,
+Canvas renderers and first-person renderer; it does not load the reference
+client's scripts at runtime.
+
 ## Relationship to DCSS
 
 Orbrun connects to standard DCSS WebTiles servers and speaks the same

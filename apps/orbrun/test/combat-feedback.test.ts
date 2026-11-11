@@ -192,11 +192,11 @@ describe('estimated outgoing damage', () => {
     expect(hits).toHaveLength(1)
     expect(hits[0]).toMatchObject({ actorId: 'id:2', x: 3, estimated: true })
   })
-  it('infers damage-over-time wound changes once, without fabricating hits on healing or disappearance', () => {
+  it('does not emit independent damage numbers from wound-status changes', () => {
     const { feedback } = harness()
     feedback.flush(world(wounded(1, 1, 'lightly_damaged', 50)))
     const next = world(wounded(1, 1, 'heavily_damaged', 50))
-    expect(feedback.flush(next)).toMatchObject([{ text: '≈20', estimated: true, fromWound: true }])
+    expect(feedback.flush(next)).toEqual([])
     expect(feedback.flush(next)).toEqual([])
     expect(feedback.flush(world(wounded(1, 1, 'lightly_damaged', 50)))).toEqual([])
     expect(feedback.flush(world())).toEqual([])
@@ -207,5 +207,26 @@ describe('estimated outgoing damage', () => {
     expect(feedback.flush(world(wounded(2, 2, 'uninjured')))).toEqual([])
     const changed = { ...wounded(2, 2, 'heavily_damaged'), name: 'orc' }
     expect(feedback.flush(world(changed))).toEqual([])
+  })
+})
+
+// Protocol messages and map changes can land on opposite sides of a render frame.
+describe('one number per reported attack', () => {
+  it.each([false, true])('does not double an attack when its wound update follows a frame (exact=%s)', exact => {
+    const { feedback, text, send } = harness()
+    const scene = world(wounded(1, 1, 'uninjured', 50))
+    feedback.flush(scene)
+    text(exact ? 'You hit the goblin for 8!' : 'You hit the goblin!')
+    expect(feedback.flush(scene)).toHaveLength(1)
+    send({ msg: 'player', turn: 101 })
+    expect(feedback.flush(world(wounded(1, 1, 'heavily_damaged', 50)))).toEqual([])
+  })
+  it('does not double an attack when its wound update arrives before the attack message', () => {
+    const { feedback, text } = harness()
+    feedback.flush(world(wounded(1, 1, 'uninjured', 50)))
+    const next = world(wounded(1, 1, 'heavily_damaged', 50))
+    expect(feedback.flush(next)).toEqual([])
+    text('You hit the goblin for 8!')
+    expect(feedback.flush(next)).toMatchObject([{ text: '8', amount: 8 }])
   })
 })

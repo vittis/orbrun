@@ -1,0 +1,66 @@
+{
+  "passed": 15,
+  "checks": [
+    {
+      "name": "3d animated",
+      "passed": true
+    },
+    {
+      "name": "3d still",
+      "passed": true
+    },
+    {
+      "name": "2.5d 960 DPR1 animated",
+      "passed": true
+    },
+    {
+      "name": "2.5d 960 DPR1 still",
+      "passed": true
+    },
+    {
+      "name": "2.5d 960 DPR1 impact",
+      "passed": true
+    },
+    {
+      "name": "2.5d 390 DPR2 animated",
+      "passed": true
+    },
+    {
+      "name": "2.5d 390 DPR2 still",
+      "passed": true
+    },
+    {
+      "name": "2.5d 390 DPR2 impact",
+      "passed": true
+    },
+    {
+      "name": "2d 960 DPR1 animated",
+      "passed": true
+    },
+    {
+      "name": "2d 960 DPR1 still",
+      "passed": true
+    },
+    {
+      "name": "2d 960 DPR1 impact",
+      "passed": true
+    },
+    {
+      "name": "2d 390 DPR2 animated",
+      "passed": true
+    },
+    {
+      "name": "2d 390 DPR2 still",
+      "passed": true
+    },
+    {
+      "name": "2d 390 DPR2 impact",
+      "passed": true
+    },
+    {
+      "name": "504 raster checks",
+      "passed": true,
+      "failures": []
+    }
+  ]
+}

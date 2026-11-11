@@ -1,4 +1,4 @@
-import { cellKey, shadeOf, type Billboard, type Scene, type SceneCell, type TileRect } from '@orbrun/scene'
+import { cellKey, shadeOf, type Billboard, type Scene, type SceneCell, type TileRect, type TileLife } from '@orbrun/scene'
 
 /**
  * Standing sprites as instances (shaders.ts `SPRITE_VERT`): what a monster,
@@ -74,6 +74,7 @@ export type Tint = { r: number; g: number; b: number }
 export type SpritePass = 'fixture' | 'opaque' | 'blend' | 'ghostVisible' | 'ghostRemembered'
 
 export interface SpriteInstance {
+  life?: TileLife
   atlas: string
   pass: SpritePass
   /** World position of the sprite's origin: the middle of its cell on the floor, lifted for a projectile. */
@@ -111,6 +112,7 @@ export interface SpriteLayer {
 }
 
 export interface StandOptions {
+  life?: TileLife
   height: number
   shade: number
   tint: Tint
@@ -183,6 +185,7 @@ export function stand(x: number, y: number, layers: readonly SpriteLayer[], o: S
     // the ink: a hull round a block, a flat ring round a ghost; none on a badge, a bar or a board at a heading (which has its ring)
     const grow = l.flat ? 0 : ghost ? 1 : board ? 0 : solid ? (o.grow ?? 1) : (o.grow ?? 0)
     out.push({
+      life: l.flat ? undefined : o.life,
       atlas: l.r.atlas,
       pass: o.pass,
       anchor: [x + 0.5, o.lift ?? 0, y + 0.5],
@@ -230,7 +233,7 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
       const r = tile(b.tile)
       if (!r) continue
       // a cloud carries its light in its colour: it blends, and reads no map
-      sprites.push(...stand(b.x, b.y, [{ r, ox: 0, oy: 0 }], { height: b.height, shade, tint, shadeMap: false, thick: false, pass: 'blend', alpha: CLOUD_ALPHA, grow: 0, back: -CLOUD_FORWARD }))
+      sprites.push(...stand(b.x, b.y, [{ r, ox: 0, oy: 0 }], { life: b.life, height: b.height, shade, tint, shadeMap: false, thick: false, pass: 'blend', alpha: CLOUD_ALPHA, grow: 0, back: -CLOUD_FORWARD }))
       continue
     }
     const layers: SpriteLayer[] = []
@@ -258,6 +261,7 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
     const sel = selected && selected.x === b.x && selected.y === b.y
     sprites.push(
       ...stand(b.x, b.y, layers, {
+        life: b.life,
         height: b.height,
         shade: translucent ? shade : 1,
         tint,
@@ -278,7 +282,8 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
       const ghostLayers = layers.map((l, i) => (i < nSprite ? l : { ...l, tint: BADGE_TINT }))
       sprites.push(
         ...stand(b.x, b.y, ghostLayers, {
-          height: b.height,
+          life: b.life,
+        height: b.height,
           shade: 1,
           tint: gt,
           shadeMap: visible,
@@ -357,7 +362,7 @@ export function fixtureInstances(scene: Scene, tile: TileLookup, framed: Readonl
       continue
     }
     const h = stairs ? STAIR_H : FIXTURE_H
-    out.push(...stand(cell.x, cell.y, [{ r, ox: 0, oy: 0 }], { height: h, shade: 1, tint, shadeMap: true, thick: true, pass: 'fixture', back: FIXTURE_BACK }))
+    out.push(...stand(cell.x, cell.y, [{ r, ox: 0, oy: 0 }], { life: cell.life, height: h, shade: 1, tint, shadeMap: true, thick: true, pass: 'fixture', back: FIXTURE_BACK }))
   }
   return out
 }

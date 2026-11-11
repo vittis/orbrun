@@ -209,15 +209,9 @@ export class CombatFeedback {
       if (event.kind === 'hit') lastHit.set(wanted, b)
       return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height) }]
     })
-    const hitActors = new Set(resolved.filter(p => p.kind === 'hit' || p.kind === 'kill').map(p => p.actorId))
-    // Poison, clouds and allies can hurt a creature without an attack sentence.
-    // Only a visible, same-identity wound decline counts; disappearance is not death.
-    for (const [id, now] of after) {
-      const was = before.get(id)
-      if (!was || hitActors.has(id) || !was.damage || !now.damage || woundRank(now.damage) <= woundRank(was.damage) || !sameForm(was, now)) continue
-      const amount = estimateDamage({ bands: [], averageHp: averageHp(now), before: was.damage, after: now.damage })
-      if (amount !== null) resolved.push({ kind: 'hit', text: '≈' + amount, amount, estimated: true, fromWound: true, actorId: id, turn: this.previous.turn, x: now.x, y: now.y, height: Math.min(0.9, now.height), heavy: amount >= 18 })
-    }
+    // Wound flags arrive independently of attack messages (often in another
+    // render frame or player turn). They refine reported hits below, but cannot
+    // establish another hit: doing so creates duplicate numbers for one attack.
     const groups = new Map<string, CombatPopup[]>()
     for (const event of resolved) if (event.kind === 'hit' && event.actorId && !event.fromWound) {
       const list = groups.get(event.actorId) ?? []

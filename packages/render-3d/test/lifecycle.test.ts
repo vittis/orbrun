@@ -87,7 +87,7 @@ describe('resource ownership', () => {
     settle(bed)
     const t = track(g)
     expect(t.tracked.geometry).toBeGreaterThan(3)
-    expect(t.tracked.texture).toBe(3) // the atlas, the shade and flash fields
+    expect(t.tracked.texture).toBe(4) // the atlas, shade, flash and environmental-light fields
     r.destroy()
     expect(t.disposed.geometry).toBe(t.tracked.geometry)
     expect(t.disposed.material).toBe(t.tracked.material)

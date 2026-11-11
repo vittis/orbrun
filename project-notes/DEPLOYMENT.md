@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.17 point at the `cloudflare-online-v1.14` release tag in
+Source links for 0.3.18 point at the `cloudflare-online-v1.15` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -320,3 +320,18 @@ source tag `cloudflare-online-v1.14`. Includes raised item cursor alignment,
 neutral unexplored mist, stronger LOS/memory contrast and removal of player
 lighting. Current release validation and rollout results are recorded in STATUS
 and SESSION_LOG; automatic Workers Builds follows the main-branch push.
+
+
+## 0.3.18 living dungeon release — 2026-11-11
+
+User authorized commit to main and deployment. Prepared immutable source tag:
+`cloudflare-online-v1.15`. Adds shared semantic lighting, material/creature
+motion, clouds, cold memory and impact rings to all three dungeon views, and
+removes independent wound-status damage popups that duplicate reported hits.
+Source links advance together with the app version. The prior production
+source is 0.3.17 (`896dcfc`, `cloudflare-online-v1.14`).
+
+Feature validation: 2,109 unit tests pass, two optional engine tests skipped;
+TypeScript, production build, 14 real-browser behavior checks and all 504
+raster acceptance checks pass. Final release checks run before the atomic
+main/source-tag push; hosted verification is recorded after rollout.

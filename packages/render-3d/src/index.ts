@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import {
   cellKey,
+  DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
   flashOf,
   getCell,
   shadeOf,
@@ -285,7 +286,16 @@ export class Render3d implements MapRenderer {
   // ---- the fields
   private shadeTex: THREE.DataTexture | null = null
   private flashTex: THREE.DataTexture | null = null
+  private lightTex: THREE.DataTexture | null = null
+  private life = new DungeonLife()
+  private livingActive = false
+  private lightTime = -Infinity
   private fieldUniforms = {
+    lightMap: { value: null as THREE.Texture | null },
+    lifeTime: { value: 0 },
+    lifeMoving: { value: 1 },
+    rippleCount: { value: 0 },
+    ripples: { value: Array.from({ length: 12 }, () => new THREE.Vector4(0, 0, -100, 0)) },
     shadeMap: { value: null as THREE.Texture | null },
     flashMap: { value: null as THREE.Texture | null },
     fieldOrigin: { value: new THREE.Vector2(0, 0) },
@@ -654,7 +664,10 @@ export class Render3d implements MapRenderer {
   }
 
   setScene(scene: Scene, now = nowSeconds()): void {
+    this.life.observe(scene, now)
+    if (this.scene !== scene) this.lightTime = -Infinity
     this.scene = scene
+    this.livingActive = scene.billboards.some(b => b.life?.motion && b.life.motion !== 'still' && !b.life.held && scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible') || [...scene.cells.values()].some(c => c.visibility === 'visible' && (c.life?.motion || c.life?.lights?.length))
     this.trackMotion(now)
   }
 
@@ -770,7 +783,7 @@ export class Render3d implements MapRenderer {
 
   /** True while something is still moving, so the host keeps rendering frames. */
   get animating(): boolean {
-    return !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
+    return this.opts.motion && (this.livingActive || this.life.active) || !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -805,6 +818,11 @@ export class Render3d implements MapRenderer {
     this.depthTarget?.dispose()
     this.depthTarget = null
     this.ghostUniforms.sceneDepth.value = null
+    this.life.clear()
+    this.livingActive = false
+    this.lightTex?.dispose()
+    this.lightTex = null
+    this.fieldUniforms.lightMap.value = null
     this.shadeTex?.dispose()
     this.shadeTex = null
     this.flashTex?.dispose()
@@ -1063,7 +1081,7 @@ export class Render3d implements MapRenderer {
 
   // ------------------------------------------------------------ the fields
 
-  private updateFields(scene: Scene) {
+  private updateFields(scene: Scene, now = nowSeconds()) {
     this.stats.fieldUpdates++
     const b = scene.bounds
     const ox = b.left - 1, oz = b.top - 1
@@ -1118,6 +1136,34 @@ export class Render3d implements MapRenderer {
     }
     shade.needsUpdate = true
     flash.needsUpdate = true
+    this.updateAtmosphere(scene, now)
+  }
+
+  private updateAtmosphere(scene: Scene, now: number) {
+    const w = this.fieldUniforms.fieldSize.value.x, h = this.fieldUniforms.fieldSize.value.y
+    const origin = this.fieldUniforms.fieldOrigin.value
+    let texture = this.lightTex
+    if (!texture || texture.image.width !== w || texture.image.height !== h) {
+      texture?.dispose()
+      texture = this.lightTex = new THREE.DataTexture(new Uint8Array(w * h * 4), w, h, THREE.RGBAFormat)
+      texture.magFilter = texture.minFilter = THREE.LinearFilter
+      texture.generateMipmaps = false
+      this.fieldUniforms.lightMap.value = texture
+    }
+    const data = texture.image.data as Uint8Array
+    data.fill(255)
+    const time = this.opts.motion ? now : 0
+    const field = lightingFor(scene, this.life.emitters(now).map(s => ({ ...s, power: s.power * (this.opts.motion ? lightPulse(s, time) : 1) }))).field
+    for (const [key, cell] of scene.cells) {
+      const i = ((cell.y - origin.y) * w + cell.x - origin.x) * 4
+      if (i < 0 || i + 3 >= data.length) continue
+      const light = field.get(key), warm = lanternAt(scene, cell)
+      const rgb = cell.visibility === 'visible' ? [0.87 + warm, 0.85 + warm * 0.55, 0.83 + warm * 0.2] : [0.58, 0.69, 0.9]
+      for (let j = 0; j < 3; j++) data[i + j] = Math.round(Math.min(1, rgb[j] + (light ? light.colour[j] / 255 * light.strength * 0.6 : 0)) * 255)
+      data[i + 3] = cell.visibility !== 'visible' ? 128 : cell.flags?.lava ? 2 : cell.flags?.water ? 1 : cell.life?.motion === 'flame' ? 3 : cell.life?.motion === 'crystal' ? 4 : cell.life?.motion === 'portal' || cell.life?.motion === 'altar' ? 5 : 0
+    }
+    texture.needsUpdate = true
+    this.lightTime = now
   }
 
   // ------------------------------------------------------------- the crowd
@@ -1158,8 +1204,17 @@ export class Render3d implements MapRenderer {
       }
       if (a.peeled !== true) return
       const o = offsetOf(inst.moverId)
-      const anchor = o ? [inst.anchor[0] + o.x, inst.anchor[1], inst.anchor[2] + o.y] : inst.anchor
-      this.batch(a, inst.pass).push([anchor, inst.quad, inst.z, inst.texel, inst.color, inst.misc, inst.cell])
+      const visible = this.scene?.cells.get(cellKey(inst.x, inst.y))?.visibility === 'visible'
+      const pose = livingPose(inst.life, inst.x, inst.y, now, this.opts.motion && visible)
+      // Isotropic texel scaling preserves the voxel ray march and layered dolls.
+      const scale = pose.sy
+      const anchor = [inst.anchor[0] + (o?.x ?? 0) + pose.x + pose.angle * 0.35, inst.anchor[1] + pose.y, inst.anchor[2] + (o?.y ?? 0)]
+      const quad = inst.quad.map(v => v * scale)
+      const z = inst.z.map(v => v * scale)
+      const misc = [...inst.misc]; misc[2] *= scale
+      const colour = [...inst.color]
+      if (inst.life?.motion === 'gold' || inst.life?.motion === 'gem') for (let i = 0; i < 3; i++) colour[i] *= 1 + pose.glow * 0.35
+      this.batch(a, inst.pass).push([anchor, quad, z, inst.texel, colour, misc, inst.cell])
       this.stats.spriteWrites++
     }
     this.ghostCount = 0
@@ -1236,11 +1291,24 @@ export class Render3d implements MapRenderer {
     return dt
   }
 
+  impact(x: number, y: number, strength: number, now: number) {
+    if (!this.opts.motion || this.scene?.cells.get(cellKey(x, y))?.visibility !== 'visible') return
+    this.life.ripple(x, y, now, strength)
+  }
+
   render(now = nowSeconds()): void {
     const r = this.renderer
     const scene = this.scene
     const cam = this.camera
     if (!r || !scene || !cam) return
+    this.life.tick(now)
+    this.fieldUniforms.lifeTime.value = this.opts.motion ? now : 0
+    this.fieldUniforms.lifeMoving.value = this.opts.motion ? 1 : 0
+    this.fieldUniforms.rippleCount.value = this.opts.motion ? this.life.ripples.length : 0
+    this.fieldUniforms.ripples.value.forEach((v, i) => {
+      const ripple = this.opts.motion ? this.life.ripples[i] : undefined
+      v.set(ripple?.x ?? 0, ripple?.y ?? 0, ripple?.born ?? -100, ripple?.strength ?? 0)
+    })
     this.lift = Number.isNaN(this.vmLift) ? NaN : this.liftEnvelope(now - this.vmLift)
     if (Number.isNaN(this.lift)) this.vmLift = NaN
     // a step that ends this frame leaves the crowd standing where the last frame drew it: it is written once more, on its cell
@@ -1262,9 +1330,10 @@ export class Render3d implements MapRenderer {
         this.grid = grid
         this.rebuildLevel(scene, grid)
       }
-      this.updateFields(scene)
+      this.updateFields(scene, now)
       this.mark?.('fields')
     }
+    if (now - this.lightTime >= 0.1) this.updateAtmosphere(scene, now)
     if (this.mesher.hasPending && !builtLevel) {
       this.placeChunks(this.mesher.continue_(LEVEL_BUDGET_MS))
       this.mark?.('level')
@@ -1279,7 +1348,7 @@ export class Render3d implements MapRenderer {
       this.crowd = sprites
       this.shadows = shadows
       this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
-    } else if (this.movers.active || landed) this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
+    } else if (this.movers.active || landed || this.opts.motion && this.livingActive) this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
     this.mark?.('crowd')
     this.cam.position.set(cam.eyeX + 0.5, Math.max(EYE_MIN, Math.min(EYE_MAX, this.opts.eyeHeight)), cam.eyeY + 0.5)
     this.cam.rotation.set(cam.pitch, -cam.yaw, 0)

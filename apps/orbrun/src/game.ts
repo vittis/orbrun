@@ -352,12 +352,13 @@ export class GameScreen {
       this.shrinkText()
       this.relayout(true)
     }
-    this.renderer = this.makeRenderer()
     const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
     this.cam.reducedMotion = motionPreference?.matches ?? false
+    this.renderer = this.makeRenderer()
     const motionChanged = () => {
       this.cam.reducedMotion = motionPreference?.matches ?? false
       if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
+      else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.cam.reducedMotion })
       else if (this.renderer instanceof Render3d) this.renderer.setOptions(this.render3dOptions(this.settings()))
       this.needsRender = true
       this.wake()
@@ -789,7 +790,7 @@ export class GameScreen {
 
   private makeRenderer(): MapRenderer {
     const st = this.hooks.settings()
-    const r: MapRenderer = this.hooks.renderer?.() ?? (this.is3d ? new Render3d(this.render3dOptions(st)) : this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32 }))
+    const r: MapRenderer = this.hooks.renderer?.() ?? (this.is3d ? new Render3d(this.render3dOptions(st)) : this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.cam.reducedMotion }))
     r.mount(this.canvas)
     this.viewmodelRev = ''
     if (this.session.gamedata) {
@@ -1045,6 +1046,7 @@ export class GameScreen {
     // the monster list or the edge pips, one or the other; in 2D the top-down view frames everything in sight, so the list stands in
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
+    if (popups.some(p => p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
     if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now)
     else this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
@@ -1094,6 +1096,14 @@ export class GameScreen {
       if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
       if (this.renderer instanceof Render25d) this.renderer.setOptions({ center: st.map.viewCenter })
       this.renderer.setScene(this.session.scene, now / 1000)
+      if (!this.mapShown) for (const event of popups) {
+        if (event.kind !== 'hit' && event.kind !== 'hurt' && event.kind !== 'level') continue
+        const x = event.player ? this.session.scene.player.x : event.x
+        const y = event.player ? this.session.scene.player.y : event.y
+        if (x === undefined || y === undefined) continue
+        const damage = Math.abs(event.amount ?? Number(event.text.replace(/^≈/, ''))) || 4
+        this.renderer.impact?.(x, y, event.kind === 'level' ? 1 : Math.min(1, 0.2 + damage / 30), now / 1000)
+      }
       this.renderer.setCamera(this.cam.camera)
       const r3d = this.renderer instanceof Render3d ? this.renderer : null
       // the 3D renderer marks its own stretches (level, bake, fields, crowd, place, draw) when measured
@@ -1307,6 +1317,8 @@ export class GameScreen {
       ;(this.renderer as Render2d).setOptions({
         cellSize: this.cellPixels(Math.max(8, Math.round((px * scale) / 100)), mode),
         mode,
+        living: !mapView,
+        animate: !this.cam.reducedMotion,
         foot: mapView ? this.mapFoot : 0,
         filterScaling: o.tile_filter_scaling === true,
         glyphFont: rcFont(o.glyph_mode_font),
