@@ -1,5 +1,24 @@
 # Project status
 
+## 0.3.18 living dungeon — deployed 2026-11-11
+
+Production main and immutable tag `cloudflare-online-v1.15` point to `6214854`.
+Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded. The live entry
+bundle matches the local production build byte for byte. Chrome verified
+0.3.18 release notes, CBRG lobby and live spectating without console errors.
+
+Includes shared colored lighting, warm LOS/cool memory, living creatures,
+materials/clouds and impact rings in all views. Wound-status changes no longer
+create a second damage popup. Reduced motion freezes animations; remembered
+materials/creatures remain still. Feature notes: `LIVING_DUNGEON.md`.
+
+Validation: 2,109 tests passed / two optional engine skips; forced typecheck,
+production build and ASSETS-only dry-run passed. Optional engine E2E: 44 skips.
+Real-browser checks cover animation/still mode and isolated impacts on desktop
+and phone; all 504 existing raster checks pass. Hosted CSP, source tag,
+allowed/prohibited proxy paths and offline-route restrictions pass.
+
+
 ## 0.3.17 visibility release — 2026-11-11
 
 Implemented in worktree `60b1/dcss-client`, branch `codex/2-5d-presentation`,

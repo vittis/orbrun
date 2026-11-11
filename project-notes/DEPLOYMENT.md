@@ -335,3 +335,24 @@ Feature validation: 2,109 unit tests pass, two optional engine tests skipped;
 TypeScript, production build, 14 real-browser behavior checks and all 504
 raster acceptance checks pass. Final release checks run before the atomic
 main/source-tag push; hosted verification is recorded after rollout.
+
+
+### Successful 0.3.18 rollout
+
+- Production main/source tag: `621485462e6755f1e4b5bec369e3b939c54a0805`,
+  `cloudflare-online-v1.15`, app 0.3.18. Main, branch and tag were pushed atomically.
+- Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded in 3m 2s;
+  the deployment stage completed at approximately 14:37:49 America/Sao_Paulo.
+- Root/About return 200 with strict CSP and the v1.15 source link. Entry
+  `/assets/main-aNu1QrgP.js` matches the validated local build byte for byte
+  (SHA-256 `6eba075ea5facd33c8c3193d3f73b8cca5b2cf87b08f2404fc9dd319d501d5e4`).
+- Allowed versioned gamedata returns generated AMD data, the unlisted proxy
+  host returns 404, and offline engine delivery remains 404.
+- Chrome displayed the 0.3.18 release notes, loaded the CBRG lobby and a live
+  spectator dungeon, including terrain, entities, fog, HUD and messages.
+  No warning/error console entries were captured. No gameplay or chat was sent.
+- Evidence: `evidence/release-0318-http-checks.json`,
+  `evidence/release-0318-live.png`, `evidence/release-0318-spectating.png`.
+
+Post-rollout evidence is committed on the working branch only, keeping main
+and the immutable source tag at the exact deployed code commit.

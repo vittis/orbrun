@@ -323,3 +323,23 @@
   JSON import-attribute and chunk-size warnings.
 - Main and source tag are published atomically. Live deployment verification
   is recorded after rollout, without advancing main for documentation alone.
+
+
+## Living dungeon commit and deployment — 2026-11-11
+
+User requested commit to main and deployment. Released app 0.3.18 as commit
+`6214854` with immutable `cloudflare-online-v1.15`; source links and package
+lock advance together. Fast-forwarded the clean main worktree and atomically
+pushed main, working branch and tag. Cloudflare build
+`08d707e7-ce5c-4287-80e0-1224450f9923` succeeded (3m 2s).
+
+Prepublication: forced TypeScript check, 2,109 passing tests/two optional-engine
+skips, production build and ASSETS-only Worker dry-run. Optional engine E2E
+explicitly skipped 44 tests without installed artifacts. Prior real-browser
+behavior/raster checks passed; existing bundle-size advisory remains.
+
+Hosted checks confirm 0.3.18/v1.15 source links, strict CSP, byte-identical entry
+bundle, allowed versioned gamedata and rejected unlisted/offline routes. Chrome
+showed 0.3.18 release notes, CBRG lobby and live spectator dungeon with no
+warning/error logs. No gameplay or chat sent. Evidence and detailed deployment
+record remain on `codex/living-dungeon`, without triggering another main build.

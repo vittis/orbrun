@@ -2,8 +2,9 @@
 
 Branch: `codex/living-dungeon`, based on production 0.3.17 (`896dcfc`).
 Prepared as app 0.3.18, immutable source tag `cloudflare-online-v1.15`.
-The user authorized committing to main and deploying on 2026-11-11; hosted
-verification is recorded after rollout.
+Deployed 2026-11-11: production main and source tag point to `6214854`.
+Cloudflare build `08d707e7-ce5c-4287-80e0-1224450f9923` succeeded; hosted
+verification is recorded in `DEPLOYMENT.md` and `evidence/release-0318-*`.
 
 ## Changes
 
