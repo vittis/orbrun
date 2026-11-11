@@ -875,6 +875,25 @@ describe('the front end: accounts and servers', () => {
     document.body.replaceChildren()
   })
 
+  it.each(['accounts/add/server', 'watch/add'])('production routes %s to the public registry instead of a custom server form', (path) => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('MODE', 'production')
+    try {
+      const { screen, at } = make()
+      pick(screen, 'Play')
+      expect(screen.view).toBe('servers')
+      expect(labels(screen)).toContain('CDI')
+      expect(labels(screen)).not.toContain('Add a server')
+      screen.open({ kind: 'menu', path })
+      expect(screen.view).toBe('servers')
+      expect(screen.root.querySelector('input[name=server]')).toBeNull()
+      expect(labels(screen)).not.toContain('Add a server')
+      expect(at).toHaveBeenLastCalledWith({ kind: 'menu', path: path === 'watch/add' ? 'watch' : 'accounts/add' })
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('Play leads to the servers, then a login, and Back walks up the same way', () => {
     const { screen } = make()
     pick(screen, 'Play')

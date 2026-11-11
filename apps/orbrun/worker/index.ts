@@ -1,13 +1,13 @@
-import { GAMEDATA_PROXY_PREFIX, MORGUE_PROXY_PREFIX, serveGamedata, serveMorgue } from '../gamedata-proxy'
+import { GAMEDATA_PROXY_PREFIX, MORGUE_PROXY_PREFIX, gamedataUpstream, serveGamedata, serveMorgue } from '../gamedata-proxy'
 import { MOVED, addressKind, pageAt } from '../src/site'
 import { COUNT_PATH } from '../src/count-events'
 import { countEvent, type EventsDataset } from './count'
 
 /**
- * orbrun.app: the static build, plus the gamedata proxy the browser cannot do
+ * DCSS Client: the static build, plus the gamedata proxy the browser cannot do
  * without and the morgue proxy the exit screen reads through (see
- * ../gamedata-proxy.ts for why and for the routes), and the offline engine's
- * files, handed to the orbrun-engine Worker as they are.
+ * ../gamedata-proxy.ts for why and for the routes). This hosted fork is online
+ * only; offline engine requests receive an explicit unavailable response.
  *
  * Everything that is not a proxy path is handed to the static assets, so
  * `public/_headers` and `public/_redirects` (the `/deck` installer) keep
@@ -19,13 +19,10 @@ import { countEvent, type EventsDataset } from './count'
  * room's and Steam's pictures, wrangler.jsonc), so a search engine is told
  * the truth about it (`answerPage`).
  *
- * And the app's anonymous event counts (../src/count-events.ts), at
- * `/api/e`, into Workers Analytics Engine.
+ * `/api/e` is inert without the optional EVENTS binding (omitted here).
  */
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> }
-  /** orbrun-engine (engine/wrangler.jsonc): the offline engine's files, at /engine/* */
-  ENGINE: { fetch(request: Request): Promise<Response> }
   /** orbrun_events (wrangler.jsonc): the event counts (./count.ts) */
   EVENTS?: EventsDataset
 }
@@ -33,7 +30,7 @@ interface Env {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname.startsWith('/engine/')) return env.ENGINE.fetch(request)
+    if (url.pathname.startsWith('/engine/')) return new Response('Offline play is unavailable on this deployment.', { status: 404 })
     if (url.pathname === COUNT_PATH) return countEvent(request, url, env)
     const morgue = url.pathname.startsWith(MORGUE_PROXY_PREFIX)
     if (!morgue && !url.pathname.startsWith(GAMEDATA_PROXY_PREFIX)) return answerPage(request, url, env)
@@ -59,8 +56,9 @@ export default {
     // one fetch per file per colo, however many players are on that version
     // `caches.default` is the Workers runtime's own cache; the DOM's
     // CacheStorage type has no such member, hence the cast
+    if (!gamedataUpstream(url.pathname)) return new Response('not found', { status: 404 })
     const cache = (caches as unknown as { default: Cache }).default
-    const key = new Request(url.toString(), { method: 'GET' })
+    const key = new Request(url.origin + url.pathname, { method: 'GET' })
     const cached = await cache.match(key)
     if (cached) return cached
 

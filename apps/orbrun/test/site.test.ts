@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { Window } from 'happy-dom'
 import { describe, expect, it } from 'vitest'
 import { HOME, MOVED, PAGES, SITE_URL, addressKind, pageAt, titleAt } from '../src/site'
-import { docHtml, robotsTxt, sitePageHtml, sitemapXml } from '../site-pages'
+import { docHtml, robotsTxt, sitePageHtml, sitemapXml, sitePages } from '../site-pages'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const template = fs.readFileSync(path.join(here, '..', 'index.html'), 'utf8')
@@ -15,6 +15,33 @@ const template = fs.readFileSync(path.join(here, '..', 'index.html'), 'utf8')
  * else is a 404 rather than another copy of the home page.
  */
 describe('the site’s pages', () => {
+  it('ships page controls externally under a CSP that blocks remote HTML script execution', () => {
+    const assets = new Map<string, string>()
+    const generate = sitePages().generateBundle
+    if (typeof generate !== 'function') throw new Error('missing site build hook')
+    generate.call({ emitFile: (asset: { fileName: string; source: string }) => assets.set(asset.fileName, asset.source) } as never, {} as never, {}, false)
+    expect(assets.get('site-controls.js')).toBe(fs.readFileSync(path.join(here, '..', 'site/site.js'), 'utf8'))
+    const window = new Window()
+    try {
+      for (const [name, html] of assets) {
+        if (!name.endsWith('.html')) continue
+        const doc = new window.DOMParser().parseFromString(html, 'text/html')
+        const executable = Array.from(doc.querySelectorAll('script')).filter((script) => script.type !== 'application/ld+json')
+        expect(executable).toHaveLength(1)
+        expect(executable[0].getAttribute('src')).toBe('/site-controls.js')
+        expect(executable[0].textContent).toBe('')
+        expect(executable[0].hasAttribute('defer')).toBe(true)
+        for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
+        expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
+        expect(html).not.toContain('cloudflare-online-v1/issues')
+      }
+      const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
+      expect(headers).toContain("script-src 'self'; script-src-attr 'none'")
+      expect(headers).toContain("frame-src 'none'")
+      expect(headers).not.toMatch(/unsafe-(inline|eval)/)
+    } finally { void window.happyDOM.close() }
+  })
+
   it('knows a page with or without its trailing slash, in any case', () => {
     expect(pageAt('/')).toBe(HOME)
     expect(pageAt('/about/steam/')?.doc).toBe('STEAM.md')

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
 import type { ServerMessage } from '@orbrun/webtiles'
 
 /**
@@ -51,7 +52,7 @@ describe('the gamedata load', () => {
   beforeEach(() => void loads.splice(0))
   afterEach(() => vi.useRealTimers())
 
-  it('gives up a load that stalls, so the messages it holds back stop piling up and the screen hears why', async () => {
+  it('closes a stalled load without applying queued messages with unavailable gamedata', async () => {
     vi.useFakeTimers()
     const { s, events, handle } = await make()
     const { Session } = await import('../src/session')
@@ -63,7 +64,7 @@ describe('the gamedata load', () => {
     await vi.advanceTimersByTimeAsync(Session.LOAD_STALL_MS - 1)
     expect(loads[0].signal.aborted).toBe(false)
     expect(s.loading).toBe(true)
-    // and then nothing at all for the whole span: the load is over, the queue drained, the error told
+    // and then nothing for the whole span: the load ends, queued deltas are discarded, and the connection closes
     await vi.advanceTimersByTimeAsync(2)
     expect(loads[0].signal.aborted).toBe(true)
     // a real fetch rejects with the abort's reason once the signal is pulled
@@ -72,7 +73,8 @@ describe('the gamedata load', () => {
     expect(s.loading).toBe(false)
     expect((s as unknown as { queue: unknown[] }).queue).toEqual([])
     expect(events.filter((e) => e.startsWith('gamedata:')).at(-1)).toBe('gamedata:error')
-    expect(events.filter((e) => e === 'state').length).toBeGreaterThanOrEqual(2)
+    expect(events.filter((e) => e === 'state')).toHaveLength(1)
+    expect(s.closed).toBe(true)
   })
 
   it('runs once per version: a second game on the version already loading starts no fetch', async () => {
@@ -124,4 +126,95 @@ describe('the gamedata load', () => {
     expect(s.gamedata).toBeNull()
     expect(events.filter((e) => e.startsWith('gamedata:'))).toEqual(['gamedata:loading'])
   })
+
+  it('closes and resets when progressive loading receives too many queued messages', async () => {
+    const { s, events, handle } = await make()
+    const { Session } = await import('../src/session')
+    const closed: string[] = []
+    s.on((e) => { if (e.type === 'closed') closed.push(e.reason) })
+    handle({ msg: 'game_client', version: 'a' })
+    for (let i = 0; i <= Session.LOAD_QUEUE_MESSAGES; i++) {
+      if (i % 1000 === 0) loads[0].progress(1, 9, 'enums.js')
+      handle({ msg: 'msgs', messages: [] })
+    }
+    expect(s.closed).toBe(true)
+    expect(s.loading).toBe(false)
+    expect(loads[0].signal.aborted).toBe(true)
+    expect((s as unknown as { queue: unknown[] }).queue).toEqual([])
+    expect(s.state.map.cells.size).toBe(0)
+    expect(closed).toHaveLength(1)
+    expect(closed[0]).toContain('queue exceeded its resource limit')
+    expect(events).toContain('gamedata:error')
+    const oldEvents = [...events]
+    handle({ msg: 'player', name: 'must not apply' })
+    expect(events).toEqual(oldEvents)
+    // A superseded async load must never apply the discarded messages later.
+    const late = gd('a')
+    loads[0].resolve(late)
+    await flush()
+    expect(late.dispose).toHaveBeenCalledOnce()
+    expect(s.gamedata).toBeNull()
+  })
+
+  it('bounds estimated bytes independently of message count, and reconnect starts fresh', async () => {
+    const { s, handle } = await make()
+    const { Session } = await import('../src/session')
+    handle({ msg: 'game_client', version: 'a' })
+    // Each 8 MiB string fits the connection frame limit but two exceed the
+    // session's 32 MiB estimate after message/key/object overhead is included.
+    const text = 'x'.repeat(Session.LOAD_QUEUE_BYTES / 4)
+    handle({ msg: 'future_extension', text })
+    expect(s.closed).toBe(false)
+    handle({ msg: 'future_extension', text })
+    expect(s.closed).toBe(true)
+    expect(s.reconnect()).toBe(true)
+    handle({ msg: 'game_client', version: 'b' })
+    handle({ msg: 'msgs', messages: [] })
+    expect(s.closed).toBe(false)
+    loads[1].resolve(gd('b'))
+    loads[0].reject(new Error('aborted'))
+    await flush()
+    expect(s.gamedata?.version).toBe('b')
+    expect(s.loading).toBe(false)
+    expect((s as unknown as { queueBytes: number }).queueBytes).toBe(0)
+  })
+
+  it('retains the recorded spectating map and state sequence within the load queue bounds', async () => {
+    const { s, handle } = await make()
+    const messages = readFileSync(new URL('../../../packages/webtiles/test/fixtures/cdi-0.34-watch.ndjson', import.meta.url), 'utf8')
+      .trim().split('\n').map((line) => JSON.parse(line).m as ServerMessage)
+    for (const message of messages) handle(message)
+    expect(loads).toHaveLength(1)
+    expect(s.loading).toBe(true)
+    expect(s.closed).toBe(false)
+    // This test covers queue/reducer fidelity, not rendering or asset loading.
+    vi.spyOn(s, 'flushScene').mockReturnValue(false)
+    loads[0].resolve(gd(loads[0].version))
+    await flush()
+    expect(s.state.phase).toBe('watching')
+    expect(s.state.player.name).toBe('Kai')
+    expect(s.state.map.cells.size).toBeGreaterThan(500)
+    expect(s.loading).toBe(false)
+    expect((s as unknown as { queueBytes: number }).queueBytes).toBe(0)
+  })
+
+
+  it('disposes prior-version gamedata and clears presentation when a replacement load fails', async () => {
+    const { s, events, handle } = await make()
+    const previous = gd('previous')
+    s.gamedata = previous as never
+    handle({ msg: 'game_client', version: 'next' })
+    handle({ msg: 'player', name: 'never apply with previous tiles' })
+    loads[0].reject(new Error('unsupported next-version module'))
+    await flush()
+    expect(previous.dispose).toHaveBeenCalledOnce()
+    expect(s.gamedata).toBeNull()
+    expect(s.closed).toBe(true)
+    expect(s.loading).toBe(false)
+    expect(s.state.map.cells.size).toBe(0)
+    expect(events.filter((e) => e === 'state')).toHaveLength(1)
+    expect(events).toContain('gamedata:error')
+    expect((s as unknown as { queue: unknown[] }).queue).toEqual([])
+  })
+
 })

@@ -21,16 +21,18 @@ import { HOME, PAGES, SITE_URL, pageAt, type Page } from './src/site'
  * `sitemap.xml` and `robots.txt`. The dev server draws them on each request,
  * so an edit to a document or to site/ shows on a reload.
  *
- * The look is site/site.css; site/site.js is the pad and the window of our
- * own. Both are inlined: a page is one request, and small.
+ * Styles are inlined; site/site.js is emitted as a same-origin asset so the
+ * site's CSP can reject all inline executable scripts and event handlers.
  */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
 /** where the markdown reader points a link to another file of the repository (markdown.ts REPO_BLOB) */
-const REPO_BLOB = 'https://github.com/Caeous/orbrun/blob/main/'
-const SOURCE = 'https://github.com/Caeous/orbrun'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1/'
+const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1'
+const ISSUES = 'https://github.com/vittis/orbrun/issues'
+const SITE_SCRIPT_PATH = '/site-controls.js'
 
 /** the poster's words, as index.html's card has them */
 const POSTER_ALT = 'A stone hall in Dungeon Crawl Stone Soup’s tiles: a down staircase between two granite statues, plants, an altar and a fountain'
@@ -411,7 +413,7 @@ function aboutMain(dom: Dom): string {
       <a class="btn ghost" href="/about/steam">Add to Steam</a>
       <a class="btn ghost" href="/about/install">Add to Home Screen</a>
     </div>
-    <span class="small-print">Free and open source · AGPL-3.0 · Unofficial</span>
+    <span class="small-print">DCSS Client fork · Online play on bundled servers · <a href="${SOURCE}" target="_blank" rel="noopener">Source for this release</a></span>
   </div>
 </section>
 
@@ -578,7 +580,6 @@ ${html}
  */
 export function sitePageHtml(page: Page, dom: Dom, beacon = ''): string {
   const css = fs.readFileSync(path.join(HERE, 'site/site.css'), 'utf8')
-  const js = fs.readFileSync(path.join(HERE, 'site/site.js'), 'utf8')
   return `<!doctype html>
 <html lang="en">
 ${head(page, css, beacon)}
@@ -598,7 +599,7 @@ ${page.path === '/about' ? aboutMain(dom) : `${docMain(page, dom)}
     <a href="${SOURCE}" target="_blank" rel="noopener">Source on GitHub</a>
     <a href="https://crawl.develz.org/" target="_blank" rel="noopener">Dungeon Crawl Stone Soup</a>
     <a href="https://pocketzot.app/about" target="_blank" rel="noopener">PocketZot</a>
-    <a href="${SOURCE}/issues" target="_blank" rel="noopener">Report a bug</a>
+    <a href="${ISSUES}" target="_blank" rel="noopener">Report a bug</a>
   </div>
   Orbrun is an unofficial client for Dungeon Crawl Stone Soup on the public servers. Not affiliated with the DCSS team.
 </footer>
@@ -608,9 +609,7 @@ ${page.path === '/about' ? aboutMain(dom) : `${docMain(page, dom)}
   <span class="chip">${glyphHtml(dom, 'B', 'B')}Back to the game</span>
   ${page.path === '/about' ? `<span class="chip">${glyphHtml(dom, 'RSTICK', 'Right stick')}Scroll</span>` : ''}
 </div>
-<script>
-${js}
-</script>
+<script defer src="${SITE_SCRIPT_PATH}"></script>
 </body>
 </html>
 `
@@ -661,6 +660,11 @@ export function sitePages(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const at = new URL(req.url ?? '/', 'http://dev').pathname
+        if (at === SITE_SCRIPT_PATH && (req.method === 'GET' || req.method === 'HEAD')) {
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8')
+          res.end(req.method === 'HEAD' ? undefined : fs.readFileSync(path.join(HERE, 'site/site.js'), 'utf8'))
+          return
+        }
         const page = pageAt(at)
         if (!page || page.path === '/' || at !== page.path || (req.method !== 'GET' && req.method !== 'HEAD')) return next()
         drawPages([page], (_, html) => {
@@ -670,6 +674,7 @@ export function sitePages(): Plugin {
       })
     },
     generateBundle() {
+      this.emitFile({ type: 'asset', fileName: SITE_SCRIPT_PATH.slice(1), source: fs.readFileSync(path.join(HERE, 'site/site.js'), 'utf8') })
       drawPages(
         PAGES.filter((p) => p.path !== '/'),
         (page, html) => this.emitFile({ type: 'asset', fileName: page.path.slice(1) + '.html', source: html }),

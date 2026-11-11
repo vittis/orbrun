@@ -1,6 +1,6 @@
 # Prioritized backlog
 
-Updated 2026-11-11. Status: done / ready / queued / blocked / optional. P0 is foundation, P1 stabilization, P2 top-down, P3 rendering, P4 optional depth, P5 release. Complexity S/M/L/XL is effort, not time. Risks use RISKS IDs.
+Updated 2026-11-11. Status: done / partial / ready / queued / blocked / optional. P0 is foundation, P1 stabilization, P2 top-down, P3 rendering, P4 optional depth, P5 release. Complexity S/M/L/XL is effort, not time. Risks use RISKS IDs.
 
 | ID | Priority / size | Status | Task and affected area | Dependencies | Acceptance criteria |
 |---|---|---|---|---|---|
@@ -9,14 +9,14 @@ Updated 2026-11-11. Status: done / ready / queued / blocked / optional. P0 is fo
 | P0-003 | P0 / M | done | Four independent investigations + two architecture critiques | P0-001 | Reports with source evidence, severity/confidence and dissent retained |
 | P0-004 | P0 / M | done | Final independent review and documentation reconciliation | P0-002,003 | Reviewer findings addressed/tracked; 11 notes complete and links valid |
 | P0-005 | P1 / S | done | Local initialization commit | P0-004 | Only notes/evidence changed; clean tree; origin/upstream verified; no application rewrite |
-| P1-001 | P0 / S | ready | Correct absent-engine test gating | P0-002 | Default no-engine suite green with explicit skip; spell-bar/helpdump guard; required-engine lane fails if artifacts missing |
+| P1-001 | P0 / S | done | Correct absent-engine test gating | P0-002 | Default no-engine suite green with explicit skip; spell-bar/helpdump guard; required-engine lane fails if artifacts missing |
 | P1-002 | P1 / M | queued | Pin web tools and reproducible CI; separate engine lane | P1-001 | npm ci/test/type/build reproducible; engine revision/recipe pinned for optional smoke/E2E |
-| P1-003 | P0 / L | ready | Remove privileged remote gamedata execution (SEC-01) | P0-003 | Global/storage/network escape fixtures blocked; schema/bounds tested; legitimate server exports supported |
-| P1-004 | P0 / M | ready | Restrict proxy destinations/redirects, add limits (SEC-02,03) | P0-003 | Allowlisted hosts; private/encoded/redirect/DNS cases rejected; byte/time/cache/rate bounds; dev/Worker parity |
-| P1-005 | P0 / M | ready | Validate frames and bound connection/session work (SEC-03,04) | P0-003 | Null/malformed/oversized batches diagnostic without uncaught error; bounded queue; explicit reconnect/reset semantics |
-| P1-006 | P0 / S | queued | WSS/account trust policy (SEC-05) | P1-003,004 | Insecure remote login prevented; explicit local exception; token expiry/rotation/logout fixtures preserved |
+| P1-003 | P0 / L | done | Remove privileged remote gamedata execution (SEC-01) | P0-003 | Global/storage/network escape fixtures blocked; schema/bounds tested; legitimate server exports supported |
+| P1-004 | P0 / M | partial | Restrict proxy destinations/redirects, add limits (SEC-02,03) | P0-003 | Allowlisted hosts; private/encoded/redirect/DNS cases rejected; byte/time/cache/rate bounds; dev/Worker parity |
+| P1-005 | P0 / M | done | Validate frames and bound connection/session work (SEC-03,04) | P0-003 | Null/malformed/oversized batches diagnostic without uncaught error; bounded queue; explicit reconnect/reset semantics |
+| P1-006 | P0 / S | done | WSS/account trust policy (SEC-05) | P1-003,004 | Insecure remote login prevented; explicit local exception; token expiry/rotation/logout fixtures preserved |
 | P1-007 | P1 / M | ready | Dependency advisory remediation (SEC-06) | P0-002 | Review prerequisites; upgrade groups/lockfile; no new failures, default green after P1-001; remaining advisories scoped |
-| P1-008 | P0 before release / M | ready | License/source offer and exact asset provenance (LIC-01,02) | P0-003 | Room/orb/fonts/engine origin/license inventory; unresolved assets replaced/omitted before distribution; exact source offer |
+| P1-008 | P0 before release / M | partial | License/source offer and exact asset provenance (LIC-01,02) | P0-003 | Room/orb/fonts/engine origin/license inventory; unresolved assets replaced/omitted before distribution; exact source offer |
 | P1-009 | P1 / M | ready | Mutation ownership, option-only invalidation and stale docs (ARC-01,02) | P0-003 | Reproduce suspected scene bug; direct writes inventoried; targeted fix if confirmed; README reflects actual state/render/input behavior |
 | P1-010 | P1 / M | ready | Characterize outbound commands and input mode transitions | P0-003 | Eight-way/heading/device/mode matrix; raw keyboard/OSK/macro preserved; focus/disconnect repeat cases |
 | P2-001 | P0 / L | queued | Complete absolute movement/target/context slice | P1-001,005,009,010 | All 8 directions invariant to heading/render; target/look/door prompts correct; contextual target explicit; server outcomes unchanged |
@@ -39,7 +39,8 @@ Updated 2026-11-11. Status: done / ready / queued / blocked / optional. P0 is fo
 
 ## Explicit unfinished work
 
-- No-engine default test failure is an upstream harness defect to fix, not a passing baseline.
+- No-engine harness gating is fixed; the historical Phase 0 command still failed as recorded. Current totals and hosted-deployment scope are in DEPLOYMENT.md.
+- Proxy policy/limits are implemented; DNS resolution pinning and distributed abuse budgets remain open. Source offer is prepared; exact bundled-art provenance remains open.
 - Engine E2E not executed successfully: artifacts, emsdk/PyYAML and JSPI-capable Node absent. Provision only for the dedicated test lane; do not block ordinary online-client development on a WASM build.
 - Physical gamepad, browser gamepad emulation, real login/gameplay, rc/save/stat continuity, all-server and cross-browser checks remain open; unit input success and CDI anonymous spectating cover narrower claims.
 - Super Dungeon Crawl source/license unresolved; inspiration only, no copied code/assets.

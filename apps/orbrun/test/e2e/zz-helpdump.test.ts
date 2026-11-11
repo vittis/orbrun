@@ -3,7 +3,8 @@ import { it } from 'vitest'
 import { startLive } from './client'
 import { screen } from './screen'
 import { FIGHTER } from './scenarios'
-it('dump help', { timeout: 120000 }, async () => {
+import { builtChannels } from './engine'
+it.skipIf(!builtChannels.includes('stable'))('dump help', { timeout: 120000 }, async () => {
   const g = await startLive({ args: FIGHTER })
   for (let i = 0; i < 5 && g.ctx().mode !== 'command'; i++) await g.raw('a')
   await g.key('?')

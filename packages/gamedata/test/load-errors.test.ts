@@ -35,7 +35,7 @@ describe('loadGamedata failures', () => {
     expect(msg).not.toBe("Unexpected token '<'")
   })
 
-  it('names the file when a gamedata module is JavaScript that will not evaluate', async () => {
+  it('names the file when a module contains unsupported executable statements', async () => {
     const err = await loadGamedata({
       base: 'https://crawl.dcss.io',
       version: SHA,
@@ -43,7 +43,7 @@ describe('loadGamedata failures', () => {
       skipImages: true,
     }).catch((e: unknown) => e)
     expect((err as Error).message).toContain(`https://crawl.dcss.io/gamedata/${SHA}/enums.js`)
-    expect((err as Error).message).toContain('boom')
+    expect((err as Error).message).toContain('unsupported gamedata')
   })
 })
 

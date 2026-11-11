@@ -3,6 +3,7 @@
 // tapped twice: the first tap aims, the second fires.
 import { describe, expect, it } from 'vitest'
 import { startLive, type E2e } from './client'
+import { builtChannels } from './engine'
 
 const CONJURER = ['-seed', '1', '-species', 'human', '-background', 'conjurer', '-wizard']
 const SUMMONER = ['-seed', '1', '-species', 'human', '-background', 'summoner', '-wizard']
@@ -24,7 +25,7 @@ async function start(args: string[]): Promise<E2e> {
 const spellButtons = (g: E2e) => Array.from(g.root.querySelectorAll<HTMLElement>('.spellbar .tb'))
 const sentText = (g: E2e) => g.sent.map((m) => ('text' in m ? m.text : 'keycode' in m ? m.keycode : m.msg))
 
-describe('the spell bar', () => {
+describe.skipIf(!builtChannels.includes('stable'))('the spell bar', () => {
   it('looks the spells up without a menu ever reaching the state, and shows them', { timeout: 60000 }, async () => {
     const g = await start(CONJURER)
     try {

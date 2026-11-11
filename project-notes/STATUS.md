@@ -1,5 +1,10 @@
 # Project status
 
+Current follow-up: user-authorized Cloudflare online deployment is in final validation.
+See [DEPLOYMENT.md](DEPLOYMENT.md) and the Cloudflare review reports for changes
+since the historical Phase 0 snapshot below. Default tests now pass with explicit
+missing-engine skips; public deployment is not yet confirmed.
+
 Updated: 2026-11-11 (America/Sao_Paulo). **Read this first when resuming.**
 
 - Phase: **0 accepted with explicit exceptions** — foundation, investigations and roadmap complete; not a green release baseline.
@@ -38,3 +43,5 @@ Additional explicit exceptions: real-engine E2E is BLOCKED by documented prerequ
 ## Local service / next-session handoff
 
 Development server was left running at [127.0.0.1:5173](http://127.0.0.1:5173/) (observed PID 29880, log `/private/tmp/dcss-dev.log`). Check with `lsof -nP -iTCP:5173 -sTCP:LISTEN` before restarting; stop its terminal with Ctrl-C, or after verifying ownership use `kill 29880`. PIDs can change. Browser test tab was closed. No deployment, initialization-branch push or background automation was performed. Run `git log -1 --oneline` and `git status --short` for the checkpoint and cleanliness.
+
+Cloudflare feasibility follow-up: existing Worker/static-assets packaging passes `npm run deploy:check` (dry-run only). Dashboard inspected read-only; no Orbrun deployment or engine service present. Online-only deployment needs removal/handling of inherited ENGINE binding/offline UI plus exposure gates above. Findings appended to SESSION_LOG; no deployment/config changes made.

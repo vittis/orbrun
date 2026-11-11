@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   addAccount,
+  addServer,
+  customServersAllowed,
   ensureDeviceAccount,
   characterOf,
   describeCharacter,
@@ -15,6 +17,7 @@ import {
   listAccounts,
   listServers,
   loginState,
+  offlineOffered,
   removeAccount,
   sameAccount,
   setChosenAccount,
@@ -34,6 +37,61 @@ Object.defineProperty(globalThis, 'localStorage', {
     setItem: (k: string, v: string) => void store.set(k, String(v)),
     removeItem: (k: string) => void store.delete(k),
   },
+})
+
+describe('hosted server policy', () => {
+  beforeEach(() => {
+    store.clear()
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('MODE', 'production')
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('offers bundled servers over HTTPS, without an offline or custom-server entry point', () => {
+    expect(offlineOffered()).toBe(false)
+    expect(customServersAllowed()).toBe(false)
+    expect(findServer('offline')).toBeNull()
+    expect(addServer('https://crawl.dcss.io/')).toEqual(findServer('cdi'))
+    expect(() => addServer('http://crawl.dcss.io')).toThrow('Use HTTPS')
+    expect(() => addServer('https://crawl.example.org')).toThrow('public server list')
+    expect(listServers().every((s) => s.ws.startsWith('wss://'))).toBe(true)
+  })
+
+  it('hides saved custom/offline accounts without deleting development data', () => {
+    vi.stubEnv('PROD', false)
+    vi.stubEnv('MODE', 'development')
+    const custom = addServer('http://crawl.example.org:8080')
+    const saved = [
+      { serverId: custom.id, username: 'custom-player' },
+      { serverId: 'offline', username: 'local-player' },
+      { serverId: 'cdi', username: 'online-player' },
+    ]
+    for (const account of saved) addAccount(account)
+    setChosenAccount(saved[0])
+    const serversBefore = store.get('orbrun.servers')
+    const accountsBefore = store.get('orbrun.accounts')
+    vi.stubEnv('PROD', true)
+    expect(listServers().some((s) => s.id === custom.id)).toBe(false)
+    expect(findServer(custom.id)).toBeNull()
+    expect(getChosenAccount()).toBeNull()
+    expect(listAccounts()).toEqual([saved[2]])
+    expect(store.get('orbrun.servers')).toBe(serversBefore)
+    expect(store.get('orbrun.accounts')).toBe(accountsBefore)
+    vi.stubEnv('PROD', false)
+    expect(listAccounts()).toHaveLength(3)
+    expect(findServer(custom.id)?.ws).toBe('ws://crawl.example.org:8080/socket')
+  })
+
+  it('does not create an offline account in production even when JSPI is supported', () => {
+    vi.stubGlobal('WebAssembly', Object.assign(Object.create(WebAssembly), { Suspending: function Suspending() {} }))
+    try {
+      ensureDeviceAccount()
+      expect(listAccounts()).toEqual([])
+      expect(getChosenAccount()).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
 
 /**

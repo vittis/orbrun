@@ -1,5 +1,15 @@
 # About Orbrun
 
+This is the DCSS Client fork, deployed for online play on the bundled public
+servers. Offline play and custom servers are unavailable in this deployment.
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1) is available under
+AGPL-3.0-or-later. Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun);
+the upstream feature guide below also describes features outside this deployment.
+
+Choose **Watch** to test without signing in. To play, choose **Play**, select the
+server where your account lives, and log in with that server’s existing account.
+Accounts and saved games are specific to each DCSS server.
+
 Orbrun is an unofficial [DCSS](https://crawl.develz.org) client that puts you
 inside the dungeon. It plays on the public
 [WebTiles](https://crawl.develz.org/wordpress/howto) servers, or on your own
@@ -13,7 +23,7 @@ asks you to relearn nothing.
 
 ## Getting started
 
-Open [orbrun.app](https://orbrun.app) and pick a server. Log in with your
+Open [DCSS Client](https://dcss-client.vittis.workers.dev) and pick a server. Log in with your
 WebTiles account, register a new one, or spectate without one. Then start a
 game. There is nothing to install and no Orbrun account: your browser talks
 to the DCSS server directly.

@@ -1,5 +1,10 @@
 # Risk register
 
+The table below records Phase 0 findings. The Cloudflare follow-up replaces remote
+JavaScript execution, restricts and bounds proxies, validates connection envelopes,
+and bounds loading queues. Current verification and residual risks are recorded in
+[DEPLOYMENT.md](DEPLOYMENT.md) and [the security review](reviews/CLOUDFLARE_SECURITY.md).
+
 Assessed 2026-11-11 at upstream `b65fc15`. Severity is impact, likelihood is conditional exposure, confidence is evidence strength. “Confirmed” does not mean publicly exploited. Full source references and primary licensing sources: [security report](reviews/security.md). No credentials or invasive public-server tests were used.
 
 | ID | Severity / likelihood / confidence | Component and classification | Evidence / reproduced? | Mitigation and gate |

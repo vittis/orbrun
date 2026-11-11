@@ -12,7 +12,7 @@
  */
 
 /** the official deployment: canonical addresses, the sitemap and the social cards name it */
-export const SITE_URL = 'https://orbrun.app'
+export const SITE_URL = 'https://dcss-client.vittis.workers.dev'
 
 export interface Page {
   /** the address, as parseRoute reads it */

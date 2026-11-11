@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { GAMEDATA_PROXY_PREFIX, MORGUE_PROXY_PREFIX, gamedataUpstream, morgueUpstream, serveGamedata, serveMorgue } from '../gamedata-proxy'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import bundledServers from '../data/servers.json'
+import { GAMEDATA_PROXY_PREFIX, MORGUE_PROXY_PREFIX, gamedataUpstream, morgueUpstream, serveGamedata, serveMorgue, gamedataProxy, PROXY_LIMITS } from '../gamedata-proxy'
 
 const SHA = 'acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8'
 const OK = `${GAMEDATA_PROXY_PREFIX}crawl.dcss.io/gamedata/${SHA}/enums.js`
@@ -12,8 +14,8 @@ describe('gamedata proxy route', () => {
   it('takes the files the loader asks for, on a host with a port', () => {
     const files = ['enums.js', 'status-icon-sizes.js', 'tileinfo-main.js', 'tileinfo-icons.js', 'player.png', 'icons.png']
     for (const f of files) {
-      const p = `${GAMEDATA_PROXY_PREFIX}webzook.net:8080/gamedata/${SHA}/${f}`
-      expect(gamedataUpstream(p), f).toBe(`https://webzook.net:8080/gamedata/${SHA}/${f}`)
+      const p = `${GAMEDATA_PROXY_PREFIX}underhound.eu:8080/gamedata/${SHA}/${f}`
+      expect(gamedataUpstream(p), f).toBe(`https://underhound.eu:8080/gamedata/${SHA}/${f}`)
     }
   })
 
@@ -85,8 +87,8 @@ const LISTING = [
 describe('morgue proxy route', () => {
   it('maps a proxy path to the server’s own morgue file, wherever the server keeps it', () => {
     expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}crawl.dcss.io/crawl/morgue/orbrun/morgue-orbrun-20260910-120000.txt`)).toBe('https://crawl.dcss.io/crawl/morgue/orbrun/morgue-orbrun-20260910-120000.txt')
-    expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}crawl.akrasiac.org/rawdata/orbrun/orbrun.txt`)).toBe('https://crawl.akrasiac.org/rawdata/orbrun/orbrun.txt')
-    expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}webzook.net:8080/morgue/orbrun/crash-orbrun-1.txt`)).toBe('https://webzook.net:8080/morgue/orbrun/crash-orbrun-1.txt')
+    expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}crawl.akrasiac.org:8443/rawdata/orbrun/orbrun.txt`)).toBe('https://crawl.akrasiac.org:8443/rawdata/orbrun/orbrun.txt')
+    expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}underhound.eu:8080/morgue/orbrun/crash-orbrun-1.txt`)).toBe('https://underhound.eu:8080/morgue/orbrun/crash-orbrun-1.txt')
     // and the `.where` beside them, which the home screen reads to know whether a save is still waiting
     expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}crawl.dcss.io/crawl/morgue/orbrun/orbrun.where`)).toBe('https://crawl.dcss.io/crawl/morgue/orbrun/orbrun.where')
   })
@@ -163,6 +165,160 @@ describe('morgue proxy route', () => {
     expect(res!.headers.get('Cache-Control')).toContain('immutable')
     // a Range that is not a plain one is not passed on
     await serveMorgue(file, async (_u, init) => ((asked = init), new Response('x')), 'bytes=0-1,5-9')
-    expect(asked).toBeUndefined()
+    expect(new Headers(asked?.headers).has('Range')).toBe(false)
+  })
+})
+
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
+
+describe('hosted proxy trust boundary', () => {
+  it('accepts the exact HTTPS host and port of every bundled official server', () => {
+    for (const server of bundledServers) {
+      expect(gamedataUpstream(`${GAMEDATA_PROXY_PREFIX}${server.host}/gamedata/${SHA}/enums.js`)).toBe(`${server.http}/gamedata/${SHA}/enums.js`)
+      expect(morgueUpstream(`${MORGUE_PROXY_PREFIX}${server.host}/morgue/player/player.txt`)).toBe(`${server.http}/morgue/player/player.txt`)
+    }
+  })
+
+  it.each(['localhost', '127.0.0.1', '10.0.0.1', '169.254.169.254', '2130706433', '[::1]', 'example.com', 'crawl.dcss.io.evil.test', 'crawl.dcss.io:8080', 'crawl.dcss.io.', 'crawl.dcss.io@evil.test', 'crawl%2edcss.io'])('refuses destination %s without fetching', async (host) => {
+    const fetcher = vi.fn<typeof fetch>()
+    expect(await serveGamedata(`${GAMEDATA_PROXY_PREFIX}${host}/gamedata/${SHA}/enums.js`, fetcher)).toBeNull()
+    expect(await serveMorgue(`${MORGUE_PROXY_PREFIX}${host}/morgue/player/player.txt`, fetcher)).toBeNull()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('rejects redirects instead of fetching their destination', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 302, headers: { Location: 'http://127.0.0.1/private' } }))
+    const res = await serveGamedata(OK, fetcher)
+    expect(res?.status).toBe(502)
+    expect(await res?.text()).toBe('upstream redirect refused')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ redirect: 'manual', signal: expect.any(AbortSignal) })
+  })
+
+  it('applies the same redirect policy to morgue fetches', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 307, headers: { Location: 'https://crawl.dcss.io/elsewhere.txt' } }))
+    expect((await serveMorgue(`${MORGUE_PROXY_PREFIX}crawl.dcss.io/morgue/player/player.txt`, fetcher))?.status).toBe(502)
+    expect(fetcher.mock.calls[0][1]?.redirect).toBe('manual')
+  })
+
+  it('limits declared and streamed response sizes and cancels the upstream body', async () => {
+    const cancel = vi.fn()
+    const declared = await serveGamedata(OK, async () => new Response(new ReadableStream({ cancel }), { headers: { 'Content-Length': String(PROXY_LIMITS.scriptBytes + 1) } }))
+    expect(declared?.status).toBe(502)
+    expect(cancel).toHaveBeenCalledOnce()
+    const streamedCancel = vi.fn()
+    const streamed = await serveGamedata(OK, async () => new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new Uint8Array(PROXY_LIMITS.scriptBytes + 1)) },
+      cancel: streamedCancel,
+    })))
+    expect(streamed?.status).toBe(502)
+    expect(streamedCancel).toHaveBeenCalledOnce()
+    // The exceeded limit releases shared accounting so a subsequent small request succeeds.
+    expect((await serveGamedata(OK, async () => new Response('ok')))?.status).toBe(200)
+  })
+
+  it('turns a failed body read into an explicit proxy error', async () => {
+    const res = await serveGamedata(OK, async () => new Response(new ReadableStream({
+      start(controller) { controller.error(new Error('upstream failed')) },
+    })))
+    expect(res?.status).toBe(502)
+    expect(res?.headers.get('Cache-Control')).toBe('no-store')
+  })
+
+  it('has a total deadline for stalled headers and body, aborts and releases slots', async () => {
+    vi.useFakeTimers()
+    let signal: AbortSignal | undefined
+    const pending = serveGamedata(OK, async (_url, init) => {
+      signal = init?.signal as AbortSignal
+      return new Promise<Response>(() => {})
+    })
+    await vi.advanceTimersByTimeAsync(PROXY_LIMITS.timeoutMs)
+    expect((await pending)?.status).toBe(504)
+    expect(signal?.aborted).toBe(true)
+    const cancel = vi.fn()
+    const bodyPending = serveGamedata(OK, async () => new Response(new ReadableStream({ cancel })))
+    await vi.advanceTimersByTimeAsync(PROXY_LIMITS.timeoutMs)
+    expect((await bodyPending)?.status).toBe(504)
+    expect(cancel).toHaveBeenCalledOnce()
+    expect((await serveGamedata(OK, async () => new Response('ok')))?.status).toBe(200)
+  })
+
+  it('caps concurrent upstream requests before fetching more', async () => {
+    const releases: ((r: Response) => void)[] = []
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(() => new Promise<Response>((resolve) => releases.push(resolve)))
+    const pending = Array.from({ length: PROXY_LIMITS.concurrent }, () => serveGamedata(OK, fetcher))
+    expect((await serveGamedata(OK, fetcher))?.status).toBe(503)
+    expect(fetcher).toHaveBeenCalledTimes(PROXY_LIMITS.concurrent)
+    for (const release of releases) release(new Response('ok'))
+    expect((await Promise.all(pending)).every((r) => r?.status === 200)).toBe(true)
+  })
+
+  it('bounds aggregate in-flight body buffers and releases them after completion', async () => {
+    const controllers: ReadableStreamDefaultController<Uint8Array>[] = []
+    const png = `${GAMEDATA_PROXY_PREFIX}crawl.dcss.io/gamedata/${SHA}/main.png`
+    const pending = Array.from({ length: 2 }, () => serveGamedata(png, async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controllers.push(controller)
+        controller.enqueue(new Uint8Array(PROXY_LIMITS.imageBytes))
+      },
+    }))))
+    // Both streams retain one 8 MiB chunk while waiting for EOF.
+    await vi.waitFor(() => expect(controllers).toHaveLength(2))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect((await serveGamedata(OK, async () => new Response('one more byte')))?.status).toBe(503)
+    for (const controller of controllers) controller.close()
+    expect((await Promise.all(pending)).every((r) => r?.status === 200)).toBe(true)
+    expect((await serveGamedata(OK, async () => new Response('ok')))?.status).toBe(200)
+  })
+
+  it('does not forward invalid, reversed, unsafe, or oversized byte ranges', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response('ok'))
+    for (const range of ['bytes=10-1', 'bytes=0-9007199254740992', `bytes=0-${PROXY_LIMITS.morgueBytes}`, 'bytes=0-1,5-9']) {
+      await serveMorgue(`${MORGUE_PROXY_PREFIX}crawl.dcss.io/morgue/player/player.txt`, fetcher, range)
+      expect(new Headers(fetcher.mock.lastCall?.[1]?.headers).has('Range')).toBe(false)
+    }
+  })
+})
+
+describe('Vite proxy middleware', () => {
+  function middleware() {
+    let handler!: (req: IncomingMessage, res: ServerResponse, next: () => void) => Promise<void>
+    const plugin = gamedataProxy()
+    ;(plugin.configureServer as Function)({ middlewares: { use(fn: typeof handler) { handler = fn } } })
+    return async (url: string, method = 'GET') => {
+      const res = { statusCode: 200, setHeader: vi.fn(), end: vi.fn() }
+      const next = vi.fn()
+      await handler({ url, method, headers: {} } as IncomingMessage, res as unknown as ServerResponse, next)
+      return { res, next }
+    }
+  }
+
+  it('returns 404 for refused proxy routes and 405 for mutation methods, without app-shell fallback', async () => {
+    const run = middleware()
+    const fetcher = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', fetcher)
+    const refused = await run('/gamedata-proxy/localhost/gamedata/abc/enums.js')
+    expect(refused.res.statusCode).toBe(404)
+    expect(refused.next).not.toHaveBeenCalled()
+    expect((await run(OK, 'POST')).res.statusCode).toBe(405)
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('evicts old cache entries once the entry bound is reached', async () => {
+    const run = middleware()
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => new Response('fixture'))
+    vi.stubGlobal('fetch', fetcher)
+    const url = (i: number) => `${GAMEDATA_PROXY_PREFIX}crawl.dcss.io/gamedata/${i.toString(16)}/enums.js`
+    await run(url(0))
+    await run(url(0))
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    for (let i = 1; i <= PROXY_LIMITS.cacheEntries; i++) await run(url(i))
+    await run(url(0))
+    expect(fetcher).toHaveBeenCalledTimes(PROXY_LIMITS.cacheEntries + 2)
   })
 })

@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { ATLASES } from '@orbrun/gamedata'
+import servers from './data/servers.json'
 
 /**
  * The one gamedata proxy, in two shells.
@@ -32,14 +33,12 @@ export const GAMEDATA_PROXY_PREFIX = '/gamedata-proxy/'
  */
 export const MORGUE_PROXY_PREFIX = '/morgue-proxy/'
 
-/**
- * What may be proxied. Not an allow-list of hosts: a player can add any
- * server (platforms.md "Server picker"), so the host stays open and the
- * *shape* is what is pinned. Only a hex version segment and only the file
- * names the loader asks for (@orbrun/gamedata `loadGamedata`) get through,
- * which leaves nothing here worth pointing at a host that is not a WebTiles
- * server.
- */
+/** Only the bundled, reviewed HTTPS server endpoints may use the hosted proxy. */
+const ALLOWED_HOSTS = new Set(servers.filter((s) => {
+  const url = new URL(s.http)
+  return url.protocol === 'https:' && url.host === s.host && !url.username && !url.password
+}).map((s) => s.host))
+
 const GAMEDATA_FILES = new Set<string>([
   'enums.js',
   'status-icon-sizes.js',
@@ -48,9 +47,6 @@ const GAMEDATA_FILES = new Set<string>([
 ])
 
 const ROUTE = /^\/gamedata-proxy\/([^/@]+)\/gamedata\/([0-9a-f]+)\/([A-Za-z0-9_.-]+)$/
-
-/** A hostname, optionally with a port: no userinfo, no path, no wildcards. */
-const HOST = /^[A-Za-z0-9.-]+(:[0-9]{1,5})?$/
 
 /**
  * A morgue path: plain segments, then a `.txt` (a morgue file or a character dump) or a `.where` (what the
@@ -74,11 +70,12 @@ const LISTED_MORGUE = /href="(?:[^"]*\/)?(morgue-[^"/?#]+-\d{8}-\d{6}\.txt)"/g
 const FIXED_MORGUE = /\/morgue-[^/]+-\d{8}-\d{6}\.txt$/
 
 function validHost(host: string): boolean {
-  return HOST.test(host) && !host.startsWith('.') && !host.endsWith('.')
+  return ALLOWED_HOSTS.has(host)
 }
 
 /** The upstream URL a morgue proxy path names, or null if it is not one of ours. */
 export function morgueUpstream(pathname: string): string | null {
+  if (pathname.length > 2048) return null
   const m = MORGUE_ROUTE.exec(pathname) ?? MORGUE_DIR_ROUTE.exec(pathname)
   if (!m) return null
   const [, host, path] = m
@@ -89,6 +86,7 @@ export function morgueUpstream(pathname: string): string | null {
 
 /** The upstream URL a proxy path names, or null if it is not one of ours. */
 export function gamedataUpstream(pathname: string): string | null {
+  if (pathname.length > 2048) return null
   const m = ROUTE.exec(pathname)
   if (!m) return null
   const [, host, version, file] = m
@@ -104,11 +102,106 @@ function contentType(file: string): string {
 function corsHeaders(file: string): Record<string, string> {
   return {
     'Content-Type': contentType(file),
+    'X-Content-Type-Options': 'nosniff',
     // WebGL needs the atlases to be cross-origin clean; the app may also be
     // served from a different origin than the proxy in other shells.
     'Access-Control-Allow-Origin': '*',
     // versioned paths: a version's gamedata never changes
     'Cache-Control': 'public, max-age=31536000, immutable',
+  }
+}
+
+// Limits leave room for current atlases (~5 MB combined) and long morgues,
+// while bounding each request and the temporary buffers shared by an isolate.
+export const PROXY_LIMITS = {
+  timeoutMs: 15_000,
+  scriptBytes: 1024 * 1024,
+  imageBytes: 8 * 1024 * 1024,
+  morgueBytes: 2 * 1024 * 1024,
+  concurrent: 16,
+  bufferedBytes: 16 * 1024 * 1024,
+  cacheEntries: 64,
+  cacheBytes: 32 * 1024 * 1024,
+} as const
+let activeRequests = 0
+let bufferedBytes = 0
+
+function proxyError(status: number, message: string): Response {
+  return new Response(message, { status, headers: {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
+  } })
+}
+
+/** Shared Node/Worker fetch policy. No caller-controlled headers or redirect targets escape it. */
+async function boundedFetch(upstream: string, limit: number, fetchImpl: typeof fetch, headers?: HeadersInit): Promise<Response> {
+  if (activeRequests >= PROXY_LIMITS.concurrent) return proxyError(503, 'proxy busy')
+  activeRequests++
+  const abort = new AbortController()
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  let retained = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<Response>((resolve) => {
+    timer = setTimeout(() => {
+      abort.abort()
+      resolve(proxyError(504, 'upstream timed out'))
+    }, PROXY_LIMITS.timeoutMs)
+  })
+  const read = async (): Promise<Response> => {
+    const r = await fetchImpl(upstream, { headers, redirect: 'manual', signal: abort.signal })
+    // Never follow redirects, even to another allowlisted host: the original
+    // request's path/host policy must also describe the response we return.
+    if (r.status >= 300 && r.status < 400 || r.redirected || r.type === 'opaqueredirect') {
+      void r.body?.cancel().catch(() => {})
+      return proxyError(502, 'upstream redirect refused')
+    }
+    if (!r.ok) {
+      void r.body?.cancel().catch(() => {})
+      return proxyError(r.status === 404 ? 404 : 502, `upstream ${r.status}`)
+    }
+    if (abort.signal.aborted) {
+      void r.body?.cancel().catch(() => {})
+      return proxyError(504, 'upstream timed out')
+    }
+    if (Number(r.headers.get('Content-Length')) > limit) {
+      void r.body?.cancel().catch(() => {})
+      return proxyError(502, 'upstream response too large')
+    }
+    const chunks: Uint8Array[] = []
+    let length = 0
+    reader = r.body?.getReader()
+    while (reader) {
+      const { done, value } = await reader.read()
+      if (abort.signal.aborted) return proxyError(504, 'upstream timed out')
+      if (done) break
+      if (length + value.byteLength > limit) return proxyError(502, 'upstream response too large')
+      if (bufferedBytes + value.byteLength > PROXY_LIMITS.bufferedBytes) return proxyError(503, 'proxy busy')
+      chunks.push(value)
+      length += value.byteLength
+      retained += value.byteLength
+      bufferedBytes += value.byteLength
+    }
+    const body = new Uint8Array(length)
+    let offset = 0
+    for (const chunk of chunks) {
+      body.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    return new Response(body, { status: r.status, headers: r.headers })
+  }
+  try {
+    return await Promise.race([read(), deadline])
+  } catch {
+    return proxyError(abort.signal.aborted ? 504 : 502, abort.signal.aborted ? 'upstream timed out' : 'upstream unreachable')
+  } finally {
+    clearTimeout(timer)
+    abort.abort()
+    // Cancellation is best effort after a terminal response; a broken upstream
+    // cancellation must not retain the concurrency slot or mask the actual error.
+    void reader?.cancel().catch(() => {})
+    bufferedBytes -= retained
+    activeRequests--
   }
 }
 
@@ -124,21 +217,8 @@ export async function serveGamedata(pathname: string, fetchImpl: typeof fetch = 
   const upstream = gamedataUpstream(pathname)
   if (!upstream) return null
   const file = pathname.slice(pathname.lastIndexOf('/') + 1)
-  let r: Response
-  try {
-    r = await fetchImpl(upstream)
-  } catch (e) {
-    return new Response(`gamedata upstream unreachable: ${String(e)}`, {
-      status: 502,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  }
-  if (!r.ok) {
-    return new Response(`gamedata upstream ${r.status}`, {
-      status: r.status === 404 ? 404 : 502,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  }
+  const r = await boundedFetch(upstream, file.endsWith('.png') ? PROXY_LIMITS.imageBytes : PROXY_LIMITS.scriptBytes, fetchImpl)
+  if (!r.ok) return r
   const body = await r.arrayBuffer()
   return new Response(body, { status: 200, headers: corsHeaders(file) })
 }
@@ -156,25 +236,16 @@ export async function serveMorgue(pathname: string, fetchImpl: typeof fetch = fe
   const upstream = morgueUpstream(pathname)
   if (!upstream) return null
   const dir = pathname.endsWith('/')
-  const ask = !dir && range && /^bytes=\d+-\d+$/.test(range) ? { headers: { Range: range } } : undefined
-  let r: Response
-  try {
-    r = await fetchImpl(upstream, ask)
-  } catch (e) {
-    return new Response(`morgue upstream unreachable: ${String(e)}`, {
-      status: 502,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  }
-  if (!r.ok) {
-    return new Response(`morgue upstream ${r.status}`, {
-      status: r.status === 404 ? 404 : 502,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  }
+  const match = range?.match(/^bytes=(\d+)-(\d+)$/)
+  const start = Number(match?.[1])
+  const end = Number(match?.[2])
+  const validRange = !dir && match && Number.isSafeInteger(start) && Number.isSafeInteger(end) && start <= end && end - start < PROXY_LIMITS.morgueBytes
+  const r = await boundedFetch(upstream, PROXY_LIMITS.morgueBytes, fetchImpl, validRange ? { Range: range! } : undefined)
+  if (!r.ok) return r
   const body = await r.text()
   const headers: Record<string, string> = {
     'Content-Type': 'text/plain; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
     'Access-Control-Allow-Origin': '*',
     'Cache-Control': dir ? 'public, max-age=60' : FIXED_MORGUE.test(pathname) ? 'public, max-age=31536000, immutable' : pathname.endsWith('.where') ? 'public, max-age=15' : 'public, max-age=300',
   }
@@ -204,32 +275,63 @@ function decodeURIComponentSafe(s: string): string {
  */
 export function gamedataProxy(): Plugin {
   const cache = new Map<string, { type: string; body: Buffer }>()
+  let cacheBytes = 0
   const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     const pathname = (req.url || '').split('?')[0]
+    const proxy = pathname.startsWith(MORGUE_PROXY_PREFIX) || pathname.startsWith(GAMEDATA_PROXY_PREFIX)
+    if (!proxy) return next()
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.statusCode = 405
+      res.setHeader('Allow', 'GET, HEAD')
+      res.end('method not allowed')
+      return
+    }
+    const reject = () => {
+      res.statusCode = 404
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      res.end('proxy path not allowed')
+    }
     if (pathname.startsWith(MORGUE_PROXY_PREFIX)) {
       const r = await serveMorgue(pathname, fetch, req.headers.range)
-      if (!r) return next()
+      if (!r) return reject()
       res.statusCode = r.status
       r.headers.forEach((v, k) => res.setHeader(k, v))
       res.end(Buffer.from(await r.arrayBuffer()))
       return
     }
     if (!pathname.startsWith(GAMEDATA_PROXY_PREFIX)) return next()
-    if (!gamedataUpstream(pathname)) return next()
+    if (!gamedataUpstream(pathname)) return reject()
     const hit = cache.get(pathname)
     if (hit) {
+      cache.delete(pathname)
+      cache.set(pathname, hit)
       res.setHeader('Content-Type', hit.type)
+      res.setHeader('X-Content-Type-Options', 'nosniff')
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
       res.end(hit.body)
       return
     }
     const r = await serveGamedata(pathname)
-    if (!r) return next()
+    if (!r) return reject()
     const body = Buffer.from(await r.arrayBuffer())
     res.statusCode = r.status
     r.headers.forEach((v, k) => res.setHeader(k, v))
-    if (r.ok) cache.set(pathname, { type: r.headers.get('Content-Type') || 'text/javascript', body })
+    if (r.ok && body.byteLength <= PROXY_LIMITS.cacheBytes) {
+      const previous = cache.get(pathname)
+      if (previous) {
+        cacheBytes -= previous.body.byteLength
+        cache.delete(pathname)
+      }
+      while (cache.size >= PROXY_LIMITS.cacheEntries || cacheBytes + body.byteLength > PROXY_LIMITS.cacheBytes) {
+        const oldest = cache.keys().next().value
+        if (oldest === undefined) break
+        cacheBytes -= cache.get(oldest)!.body.byteLength
+        cache.delete(oldest)
+      }
+      cache.set(pathname, { type: r.headers.get('Content-Type') || 'text/javascript', body })
+      cacheBytes += body.byteLength
+    }
     res.end(body)
   }
   return {

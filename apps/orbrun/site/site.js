@@ -1,4 +1,4 @@
-// The site's pages with a pad in hand, and in a window of Orbrun's own (../site-pages.ts inlines this).
+// The site's pages with a pad in hand; ../site-pages.ts serves this as an external asset.
 //
 // Up and down (d-pad or left stick) move the gold cursor to the next link (or Copy) on
 // screen, and scroll when there is none; A follows it, B or Start go back to

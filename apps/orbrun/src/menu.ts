@@ -7,7 +7,7 @@ import { h, replace } from './dom'
 import { FocusNav, type Focusable } from './focus'
 import { nextHomePlace } from './room/places'
 import { RoomView } from './room/view'
-import { addAccount, addServer, ensureDeviceAccount, removeServer, openPage, characterOf, describeCharacter, describePlace, findServer, getChosenAccount, getGames, getLast, getMorgueDir, listAccounts, listServers, loginState, OFFLINE_SERVER, offlineOffered, offlineRuns, onIOS, morgueUrlFor, removeAccount, sameAccount, setChosenAccount, setLast, setMorgueDir, type Account, type LastCharacter, type MenuRoute, type Route, type ServerInfo } from './servers'
+import { addAccount, addServer, customServersAllowed, ensureDeviceAccount, removeServer, openPage, characterOf, describeCharacter, describePlace, findServer, getChosenAccount, getGames, getLast, getMorgueDir, listAccounts, listServers, loginState, OFFLINE_SERVER, offlineOffered, offlineRuns, onIOS, morgueUrlFor, removeAccount, sameAccount, setChosenAccount, setLast, setMorgueDir, type Account, type LastCharacter, type MenuRoute, type Route, type ServerInfo } from './servers'
 import { morgueDirGuesses, parseWhereis, saveWaiting, whereisUrl, type Whereis } from './whereis'
 import { deviceDump, deviceMorgues, morgueDate, morgueStamp, parseMorgue, serverMorgue, serverMorgueHead, serverMorgues, type MorgueSummary } from './morgues'
 import { morgueHtml } from './morgue-text'
@@ -2361,7 +2361,7 @@ export class FrontEnd {
         },
       })
     }
-    rows.push({ id: 'add-server', label: 'Add a server', sub: 'one not on this list', marker: '+', gap: true, hint: 'A WebTiles server not listed here, by its address.', fn: () => this.showAddServer(mode) })
+    if (customServersAllowed()) rows.push({ id: 'add-server', label: 'Add a server', sub: 'one not on this list', marker: '+', gap: true, hint: 'A WebTiles server not listed here, by its address.', fn: () => this.showAddServer(mode) })
     this.list({ cls: 'servers-list', title: mode === 'watch' ? 'Watch' : offlineOffered() ? 'Add a server account' : 'Add an account', lede: 'Choose a server.', rows, focus })
   }
 
@@ -2372,6 +2372,7 @@ export class FrontEnd {
    * text kept to fix.
    */
   private showAddServer(mode: 'add' | 'watch') {
+    if (!customServersAllowed()) return this.showServers(mode)
     this.serversMode = mode
     this.setView('add-server', 'add-server-form')
     this.at({ kind: 'menu', path: mode === 'watch' ? 'watch/add' : 'accounts/add/server' })

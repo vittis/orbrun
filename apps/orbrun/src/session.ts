@@ -68,6 +68,9 @@ export class Session {
   scene: Scene = emptyScene()
   private listeners = new Set<(e: SessionEvent) => void>()
   private queue: ServerMessage[] = []
+  private queueBytes = 0
+  /** A loading failure waiting for the socket close callback. */
+  private loadFailure: string | null = null
   private loadingVersion: string | null = null
   /** Counts gamedata loads started; a load that is no longer the latest, or whose session closed, publishes nothing. */
   private loadGeneration = 0
@@ -76,10 +79,13 @@ export class Session {
   /**
    * A load that makes no progress for this long is given up as stalled. The messages the load holds back
    * (`queue`) are every one the game sends meanwhile, and none can be dropped (a map delta left out is a
-   * level drawn wrong), so the queue is bounded in time instead: a fetch the browser would let hang for
-   * minutes ends here, the error reaches the screen, and the queue drains.
+   * level drawn wrong). The stall timer handles slow loads; count and estimated
+   * byte limits below independently bound retained messages even while loading progresses.
    */
   static readonly LOAD_STALL_MS = 30_000
+  static readonly LOAD_QUEUE_MESSAGES = 8192
+  /** Twice serialized character count plus per-message overhead; an estimate, not a heap measurement. */
+  static readonly LOAD_QUEUE_BYTES = 32 * 1024 * 1024
   /** A gamedata fetch is in flight; a `gamedata` event with `ready` or `error` ends it. */
   get loading(): boolean {
     return this.loadingVersion !== null
@@ -154,7 +160,10 @@ export class Session {
       this.loadAbort = null
       this.loadingVersion = null
       this.queue = []
-      this.emit({ type: 'closed', reason: r.reason || closeWord(r.code) })
+      this.queueBytes = 0
+      const reason = this.loadFailure || r.reason || closeWord(r.code)
+      this.loadFailure = null
+      this.emit({ type: 'closed', reason })
     })
   }
 
@@ -220,12 +229,13 @@ export class Session {
    * nothing is while the connection is still up.
    */
   reconnect(): boolean {
-    if (!this.closed || !this.conn.reopen) return false
+    if (!this.closed || this.loadFailure || !this.conn.reopen) return false
     this.state = initialState()
     this.scene = emptyScene()
     this.lastSceneRev = { map: -1, player: -1, ui: -1 }
     this.sceneDirty = false
     this.queue = []
+    this.queueBytes = 0
     this.closed = false
     this.conn.reopen()
     return true
@@ -305,6 +315,7 @@ export class Session {
   }
 
   private handle(m: ServerMessage) {
+    if (this.closed || this.loadFailure) return
     // an answer is its question's (a probe, or the rc editor), and a load in progress must not hold it
     if (m.msg === 'rcfile_contents' && this.rcAsks.length) {
       const at = this.rcAsks.findIndex((a) => a.gameId === m.game_id)
@@ -344,10 +355,41 @@ export class Session {
       return
     }
     if (this.loadingVersion) {
+      if (this.queue.length >= Session.LOAD_QUEUE_MESSAGES) return this.failLoad()
+      let bytes: number
+      try {
+        bytes = JSON.stringify(m).length * 2 + 64
+      } catch {
+        return this.failLoad()
+      }
+      if (this.queueBytes + bytes > Session.LOAD_QUEUE_BYTES) return this.failLoad()
       this.queue.push(m)
+      this.queueBytes += bytes
       return
     }
     this.apply(m)
+  }
+
+  /** A failed load or lost authoritative delta requires a fresh session, never a partial queue replay. */
+  private failLoad(reason = 'gamedata message queue exceeded its resource limit; reconnect to reload the game') {
+    this.loadFailure = reason
+    this.closed = true
+    this.loggingIn = false
+    ++this.loadGeneration
+    this.loadAbort?.abort(new Error(reason))
+    this.loadAbort = null
+    this.loadingVersion = null
+    this.queue = []
+    this.queueBytes = 0
+    this.gamedata?.dispose()
+    this.gamedata = null
+    this.state = initialState()
+    this.scene = emptyScene()
+    this.sceneDirty = false
+    this.lastSceneRev = { map: -1, player: -1, ui: -1 }
+    this.diag(reason)
+    this.emit({ type: 'gamedata', status: 'error', detail: reason })
+    this.close()
   }
 
   private apply(m: ServerMessage) {
@@ -390,8 +432,7 @@ export class Session {
       this.emit({ type: 'gamedata', status: 'ready' })
     } catch (e) {
       if (!current()) return
-      this.diag('gamedata load failed: ' + safeString(e))
-      this.emit({ type: 'gamedata', status: 'error', detail: safeString(e) })
+      this.failLoad('gamedata load failed: ' + safeString(e))
     } finally {
       clearTimeout(stall)
       if (current()) {
@@ -399,6 +440,7 @@ export class Session {
         this.loadingVersion = null
         const q = this.queue
         this.queue = []
+        this.queueBytes = 0
         for (const m of q) this.apply(m)
         this.flushScene()
       }

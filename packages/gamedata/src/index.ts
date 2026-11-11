@@ -8,6 +8,8 @@
  * `TileSource` contract structurally, through the types below.
  */
 
+import { parseEnums, parseTiles, parseStatusIcons, MAX_MODULE_CHARS } from './parse.ts'
+
 /** A tile id, as the server's tileinfo modules number them. */
 export type TileId = number
 
@@ -105,39 +107,20 @@ export type AtlasName = (typeof ATLASES)[number]
 
 const TILEINFO_ORDER: AtlasName[] = ['floor', 'wall', 'feat', 'main', 'player', 'gui', 'icons']
 
-/** Evaluate an AMD module source with the given resolved dependencies. */
-function evalAmd(src: string, resolve: (dep: string) => unknown): unknown {
-  let result: unknown
-  const define = (a: unknown, b?: unknown) => {
-    let deps: string[] = []
-    let factory: unknown
-    if (typeof a === 'function') factory = a
-    else {
-      deps = a as string[]
-      factory = b
-    }
-    const args = deps.map(resolve)
-    result = (factory as (...x: unknown[]) => unknown)(...args)
-  }
-  const fn = new Function('define', 'window', 'assert', 'requirejs', 'require', src)
-  fn(define, {}, () => {}, undefined, undefined)
-  return result
-}
-
 /**
- * Evaluate one gamedata module, saying which URL failed when it will not.
+ * Parse one generated data module without executing remote JavaScript.
  *
  * A shell whose gamedata proxy is missing answers these URLs with its own
  * app shell: a 200 whose body is HTML. Without this the only sign is the
- * SyntaxError from the eval below (`Unexpected token '<'`), which names
+ * SyntaxError from the parser (`Unexpected token '<'`), which names
  * neither the file nor the reason.
  */
-function evalGamedata(url: string, src: string, resolve: (dep: string) => unknown): unknown {
+function parseGamedata<T>(url: string, src: string, read: (source: string) => T): T {
   if (/^\s*(<!|<html|<\?xml)/i.test(src)) {
     throw new Error(`gamedata ${url}: expected JavaScript, got an HTML page (is the gamedata proxy serving this path?)`)
   }
   try {
-    return evalAmd(src, resolve)
+    return read(src)
   } catch (e) {
     throw new Error(`gamedata ${url}: ${e instanceof Error ? e.message : String(e)}`)
   }
@@ -437,7 +420,7 @@ function gamedataRoot(base: string, version: string): string {
   return `${base.replace(/\/$/, '')}/gamedata/${version}`
 }
 
-/** The scripts `loadGamedata` reads, in the order it evaluates them; the optional status-icon-sizes.js is not among them. */
+/** The scripts parsed in dependency order; status-icon-sizes.js is optional. */
 const SCRIPTS = ['enums.js', ...TILEINFO_ORDER.map((n) => `tileinfo-${n}.js`)]
 
 /**
@@ -470,7 +453,7 @@ export async function loadGamedata(opts: LoadGamedataOptions): Promise<Gamedata>
     }),
   )
   checkAborted()
-  const enums = evalGamedata(`${root}/${files[0]}`, texts[0], () => undefined) as Enums
+  const enums = parseGamedata(`${root}/${files[0]}`, texts[0], parseEnums)
   const modules = {} as Record<AtlasName, TileModule>
   let prev: Record<string, unknown> | undefined
   let fp = ''
@@ -478,7 +461,7 @@ export async function loadGamedata(opts: LoadGamedataOptions): Promise<Gamedata>
     const name = TILEINFO_ORDER[i]
     const src = texts[i + 1]
     const p = prev
-    const exports = evalGamedata(`${root}/${files[i + 1]}`, src, () => p) as Record<string, unknown>
+    const exports = parseGamedata(`${root}/${files[i + 1]}`, src, (source) => parseTiles(source, name, p))
     const get_tile_info = exports.get_tile_info as (idx: number) => TileInfoRaw | undefined
     const tile_count = exports.tile_count as (idx: number) => number
     const basetile = exports.basetile as (idx: number) => number
@@ -504,9 +487,7 @@ export async function loadGamedata(opts: LoadGamedataOptions): Promise<Gamedata>
   // status-icon-sizes.js is generated with the tiles; a server may predate it
   try {
     const src = await io.fetchText(`${root}/status-icon-sizes.js`, signal)
-    const mod = evalGamedata(`${root}/status-icon-sizes.js`, src, () => modules.icons.exports) as
-      | { status_icon_size?: StatusIconSize }
-      | undefined
+    const mod = parseGamedata(`${root}/status-icon-sizes.js`, src, (source) => parseStatusIcons(source, modules.icons.exports))
     if (mod && typeof mod.status_icon_size === 'function') gd.setStatusIconSizes(mod.status_icon_size)
     else opts.onDiagnostic?.('status-icon-sizes.js has no status_icon_size; status icons shift by their own width')
   } catch (e) {
@@ -540,7 +521,24 @@ export function browserIo(): GamedataFetch {
     async fetchText(url, signal) {
       const r = await fetch(url, { signal })
       if (!r.ok) throw new Error(`gamedata ${url}: HTTP ${r.status}`)
-      return r.text()
+      // Bound bytes while streaming, before retaining a hostile response.
+      if (!r.body) throw new Error(`gamedata ${url}: empty response body`)
+      const reader = r.body.getReader()
+      const decoder = new TextDecoder()
+      let text = '', bytes = 0
+      try {
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          bytes += value.byteLength
+          if (bytes > MAX_MODULE_CHARS) throw new Error(`gamedata ${url}: module size limit exceeded`)
+          text += decoder.decode(value, { stream: true })
+        }
+        return text + decoder.decode()
+      } finally {
+        await reader.cancel().catch(() => {})
+        reader.releaseLock()
+      }
     },
     async loadImage(url, signal) {
       const r = await fetch(url, { signal })

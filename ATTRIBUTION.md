@@ -57,8 +57,11 @@ spoken to, and gameplay never draws from it. Orbrun's mark is the Orb of
 Zot's tile of that same version, cut from its `main.png` into
 `apps/orbrun/public/orb.png`: it stands beside the name on the title screen,
 and `tools/build/brand.mjs` builds the favicon, the README's wordmark and the
-Steam artwork from it. DCSS's tile art (`rltiles`) is released under CC0 by
-the DCSS team and its artists.
+Steam artwork from it. DCSS's LICENSE states that most tile art is public domain or CC0, with
+exceptions. The atlas records source rectangles and a gamedata version,
+not a per-tile license audit; do not infer that every packed tile is CC0.
+See the upstream [DCSS license](https://github.com/crawl/crawl/blob/master/LICENSE)
+and [tile licensing notes](https://github.com/crawl/tiles/blob/master/README.md).
 
 The name beside it is set in Grenze Gotisch Bold by Omnibus-Type, under the
 SIL Open Font License 1.1 (`assets/fonts/OFL.txt`): the title screen loads
@@ -127,7 +130,7 @@ upstream and a JSPI-only build.
 
 ## Third-party assets and dependencies
 
-- [three.js](https://threejs.org) (MIT): the 3D renderer, the one runtime
+- [three.js](https://threejs.org) (MIT): the 3D renderer, a runtime
   dependency.
 - Grenze Gotisch by Omnibus-Type (SIL Open Font License 1.1,
   `assets/fonts/OFL.txt`): the title face, as described above.
@@ -135,9 +138,18 @@ upstream and a JSPI-only build.
   fetched at runtime from the connected DCSS server, which serves its own
   copies. DCSS tiles are by the DCSS contributors under the licenses stated
   in the DCSS source tree (`crawl-ref/source/rltiles/`); the few packed into
-  the front room's atlas are CC0, as described above.
+  the front room's atlas retain the provenance caveat described above.
 - The hosted site loads Cloudflare Web Analytics' beacon script when a token
   is set at build time (`apps/orbrun/src/analytics.ts`); a local build loads
   nothing.
 - Build and test tooling (TypeScript, Vite, Vitest, happy-dom, wrangler,
   opentype.js, ws) under their own licenses, none of it shipped to players.
+
+## DCSS Client fork — 2026-11-11
+
+This fork changes the hosted server policy, gamedata parsing, network limits,
+Cloudflare deployment configuration and source links. Upstream credits above
+remain applicable. See `project-notes` and the release history for changes.
+
+Acorn (MIT) parses generated gamedata without executing it. Its license is
+in `apps/orbrun/public/licenses/acorn.txt`, shipped at `/licenses/acorn.txt`.

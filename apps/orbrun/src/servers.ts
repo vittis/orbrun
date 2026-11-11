@@ -30,13 +30,17 @@ export const ENGINE_BASE = '/engine'
 export const OFFLINE_SERVER: ServerInfo = { id: 'offline', name: 'Offline', ws: '', http: '', host: 'this device', offline: true }
 
 /**
- * Whether Offline is offered: everywhere but under test, where no engine is
- * served (the dev server serves a local engine/build.sh through
- * engine-files.ts, a deploy the published one through the ENGINE binding).
+ * Offline is available only in development, where engine-files.ts can serve
+ * a local engine/build.sh. The hosted client has no engine service.
  * Read on each call, so a test can stub the environment.
  */
 export function offlineOffered(): boolean {
-  return import.meta.env.MODE !== 'test'
+  return !import.meta.env.PROD && import.meta.env.MODE !== 'test'
+}
+
+/** Hosted builds use only the bundled public-server registry. */
+export function customServersAllowed(): boolean {
+  return !import.meta.env.PROD
 }
 
 /**
@@ -81,7 +85,7 @@ function save(key: string, value: unknown) {
 }
 
 export function listServers(): ServerInfo[] {
-  const custom = load<ServerInfo[]>(KEY, [])
+  const custom = customServersAllowed() ? load<ServerInfo[]>(KEY, []) : []
   return [...(bundled as ServerInfo[]), ...custom]
 }
 
@@ -101,10 +105,12 @@ export function addServer(url: string): ServerInfo {
     throw new Error(`${text} is not an address.`)
   }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('A server is reached over http or https.')
+  if (!customServersAllowed() && u.protocol !== 'https:') throw new Error('Use HTTPS for a listed public server.')
   const host = u.host.toLowerCase()
   if (!host || /\s/.test(text) || !/[a-z0-9]/.test(host)) throw new Error(`${text} is not an address.`)
   const had = listServers().find((s) => !s.offline && s.host.toLowerCase() === host)
   if (had) return had
+  if (!customServersAllowed()) throw new Error('Choose a server from the public server list.')
   const ws = (u.protocol === 'http:' ? 'ws://' : 'wss://') + host + '/socket'
   const info: ServerInfo = { id: host, name: host, ws, http: u.origin, host, custom: true }
   const custom = load<ServerInfo[]>(KEY, []).filter((s) => s.id !== info.id)
@@ -202,7 +208,7 @@ function localStorageHas(key: string): boolean {
  */
 export function listAccounts(): Account[] {
   const stored = storedAccounts()
-  const all = offlineOffered() ? stored : stored.filter((a) => a.serverId !== OFFLINE_SERVER.id)
+  const all = stored.filter((a) => findServer(a.serverId) !== null)
   const used = load<Record<string, number>>(USED_KEY, {})
   const at = (a: Account) => used[tokenKey(a.serverId, a.username)] ?? 0
   return all.sort((a, b) => at(b) - at(a))

@@ -1,10 +1,10 @@
 {
-  // orbrun.app: a Worker that serves the static build and the gamedata proxy.
+  // DCSS Client: a Worker that serves the static build and the gamedata proxy.
   //
   // Cloudflare's build settings must have Root directory = / (the monorepo
   // root), because apps/orbrun depends on the workspace packages by name and
   // on the root's vite: an `npm ci` inside apps/orbrun resolves neither.
-  //   Build command:  npm ci --include=dev && npm run build
+  //   Build command:  npm ci --include=dev && npm run typecheck && NODE_ENV=test npm test && npm run build
   //   Deploy command: npx wrangler deploy
   //
   // The `--include=dev` is required. The build image exports
@@ -16,7 +16,7 @@
   // leaves the pruned tree alone. As a backstop the root `prebuild` script
   // (tools/build/ensure-dev-deps.mjs) reinstalls when vite is missing.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "orbrun",
+  "name": "dcss-client",
   "main": "apps/orbrun/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "assets": {
@@ -32,11 +32,7 @@
     // page skip it
     "run_worker_first": ["/*", "!/assets/*", "!/fonts/*", "!/room/*", "!/steam/*", "!/icons/*"]
   },
-  // the offline engine's files: a Worker of their own (engine/wrangler.jsonc),
-  // deployed before this one, so a new engine build never redeploys the app
-  "services": [{ "binding": "ENGINE", "service": "orbrun-engine" }],
-  // the app's anonymous event counts at /api/e (apps/orbrun/src/count-events.ts); the dataset is made on first write
-  "analytics_engine_datasets": [{ "binding": "EVENTS", "dataset": "orbrun_events" }],
+  // This fork deploys online play only. No engine Worker or analytics dataset is needed.
   "observability": {
     "enabled": true
   }

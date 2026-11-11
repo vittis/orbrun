@@ -41,7 +41,9 @@ export interface WebSocketLike {
   binaryType: string
   readyState: number
   send(data: string): void
-  close(): void
+  close(code?: number, reason?: string): void
+  /** Native sockets expose bytes queued for transmission; test transports may omit it. */
+  readonly bufferedAmount?: number
   onopen: ((ev: unknown) => void) | null
   onmessage: ((ev: { data: unknown }) => void) | null
   onclose: ((ev: { code: number; reason: string; wasClean: boolean }) => void) | null
@@ -57,6 +59,22 @@ export interface RemoteConnectionOptions {
   /** Prefer the uncompressed subprotocol. Set false if a server refuses it. */
   noCompression?: boolean
   onDiagnostic?: (text: string, detail?: unknown) => void
+}
+
+/** Generous enough for full maps/rc files, bounded against a stalled or malformed peer. */
+export const CONNECTION_LIMITS = {
+  frameBytes: 16 * 1024 * 1024,
+  batchMessages: 8192,
+  messageNameLength: 128,
+  outboundMessageBytes: 1024 * 1024,
+  queuedMessages: 1024,
+  queuedBytes: 2 * 1024 * 1024,
+} as const
+
+function messageObject(value: unknown): value is ServerMessage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const msg = (value as Record<string, unknown>).msg
+  return typeof msg === 'string' && msg.length > 0 && msg.length <= CONNECTION_LIMITS.messageNameLength
 }
 
 /**
@@ -81,6 +99,8 @@ export class RemoteConnection implements Connection {
   onTraffic: ((e: TrafficEvent) => void) | null = null
   /** What was sent before the socket opened, to go out in order once it has. Only while connecting: a closed socket keeps nothing. */
   private queue: string[] = []
+  private queueBytes = 0
+  private encoder = new TextEncoder()
 
   constructor(opts: RemoteConnectionOptions) {
     this.opts = opts
@@ -98,21 +118,33 @@ export class RemoteConnection implements Connection {
     ws.onopen = () => {
       if (!mine()) return
       this.open = true
-      for (const s of this.queue) ws.send(s)
+      const pending = this.queue
       this.queue = []
+      this.queueBytes = 0
+      for (const s of pending) {
+        if (!this.transmit(s, this.encoder.encode(s).byteLength)) return
+      }
       for (const h of this.openHandlers) h()
     }
     ws.onmessage = (ev) => {
       if (!mine()) return
       let text: string
-      if (typeof ev.data === 'string') text = ev.data
-      else if (ev.data instanceof ArrayBuffer && this.decoder) text = this.decoder.decode(ev.data)
-      else {
-        this.opts.onDiagnostic?.('binary frame received; compression is not supported', ev.data)
+      let bytes: number
+      if (typeof ev.data === 'string') {
+        // Reject oversized strings before allocating another encoded copy.
+        if (ev.data.length > CONNECTION_LIMITS.frameBytes) return this.terminate('incoming frame exceeds byte limit')
+        text = ev.data
+        bytes = this.encoder.encode(text).byteLength
+      } else if (ev.data instanceof ArrayBuffer && this.decoder) {
+        bytes = ev.data.byteLength
+        if (bytes > CONNECTION_LIMITS.frameBytes) return this.terminate('incoming frame exceeds byte limit')
+        text = this.decoder.decode(ev.data)
+      } else {
+        this.terminate('unsupported WebTiles frame type')
         return
       }
-      // the bytes as they arrived, not as they decode: a UTF-8 frame is longer than its characters
-      this.dispatchText(text, ev.data instanceof ArrayBuffer ? ev.data.byteLength : text.length)
+      if (bytes > CONNECTION_LIMITS.frameBytes) return this.terminate('incoming frame exceeds byte limit')
+      this.dispatchText(text, bytes)
     }
     ws.onclose = (ev) => {
       if (!mine()) return
@@ -120,6 +152,7 @@ export class RemoteConnection implements Connection {
       this.closed = true
       // whatever was waiting for the socket to open never will now
       this.queue = []
+      this.queueBytes = 0
       for (const h of this.closeHandlers) h({ code: ev.code, reason: ev.reason, clean: ev.wasClean })
     }
     ws.onerror = (ev) => {
@@ -129,21 +162,42 @@ export class RemoteConnection implements Connection {
   }
 
   private dispatchText(text: string, bytes: number) {
-    if (!text.startsWith('{')) {
-      this.opts.onDiagnostic?.('non-JSON message ignored', text.slice(0, 200))
-      return
-    }
-    let obj: { msgs?: ServerMessage[] } & ServerMessage
+    let obj: unknown
     try {
       obj = JSON.parse(text)
-    } catch (e) {
-      this.opts.onDiagnostic?.('JSON parse error', text.slice(0, 200))
+    } catch {
+      this.terminate('invalid WebTiles JSON', 4002)
       return
     }
-    const msgs: ServerMessage[] = Array.isArray(obj.msgs) ? obj.msgs : [obj]
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+      this.terminate('invalid WebTiles envelope', 4002)
+      return
+    }
+    let msgs: unknown[]
+    if (Object.hasOwn(obj, 'msgs')) {
+      const batch = (obj as Record<string, unknown>).msgs
+      if (!Array.isArray(batch)) {
+        this.terminate('invalid WebTiles message batch', 4002)
+        return
+      }
+      msgs = batch
+    } else msgs = [obj]
+    if (msgs.length > CONNECTION_LIMITS.batchMessages) {
+      this.terminate('incoming batch exceeds message limit')
+      return
+    }
+    // Validate the complete envelope first: applying only a prefix would lose
+    // authoritative deltas while leaving the UI looking connected.
+    if (!msgs.every(messageObject)) {
+      this.terminate('invalid WebTiles message', 4002)
+      return
+    }
     // before the handlers run: what arrived is the network's, what they then cost is the frame's
     this.onTraffic?.({ dir: 'in', bytes, msgs: msgs.length })
-    for (const m of msgs) this.dispatch(m)
+    for (const m of msgs) {
+      if (this.closed) break
+      this.dispatch(m)
+    }
   }
 
   private dispatch(m: ServerMessage) {
@@ -160,12 +214,51 @@ export class RemoteConnection implements Connection {
     }
   }
 
+  /** Resource/protocol failures end the session explicitly; queued commands are never replayed later. */
+  private terminate(reason: string, code = 4000): void {
+    if (this.closed) return
+    const ws = this.ws
+    ++this.gen // ignore late open/message/close callbacks from the rejected socket
+    this.open = false
+    this.closed = true
+    this.queue = []
+    this.queueBytes = 0
+    this.opts.onDiagnostic?.(reason)
+    ws?.close(code, reason)
+    for (const h of this.closeHandlers) h({ code, reason, clean: false })
+  }
+
+  private transmit(s: string, bytes: number): boolean {
+    if ((this.ws?.bufferedAmount ?? 0) + bytes > CONNECTION_LIMITS.queuedBytes) {
+      this.terminate('outgoing socket buffer exceeds byte limit')
+      return false
+    }
+    try {
+      this.ws!.send(s)
+      return true
+    } catch {
+      this.terminate('websocket send failed')
+      return false
+    }
+  }
+
   send(msg: ClientMessage): void {
+    if (this.closed) {
+      this.opts.onDiagnostic?.('message dropped: the connection is closed', msg.msg)
+      return
+    }
     const s = JSON.stringify(msg)
-    this.onTraffic?.({ dir: 'out', bytes: s.length, msgs: 1, name: msg.msg })
-    if (this.ws && this.open && this.ws.readyState === 1) this.ws.send(s)
-    else if (this.closed) this.opts.onDiagnostic?.('message dropped: the connection is closed', msg.msg)
-    else this.queue.push(s)
+    if (s.length > CONNECTION_LIMITS.outboundMessageBytes) return this.terminate('outgoing message exceeds byte limit')
+    const bytes = this.encoder.encode(s).byteLength
+    if (bytes > CONNECTION_LIMITS.outboundMessageBytes) return this.terminate('outgoing message exceeds byte limit')
+    this.onTraffic?.({ dir: 'out', bytes, msgs: 1, name: msg.msg })
+    if (this.ws && this.open && this.ws.readyState === 1) this.transmit(s, bytes)
+    else if (this.queue.length >= CONNECTION_LIMITS.queuedMessages || this.queueBytes + bytes > CONNECTION_LIMITS.queuedBytes) {
+      this.terminate('outgoing connection queue exceeds limit')
+    } else {
+      this.queue.push(s)
+      this.queueBytes += bytes
+    }
   }
 
   onMessage(handler: (msg: ServerMessage) => void): Unsubscribe {
@@ -199,6 +292,7 @@ export class RemoteConnection implements Connection {
     this.closed = false
     this.open = false
     this.queue = []
+    this.queueBytes = 0
     this.connect()
   }
 }

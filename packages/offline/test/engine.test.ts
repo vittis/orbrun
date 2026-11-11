@@ -17,6 +17,9 @@ import {
 // The real engine, built by engine/build.sh; skipped where nothing is built (CI runs engine/smoke.mjs instead).
 const DIST = join(import.meta.dirname, '../../../engine/dist')
 const built = ['stable', 'trunk'].filter((c) => existsSync(join(DIST, c, 'engine.json')))
+if (process.env.REQUIRE_ENGINE === '1' && !built.includes('stable')) {
+  throw new Error('REQUIRE_ENGINE=1 needs engine/dist/stable/engine.json; build the stable engine before running this test lane.')
+}
 
 /** Runs an engine in this process, as the worker would. */
 const inProcess: EngineLauncher = (channel, args, events) => {
@@ -58,8 +61,8 @@ async function until(what: string, test: () => boolean, ms = 20000) {
   }
 }
 
-describe.skipIf(!built.length).each(built)('offline %s engine through LocalWasmConnection', (name) => {
-  it("logs in, starts a character named for the profile, plays it to the map, takes turns, and saves on the way back to the lobby", { timeout: 60000 }, async () => {
+describe.each(['stable', 'trunk'])('offline %s engine through LocalWasmConnection', (name) => {
+  it.skipIf(!built.includes(name))("logs in, starts a character named for the profile, plays it to the map, takes turns, and saves on the way back to the lobby", { timeout: 60000 }, async () => {
     const info = JSON.parse(readFileSync(join(DIST, name, 'engine.json'), 'utf8')) as EngineInfo
     const channel = channelOf(info)
     const notes: [string, string | null][] = []
