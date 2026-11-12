@@ -2,10 +2,14 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.42 — 2026-11-12
+## 0.3.43 — 2026-11-12
 
 - Align Djinni defence and attribute rows below the character portrait.
 - Keep webs and nets at character size in overhead views instead of covering the screen.
+
+## 0.3.42 — 2026-11-12
+
+- Give Dungeon (2.5D) deaths chunkier shaded pixel gore, denser blood sprays and ragged splatters that linger before dissolving.
 
 ## 0.3.41 — 2026-11-12
 

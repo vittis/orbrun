@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.40 point at the `cloudflare-online-v1.37` release tag in
+Source links for 0.3.42 point at the `cloudflare-online-v1.39` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1016,21 +1016,43 @@ Verify the hosted source tag and bundle after rollout; if main advances, retain
 the newer release when it includes this change instead of redeploying older code.
 
 
-## 0.3.42 character overview and web scale — prepared 2026-11-12
+## 0.3.42 pixel gore in Dungeon (2.5D) — prepared 2026-11-12
+
+User authorized committing to main and deploying the 2.5D-only gore remake.
+Integrated origin/main `e0ef8b7`, preserving directional travel arrivals and
+all preceding releases. Immutable source tag: `cloudflare-online-v1.39`.
+
+Dungeon death effects use shaded pixel stamps with dark outlines and exposed
+bone, larger gibs, denser blood trails and ragged floor splatters. Residue
+lasts up to 4.6 seconds and dissolves whole texels. Bone, slime, stone,
+elemental and spectral deaths retain distinct colors and motion. Death bursts
+replace the smooth impact ring; floor stains draw below actors and terrain.
+Visibility, Still mode, level cleanup, bounded histories and sprite caches
+remain enforced. First-person effects are unchanged.
+
+Integrated validation passed a forced TypeScript rebuild and 2,399 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. Browser checks covered blood, slime and
+complete expiry. The guarded production build/dry-run precedes the atomic
+main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
+source links, bundle identity and proxy checks follow rollout.
+
+## 0.3.43 character overview and web scale — prepared 2026-11-12
 
 User authorized committing to main and deploying while preserving concurrent
-agents’ work. Based on origin/main `e0ef8b7`, retaining directional arrivals,
-creature-specific death effects, wall depth and prior releases. Immutable
-source tag: `cloudflare-online-v1.39`.
+agents’ work. Integrated origin/main `aaad668`, retaining the concurrent pixel-gore
+release, directional arrivals, wall depth and prior releases. Immutable
+source tag: `cloudflare-online-v1.40`.
 
 Djinni reserve the absent Magic row so AC/Str align with the other stats below
 the portrait. Overhead views keep whole-cell web/net art on the character;
 the large central overlay is reserved for first person. Switching projections
 updates the overlay without waiting for a game-state change.
 
-Validation: 2,394 unit tests passed with two optional-engine skips, and
-TypeScript passed. Release checks include a forced TypeScript rebuild, the
-full suite, optional engine E2E and guarded production build/dry-run. Publish
+Integrated validation: 2,403 unit tests passed with two optional-engine
+skips; the forced TypeScript rebuild passed. Optional engine E2E reports
+44 explicit skips because engine artifacts are absent. A guarded production
+build/dry-run precedes publication. Publish
 main and the source tag atomically through the existing Workers Builds
 pipeline. Re-fetch and integrate main if another agent advances it; never
 force-push or upload a separate stale local build. Verify hosted source and
