@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.61 — 2026-11-12
+
+- Replace low-health tile fire flashes with a subtle red corner vignette that fades away after damage at 30% HP or below.
+- Keep the centre clear and reduce warning intensity with reduced motion.
+
 ## 0.3.60 — 2026-11-12
 
 - Replace melee impact flashes in Dungeon (2.5D) with subtle directional sprays matched to the target's body material.
