@@ -28,6 +28,7 @@ import { OKAY_THEN, actionNeighbour, actionTab, actionTabOf, type ActionTabId } 
 import { CHAMFER, getSavedView, leftRightTurns, saveSettings, saveView, WALL_INSET, type Settings } from './servers'
 import { fovOf, messageLinesOf, rcPacesExplore, setAutoMessageLines, setAutoMinimap, setExploreGame, type SettingGroup } from './settings-rows'
 import { PerfOverlay, type LogContext } from './perf'
+import { FpsCounter } from './fps'
 import { MapHold } from './map-hold'
 import { swipeLean, swipeStep } from './swipe'
 import { FLICK_TURN_RATE, SWIPE_FIRST_PX, SWIPE_HEADING_PX, swipeRest, swipeView } from './swipe-turn'
@@ -150,6 +151,7 @@ export class GameScreen {
   private ctx: Context
   /** frame timing readout (perf.ts), on with `?perf` */
   private perf: PerfOverlay
+  private fps = new FpsCounter()
   private unsub: (() => void)[] = []
   private _needsRender = true
   /**
@@ -335,7 +337,7 @@ export class GameScreen {
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
-    this.root.append(this.canvas, this.loading)
+    this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.combatPopups.root)
     const st = hooks.settings()
     this.renderMode = st.renderer
@@ -699,6 +701,7 @@ export class GameScreen {
       }
     }
     this.viewPx = px
+    this.fps.place(this.renderMode === '2.5d' && !mapView ? this.grid.px(cells.view) : null)
     // the map is centred, and its cells fitted, on its part above the touch bar (render-2d `foot`)
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
@@ -983,6 +986,7 @@ export class GameScreen {
     if (this.advancePresentation(dt, now / 1000)) this.needsRender = true
     perf?.mark('present')
     if (!this.awake(now)) {
+      this.fps.update(now, false)
       // nothing to do and nothing moving: no frames until something happens (`wake`) or the safety tick
       cancelFrame(this.raf)
       this.raf = 0
@@ -1094,6 +1098,7 @@ export class GameScreen {
     this.chat.update(st, this.chatOn && (st.phase === 'playing' || st.phase === 'watching'), !!st.lobby.username)
     this.syncTarget()
     perf?.mark('ui')
+    let rendered = false
     if (this.needsRender) {
       this.needsRender = false
       this.syncViewmodel(st)
@@ -1115,6 +1120,7 @@ export class GameScreen {
       // the 3D renderer marks its own stretches (level, bake, fields, crowd, place, draw) when measured
       if (r3d) r3d.mark = perf ? (n) => perf.mark(n) : null
       this.renderer.render(now / 1000)
+      rendered = true
       perf?.mark('render')
       // a frame that drew: the key whose answer it put on the screen stops waiting (perf.ts `drew`)
       if (perf) this.perf.net.drew()
@@ -1124,6 +1130,7 @@ export class GameScreen {
     }
     this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d,
       this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.cam.reducedMotion) : this.cam.reducedMotion)
+    this.fps.update(now, rendered)
     perf?.end()
   }
 

@@ -7,6 +7,7 @@ import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { TileCache } from '../../../packages/render-2.5d/src/tiles'
 import { CameraController } from '../src/camera'
 import { GameScreen } from '../src/game'
+import { FpsCounter } from '../src/fps'
 import { PredictiveMovement } from '../src/predictive-movement'
 import type { Session } from '../src/session'
 
@@ -35,7 +36,7 @@ function harness() {
   const session = { state, scene, sceneChangedAt: 1050, flushScene: vi.fn(() => false) }
   const screen = Object.assign(Object.create(GameScreen.prototype), {
     session, cam, renderer, prediction: new PredictiveMovement(session as unknown as Session, cam, () => false), lastFrame: 1000, hooks: {},
-    awake: () => false, wake: vi.fn(), idleTick: vi.fn(), sceneTime: undefined,
+    awake: () => false, wake: vi.fn(), idleTick: vi.fn(), sceneTime: undefined, fps: new FpsCounter(),
   }) as {
     loop(now: number): void
     advancePresentation(dt: number, now: number): boolean

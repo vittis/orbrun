@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.51 point at the `cloudflare-online-v1.48` release tag in
+Source links for 0.3.52 point at the `cloudflare-online-v1.49` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1311,3 +1311,21 @@ creature's body-centred impact. Release validation and the guarded deployment
 dry-run precede the atomic, non-forced main/source-tag push through the existing
 Workers Builds pipeline. Verify live version, source links, exact bundle, CSP,
 proxies and anonymous spectating after rollout.
+
+
+## 0.3.52 dungeon FPS counter — prepared 2026-11-12
+
+User authorized committing to main and deploying. Based on origin/main
+`80cf1d6`; immutable source tag: `cloudflare-online-v1.49`.
+
+Dungeon (2.5D) shows a compact FPS counter in the upper-left of the map. It
+counts actual map draws over half-second samples on the existing frame clock,
+without requesting additional frames or timers. Visible animations continue to
+count while the player stands still; genuinely sleeping scenes settle to zero.
+The counter hides in the level map and other projections and resets when the
+dungeon view returns. Timing tests cover 30/60/120 FPS, skipped draws, idle
+samples and view changes.
+
+Release validation precedes an atomic, non-forced main/source-tag push through
+the existing Workers Builds pipeline. Verify the hosted release, source links,
+exact bundles, CSP and proxy restrictions after deployment.
