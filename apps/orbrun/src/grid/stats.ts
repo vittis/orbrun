@@ -384,9 +384,9 @@ export function statsRows(p: PlayerState, opts: ServerOptions, prev: BarMemory =
   rows.push(beside(titleIn(besideW)))
   rows.push(beside(line2(besideW)))
   place(hpBar)
-  if (mpValue) place(mpBar)
+  // Reserve the Magic row for Djinni too, so both stat columns start below the portrait.
+  place(mpValue ? mpBar : () => [])
 
-  // a Djinni's pane has no Magic row, so its AC row still sits beside the portrait
   for (let i = 0; i < left.length; i++) place((_, cols) => joinRows(left[i], cols.split, right[i]))
 
   rows.push(cutRow(weapon, width, true))

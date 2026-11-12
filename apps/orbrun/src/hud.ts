@@ -391,13 +391,15 @@ export class Hud {
    * WebTiles paints across the whole doll (scene `statusIcons` `full`),
    * blown up in the middle of the free view at part opacity, so being held
    * reads at a glance without hiding what stands behind it. Only in the
-   * dungeon view proper: a menu, a popup or the level map covers it.
+   * first-person dungeon view: overhead renderers draw these on the character.
+   * A menu, a popup or the level map covers it.
    */
   private trapped = h('div', { class: 'trapped', hidden: true })
   private trappedCanvas = h('canvas', { class: 'trapped-canvas' })
   private trappedR2d = new Render2d({ mode: 'tiles', cellSize: 32 })
   private trappedKey = ''
   private trappedPre: unknown[] | undefined
+  private trappedOverlayEnabled = true
   /** the minimap's unexplored ground is the same translucent backing as the stats pane, since it lies over the view too */
   private minimap = new Render2d({ mode: 'tiles', cellSize: MINIMAP_CELL_DEFAULT, follow: true, background: 'rgba(0, 0, 0, 0)' })
   /**
@@ -1035,14 +1037,14 @@ export class Hud {
    */
   private renderTrapped(scene: Scene, state: GameState, gd: Gamedata | null) {
     const free = this.freePx
-    const pre = [scene.revision, state.rev.any, gd, free]
+    const pre = [scene.revision, state.rev.any, gd, free, this.trappedOverlayEnabled]
     if (!changed(this.trappedPre, pre)) return
     this.trappedPre = pre
     const me = scene.playerOnLevel ? scene.billboards.find((b) => b.kind === 'player' && b.x === scene.player.x && b.y === scene.player.y) : undefined
     const marks = (me?.statusIcons || []).filter((i) => i.full)
     const o = state.options
     const glyphs = o.tile_display_mode === 'glyphs'
-    const covered = state.uiState !== UiState.NORMAL || state.menus.length > 0 || state.ui.length > 0
+    const covered = !this.trappedOverlayEnabled || state.uiState !== UiState.NORMAL || state.menus.length > 0 || state.ui.length > 0
     const key = JSON.stringify([marks.map((b) => b.tile), glyphs, covered, o.tile_filter_scaling, gd?.version, free])
     if (key === this.trappedKey) return
     this.trappedKey = key
@@ -1705,6 +1707,15 @@ export class Hud {
     ctx.fillStyle = '#fff'
     ctx.fill()
     ctx.restore()
+  }
+
+  /** Only first person needs a screen-sized net/web; overhead views show it on the character. */
+  setTrappedOverlayEnabled(enabled: boolean) {
+    if (enabled === this.trappedOverlayEnabled) return
+    this.trappedOverlayEnabled = enabled
+    this.trappedPre = undefined
+    this.trappedKey = ''
+    if (!enabled) this.trapped.hidden = true
   }
 
   /** Overhead projections can show the dungeon without a duplicate corner view. */

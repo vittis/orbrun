@@ -262,9 +262,9 @@ export interface Billboard {
     square?: true
     /**
      * The badge is the whole cell: the net and the web, which WebTiles
-     * paints across the doll rather than in a corner. Orbrun's HUD blows
-     * these up in the middle of the view (hud.ts renderTrapped) and keeps
-     * them off the corner strip.
+     * paints across the doll rather than in a corner. First person's HUD
+     * enlarges these in the middle of the view (hud.ts renderTrapped);
+     * overhead views keep them on the character, off the corner strip.
      */
     full?: true
   }[]

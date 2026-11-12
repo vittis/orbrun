@@ -2,9 +2,14 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.43 — 2026-11-12
+## 0.3.44 — 2026-11-12
 
 - Show dungeon projectiles as a single traveling sprite, with impact effects at their destination.
+
+## 0.3.43 — 2026-11-12
+
+- Align Djinni defence and attribute rows below the character portrait.
+- Keep webs and nets at character size in overhead views instead of covering the screen.
 
 ## 0.3.42 — 2026-11-12
 

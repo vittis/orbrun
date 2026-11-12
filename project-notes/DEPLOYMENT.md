@@ -1037,13 +1037,35 @@ complete expiry. The guarded production build/dry-run precedes the atomic
 main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
 source links, bundle identity and proxy checks follow rollout.
 
-
-## 0.3.43 single traveling projectiles — prepared 2026-11-12
+## 0.3.43 character overview and web scale — prepared 2026-11-12
 
 User authorized committing to main and deploying while preserving concurrent
-agents' changes. Integrated origin/main `aaad668`, retaining 0.3.42's pixel gore,
+agents’ work. Integrated origin/main `aaad668`, retaining the concurrent pixel-gore
+release, directional arrivals, wall depth and prior releases. Immutable
+source tag: `cloudflare-online-v1.40`.
+
+Djinni reserve the absent Magic row so AC/Str align with the other stats below
+the portrait. Overhead views keep whole-cell web/net art on the character;
+the large central overlay is reserved for first person. Switching projections
+updates the overlay without waiting for a game-state change.
+
+Integrated validation: 2,403 unit tests passed with two optional-engine
+skips; the forced TypeScript rebuild passed. Optional engine E2E reports
+44 explicit skips because engine artifacts are absent. A guarded production
+build/dry-run precedes publication. Publish
+main and the source tag atomically through the existing Workers Builds
+pipeline. Re-fetch and integrate main if another agent advances it; never
+force-push or upload a separate stale local build. Verify hosted source and
+bundle identity after rollout.
+
+
+## 0.3.44 single traveling projectiles — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' changes. Integrated origin/main `548f1aa`, retaining 0.3.43's HUD/web
+fixes, 0.3.42's pixel gore,
 0.3.41's directional arrivals and all previous features. Immutable source tag:
-`cloudflare-online-v1.40`.
+`cloudflare-online-v1.41`.
 
 Dungeon (2.5D) groups confirmed projectile samples into one interpolated sprite,
 including flights received and cleared before a render. Magic darts, bow arrows
@@ -1054,9 +1076,9 @@ remote-map and Still cleanup remain covered.
 
 Feature validation passed 2,395 unit tests with two optional-engine skips,
 typecheck, production build and all 24 real-art browser checks. Integrated
-validation passed a forced TypeScript rebuild and 2,404 unit tests with two
-optional-engine skips; optional engine E2E reports 44 explicit skips because
+validation passed a forced TypeScript rebuild and 2,408 tests with two
+optional-engine skips. Optional engine E2E reports 44 explicit skips because
 engine artifacts are absent. The guarded Worker dry-run precedes an atomic
-main/source tag push. Use main-triggered Workers Builds only, preserving any newer release
-that includes this change. Verify hosted source links and bundle identity after
+main/source tag push. Use main-triggered Workers Builds only, preserving any
+newer release that includes this change. Verify hosted source links and bundle identity after
 rollout.

@@ -444,6 +444,24 @@ describe('environmental lighting', () => {
 })
 
 describe('atlas composition', () => {
+  it('keeps a full-cell web or net on the player at the projected tile size', () => {
+    const { r, ctx } = renderer()
+    r.setOptions({ animate: false })
+    const image = {} as TexImageSource
+    r.setTiles({
+      tile: id => id === 99 ? { atlas: 'icons', sx: 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 } : null,
+      atlas: () => image,
+      atlasNames: () => ['icons'],
+    })
+    const scene = sceneOf(cell(0, 0))
+    scene.billboards = [{ kind: 'player', x: 0, y: 0, tile: 2, statusIcons: [{ tile: 99, ox: 0, oy: 0, full: true }] }]
+    r.setScene(scene)
+    r.render(0)
+    const size = fittedScale(900, 700, 50 * Math.PI / 180)
+    const foot = r.project(0, 0.3)
+    expect(ctx.drawImage).toHaveBeenCalledExactlyOnceWith(image, 0, 0, 32, 32, foot.x - size / 2, foot.y - size, size, size)
+  })
+
   it('preserves offsets, doll clipping, and top-pinned status badges', () => {
     const image = {} as TexImageSource
     const source = { tile: () => ({ atlas: 'a', sx: 10, sy: 20, w: 20, h: 24, ox: 3, oy: 8, cell: 32 }), atlas: () => image, atlasNames: () => ['a'] }
