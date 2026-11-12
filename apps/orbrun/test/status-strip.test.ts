@@ -62,9 +62,10 @@ interface Drew {
   /** the stats pane's right edge in css px */
   statsRight: number
   trapped: Trapped
+  trappedVisibility: boolean[]
 }
 
-function draw(st: GameState, badges: NonNullable<Billboard['statusIcons']> | undefined, { onLevel = true, gamedata = gd as Gamedata | null } = {}): Drew {
+function draw(st: GameState, badges: NonNullable<Billboard['statusIcons']> | undefined, { onLevel = true, gamedata = gd as Gamedata | null, overlayModes = [true] } = {}): Drew {
   drawn.length = 0
   const host = document.createElement('div')
   Object.defineProperty(host, 'clientWidth', { value: 1600 })
@@ -93,7 +94,13 @@ function draw(st: GameState, badges: NonNullable<Billboard['statusIcons']> | und
   const cam = { x: 0, y: 0, yaw: 0 } as unknown as Camera
   const ctx = { mode: 'command', layer: 'macro', hostilesInView: 0 } as never
   const before = drawn.length
-  hud.update(st, scene, cam, ctx, 'xbox', gamedata, false, 'keyboard', 'list', false)
+  const mark = (hud as unknown as { trapped: HTMLElement }).trapped
+  const trappedVisibility: boolean[] = []
+  for (const enabled of overlayModes) {
+    hud.setTrappedOverlayEnabled(enabled)
+    hud.update(st, scene, cam, ctx, 'xbox', gamedata, false, 'keyboard', 'list', false)
+    trappedVisibility.push(mark.hidden)
+  }
   const strip = (hud as unknown as { statuses: HTMLElement }).statuses
   const map = (hud as unknown as { minimapCanvas: HTMLCanvasElement }).minimapCanvas
   const side = grid.px(cells.sidebar)
@@ -102,10 +109,10 @@ function draw(st: GameState, badges: NonNullable<Billboard['statusIcons']> | und
   // the strip draws before the mark (hud.update), so what the mark drew is whatever came after the strip's badges
   const stripCount = badges ? badges.filter((b) => !b.at && !b.square && !b.full).length : 0
   const stripDrawn = strip.hidden ? [] : drawn.slice(before, before + stripCount)
-  const mark = (hud as unknown as { trapped: HTMLElement }).trapped
   const markCanvas = (hud as unknown as { trappedCanvas: HTMLCanvasElement }).trappedCanvas
   const free = grid.px(cells.clear)
   return {
+    trappedVisibility,
     drawn: stripDrawn,
     hidden: strip.hidden,
     title: strip.title,
@@ -178,6 +185,13 @@ describe('the status strip beside the minimap', () => {
 })
 
 describe('the trapped mark in the middle of the view', () => {
+  it.each([NET, WEB])('hides the large overlay in overhead views and restores it on switching to first person (tile %i)', tile => {
+    const d = draw(stateWith(), [{ tile, ox: 0, oy: 0, full: true }], { overlayModes: [false, true, false, true] })
+    // Switching views must update the overlay even when the game state and scene have not changed.
+    expect(d.trappedVisibility).toEqual([true, false, true, false])
+    expect(d.trapped.drawn).toEqual([tile, tile])
+  })
+
   it('blows the net and the web up on one square, TRAPPED_FRACTION of the free view, centred on it', () => {
     const d = draw(stateWith(), [{ tile: POISON, ox: 0, oy: 0 }, { tile: NET, ox: 0, oy: 0, full: true }, { tile: WEB, ox: 0, oy: 0, full: true }])
     const t = d.trapped

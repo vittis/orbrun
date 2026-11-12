@@ -623,6 +623,7 @@ export class GameScreen {
     if (!this.hud) return
     const dungeon = this.settings().renderer === '2.5d'
     this.hud.setMinimapEnabled(!dungeon)
+    this.hud.setTrappedOverlayEnabled(this.is3d)
     const st = this.session.state
     const o = st.options
     const g = this.grid.grid
