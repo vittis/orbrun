@@ -339,13 +339,14 @@ describe('picking and visibility', () => {
 })
 
 describe('environmental lighting', () => {
-  it('centres compact glows on standing artwork rather than the cell beneath it', () => {
+  it('centres room-sized light pools on standing artwork rather than the cell beneath it', () => {
     const scene = sceneOf(cell(0, 0))
     const fire = { colour: [255, 158, 64] as [number, number, number], radius: 4.2, power: 0.7 }
     scene.billboards = [{ kind: 'doll', x: 0, y: 0, tile: 5, height: 1, life: { lights: [fire] } }]
     const p = { x: 0, y: 0, width: 400, height: 300, scale: 40, tilt: 50 * Math.PI / 180 }
     const source = { ...fire, x: 0, y: 0 }
-    expect(glowRadius(source)).toBeLessThanOrEqual(1.35)
+    expect(glowRadius(source)).toBeCloseTo(3.57)
+    expect(glowRadius({ ...source, radius: 100 })).toBe(6)
     const center = glowCenter(scene, p, source, { tile: () => ({ atlas: 'a', sx: 0, sy: 0, w: 12, h: 20, ox: 10, oy: 4, cell: 32 }), atlas: () => null, atlasNames: () => [] })
     expect(center.x).toBe(200)
     expect(center.y).toBeCloseTo(project(p, 0, 0.3).y - 40 + 14 * 40 / 32)

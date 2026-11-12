@@ -47,6 +47,15 @@ export class TileCache {
     return true
   }
 
+  /** Extrude the roof's last texel, preserving its edge instead of repeating the wall art. */
+  drawWallFace(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting) {
+    if (rect.height <= 0) return
+    const surface = this.composite(layers, light, memory, true, flash)
+    if (!surface) return
+    ctx.drawImage(surface, 0, surface.height - 1, surface.width, 1, rect.x, rect.y, rect.width, rect.height)
+    lighting?.draw(ctx, rect)
+  }
+
   /** Numeric memory is continuous black opacity; booleans retain static shading. */
   private composite(layers: Layer[], light: number, memory: boolean | number, flat: boolean, flash?: { r: number; g: number; b: number; a: number }, thin = false, rasterScale = 1) {
     if (!layers.some(l => this.source?.tile(l.tile))) return null
