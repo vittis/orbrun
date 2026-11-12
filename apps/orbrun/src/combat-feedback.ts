@@ -50,9 +50,9 @@ export function combatText(text: string): CombatPopup[] {
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
     const s = sentence.trim()
     let m: RegExpExecArray | null
-    if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off) (.+?)[.!]+$/.exec(s))) {
+    if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off|blow up) (.+?)[.!]+$/.exec(s))) {
       out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
-    } else if ((m = /^(?:The|Your) (.+?) (?:dies|is destroyed|crumbles to dust|is blown up)[.!]+$/.exec(s))) {
+    } else if ((m = /^(.+?) (?:dies|is killed|is destroyed|crumbles (?:to|into) dust|is blown up)[.!]+$/.exec(s))) {
       out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
     } else if (/^(?!You\b).+? you(?: with .+?)? but (?:do|does) no damage[.!]+$/.test(s)) {
       // There is no HP delta for a zero-damage incoming hit. Keep the server's explicit result.
@@ -123,6 +123,9 @@ export class CombatFeedback {
   private history: boolean
   private presented = false
   private scene: Scene | null = null
+  private levelKey: string | undefined
+  /** Kill messages can follow the map removal across rendered frames. */
+  private recentActors = new Map<string, { actor: Billboard; at: number }>()
 
   constructor(state: GameState) {
     this.previous = this.snapshot(state)
@@ -142,6 +145,7 @@ export class CombatFeedback {
       this.pending = []
       this.incoming = []; this.melee = []; this.cues = []; this.spells = []
       this.scene = null
+      this.recentActors.clear()
       this.presented = false
       this.ready = false
       this.history = true
@@ -166,6 +170,7 @@ export class CombatFeedback {
         this.pending = []
         this.incoming = []; this.melee = []; this.cues = []; this.spells = []
         this.scene = null
+        this.recentActors.clear()
         this.presented = false
       }
       this.previous = next
@@ -208,17 +213,28 @@ export class CombatFeedback {
 
   takeMelee(): MeleeAttack[] { return this.melee.splice(0) }
 
-  flush(scene: Scene): CombatPopup[] {
+  flush(scene: Scene, now = performance.now()): CombatPopup[] {
     const pending = this.pending.splice(0)
     const incoming = this.incoming.splice(0)
     const cues = this.cues.splice(0)
     const old = this.scene
+    const sameLevel = old?.playerOnLevel && this.levelKey === scene.levelKey
     this.scene = scene
+    this.levelKey = scene.levelKey
     this.presented = scene.playerOnLevel && scene.cells.size > 0
-    if (!scene.playerOnLevel) { this.melee = []; this.spells = []; return [] }
+    if (!scene.playerOnLevel) { this.melee = []; this.spells = []; this.recentActors.clear(); return [] }
+    if (!sameLevel) this.recentActors.clear()
     if (!pending.length && !incoming.length && !cues.length && old === scene) return []
-    const before = actorsIn(old), after = actorsIn(scene)
+    const before = actorsIn(sameLevel ? old : null), after = actorsIn(scene)
     const candidates = new Map([...before, ...after])
+    for (const [id, seen] of this.recentActors) if (now - seen.at > 2000) this.recentActors.delete(id)
+    for (const [id, actor] of candidates) this.recentActors.set(id, { actor, at: now })
+    while (this.recentActors.size > 256) this.recentActors.delete(this.recentActors.keys().next().value!)
+    // This short memory is used only with an explicit death sentence. Walking,
+    // blinking, expired foxfires and leaving sight never establish a kill.
+    const deathCandidates = new Map([...this.recentActors].flatMap(([id, { actor }]) =>
+      scene.cells.get(cellKey(actor.x, actor.y))?.visibility === 'visible' ? [[id, actor] as const] : []))
+    for (const [id, actor] of candidates) deathCandidates.set(id, actor)
     for (const attempt of incoming) {
       const attackers = [...candidates.values()].filter(b => bare(plain(b.name ?? '')) === bare(attempt.attacker)
         && Math.max(Math.abs(b.x - scene.player.x), Math.abs(b.y - scene.player.y)) === 1)
@@ -238,8 +254,9 @@ export class CombatFeedback {
     const resolved: CombatPopup[] = pending.flatMap(event => {
       if (event.player) return [event]
       const wanted = bare(event.target ?? '')
-      const deathEvidence = (b: Billboard) => killedNames.has(wanted) && before.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
-      const matches = [...candidates.values()].filter(b => {
+      const deathEvidence = (b: Billboard) => killedNames.has(wanted) && deathCandidates.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
+      const pool = event.kind === 'kill' || event.kind === 'hit' && killedNames.has(wanted) ? deathCandidates : candidates
+      const matches = [...pool.values()].filter(b => {
         if (event.kind === 'kill' && slain.has(actorKey(b))) return false
         const ref = b.ref as { name?: string; plural?: string } | undefined
         return [b.name, ref?.name, ref?.plural].some(n => n && bare(plain(n)) === wanted)
@@ -252,7 +269,7 @@ export class CombatFeedback {
       const id = actorKey(b)
       used.add(id)
       if (event.kind === 'hit') lastHit.set(wanted, b)
-      if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted) }
+      if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id) }
       return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height),
         ...(event.kind === 'kill' ? { death: deathFor(b, scene.player) } : {}) }]
     })
