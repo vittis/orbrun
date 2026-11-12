@@ -60,7 +60,7 @@ function choose() {
   canvas.setAttribute('aria-label', 'Combat effects preview')
   view.prepend(canvas)
   mode = (document.getElementById('projection') as HTMLSelectElement).value
-  renderer = mode === '3d' ? new Render3d() : mode === '2d' ? new Render2d({ cellSize: 45, center: scene.player }) : new Render25d({ center: scene.player, zoom: 1.2 })
+  renderer = mode === '3d' ? new Render3d() : mode === '2d' ? new Render2d({ cellSize: 45, center: scene.player, living: true }) : new Render25d({ center: scene.player, zoom: 1.2 })
   renderer.mount(canvas)
   renderer.setTiles(tiles)
   renderer.setScene(scene)
@@ -119,7 +119,7 @@ function play(kind: string) {
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
   const weapon = (document.getElementById('weapon') as HTMLSelectElement).value || undefined
-  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), weapon, now, mode !== '2d' && !reduced)
+  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), weapon, now, !reduced)
   popups.add(timed, now)
   attackAt = now
   attackDuration = meleeTiming(kind === 'incoming' ? 'crush' : meleeStyle(weapon) ?? 'slash').duration * 1000

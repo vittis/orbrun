@@ -1,5 +1,5 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
-import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStrength, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
@@ -17,6 +17,7 @@ const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 
 /** Small, bounded visual histories. No game rules, prose parsing or timers. */
 export class DungeonEffects {
+  readonly hits = new HitEffects()
   strokes: MeleeStroke[] = []
   traces: SpellTrace[] = []
   bursts: SpellBurst[] = []
@@ -33,6 +34,7 @@ export class DungeonEffects {
     if (!animate || !scene.playerOnLevel || !this.onLevel || scene.levelKey !== this.level) this.clear()
     this.level = scene.levelKey
     this.onLevel = scene.playerOnLevel
+    this.hits.observe(scene, animate)
     this.actors = new Map(scene.billboards.filter(b => creature(b) && visible(scene, b)).map(b => {
       const id = combatActorId(b), old = this.actors.get(id)
       const previous = old && (old.x !== b.x || old.y !== b.y) ? { x: old.x, y: old.y, at: now } : old?.previous
@@ -80,6 +82,13 @@ export class DungeonEffects {
   }
 
   projectiles(now: number) { return this.missiles.sample(now) }
+
+  hit(scene: Scene, effect: HitEffect, now: number) {
+    const target = this.target(scene, { ...effect, kind: 'physical' }, now)
+    const placed = target ? { ...effect, actorId: combatActorId(target), x: target.x, y: target.y } : effect
+    const contact = this.missiles.bind({ ...placed, kind: 'physical' }, now)
+    return this.hits.spawn(scene, placed, now, contact?.time)
+  }
 
   private target(scene: Scene, effect: SpellEffect, now: number) {
     const actors = scene.billboards.filter(b => creature(b) && visible(scene, b))
@@ -168,6 +177,7 @@ export class DungeonEffects {
 
   tick(scene: Scene, now: number) {
     this.missiles.tick(scene, now)
+    this.hits.tick(scene, now)
     for (const burst of this.bursts) {
       if (burst.contact) burst.born = Math.max(burst.requested, burst.contact.time())
       const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
@@ -193,5 +203,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.hits.clear(); this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

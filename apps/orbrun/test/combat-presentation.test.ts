@@ -10,7 +10,7 @@ function harness() {
   for (const x of [0, 1, 2]) scene.cells.set(cellKey(x, 0), {
     x, y: 0, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 0, flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false },
   })
-  const renderer = { melee: vi.fn(), spell: vi.fn(), impact: vi.fn(), death: vi.fn() } as unknown as MapRenderer
+  const renderer = { melee: vi.fn(), spell: vi.fn(), impact: vi.fn(), hit: vi.fn(), death: vi.fn() } as unknown as MapRenderer
   return { scene, renderer }
 }
 
@@ -37,6 +37,7 @@ describe('combat contact timing', () => {
     expect(timed.map(e => e.delay)).toEqual([contact * 1000, contact * 1000])
     expect(timed[0].amount).toBe(8)
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1 + contact)
+    expect(renderer.hit).toHaveBeenCalledWith({ x: 1, y: 0, actorId: 'id:1', turn: undefined }, 1 + contact)
     expect(renderer.spell).toHaveBeenCalledWith({ x: 1, y: 0, kind: 'fire' }, 1 + contact)
   })
 
@@ -62,6 +63,21 @@ describe('combat contact timing', () => {
     }
     expect(renderer.melee).toHaveBeenCalledTimes(2)
     expect(renderer.impact).not.toHaveBeenCalled()
+    expect(renderer.hit).not.toHaveBeenCalled()
+  })
+
+  it('flashes direct spell damage but ignores resisted, utility, zero-damage and Still-mode results', () => {
+    const { scene, renderer } = harness()
+    for (const text of ['Flames lash the goblin!', 'The goblin convulses!', 'The electricity discharges through the goblin!', 'The goblin shatters!']) {
+      const events = combatText(text).map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
+      presentCombat(renderer, scene, events, [], [], undefined, 1000, true)
+    }
+    expect(renderer.hit).toHaveBeenCalledTimes(4)
+    for (const text of ['The goblin resists.', 'The goblin struggles to resist.', 'The goblin looks drowsy...', 'You heal the goblin.', 'You freeze the goblin but do no damage.']) {
+      presentCombat(renderer, scene, combatText(text).map(e => ({ ...e, x: 1, y: 0 })), [], [], undefined, 1000, true)
+    }
+    presentCombat(renderer, scene, [{ kind: 'hurt', text: '-4', amount: 4, player: true }], [], [], undefined, 1000, false)
+    expect(renderer.hit).toHaveBeenCalledTimes(4)
   })
 
   it.each(['still', 'unsupported', 'hidden'] as const)('does not delay feedback without a visible animated stroke (%s)', mode => {

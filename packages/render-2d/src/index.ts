@@ -1,5 +1,6 @@
 import {
   cellKey,
+  combatActorId, HitEffects, type HitEffect,
   DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
   dirToYaw,
   flashOf,
@@ -239,6 +240,7 @@ export class Render2d implements MapRenderer {
    */
   private seam = 0
   private life = new DungeonLife()
+  private hits = new HitEffects()
   private active = false
   private sceneRevision = -1
   private time: number | null = null
@@ -307,6 +309,7 @@ export class Render2d implements MapRenderer {
     this.tiles = tiles
   }
   setScene(scene: Scene, now = performance.now() / 1000): void {
+    this.hits.observe(scene, this.opts.animate && this.opts.living)
     if (this.opts.living && (scene !== this.scene || scene.revision !== this.sceneRevision)) { this.life.observe(scene, now); this.lightTime = -Infinity }
     this.scene = scene
     this.sceneRevision = scene.revision
@@ -327,6 +330,7 @@ export class Render2d implements MapRenderer {
     }
   }
   destroy(): void {
+    this.hits.clear()
     this.life.clear()
     this.active = false
     this.canvas = null
@@ -471,11 +475,18 @@ export class Render2d implements MapRenderer {
     this.active = true
   }
 
+  hit(effect: HitEffect, now: number) {
+    if (this.opts.living && this.opts.animate && this.scene && this.hits.spawn(this.scene, effect, now)) this.active = true
+  }
+
   render(now = performance.now() / 1000): void {
     const ctx = this.ctx
     const scene = this.scene
     if (!ctx || !scene || !this.canvas) return
     this.active = false
+    this.hits.observe(scene, this.opts.animate && this.opts.living)
+    this.hits.tick(scene, now)
+    if (this.hits.active) this.active = true
     const living = this.opts.living && this.opts.mode === 'tiles' && !!this.tiles
     this.time = living && this.opts.animate ? now : null
     this.life.tick(now)
@@ -647,6 +658,11 @@ export class Render2d implements MapRenderer {
             ctx.translate(sx + cs / 2 + pose.x * cs, sy + cs - pose.y * cs)
             ctx.rotate(pose.angle); ctx.scale(pose.sx, pose.sy)
             ctx.translate(-sx - cs / 2, -sy - cs)
+          }
+          const brightness = this.hits.brightness(combatActorId(b), now)
+          if (brightness > 1) {
+            if (typeof ctx.filter === 'string') ctx.filter = `brightness(${brightness})`
+            else ctx.globalAlpha *= 1 - (brightness - 1) * 0.5
           }
           if (b.layers) for (const l of b.layers) this.drawTile(ctx, l.tile, sx, sy, cs, l.ox, l.oy, l.ymax)
           else this.drawTile(ctx, b.tile, sx, sy, cs)

@@ -1,4 +1,4 @@
-import { cellKey, shadeOf, type Billboard, type Scene, type SceneCell, type TileRect, type TileLife } from '@orbrun/scene'
+import { cellKey, combatActorId, shadeOf, type Billboard, type Scene, type SceneCell, type TileRect, type TileLife } from '@orbrun/scene'
 
 /**
  * Standing sprites as instances (shaders.ts `SPRITE_VERT`): what a monster,
@@ -91,6 +91,7 @@ export interface SpriteInstance {
   cell: [number, number]
   /** The monster this instance belongs to, where it may glide (motion.ts). */
   moverId?: number
+  actorId?: string
   /** The cell it stands on, for the cursor's shell and the movers. */
   x: number
   y: number
@@ -112,6 +113,7 @@ export interface SpriteLayer {
 }
 
 export interface StandOptions {
+  actorId?: string
   life?: TileLife
   height: number
   shade: number
@@ -196,6 +198,7 @@ export function stand(x: number, y: number, layers: readonly SpriteLayer[], o: S
       misc: [mode, board ? (l.native ?? 0) : grow, k, o.faceEye ?? o.yaw ?? 0],
       cell: [x, y],
       moverId: o.moverId,
+      actorId: l.flat ? undefined : o.actorId,
       x,
       y,
     })
@@ -258,6 +261,7 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
     const lift = b.kind === 'projectile' ? PROJECTILE_LIFT : 0
     const lie = b.lying
     const moverId = b.kind === 'monster' ? monsterIdOf(b) : undefined
+    const actorId = b.kind === 'monster' && !b.scenery ? combatActorId(b) : undefined
     const sel = selected && selected.x === b.x && selected.y === b.y
     sprites.push(
       ...stand(b.x, b.y, layers, {
@@ -274,6 +278,7 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
         lift,
         lie,
         moverId,
+        actorId,
       }),
     )
     // scenery is the exception to the ghost pass: a plant behind a wall tells you nothing
@@ -293,6 +298,7 @@ export function crowdInstances(scene: Scene, tile: TileLookup, selected: { x: nu
           lift,
           lie,
           moverId,
+          actorId,
         }),
       )
     }

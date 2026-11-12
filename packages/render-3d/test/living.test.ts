@@ -21,6 +21,30 @@ function room() {
 }
 
 describe('living sprites in first person', () => {
+  it('flashes the damaged body while badges stay steady, then restores an idle batch', () => {
+    const { r, g } = stubbed({ motion: true }, tiles), s = room()
+    s.billboards[0] = { ...s.billboards[0], id: 7, life: { motion: 'still' }, statusIcons: [{ tile: 2, ox: 0, oy: 0 }] }
+    r.setCamera(makeCamera(0, 0)); r.setScene(s, 1); r.render(1); settle({ r, g, draws: 0 }, 1)
+    const first = written(g, 'main', 'opaque'), builds = g.stats.levelBuilds
+    r.hit({ x: 1, y: 1, actorId: 'id:7' }, 1.1)
+    expect(r.animating).toBe(true)
+    r.render(1.09)
+    expect(written(g, 'main', 'opaque')).toEqual(first)
+    r.render(1.12)
+    const hit = written(g, 'main', 'opaque')
+    expect(hit[0].color[0]).toBeGreaterThan(first[0].color[0])
+    expect(hit[1]).toEqual(first[1])
+    expect(g.stats.levelBuilds).toBe(builds)
+    r.render(1.27)
+    expect(written(g, 'main', 'opaque')).toEqual(first)
+    expect(r.animating).toBe(false)
+    r.setOptions({ motion: false })
+    r.hit({ x: 1, y: 1, actorId: 'id:7' }, 2)
+    r.render(2.02)
+    expect(written(g, 'main', 'opaque')).toEqual(first)
+    r.destroy()
+  })
+
   it('breathes without rebuilding terrain, and freezes when motion is disabled', () => {
     const { r, g } = stubbed({ motion: true }, tiles), s = room()
     r.setCamera(makeCamera(0, 0)); r.setScene(s, 1); r.render(1); settle({ r, g, draws: 0 })

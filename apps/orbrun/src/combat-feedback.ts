@@ -77,6 +77,12 @@ export function combatText(text: string): CombatPopup[] {
         melee = !/^(?:smite|burn|freeze|electrocute|drain|blast)$/i.test(m[1])
       }
       else if ((m = /^(?:The|Your) .+? (?:hits?|pierces?|strikes?|burns?|engulfs?|freezes?|skewers?) (.+?)[.!]+$/.exec(s))) target = m[1]
+      else if (!/\b(?:resists?|no damage)\b/i.test(s)) {
+        // Direct spells such as Flame Wave, Airstrike and draining have their
+        // own result sentences rather than the usual "You hit" wording.
+        target = spellText(s).find(cue => cue.target && !cue.player
+          && !['heal', 'buff', 'debuff', 'teleport', 'poison'].includes(cue.kind))?.target
+      }
       if (!target || /^you(?:\b|$)/i.test(target)) continue // HP deltas already report incoming damage.
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const noDamage = /but (?:do|does) no damage/.test(s)

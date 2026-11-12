@@ -65,7 +65,7 @@ describe('confirmed non-projectile spells and abilities', () => {
     moved.billboards[0].x = 2
     h.text('Flames lash the goblin.')
     h.feedback.flush(moved)
-    expect(h.feedback.takeSpells()).toEqual([{ x: 2, y: 0, kind: 'fire', actorId: 'id:1', turn: undefined }])
+    expect(h.feedback.takeSpells()).toEqual([{ x: 2, y: 0, kind: 'fire', actorId: 'id:1', turn: 0 }])
     h.feedback.flush(world(false))
     const hidden = world()
     hidden.cells.get(cellKey(1, 0))!.visibility = 'remembered'

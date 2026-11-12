@@ -1111,7 +1111,7 @@ export class GameScreen {
       this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
-        const animate = this.renderMode === '3d' ? !this.cam.reducedMotion : this.renderMode === '2.5d' && dungeonAnimation(settings, this.cam.reducedMotion)
+        const animate = this.renderMode === '2.5d' ? dungeonAnimation(settings, this.cam.reducedMotion) : !this.cam.reducedMotion
         const timed = presentCombat(this.renderer, this.session.scene, popups, incomingMelee, spells, weapon, now, animate)
         if (showCombat) this.combatPopups.add(timed, now, this.renderMode === '2.5d')
       }

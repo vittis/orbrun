@@ -1,5 +1,5 @@
 import {
-  cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect,
+  cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -219,6 +219,10 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate && this.effects.melee(this.scene, attack, now)) this.active = true
   }
 
+  hit(effect: HitEffect, now: number) {
+    if (this.opts.animate && this.effects.hit(this.scene, effect, now)) this.active = true
+  }
+
   spell(effect: SpellEffect, now: number) {
     if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
   }
@@ -241,6 +245,7 @@ export class Render25d implements MapRenderer {
         intensity: ripple.strength < 0.45 ? 'light' : ripple.strength > 0.8 ? 'heavy' : 'solid' }, ripple.born, 'generic')
     }
     this.effects.tick(this.scene, now)
+    if (this.effects.hits.active) this.active = true
     const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.map(entry => {
@@ -720,6 +725,11 @@ export class Render25d implements MapRenderer {
     const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
     ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || breathing
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
+    const brightness = this.opts.animate && visible ? this.effects.hits.brightness(combatActorId(b), time) : 1
+    if (brightness > 1) {
+      if (typeof ctx.filter === 'string') ctx.filter = `brightness(${brightness})`
+      else ctx.globalAlpha *= 1 - (brightness - 1) * 0.5
+    }
     if (b.lying) {
       this.plane(ctx, p, { ...cell, x: position.x, y: position.y }, b.layers ?? [{ tile: b.tile }], 0.02)
     } else {

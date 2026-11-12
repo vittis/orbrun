@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import {
   cellKey,
+  HitEffects, type HitEffect,
   DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
   flashOf,
   getCell,
@@ -290,6 +291,7 @@ export class Render3d implements MapRenderer {
   private flashTex: THREE.DataTexture | null = null
   private lightTex: THREE.DataTexture | null = null
   private life = new DungeonLife()
+  private hits = new HitEffects()
   private livingActive = false
   private lightTime = -Infinity
   private fieldUniforms = {
@@ -667,6 +669,7 @@ export class Render3d implements MapRenderer {
   }
 
   setScene(scene: Scene, now = nowSeconds()): void {
+    this.hits.observe(scene, this.opts.motion)
     this.deaths.observe(scene, this.opts.motion)
     this.life.observe(scene, now)
     if (this.scene !== scene) this.lightTime = -Infinity
@@ -676,6 +679,7 @@ export class Render3d implements MapRenderer {
   }
 
   resetMotion(): void {
+    this.hits.clear()
     this.deaths.clear()
     this.movers.clear()
     this.motionRevision = -1
@@ -788,7 +792,7 @@ export class Render3d implements MapRenderer {
 
   /** True while something is still moving, so the host keeps rendering frames. */
   get animating(): boolean {
-    return this.deaths.active || this.opts.motion && (this.livingActive || this.life.active) || !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
+    return this.deaths.active || this.opts.motion && (this.hits.active || this.livingActive || this.life.active) || !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -805,6 +809,7 @@ export class Render3d implements MapRenderer {
   }
 
   destroy(): void {
+    this.hits.clear()
     this.deaths.destroy()
     this.clearLevel()
     this.dropAtlases()
@@ -1219,6 +1224,8 @@ export class Render3d implements MapRenderer {
       const z = inst.z.map(v => v * scale)
       const misc = [...inst.misc]; misc[2] *= scale
       const colour = [...inst.color]
+      const brightness = this.opts.motion && visible && inst.actorId ? this.hits.brightness(inst.actorId, now) : 1
+      for (let i = 0; i < 3; i++) colour[i] *= brightness
       if (inst.life?.motion === 'gold' || inst.life?.motion === 'gem') for (let i = 0; i < 3; i++) colour[i] *= 1 + pose.glow * 0.35
       this.batch(a, inst.pass).push([anchor, quad, z, inst.texel, colour, misc, inst.cell])
       this.stats.spriteWrites++
@@ -1306,12 +1313,19 @@ export class Render3d implements MapRenderer {
     if (this.opts.motion && this.scene) this.deaths.spawn(this.scene, effect, now)
   }
 
+  hit(effect: HitEffect, now: number) {
+    if (this.opts.motion && this.scene) this.hits.spawn(this.scene, effect, now)
+  }
+
   render(now = nowSeconds()): void {
     const r = this.renderer
     const scene = this.scene
     const cam = this.camera
     if (!r || !scene || !cam) return
     this.deaths.update(scene, now)
+    const hadHits = this.hits.active
+    this.hits.observe(scene, this.opts.motion)
+    this.hits.tick(scene, now)
     this.life.tick(now)
     this.fieldUniforms.lifeTime.value = this.opts.motion ? now : 0
     this.fieldUniforms.lifeMoving.value = this.opts.motion ? 1 : 0
@@ -1359,7 +1373,7 @@ export class Render3d implements MapRenderer {
       this.crowd = sprites
       this.shadows = shadows
       this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
-    } else if (this.movers.active || landed || this.opts.motion && this.livingActive) this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
+    } else if (hadHits || this.movers.active || landed || this.opts.motion && this.livingActive) this.writeInstances({ x: cam.eyeX, y: cam.eyeY }, now)
     this.mark?.('crowd')
     this.cam.position.set(cam.eyeX + 0.5, Math.max(EYE_MIN, Math.min(EYE_MAX, this.opts.eyeHeight)), cam.eyeY + 0.5)
     this.cam.rotation.set(cam.pitch, -cam.yaw, 0)
@@ -1389,7 +1403,7 @@ export class Render3d implements MapRenderer {
     r.clear(true, true, false)
     r.render(this.three, this.cam)
     this.mark?.('draw')
-    this.renderViewmodel(r, scene)
+    this.renderViewmodel(r, scene, now)
   }
 
   // ------------------------------------------------------------- viewmodel
@@ -1514,7 +1528,7 @@ export class Render3d implements MapRenderer {
     return h
   }
 
-  private renderViewmodel(r: THREE.WebGLRenderer, scene: Scene) {
+  private renderViewmodel(r: THREE.WebGLRenderer, scene: Scene, now: number) {
     if (!this.vmVisible || !this.tiles) return
     const vm = this.viewmodel!
     if (!this.hands.weapon && vm.weapon) this.hands.weapon = this.hand(vm.weapon)
@@ -1523,6 +1537,7 @@ export class Render3d implements MapRenderer {
     const asp = this.vmCam.aspect
     const lift = this.lift
     const tint = scene.level.tint
+    const brightness = this.opts.motion ? this.hits.brightness('player', now) : 1
     const flash = flashOf(getCell(scene, scene.player.x, scene.player.y))
     const k = handsScale(asp, this.upright)
     const foot = this.footShare
@@ -1539,7 +1554,7 @@ export class Render3d implements MapRenderer {
       ;(h.material.uniforms.modelInverse.value as THREE.Matrix4).copy(m.matrixWorld).invert()
       // the hands take the level's light and the flash over the cell the player stands in
       h.batch.begin()
-      h.batch.push([[0, 0, 0], h.quad, [0, VM_DEPTH * h.scale], [0, 0, h.cell, h.cell], [tint.r, tint.g, tint.b, 1], [MODE_THICK | MODE_HULL_FRONT | MODE_FLASH_OVERRIDE, 1, h.scale, 0], [0, 0]])
+      h.batch.push([[0, 0, 0], h.quad, [0, VM_DEPTH * h.scale], [0, 0, h.cell, h.cell], [tint.r * brightness, tint.g * brightness, tint.b * brightness, 1], [MODE_THICK | MODE_HULL_FRONT | MODE_FLASH_OVERRIDE, 1, h.scale, 0], [0, 0]])
       h.batch.end()
     }
     this.spriteUniforms.flashOverride.value.set(flash.r, flash.g, flash.b, flash.a)

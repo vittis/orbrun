@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.57 — 2026-11-12
+
+- Briefly flash creatures when melee or spells damage them, timed to the hit and respecting reduced motion.
+
 ## 0.3.56 — 2026-11-12
 
 - Keep grounded characters, orc apostles and sacred lotuses from hovering; animate player flight only while the flying status is active.

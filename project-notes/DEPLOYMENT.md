@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.56 point at the `cloudflare-online-v1.53` release tag in
+Source links for 0.3.57 point at the `cloudflare-online-v1.54` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1436,3 +1436,27 @@ engine skips.
 The validated release follows the existing guarded build and atomic main/tag
 push through Workers Builds. Verify production assets, source links, CSP and
 anonymous spectator access after rollout.
+
+
+## 0.3.57 subtle entity hit flashes — prepared 2026-11-12
+
+User authorized committing and deploying the melee/spell hit effect. Integrated
+origin/main `74d3af6`, preserving the grounded-flight correction and prior
+projectile timing changes. Immutable source tag: `cloudflare-online-v1.54`.
+
+Confirmed damage briefly brightens the recipient for 160 ms in tile, Dungeon
+(2.5D) and first-person views, with an opacity blink on Canvas implementations
+without filter support. Melee uses its contact time; Dungeon projectiles share
+their arrival clock. Stable identities keep flashes on moving creatures, while
+misses, zero damage, resisted spells, healing and utility effects do not flash.
+Reduced motion and Still mode suppress flashes. First-person player damage
+flashes the hands; badges remain steady. Direct damaging spell result sentences
+also enter the existing confirmed-damage feedback path.
+
+Validation passed TypeScript and 2,568 unit tests with two optional-engine
+skips. Optional engine E2E reports 44 skips because engine artifacts are absent.
+Coverage includes identity, contact timing, coalescing, expiry, visibility, level
+cleanup, projectile arrival and first-person batch restoration. The guarded
+production dry-run precedes an atomic, non-forced
+main/source-tag push through Workers Builds. Verify the hosted version, source
+links, asset identity, CSP and proxy restrictions after rollout.
