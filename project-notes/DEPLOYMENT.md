@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.35 point at the `cloudflare-online-v1.32` release tag in
+Source links for 0.3.37 point at the `cloudflare-online-v1.34` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -922,3 +922,19 @@ numbers, unknown Magic Dart damage, incoming HP loss and Still mode. Guarded
 production build/dry-run precedes the atomic main/source-tag push; hosted
 source, bundle identity and CSP checks follow the Workers Builds result.
 
+
+
+## 0.3.37 more pronounced idle breathing — prepared 2026-11-12
+
+User authorized committing to main and deploying. Based on current origin/main
+987e8f2, retaining all prior releases and the LOS arrival fix. Immutable source
+tag: `cloudflare-online-v1.34`. Idle breathing has 50% more range with unchanged
+rhythm; overhead breathing retains smooth edges and no sideways stretching.
+
+Validation: 2,338 unit tests passed with two optional-engine skips, forced
+TypeScript rebuild and production build passed. One geometry test timed out
+during the first release suite; the full suite passed with four workers.
+Optional engine E2E reports 44 skips because engine artifacts are absent.
+The guarded Worker dry-run precedes the atomic main/source-tag push, which
+triggers Cloudflare Workers Builds. Hosted source and bundle checks follow
+the deployment result.
