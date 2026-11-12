@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path'
 import { loadGamedata, type Gamedata } from '@orbrun/gamedata'
 import { type Connection, type ServerMessage } from '@orbrun/webtiles'
 import { Render25d } from '@orbrun/render-2.5d'
+import { ImpactArt } from '../../../packages/render-2.5d/src/impact-draw'
 import { TileCache } from '../../../packages/render-2.5d/src/tiles'
 import { Session } from '../src/session'
 import type { ServerInfo } from '../src/servers'
@@ -47,6 +48,10 @@ function harness(animate = true) {
   return { session, deliver, renderer, frames, ctx }
 }
 
+const recorded = JSON.parse(readFileSync(resolve('apps/orbrun/test/fixtures/magic-dart-batched.json'), 'utf8')) as {
+  cycle: number; shots: { receivedMs: number; clearAfterMs: number; points: { x: number; y: number; phase: number }[] }[]
+}
+
 describe('projectile receipt before the next animation frame', () => {
   it.each(['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW', 'MI_ARROW2', 'BOLT_STONE_ARROW_2'])('preserves a complete %s flight in one synchronous message burst', name => {
     const { session, deliver, renderer, frames } = harness()
@@ -73,6 +78,63 @@ describe('projectile receipt before the next animation frame', () => {
       renderer.render(4)
       expect(renderer.animating).toBe(false)
     } finally { draw.mockRestore(); renderer.destroy(); session.close() }
+  })
+
+  it.each(recorded.shots)('replays recorded batched Magic Dart at $receivedMs ms as one forward flight and one endpoint impact', shot => {
+    const { session, deliver, renderer } = harness()
+    const tile = (phase: number) => gd.main.id(phase ? `BOLT_MAGIC_DART_${phase}` : 'BOLT_MAGIC_DART')!
+    const tiles = new Set(shot.points.map(p => tile(p.phase)))
+    const draws: { tile: number; x: number; y: number }[] = []
+    const draw = vi.spyOn(TileCache.prototype, 'drawPlane').mockImplementation((_ctx, layers, rect) => {
+      if (tiles.has(layers[0].tile)) draws.push({ tile: layers[0].tile, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 })
+      return true
+    })
+    const impact = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    try {
+      const bg = gd.dngn.id('FLOOR_GREY_DIRT')!
+      const cells = Array.from({ length: 17 }, (_, y) => Array.from({ length: 17 }, (_, x) => ({ x: x - 8, y: y - 8, f: 33, mf: 1, g: '.', t: { bg } }))).flat()
+      deliver({ msg: 'map', cells }); session.flushScene()
+      deliver({ msg: 'map', cells: shot.points.map(p => ({ x: p.x, y: p.y, t: { ov: [tile(p.phase)] } })) })
+      deliver({ msg: 'delay', t: 30 })
+      deliver({ msg: 'map', cells: shot.points.map(p => ({ x: p.x, y: p.y, t: { ov: [] } })) })
+      // No RAF/flush between addition and removal: the receipt pipeline owns both.
+      const end = [...shot.points].sort((a, b) => Math.max(Math.abs(b.x), Math.abs(b.y)) - Math.max(Math.abs(a.x), Math.abs(a.y)))[0]
+      renderer.impact(end.x, end.y, 0.6, 1.03)
+      renderer.render(1.002)
+      expect(draws).toHaveLength(1)
+      if (shot.points.length > 1) {
+        const from = renderer.project(0, 0, 0.28)
+        const to = renderer.project(end.x, end.y, 0.28)
+        const dx = draws[0].x - from.x, dy = draws[0].y - from.y
+        expect(dx * (to.x - from.x) + dy * (to.y - from.y)).toBeGreaterThan(0)
+        expect(Math.hypot(dx, dy)).toBeLessThan(renderer.project(1.5, 0).x - renderer.project(0, 0).x)
+      }
+      expect(impact.mock.calls.filter(c => c[10] !== true)).toHaveLength(0)
+      impact.mockClear(); draws.length = 0
+      renderer.render(1.08)
+      expect(draws).toHaveLength(0)
+      const bursts = impact.mock.calls.filter(c => c[10] !== true)
+      expect(bursts).toHaveLength(1)
+      expect(bursts[0][1]).toBe('magic')
+      const q = renderer.project(end.x, end.y + 0.22)
+      expect(bursts[0][5]).toBeCloseTo(q.x)
+      expect(bursts[0][6]).toBeCloseTo(q.y - (renderer.project(1, 0).x - renderer.project(0, 0).x) * 0.4)
+      impact.mockClear()
+      renderer.render(1.46)
+      expect(impact.mock.calls.filter(c => c[10] !== true)).toHaveLength(0) // no delayed generic second hit
+    } finally { impact.mockRestore(); draw.mockRestore(); renderer.destroy(); session.close() }
+  })
+
+  it('publishes clear frames between consecutive identical casts without waiting for a RAF', () => {
+    const { session, deliver, renderer, frames } = harness()
+    const tile = gd.main.id('BOLT_MAGIC_DART')!
+    try {
+      for (let i = 0; i < 2; i++) {
+        deliver({ msg: 'map', cells: [{ x: 1, y: 0, t: { ov: [tile] } }] })
+        deliver({ msg: 'map', cells: [{ x: 1, y: 0, t: { ov: [] } }] })
+      }
+      expect(frames).toEqual([[tile], [], [tile], []])
+    } finally { renderer.destroy(); session.close() }
   })
 
   it('rotates a north-facing stone-arrow sprite onto an eastbound flight', () => {

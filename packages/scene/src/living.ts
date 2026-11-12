@@ -12,6 +12,9 @@ export interface ProjectileAppearance {
   angle?: number
   /** Stable tile family, excluding directional/animation variants. */
   family?: string
+  /** Some spell variants encode (distance from source - 1) modulo this cycle. */
+  distancePhase?: number
+  distanceCycle?: number
 }
 export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[]; projectile?: ProjectileAppearance | false }
 export interface LivingPose { x: number; y: number; sx: number; sy: number; angle: number; glow: number }
@@ -132,7 +135,7 @@ export function lanternAt(scene: Scene, cell: SceneCell) {
   return 0.035 + 0.1 * Math.max(0, 1 - Math.hypot(cell.x - scene.player.x, cell.y - scene.player.y) / 9)
 }
 
-export interface DungeonRipple { x: number; y: number; born: number; strength: number }
+export interface DungeonRipple { x: number; y: number; born: number; strength: number; kind?: 'impact' | 'water' | 'arrival' }
 const ranks = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead']
 const actorId = (b: Billboard) => (b.ref as { id?: number } | undefined)?.id ?? `${b.x},${b.y}:${b.name}`
 
@@ -164,7 +167,7 @@ export class DungeonLife {
     }
     if (old && this.previous && scene.playerOnLevel && (this.lastPlayer.x !== scene.player.x || this.lastPlayer.y !== scene.player.y)) {
       const c = scene.cells.get(cellKey(scene.player.x, scene.player.y)), jump = Math.hypot(this.lastPlayer.x - scene.player.x, this.lastPlayer.y - scene.player.y) > 1.5
-      if (c?.visibility === 'visible' && (c.flags?.water || jump)) this.ripple(c.x, c.y, now, jump ? 0.8 : 0.35)
+      if (c?.visibility === 'visible' && (c.flags?.water || jump)) this.ripple(c.x, c.y, now, jump ? 0.8 : 0.35, jump ? 'arrival' : 'water')
     }
     this.actors = next
     this.sources = emittersFor(scene)
@@ -179,10 +182,10 @@ export class DungeonLife {
     this.onLevel = scene.playerOnLevel
     while (this.trails.size > 96) this.trails.delete(this.trails.keys().next().value!)
   }
-  ripple(x: number, y: number, born: number, strength: number) {
-    const existing = this.ripples.find(r => r.x === x && r.y === y && Math.abs(born - r.born) < 0.12)
+  ripple(x: number, y: number, born: number, strength: number, kind: DungeonRipple['kind'] = 'impact') {
+    const existing = this.ripples.find(r => r.x === x && r.y === y && (r.kind ?? 'impact') === kind && Math.abs(born - r.born) < 0.12)
     if (existing) existing.strength = Math.max(existing.strength, strength)
-    else this.ripples.push({ x, y, born, strength })
+    else this.ripples.push({ x, y, born, strength, kind })
     this.ripples = this.ripples.slice(-12)
   }
   emitters(now: number): Emitter[] {

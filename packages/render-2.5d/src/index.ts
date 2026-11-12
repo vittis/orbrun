@@ -10,6 +10,7 @@ import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects, type SpellBurst } from './effects.js'
 import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
 import { drawMelee } from './melee-draw.js'
+import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
@@ -56,6 +57,8 @@ export class Render25d implements MapRenderer {
   private effects = new DungeonEffects()
   private deaths = new DungeonDeaths()
   private deathArt = new DeathArt()
+  private impactArt = new ImpactArt()
+  private claimedImpacts = new WeakSet<object>()
   private visibility = new DungeonVisibility()
   private arrival = new DungeonArrival()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
@@ -252,6 +255,24 @@ export class Render25d implements MapRenderer {
         standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
         this.active = true
       }
+      // Generic hit/arrival feedback shares the same shaded pixel contact art.
+      // Existing melee, projectile and spell contacts already own their bursts.
+      for (const ripple of this.life.ripples) {
+        if (ripple.kind === 'water' || this.claimedImpacts.has(ripple)) continue
+        if (this.deaths.coversImpact(ripple.x, ripple.y, now) || this.effects.coversImpact(ripple.x, ripple.y, now)) {
+          this.claimedImpacts.add(ripple); continue
+        }
+        const duration = ripple.kind === 'arrival' ? 0.55 : 0.45, age = now - ripple.born
+        if (age >= duration) continue
+        this.active = true
+        if (age < 0) continue
+        const cell = this.scene.cells.get(cellKey(ripple.x, ripple.y))
+        if (!cell || cell.visibility !== 'visible' || cell.occluder || !this.inFrame(p, ripple)) continue
+        const burst: SpellBurst = { x: ripple.x, y: ripple.y, born: ripple.born, duration,
+          kind: ripple.kind === 'arrival' ? 'earth' : 'physical',
+          intensity: ripple.strength < 0.45 ? 'light' : ripple.strength > 0.8 ? 'heavy' : 'solid' }
+        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + 0.35 })
+      }
       for (const burst of this.effects.bursts) {
         const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
         if (!cell || cell.occluder && !burst.impact || !this.inFrame(p, burst)) continue
@@ -321,7 +342,7 @@ export class Render25d implements MapRenderer {
       if (!cell || cell.occluder) continue
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
       ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 0.4, rect.width, rect.height + s * 0.4); ctx.clip()
-      drawSpellTrace(ctx, p, trace, now); ctx.restore()
+      drawSpellTrace(ctx, p, trace, now, this.impactArt, this.dpr); ctx.restore()
       this.active = true
     }
     for (const death of deathParticles) if (death.ground && this.inFrame(p, death)) this.deathArt.draw(ctx, p, this.scene, death, this.dpr)
@@ -355,9 +376,14 @@ export class Render25d implements MapRenderer {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
       else if (entry.burst) {
-        const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
-        ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1); ctx.clip()
-        drawSpellBurst(ctx, p, entry.burst, now); ctx.restore()
+        ctx.save(); ctx.beginPath()
+        for (let y = entry.y - 1; y <= entry.y + 1; y++) for (let x = entry.x - 1; x <= entry.x + 1; x++) {
+          const cell = this.scene.cells.get(cellKey(x, y))
+          if (cell?.visibility !== 'visible' || cell.occluder && (x !== entry.x || y !== entry.y)) continue
+          const rect = planeRect(p, x, y, 0, this.dpr)
+          ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1)
+        }
+        ctx.clip(); drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr); ctx.restore()
       }
       else if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
       else if (entry.cell.occluder) this.wall(ctx, p, entry.cell)
@@ -534,20 +560,19 @@ export class Render25d implements MapRenderer {
   private impactRipples(ctx: Context2d, p: Projection, time: number) {
     if (!this.opts.animate) return
     for (const ripple of this.life.ripples) {
-      if (this.deaths.coversImpact(ripple.x, ripple.y, time)) continue
-      const age = time - ripple.born
-      if (age < 0 || age >= 0.9) continue
+      if (ripple.kind !== 'water') continue
+      const age = (time - ripple.born) / 0.9
+      if (age < 0 || age >= 1) continue
       this.active = true
       const q = project(p, ripple.x, ripple.y)
-      const radius = p.scale * (0.08 + age * 1.1)
       ctx.save(); ctx.beginPath()
-      // Clip to current LOS, so impact rings never reveal unseen terrain.
-      for (const cell of this.cells) if (cell.visibility === 'visible') {
+      for (const cell of this.cells) if (cell.visibility === 'visible' && !cell.occluder) {
         const r = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(r.x, r.y, r.width, r.height)
       }
-      ctx.clip(); ctx.strokeStyle = `rgba(220,230,240,${ripple.strength * 0.18 * (1 - age / 0.9) ** 2})`
-      ctx.lineWidth = Math.max(0.6, p.scale / 90); ctx.beginPath()
-      ctx.ellipse(q.x, q.y, radius, radius * groundDepth(p.tilt), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore()
+      ctx.clip()
+      this.impactArt.draw(ctx, 'water', age, ripple.x * 11 + ripple.y * 23, ripple.strength,
+        q.x, q.y, p.scale, this.dpr, groundDepth(p.tilt))
+      ctx.restore()
     }
   }
 
@@ -834,6 +859,8 @@ export class Render25d implements MapRenderer {
     this.effects.clear()
     this.deaths.clear()
     this.deathArt.clear()
+    this.impactArt.clear()
+    this.claimedImpacts = new WeakSet()
     this.visibility.clear()
     this.arrival.clear()
     this.fogField = null

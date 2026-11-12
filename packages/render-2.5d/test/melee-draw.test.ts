@@ -10,9 +10,14 @@ const projection: Projection = { x: 0, y: 0, width: 640, height: 480, scale: 32,
 interface Run { x: number; y: number; width: number; alpha: number; colour: string }
 function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeStroke> = {}) {
   const runs: Run[] = []
+  // Runs are local to the attacker; preserve nested contact-stamp transforms.
+  let offset = { x: 0, y: 0 }
+  const stack: typeof offset[] = []
   const ctx = {
-    globalAlpha: 1, fillStyle: '', save() {}, restore() {}, translate() {}, scale() {},
-    fillRect(x: number, y: number, width: number) { runs.push({ x, y, width, alpha: this.globalAlpha, colour: this.fillStyle }) },
+    globalAlpha: 1, fillStyle: '',
+    save() { stack.push({ ...offset }) }, restore() { offset = stack.pop() ?? { x: 0, y: 0 } },
+    translate(x: number, y: number) { if (stack.length > 1) { offset.x += x; offset.y += y } }, scale() {},
+    fillRect(x: number, y: number, width: number) { runs.push({ x: x + offset.x, y: y + offset.y, width, alpha: this.globalAlpha, colour: this.fillStyle }) },
   }
   const stroke: MeleeStroke = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style, hit: true, born: 0, duration: meleeTiming(style).duration, ...options }
   drawMelee(ctx as unknown as Context2d, projection, stroke, age * stroke.duration)

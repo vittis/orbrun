@@ -17,6 +17,8 @@ describe('server tile semantics for atmosphere', () => {
     }
   })
   it('distinguishes directional artwork from distance/animation variants', () => {
+    expect(projectileAppearance('BOLT_MAGIC_DART_5', 6)).toMatchObject({ family: 'BOLT_MAGIC_DART', distancePhase: 5, distanceCycle: 6 })
+    expect(projectileAppearance('BOLT_MAGIC_DART', 6)).toMatchObject({ distancePhase: 0, distanceCycle: 6 })
     expect(projectileAppearance('MI_ARROW0')).toMatchObject({ family: 'MI_ARROW', angle: -Math.PI / 2 })
     expect(projectileAppearance('MI_ARROW6')).toMatchObject({ family: 'MI_ARROW', angle: Math.PI })
     expect(projectileAppearance('BOLT_STONE_ARROW_2')).toMatchObject({ family: 'BOLT_STONE_ARROW', angle: 0 })

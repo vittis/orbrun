@@ -2,12 +2,12 @@ import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStre
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
-export interface SpellBurst extends SpellEffect { born: number; duration: number; impact?: boolean }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; impact?: boolean; material?: ProjectileAppearance['kind']; direction?: number }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ProjectilePoint { billboard: Billboard; at: number }
 interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number; presented?: boolean }
-const PROJECTILE_SPEED = 40
-const MIN_PROJECTILE_TIME = 0.04
+const PROJECTILE_SPEED = 240
+const MIN_PROJECTILE_TIME = 0.02
 const shotKey = (b: Billboard) => `${b.x},${b.y}:${b.tile}`
 const shotFamily = (b: Billboard) => {
   const a = b.life?.projectile
@@ -62,14 +62,7 @@ export class DungeonEffects {
       const group = groups.get(key) ?? []
       group.push(b); groups.set(key, group)
     }
-    const projectiles = [...groups.values()].flatMap(group => {
-      const a = group[0].life?.projectile
-      // Several overlay cells may arrive together in map order. Directional
-      // art provides a travel order independent of east/west or north/south.
-      const angle = a ? a.angle : undefined
-      if (angle === undefined) return group
-      return group.sort((p, q) => (p.x - q.x) * Math.cos(angle) + (p.y - q.y) * Math.sin(angle))
-    })
+    const projectiles = [...groups.values()].flatMap(group => this.orderProjectiles(scene, group))
     if (animate && scene.playerOnLevel) for (const billboard of projectiles) {
       if (billboard.kind !== 'projectile' || billboard.life?.projectile === false || !visible(scene, billboard)) continue
       const key = shotKey(billboard)
@@ -125,6 +118,42 @@ export class DungeonEffects {
     this.tick(scene, now)
     this.traces = this.traces.slice(-48)
     this.flights = this.flights.slice(-48)
+  }
+
+  private orderProjectiles(scene: Scene, group: Billboard[]) {
+    const appearance = group[0].life?.projectile
+    if (!appearance) return group
+    const angle = appearance.angle
+    if (angle !== undefined) return group.sort((p, q) => (p.x - q.x) * Math.cos(angle) + (p.y - q.y) * Math.sin(angle))
+    if (!appearance.distanceCycle || group.length < 2) return group
+    // Crawl batches a complete ray in map order. Magic Dart's six variants
+    // encode distance, NOT direction or a unique sequence (distance 7 wraps).
+    // Score visible actors outside the ray against every encoded distance.
+    const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
+    const matches = (origin: { x: number; y: number }) => !group.some(b => b.x === origin.x && b.y === origin.y)
+      && group.some(b => distance(b, origin) === 1)
+      && group.every(b => {
+        const art = b.life?.projectile
+        return !art || art.distancePhase === undefined || !art.distanceCycle || (distance(b, origin) - 1) % art.distanceCycle === art.distancePhase
+      })
+    const actors = [scene.player, ...scene.billboards.filter(b => b.kind === 'monster' && !b.scenery)]
+      .filter(a => visible(scene, a) && matches(a))
+    if (actors.length === 1) return group.sort((a, b) => distance(a, actors[0]) - distance(b, actors[0]))
+    // An offscreen shooter is still safe when all possible ray origins imply
+    // the same ordering. Otherwise retain chronological samples, never flip.
+    const origins = new Map<string, { x: number; y: number }>()
+    for (const b of group) if (b.life?.projectile && b.life.projectile.distancePhase === 0) {
+      for (let y = b.y - 1; y <= b.y + 1; y++) for (let x = b.x - 1; x <= b.x + 1; x++) {
+        if (matches({ x, y })) origins.set(`${x},${y}`, { x, y })
+      }
+    }
+    const orders = [...origins.values()].map(origin => [...group].sort((a, b) => distance(a, origin) - distance(b, origin)))
+    if (orders.length && orders.every(order => order.every((b, i) => b === orders[0][i]))) return orders[0]
+    const known = group.map(b => this.shots.get(shotKey(b))).find(f => f && f.points.length > 1)
+    if (known) return group.sort((a, b) => distance(a, known.points[0].billboard) - distance(b, known.points[0].billboard))
+    // With no trustworthy direction, do not invent a backwards flight or fake
+    // impacts along an unordered snapshot. Later confirmed samples may resolve it.
+    return []
   }
 
   private launch(scene: Scene, flight: ProjectileFlight, dx: number, dy: number) {
@@ -220,14 +249,21 @@ export class DungeonEffects {
       const physical = appearance && ['sand', 'stone', 'metal'].includes(appearance.kind)
       const duration = physical ? 1.7 : source.pulse === 'fire' ? 2.8 : 2.1
       if (now - born < duration) this.traces.push({ source, appearance, born, duration })
-      const kind = physical ? 'physical' : appearance?.kind ?? 'magic'
+      const kind = appearance?.kind === 'sand' || appearance?.kind === 'stone' ? 'earth' : physical ? 'physical' : appearance?.kind ?? 'magic'
       const burstDuration = kind === 'electric' ? 0.5 : 0.4
-      if (now - born < burstDuration) this.bursts.push({ x: billboard.x, y: billboard.y, kind: kind as SpellEffect['kind'], born, duration: burstDuration, impact: true })
+      if (now - born < burstDuration) this.bursts.push({ x: billboard.x, y: billboard.y, kind: kind as SpellEffect['kind'], born, duration: burstDuration, impact: true, material: appearance?.kind, direction: Math.atan2(billboard.y - flight.points[0].billboard.y, billboard.x - flight.points[0].billboard.x) })
       return false
     })
     this.traces = this.traces.slice(-48)
     this.bursts = this.bursts.slice(-48)
     for (const [key, flight] of this.shots) if (!this.flights.includes(flight)) this.shots.delete(key)
+  }
+
+  coversImpact(x: number, y: number, now: number) {
+    return this.traces.some(t => t.source.x === x && t.source.y === y && now >= t.born && now - t.born < t.duration)
+      || this.bursts.some(b => b.x === x && b.y === y && now - b.born >= 0 && now - b.born < b.duration)
+      || this.strokes.some(s => s.hit && s.to.x === x && s.to.y === y && now - s.born >= 0 && now - s.born < s.duration)
+      || this.flights.some(f => tail(f).billboard.x === x && tail(f).billboard.y === y && now < arrival(f))
   }
 
   clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.flights = []; this.onLevel = false; this.level = undefined }

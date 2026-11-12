@@ -6,6 +6,7 @@ import { drawTile, TileCache } from '../src/tiles.js'
 import { glowCenter, glowRadius } from '../src/lighting.js'
 import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
+import { ImpactArt } from '../src/impact-draw.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
   return { x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
@@ -86,13 +87,14 @@ describe('picking and visibility', () => {
 
 
   it('draws direct spells on its frame clock, sleeps after expiry, and respects Still mode', () => {
-    const { r, ctx } = renderer()
+    const { r } = renderer()
+    const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
     const scene = sceneOf(cell(0, 0), cell(1, 0))
     r.setScene(scene, 0)
     r.spell({ x: 1, y: 0, kind: 'cold' }, 1)
     r.render(1.1)
     expect(r.animating).toBe(true)
-    expect(ctx.strokeStyle).toBe('#a5e7ff')
+    expect(art.mock.calls.filter(c => c[1] === 'cold')).toHaveLength(1)
     r.render(2)
     expect(r.animating).toBe(false)
     r.setOptions({ animate: false })
@@ -103,6 +105,7 @@ describe('picking and visibility', () => {
     r.spell({ x: 100, y: 100, kind: 'fire' }, 4)
     r.render(4.1)
     expect(r.animating).toBe(false)
+    art.mockRestore(); r.destroy()
   })
 
   it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {

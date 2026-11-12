@@ -1,0 +1,1026 @@
+{
+  "description": "Normalized public CBRG spectator frames recorded 2026-11-12. Coordinates are relative to the caster; phase is the server Magic Dart variant. Wire cell order and phase wrap are preserved. No accounts, inventory or chat.",
+  "cycle": 6,
+  "shots": [
+    {
+      "receivedMs": 313,
+      "points": [
+        {
+          "x": -6,
+          "y": 0,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": 0,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 27
+    },
+    {
+      "receivedMs": 659,
+      "points": [
+        {
+          "x": -5,
+          "y": 0,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 30
+    },
+    {
+      "receivedMs": 1043,
+      "points": [
+        {
+          "x": -4,
+          "y": 0,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 1399,
+      "points": [
+        {
+          "x": -4,
+          "y": 0,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 34
+    },
+    {
+      "receivedMs": 16384,
+      "points": [
+        {
+          "x": -1,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 4,
+          "phase": 3
+        },
+        {
+          "x": -2,
+          "y": 5,
+          "phase": 4
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 16562,
+      "points": [
+        {
+          "x": -1,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 4,
+          "phase": 3
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 16732,
+      "points": [
+        {
+          "x": -1,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 3,
+          "phase": 2
+        }
+      ],
+      "clearAfterMs": 33
+    },
+    {
+      "receivedMs": 18030,
+      "points": [
+        {
+          "x": -6,
+          "y": -2,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": -1,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -1,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 18204,
+      "points": [
+        {
+          "x": -4,
+          "y": -1,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 35
+    },
+    {
+      "receivedMs": 18367,
+      "points": [
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 35
+    },
+    {
+      "receivedMs": 18579,
+      "points": [
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 36
+    },
+    {
+      "receivedMs": 22191,
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": 0,
+          "y": 4,
+          "phase": 3
+        },
+        {
+          "x": 0,
+          "y": 5,
+          "phase": 4
+        },
+        {
+          "x": 0,
+          "y": 6,
+          "phase": 5
+        }
+      ],
+      "clearAfterMs": 36
+    },
+    {
+      "receivedMs": 22411,
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": 0,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": 0,
+          "y": 4,
+          "phase": 3
+        },
+        {
+          "x": 0,
+          "y": 5,
+          "phase": 4
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 26979,
+      "points": [
+        {
+          "x": 1,
+          "y": 0,
+          "phase": 0
+        },
+        {
+          "x": 2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": 3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "phase": 3
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 41806,
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": -3,
+          "y": 4,
+          "phase": 3
+        },
+        {
+          "x": -4,
+          "y": 5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 6,
+          "phase": 5
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 41987,
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": -3,
+          "y": 4,
+          "phase": 3
+        },
+        {
+          "x": -4,
+          "y": 5,
+          "phase": 4
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 42171,
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -1,
+          "y": 2,
+          "phase": 1
+        },
+        {
+          "x": -2,
+          "y": 3,
+          "phase": 2
+        },
+        {
+          "x": -3,
+          "y": 4,
+          "phase": 3
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 44640,
+      "points": [
+        {
+          "x": -7,
+          "y": -7,
+          "phase": 0
+        },
+        {
+          "x": -6,
+          "y": -6,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 48
+    },
+    {
+      "receivedMs": 44890,
+      "points": [
+        {
+          "x": -6,
+          "y": -6,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 37
+    },
+    {
+      "receivedMs": 45265,
+      "points": [
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 40
+    },
+    {
+      "receivedMs": 46655,
+      "points": [
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 77
+    },
+    {
+      "receivedMs": 47027,
+      "points": [
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 41
+    },
+    {
+      "receivedMs": 47348,
+      "points": [
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 42
+    },
+    {
+      "receivedMs": 47672,
+      "points": [
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 36
+    },
+    {
+      "receivedMs": 47941,
+      "points": [
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 38
+    },
+    {
+      "receivedMs": 48259,
+      "points": [
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 43
+    },
+    {
+      "receivedMs": 48587,
+      "points": [
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 43
+    },
+    {
+      "receivedMs": 48916,
+      "points": [
+        {
+          "x": -5,
+          "y": -5,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -4,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -3,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": -2,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": -1,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 51693,
+      "points": [
+        {
+          "x": -6,
+          "y": -1,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": -1,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -1,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 44
+    },
+    {
+      "receivedMs": 52015,
+      "points": [
+        {
+          "x": -5,
+          "y": -1,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": -1,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 73
+    },
+    {
+      "receivedMs": 52381,
+      "points": [
+        {
+          "x": -4,
+          "y": -1,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": -1,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 45
+    },
+    {
+      "receivedMs": 52761,
+      "points": [
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 39
+    },
+    {
+      "receivedMs": 54723,
+      "points": [
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        },
+        {
+          "x": -7,
+          "y": 1,
+          "phase": 0
+        },
+        {
+          "x": -6,
+          "y": 1,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": 1,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 1,
+          "phase": 3
+        }
+      ],
+      "clearAfterMs": 48
+    },
+    {
+      "receivedMs": 55050,
+      "points": [
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        },
+        {
+          "x": -6,
+          "y": 1,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": 1,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 1,
+          "phase": 3
+        }
+      ],
+      "clearAfterMs": 42
+    },
+    {
+      "receivedMs": 59826,
+      "points": [
+        {
+          "x": -7,
+          "y": 0,
+          "phase": 0
+        },
+        {
+          "x": -6,
+          "y": 0,
+          "phase": 5
+        },
+        {
+          "x": -5,
+          "y": 0,
+          "phase": 4
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "phase": 3
+        },
+        {
+          "x": -3,
+          "y": 0,
+          "phase": 2
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "phase": 1
+        },
+        {
+          "x": -1,
+          "y": 0,
+          "phase": 0
+        }
+      ],
+      "clearAfterMs": 39
+    }
+  ]
+}

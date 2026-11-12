@@ -2,6 +2,7 @@ import { impactStrength, meleeTiming } from '@orbrun/scene'
 import type { MeleeStroke } from './effects.js'
 import { project, type Projection } from './projection.js'
 import type { Context2d } from './tiles.js'
+import { paintImpact } from './impact-art.js'
 
 interface Point { x: number; y: number }
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
@@ -117,22 +118,10 @@ export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, no
   }
 
   if (stroke.hit && age >= contact) {
-    const flash = clamp(1 - recovery / 0.35), radius = (style === 'crush' || style === 'cleave' ? 0.22 : 0.14) * (0.75 + strength * 0.5)
-    const points: Point[] = []
-    for (let i = 0; i < 16; i++) {
-      const angle = i * Math.PI / 8, r = (i % 2 ? 0.28 : i % 4 ? 0.65 : 1) * radius * (1 + recovery)
-      points.push({ x: dx + Math.cos(angle) * r, y: dy + Math.sin(angle) * r })
-    }
-    polygon(ctx, points, colours[2], flash)
-    polygon(ctx, points.map(q => ({ x: dx + (q.x - dx) * 0.5, y: dy + (q.y - dy) * 0.5 })), colours[3], flash)
-    const count = 3 + Math.round(strength * 5)
-    for (let i = 0; i < count; i++) {
-      const angle = i * 2.4 + stroke.from.x * 0.7 + stroke.to.y * 1.3
-      const travel = Math.sqrt(recovery) * (0.18 + strength * 0.24)
-      const x = dx + Math.cos(angle) * travel, y = dy + Math.sin(angle) * travel - Math.sin(recovery * Math.PI) * 0.08
-      const outward = style === 'crush' || style === 'cleave' ? 0.07 : 0.045
-      polygon(ctx, [{ x, y }, { x: x + Math.cos(angle) * outward, y: y + Math.sin(angle) * outward }, { x: x - Math.sin(angle) / 32, y: y + Math.cos(angle) / 32 }], colours[i % 2 ? 2 : 3], (1 - recovery) ** 2)
-    }
+    ctx.save(); ctx.translate(Math.round(dx * 32), Math.round(dy * 32))
+    paintImpact(ctx, stroke.tone ?? 'physical', recovery,
+      Math.floor(stroke.from.x * 11 + stroke.to.y * 23), strength, Math.atan2(dy, dx))
+    ctx.restore()
   }
   ctx.restore()
 }

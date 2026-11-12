@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel impact art checks</title>
+<style>
+body { margin: 24px; background: #101014; color: #ded5bf; font: 14px system-ui, sans-serif }
+h1 { font-size: 22px } #captures { display: grid; grid-template-columns: repeat(3, 224px); gap: 12px }
+figure { margin: 0; background: #19181c; border: 1px solid #454047 } figcaption { padding: 10px }
+canvas { display: block; width: 224px; height: 224px; image-rendering: pixelated } pre { white-space: pre-wrap }
+</style>
+<h1>Shaded pixel impacts · actual game tiles</h1>
+<p>Contact → burst → dissolving remnants. All effects share the dungeon’s texel scale, hard outlines and shaded colour ramps.</p>
+<pre id="result">Loading local game tiles…</pre>
+<div id="captures"></div>
+<script type="module" src="./impact-checks.ts"></script>
+</html>

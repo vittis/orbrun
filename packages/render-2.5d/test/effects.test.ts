@@ -65,14 +65,14 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe({ ...scene, billboards: [sand] }, 1, true)
     expect(fx.projectiles(1)).toMatchObject([{ tile: sand.tile, x: 1 }])
     fx.observe({ ...scene, billboards: [] }, 1.001, true)
-    expect(fx.projectiles(1.016)).toHaveLength(1)
-    expect(fx.projectiles(1.016)[0].x).toBe(1)
+    expect(fx.projectiles(1.008)).toHaveLength(1)
+    expect(fx.projectiles(1.008)[0].x).toBe(1)
     expect(fx.traces).toHaveLength(0)
     fx.tick(scene, 1.09)
-    expect(fx.traces).toMatchObject([{ born: 1.04, appearance: { kind: 'sand' }, source: { power: 0 } }])
+    expect(fx.traces).toMatchObject([{ born: 1.02, appearance: { kind: 'sand' }, source: { power: 0 } }])
     fx.observe({ ...scene, billboards: [] }, 1.1, true)
     expect(fx.traces).toHaveLength(1)
-    expect(fx.traces[0].born).toBeCloseTo(1.04)
+    expect(fx.traces[0].born).toBeCloseTo(1.02)
     fx.tick(scene, 1.2)
     expect(fx.projectiles(1.2)).toHaveLength(0)
     expect(fx.traces).toHaveLength(1)
@@ -90,7 +90,7 @@ describe('bounded dungeon combat presentation', () => {
       if (reset === 'level') scene.levelKey = 'D:2'
       if (reset === 'remote') scene.playerOnLevel = false
       fx.observe(scene, 1.01, reset !== 'still')
-      expect(fx.projectiles(1.016)).toHaveLength(0)
+      expect(fx.projectiles(1.008)).toHaveLength(0)
       expect(fx.traces).toHaveLength(0)
     }
   })
@@ -100,7 +100,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1, true)
-    for (const [time, x] of [[1.0125, 0.5], [1.0375, 1.5], [1.0625, 2.5], [1.074, 2.96]]) {
+    for (const [time, x] of [[1 + 0.5 / 240, 0.5], [1 + 1.5 / 240, 1.5], [1 + 2.5 / 240, 2.5], [1 + 2.96 / 240, 2.96]]) {
       const shots = fx.projectiles(time)
       expect(shots).toHaveLength(1)
       expect(shots[0].x).toBeCloseTo(x)
@@ -124,7 +124,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.projectiles(1)).toMatchObject([{ x: 1 }])
     fx.observe({ ...scene, billboards: [spell(0)] }, 1.001, true)
     fx.observe(scene, 1.002, true)
-    expect(fx.projectiles(1.0135)[0].x).toBeCloseTo(0.5)
+    expect(fx.projectiles(1.001 + 0.5 / 240)[0].x).toBeCloseTo(0.5)
     fx.tick(scene, 1.042)
     expect(fx.bursts).toMatchObject([{ x: 0, y: 0, impact: true }])
   })
@@ -136,7 +136,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.projectiles(1.01)[0].x).toBe(1)
     fx.observe({ ...scene, billboards: [spell(2)] }, 1.02, true)
     expect(fx.projectiles(1.02)[0].x).toBeGreaterThanOrEqual(1)
-    expect(fx.projectiles(1.0325)[0].x).toBeCloseTo(1.5)
+    expect(fx.projectiles(1.02 + 0.5 / 240)[0].x).toBeCloseTo(1.5)
   })
 
   it('keeps consecutive short shots from becoming a return flight', () => {
@@ -145,8 +145,8 @@ describe('bounded dungeon combat presentation', () => {
     for (const x of [1, 2]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1, true)
     fx.observe({ ...scene, billboards: [spell(1)] }, 1.001, true)
-    expect(fx.projectiles(1.0125)).toHaveLength(2)
-    expect(fx.projectiles(1.0375)[0].x).toBeCloseTo(1.5)
+    expect(fx.projectiles(1 + 0.5 / 240)).toHaveLength(2)
+    expect(fx.projectiles(1 + 1.5 / 240)[0].x).toBeCloseTo(1.5)
   })
 
   it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]])('flies correctly in direction %s,%s, even with cells supplied in reverse order', (dx, dy) => {
@@ -158,7 +158,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [shot(2), shot(1)] }, 1, true)
     fx.observe(scene, 1, true)
-    const halfway = fx.projectiles(1 + Math.hypot(dx, dy) / 80)
+    const halfway = fx.projectiles(1 + Math.hypot(dx, dy) / 480)
     expect(halfway).toHaveLength(1)
     expect(halfway[0].x).toBeCloseTo(dx * 0.5)
     expect(halfway[0].y).toBeCloseTo(dy * 0.5)
@@ -196,7 +196,7 @@ describe('bounded dungeon combat presentation', () => {
     for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1, true)
     fx.observe({ ...scene, billboards: [spell(1)] }, 1.01, true)
-    expect(fx.projectiles(1.025)).toHaveLength(2)
+    expect(fx.projectiles(1.012)).toHaveLength(2)
     fx.observe(scene, 1.02, true)
     fx.tick(scene, 1.3)
     expect(fx.traces.map(t => t.source.x).sort()).toEqual([1, 3])
@@ -218,7 +218,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [{ ...spell(), life: { projectile: false } }] }, 1, true)
     fx.observe(scene, 1.001, true)
-    expect(fx.projectiles(1.016)).toHaveLength(0)
+    expect(fx.projectiles(1.008)).toHaveLength(0)
     expect(fx.traces).toHaveLength(0)
   })
   it('lunges and recoils without changing confirmed cells, settles, and ignores miss recoil', () => {
