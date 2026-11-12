@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.55 — 2026-11-12
+
+- Slow projectiles slightly so their flight is easier to follow while keeping combat snappy.
+
 ## 0.3.54 — 2026-11-12
 
 - Make idle breathing and swaying more noticeable, and give flying creatures and Djinni a visible hovering animation.
