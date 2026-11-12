@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.52 — 2026-11-12
+
+- Add an FPS counter to the Dungeon (2.5D) view, measuring frames actually drawn.
+
 ## 0.3.51 — 2026-11-12
 
 - Restore WebTiles projectile artwork repeated along the path.
