@@ -10,7 +10,7 @@ export class ImpactArt {
     x: number, y: number, scale: number, dpr: number, squash = 1, residue = false, direction?: number) {
     if (age < 0 || age >= 1 || scale <= 0) return
     const frame = Math.min(15, Math.floor(age * 16)), variant = ((Math.floor(seed) % 8) + 8) % 8
-    const power = Math.max(0, Math.min(2, Math.round(strength * 2)))
+    const power = strength < 0.45 ? 0 : strength > 0.8 ? 2 : 1
     const facing = direction === undefined ? undefined : Math.round(direction / (Math.PI / 4))
     const key = `${kind}:${frame}:${variant}:${power}:${residue}:${facing}`
     let image = this.cache.get(key)

@@ -27,6 +27,20 @@ function harness() {
 }
 
 describe('combat sentences', () => {
+  // mon-death.cc uses passive wording for indirect kills and omits articles
+  // for unique monsters. None of these sentences reports an HP amount.
+  it.each([
+    ['The goblin is killed!', 'The goblin'],
+    ['Sigmund is killed!', 'Sigmund'],
+    ['Sigmund dies!', 'Sigmund'],
+    ['Your orc is destroyed!', 'Your orc'],
+    ['The orc zombie crumbles into dust!', 'The orc zombie'],
+    ['You blow up the goblin!', 'the goblin'],
+  ])('recognizes the confirmed death sentence: %s', (text, target) => {
+    expect(combatText(text)).toMatchObject([{ kind: 'kill', text: 'SLAIN', target }])
+    expect(combatText(text)[0].amount).toBeUndefined()
+  })
+
   it.each([
     'The ice thorns skewer the goblin.',
     '<lightblue>The ice thorns skewer the goblin!<lightgrey>',
@@ -240,6 +254,68 @@ describe('combat updates', () => {
   it('does not infer death when an actor simply leaves sight', () => {
     const { feedback } = harness()
     expect(feedback.flush(world())).toEqual([])
+  })
+  it.each(['You kill the goblin!', 'The goblin is killed!', 'The goblin dies!'])(
+    'keeps a Foxfire victim through map removal until its confirmed death arrives: %s', deathText => {
+      const { feedback, text } = harness()
+      const foxfire: Billboard = { ...goblin(3, 0), name: 'foxfire', ref: { id: 3, name: 'foxfire' }, attitude: 'friendly' }
+      const before = world(goblin(1, 1), goblin(2, 2), foxfire)
+      feedback.flush(before, 100)
+      const after = { ...before, billboards: [goblin(2, 2)] }
+      expect(feedback.flush(after, 110)).toEqual([])
+      expect(feedback.flush(after, 120)).toEqual([])
+      text(`The foxfire burns the goblin! ${deathText}`)
+      const events = feedback.flush(after, 130)
+      expect(events).toMatchObject([
+        { kind: 'hit', actorId: 'id:1', x: 1, y: 0, tone: 'fire', melee: false },
+        { kind: 'kill', actorId: 'id:1', death: { actorId: 'id:1', x: 1, y: 0, kind: 'flesh' } },
+      ])
+      expect(events.filter(e => e.death)).toHaveLength(1)
+      expect(feedback.flush(after, 140)).toEqual([])
+      text('The goblin is killed!')
+      expect(feedback.flush(after, 150).some(e => e.actorId === 'id:1')).toBe(false)
+    },
+  )
+  it('resolves a named unique killed indirectly after its map removal', () => {
+    const { feedback, text } = harness()
+    const unique: Billboard = { ...goblin(7), name: 'Sigmund', ref: { id: 7, name: 'Sigmund' } }
+    const before = world(unique)
+    feedback.flush(before, 100)
+    const after = { ...before, billboards: [] }
+    feedback.flush(after, 110)
+    text('The foxfire burns Sigmund! Sigmund is killed!')
+    expect(feedback.flush(after, 120).find(e => e.kind === 'kill')).toMatchObject({
+      actorId: 'id:7', death: { actorId: 'id:7', x: 1, y: 0 },
+    })
+  })
+  it('keeps separate remembered victims for multiple indirect kills with the same name', () => {
+    const { feedback, text } = harness()
+    const before = world(goblin(1, 1), goblin(2, 2))
+    feedback.flush(before, 100)
+    const after = { ...before, billboards: [] }
+    feedback.flush(after, 110)
+    text('The goblin is killed! The goblin dies!')
+    expect(feedback.flush(after, 120).map(e => e.death?.actorId)).toEqual(['id:1', 'id:2'])
+  })
+  it.each(['expired', 'hidden', 'level'] as const)('does not reuse %s victim positions for a delayed kill', change => {
+    const { feedback, text } = harness()
+    const before = { ...world(goblin()), levelKey: 'D:1' }
+    feedback.flush(before, 100)
+    const after = { ...before, billboards: [] }
+    feedback.flush(after, 110)
+    if (change === 'hidden') after.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+    if (change === 'level') after.levelKey = 'D:2'
+    text('The goblin is killed!')
+    expect(feedback.flush(after, change === 'expired' ? 2200 : 120)).toEqual([])
+  })
+  it('does not turn a Foxfire hit or a dissipating Foxfire into an inferred death', () => {
+    const { feedback, text } = harness()
+    const before = world(goblin())
+    feedback.flush(before, 100)
+    const after = { ...before, billboards: [] }
+    feedback.flush(after, 110)
+    text('The foxfire burns the goblin! The foxfire dissipates!')
+    expect(feedback.flush(after, 120)).toEqual([])
   })
   it('spawns separate deaths for same-name victims and recognizes damage-over-time death messages', () => {
     const { feedback, text } = harness()
