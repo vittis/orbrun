@@ -330,7 +330,7 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     gd,
     player: scene.player,
     playerOnLevel: scene.playerOnLevel,
-    playerLife: JSON.stringify([state.player.hp, state.player.hp_max, state.player.status.map(s => s.light || s.text || '')]),
+    playerLife: JSON.stringify([state.player.species, state.player.hp, state.player.hp_max, state.player.status.map(s => [s.light, s.text])]),
     place: state.player.place || '',
     demonTier: state.options.tile_show_demon_tier,
     cells: new Map(),

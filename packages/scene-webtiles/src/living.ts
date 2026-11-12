@@ -91,6 +91,7 @@ export function creatureLife(name: string, flags: FlagWord, b: Billboard): TileL
   let amplitude = flags.STAB ? 1.7 : b.threat === 'nasty' ? 1.3 : 1
   if (b.height >= 0.7) { rate *= 0.75; amplitude *= 1.3 }
   if (b.damage && b.damage !== 'uninjured') { rate *= 0.8; amplitude *= 0.8 }
+  if (flags.FLYING) motion = 'fly'
   if (held) motion = 'still'
   const glow = tileLight('MONS_' + n)
   return { motion, held, rate, amplitude, flying: !!flags.FLYING, weary: !!b.damage && b.damage !== 'uninjured', fleeing: !!flags.FLEEING, lights: glow ? [glow] : undefined }
@@ -117,9 +118,10 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
     }
     if (b.kind === 'player') {
       const hp = state.player.hp / Math.max(1, state.player.hp_max)
-      const status = state.player.status.map(s => s.light || s.text || '').join(' ')
+      const status = state.player.status.map(s => `${s.light ?? ''} ${s.text ?? ''}`).join(' ')
+      const flying = !!gd.fg(t?.fg).FLYING || state.player.species === 'Djinni' || /\b(?:fly|flying|flight|airborne)\b/i.test(status)
       b.life = {
-        ...b.life, motion: 'breath', rate: 0.8 + (1 - hp) * 1.2,
+        ...b.life, motion: flying ? 'fly' : 'breath', flying, rate: 0.8 + (1 - hp) * 1.2,
         amplitude: hp < 0.5 ? 0.8 : 1.1, wading: cell.flags.water,
         held: /paral|petrified|held|net|web/i.test(status),
       }

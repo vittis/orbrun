@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.53 point at the `cloudflare-online-v1.50` release tag in
+Source links for 0.3.54 point at the `cloudflare-online-v1.51` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1361,3 +1361,26 @@ artifacts are absent. The guarded dry-run precedes an atomic, non-forced
 main/source-tag push through the existing Workers Builds pipeline.
 Verify live version, source links, exact bundle, CSP, proxies and anonymous
 spectating after rollout.
+
+
+## 0.3.54 pronounced idle motion and flight — prepared 2026-11-12
+
+User authorized committing and deploying. Integrated origin/main `a6097b1`,
+preserving hybrid projectile travel and recipient overlays. Immutable source
+tag: `cloudflare-online-v1.51`.
+
+Dungeon (2.5D) increases breathing amplitude by approximately 60% and other
+creature idle motion by 20%. Flying monsters and players hover above their
+ground marker with a smooth vertical bob and gentle sideways drift. Player
+flight follows foreground flags, flight status and innate Djinni flight;
+species and status changes refresh the player without requiring map updates.
+Held creatures and Still/reduced-motion presentation remain stationary.
+
+Integrated validation passed TypeScript and 2,533 unit tests, with two optional
+engine skips. Optional engine E2E reports 44 skips because engine artifacts are
+absent.
+
+Release validation and the guarded production dry-run precede an atomic,
+non-forced main/source-tag push through the existing Workers Builds pipeline.
+Verify hosted version, immutable source links, bundle identity, CSP and proxies
+after deployment.

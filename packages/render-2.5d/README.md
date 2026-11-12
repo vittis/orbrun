@@ -142,8 +142,10 @@ effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
 Server flashes keep their supplied colours. The renderer receives typed spell
 feedback from the app; it never parses messages or determines damage.
-Idle motion uses device-pixel-snapped offsets. Breathing is a shallow vertical
-rise; in crisp mode, sprites are enlarged by whole pixels before narrow edge
+Idle motion uses device-pixel-snapped offsets. Breathing is a visible vertical
+rise, while airborne creatures and flying players (including Djinni) hover above
+their ground marker with a slow bob and gentle sideways drift. In crisp mode,
+breathing sprites are enlarged by whole pixels before narrow edge
 smoothing eases the animation. Still sprites retain the selected tile filter.
 Severe wound flags add a guarded lean and uneven breathing without obscuring
 identifying sprite art.

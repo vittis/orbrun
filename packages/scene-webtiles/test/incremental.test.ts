@@ -96,6 +96,33 @@ describe('incremental scene building', () => {
     expect(semantics(s)).toEqual(semantics(buildScene(state, gd)))
   })
 
+  it('refreshes player flight from species and status changes without map updates', () => {
+    const state = fixtureState()
+    state.player.species = 'Human'; state.player.status = []
+    let scene = buildScene(state, gd)
+    const player = () => scene.billboards.find(b => b.kind === 'player')!
+    const refresh = () => { scene = buildScene(state, gd, { previous: scene, dirty: { cells: new Set(), mapCleared: false } }) }
+    // The recording's player is airborne through the foreground flag alone.
+    expect(player().life).toMatchObject({ motion: 'fly', flying: true })
+    const mc = [...state.map.cells.values()].find(c => c.x === state.player.pos.x && c.y === state.player.pos.y)!
+    mc.t!.fg = gd.fg(mc.t?.fg).value
+    scene = buildScene(state, gd)
+    expect(player().life).toMatchObject({ motion: 'breath', flying: false })
+    state.player.species = 'Djinni'; refresh()
+    expect(player().life).toMatchObject({ motion: 'fly', flying: true })
+    state.player.species = 'Human'; refresh()
+    expect(player().life).toMatchObject({ motion: 'breath', flying: false })
+    state.player.status = [{ light: 'Fly', text: 'flying' }]; refresh()
+    expect(player().life).toMatchObject({ motion: 'fly', flying: true })
+    // A stable short label must not hide changes in the long status text.
+    state.player.status = [{ light: 'Other', text: 'flying' }]; refresh()
+    expect(player().life).toMatchObject({ motion: 'fly', flying: true })
+    state.player.status = [{ light: 'Other', text: 'grounded' }]; refresh()
+    expect(player().life).toMatchObject({ motion: 'breath', flying: false })
+    state.player.species = 'Djinni'; state.player.status = [{ light: 'Para', text: 'paralysed' }]; refresh()
+    expect(player().life).toMatchObject({ motion: 'fly', flying: true, held: true })
+  })
+
   it('moves the lid of a cell whose wall neighbourhood changed', () => {
     const state = fixtureState()
     const a = buildScene(state, gd, { dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })

@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.54 — 2026-11-12
+
+- Make idle breathing and swaying more noticeable, and give flying creatures and Djinni a visible hovering animation.
+
 ## 0.3.53 — 2026-11-12
 
 - Show one travelling projectile that lands over the destination creature, paced by WebTiles animation delays.

@@ -59,4 +59,10 @@ describe('server tile semantics for atmosphere', () => {
     const held = creatureLife('orc', { PARALYSED: true, FLYING: true } as unknown as FlagWord, monster)
     expect(livingPose(held, 1, 0, 10)).toEqual(livingPose(undefined, 1, 0, 10))
   })
+  it.each(['bat', 'gargoyle', 'bee', 'fire elemental'])('gives an airborne %s a hover instead of its grounded idle', name => {
+    const life = creatureLife(name, { FLYING: true } as unknown as FlagWord, monster)
+    expect(life).toMatchObject({ motion: 'fly', flying: true })
+    expect(livingPose(life, 0, 0, 1).sy).toBe(1)
+    expect(livingPose(life, 0, 0, 1).y).toBeGreaterThan(0)
+  })
 })
