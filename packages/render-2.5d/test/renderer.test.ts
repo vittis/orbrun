@@ -31,7 +31,7 @@ describe('the north-up projection', () => {
       const tilt = degrees * Math.PI / 180
       const p = { x: -13, y: 27, width: 903, height: 701, tilt, scale: fittedScale(903, 701, tilt, zoom) }
       for (let x = -20; x < -5; x++) for (let y = 19; y < 35; y++) {
-        for (const z of [0, 0.18, 0.58]) {
+        for (const z of [0, 0.08, 0.58]) {
           const a = planeRect(p, x, y, z, dpr)
           const east = planeRect(p, x + 1, y, z, dpr)
           const south = planeRect(p, x, y + 1, z, dpr)
@@ -64,6 +64,25 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it.each([30, 35, 50, 65, 75])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
+    const { r } = renderer()
+    r.setOptions({ tilt, animate: false })
+    const cells = [-2, -1, 0, 1, 2].flatMap(y => [-1, 0, 1].map(x =>
+      cell(x, y, y !== 0 ? { kind: 'wall', occluder: true } : {})))
+    r.setScene(sceneOf(...cells))
+    r.render(0)
+    // Most of the floor, including the feet of standing art, must remain clickable.
+    for (const y of [-0.45, 0, 0.35]) {
+      const q = r.project(0, y)
+      expect(r.pick(q.x, q.y)).toBe(cellKey(0, 0))
+    }
+    // Both the tall back wall and low foreground lip still own their raised surfaces.
+    for (const [y, z] of [[-1.4, 0.58], [0.6, 0.08]]) {
+      const q = r.project(0, y, z)
+      expect(r.pick(q.x, q.y)).toBe(cellKey(0, Math.round(y)))
+    }
+  })
+
   it('sorts crossing actors by their drawn depth on every frame', () => {
     const { r } = renderer()
     const order: number[] = []

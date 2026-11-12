@@ -3,9 +3,10 @@ import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { surfaceLightChecks } from './surface-light-checks'
 import { movementChecks } from './movement-checks'
+import { corridorChecks } from './corridor-checks'
 
 const atlas = document.createElement('canvas')
-atlas.width = 128
+atlas.width = 160
 atlas.height = 32
 const ink = atlas.getContext('2d')!
 ink.fillStyle = '#fff'
@@ -18,6 +19,8 @@ ink.lineWidth = 3
 ink.strokeRect(65.5, 1.5, 29, 29)
 ink.fillStyle = '#ff0000'
 ink.fillRect(96, 0, 4, 4)
+ink.fillStyle = '#b84a40'
+ink.fillRect(128, 0, 32, 32)
 const source: TileSource = {
   tile: id => ({ atlas: 'test', sx: (id - 1) * 32, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
   atlas: () => atlas,
@@ -166,4 +169,6 @@ const surfaces = surfaceLightChecks()
 checks += surfaces.checks; failures.push(...surfaces.failures)
 const movement = movementChecks(source)
 checks += movement.checks; failures.push(...movement.failures)
+const corridors = corridorChecks(source)
+checks += corridors.checks; failures.push(...corridors.failures)
 document.querySelector('#result')!.textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)

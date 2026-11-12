@@ -24,12 +24,15 @@ flattened tiles; floors, creatures and wall faces retain their own depth
 and picking regions. The existing first-person renderer remains independent.
 
 - `projection.ts` owns ground projection, its inverse, and viewport fitting.
+  Ground rows have 25% extra depth so single-cell horizontal passages leave
+  room around upright art. Wall elevation still follows the camera tilt.
   World coordinates are cell centres. Input and drawing use CSS pixels;
   shared terrain edges snap to backing pixels at each zoom and device pixel
   ratio, capped at two, so adjacent quads meet without gaps or overlap strips.
 - `index.ts` paints ground layers, continuous floor lighting, contact
   shadows, depth-sorted walls and sprites, and readable targeting markers.
-  Foreground walls lower beside visible open ground. Sprites retain doll
+  Foreground walls lower to a small lip beside visible open ground. The same
+  height drives their drawing, picking and light placement. Sprites retain doll
   composition, atlas offsets, clipping, status badges and player minibars.
   Monsters and ordinary objects use the same atlas scale as the player;
   the artwork defines their relative proportions, independently of the
@@ -107,12 +110,15 @@ Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
 player directly; long-distance moves demonstrate teleport snapping.
 
-The Scene chooser also loads a recorded fountain dungeon. Original 2D
+The Scene chooser also loads narrow horizontal/vertical corridors and a
+recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
-Open `/testbed/dungeon-checks.html` for 900 real Canvas pixel checks: uniform
+Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist.
+Corridor checks cover floor clearance, exposed sprite heads/feet, raised wall
+faces and picking at all elevations, including 30° and 75°, on desktop and phone.
 Movement checks sample all three easing curves at the start, midpoint and
 landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
 a steady centred player and moving world under camera follow. These

@@ -75,7 +75,8 @@ export function surfaceLightChecks() {
       const i = (y * pixels.width + x) * 4
       if (pixels.data[i] > 140 && pixels.data[i + 1] > 130 && pixels.data[i] > pixels.data[i + 2] * 1.2) { top = Math.min(top, y); bottom = Math.max(bottom, y); columns.add(x) }
     }
-    assert('thin connected beam segments', bottom >= top && bottom - top + 1 <= Math.ceil(p.scale * dpr * 0.09) && columns.size >= Math.floor(p.scale * 1.9 * dpr), { dpr, thickness: bottom - top + 1, columns: columns.size, scale: p.scale })
+    const cellDepth = project(p, 0, 1).y - project(p, 0, 0).y
+    assert('thin connected beam segments', bottom >= top && bottom - top + 1 <= Math.ceil(cellDepth * dpr * 0.12) && columns.size >= Math.floor(p.scale * 1.9 * dpr), { dpr, thickness: bottom - top + 1, columns: columns.size, scale: p.scale })
     r.destroy()
   }
   return { checks, failures }

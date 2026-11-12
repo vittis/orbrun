@@ -1,6 +1,6 @@
 import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { cellKey, makeCamera, type TileSource } from '@orbrun/scene'
+import { cellKey, emptyScene, makeCamera, type TileSource } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
@@ -80,10 +80,27 @@ for (const id of ['tilt', 'zoom', 'animate', 'original', 'duration', 'easing']) 
   fit()
 })
 const roomScene = scene
+const corridorScene = emptyScene()
+corridorScene.playerOnLevel = true
+// A one-cell east–west passage with a north–south junction, using the same room art.
+for (let y = -4; y <= 4; y++) for (let x = -8; x <= 8; x++) {
+  const wall = !(y === 0 && x > -8 && x < 8 || x === 5 && y > -4 && y < 4)
+  corridorScene.cells.set(cellKey(x, y), {
+    x, y, kind: wall ? 'wall' : 'floor', visibility: 'visible', occluder: wall,
+    floorTile: 4, wallTile: 1113,
+    flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false },
+  })
+}
+corridorScene.billboards = [
+  { x: 0, y: 0, tile: 4519, kind: 'player', height: 0.7 },
+  { x: -2, y: 0, tile: 4274, kind: 'item', height: 0.6 },
+  { x: 2, y: 0, tile: 7189, kind: 'monster', height: 0.4, attitude: 'hostile' },
+]
 document.getElementById('scene')!.addEventListener('change', async () => {
   const id = (document.getElementById('scene') as HTMLSelectElement).value
   let source: TileSource = roomSource
   if (id === 'room') scene = roomScene
+  else if (id === 'corridor') scene = corridorScene
   else {
     const [file, image] = await Promise.all([
       fetch(`/room/places/${id}.json`).then(response => response.json() as Promise<PlaceFile>),

@@ -3,10 +3,11 @@ import {
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource,
 } from '@orbrun/scene'
-import { fittedScale, planeRect, project, unproject, type Projection } from './projection.js'
+import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer } from './tiles.js'
 import { DungeonLighting } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
+import { wallHeight } from './walls.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -176,7 +177,7 @@ export class Render25d implements MapRenderer {
     if (!ctx) return
     const time = this.opts.animate ? now : 0
     this.frameTime = now
-    const p = this.projection(), s = p.scale, sy = Math.sin(p.tilt)
+    const p = this.projection(), s = p.scale, sy = groundDepth(p.tilt)
     this.active = this.movement.cameraMoving(now)
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.map(entry => {
@@ -304,7 +305,7 @@ export class Render25d implements MapRenderer {
   private unexploredFog(ctx: Context2d, p: Projection, time: number) {
     ctx.fillStyle = '#030404'
     ctx.fillRect(0, 0, this.width, this.height)
-    const sy = Math.sin(p.tilt), step = 4
+    const sy = groundDepth(p.tilt), step = 4
     const left = Math.floor((p.x - this.width / p.scale / 2) / step) * step - step
     const right = p.x + this.width / p.scale / 2 + step
     const top = Math.floor((p.y - this.height / (p.scale * sy) / 2) / step) * step - step
@@ -386,7 +387,7 @@ export class Render25d implements MapRenderer {
       }
       ctx.clip(); ctx.strokeStyle = `rgba(220,230,240,${ripple.strength * 0.18 * (1 - age / 0.9) ** 2})`
       ctx.lineWidth = Math.max(0.6, p.scale / 90); ctx.beginPath()
-      ctx.ellipse(q.x, q.y, radius, radius * Math.sin(p.tilt), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore()
+      ctx.ellipse(q.x, q.y, radius, radius * groundDepth(p.tilt), 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore()
     }
   }
 
@@ -444,11 +445,11 @@ export class Render25d implements MapRenderer {
     const right = Math.max(...memory.map(c => c.x)) + 4
     const top = Math.floor(Math.min(...memory.map(c => c.y)) / 4) * 4
     const bottom = Math.max(...memory.map(c => c.y)) + 4
-    ctx.scale(1, Math.sin(p.tilt))
+    ctx.scale(1, groundDepth(p.tilt))
     for (let y = top; y <= bottom; y += 4) for (let x = left; x <= right; x += 4) {
       const phase = x * 1.31 + y * 2.17
       const q = project(p, x + Math.sin(time * 0.14 + phase) * 0.6, y + Math.cos(time * 0.11 + phase) * 0.4)
-      const cy = q.y / Math.sin(p.tilt), radius = p.scale * 2.8
+      const cy = q.y / groundDepth(p.tilt), radius = p.scale * 2.8
       const mist = ctx.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
       mist.addColorStop(0, 'rgba(0,0,0,0.045)')
       mist.addColorStop(1, 'rgba(0,0,0,0)')
@@ -485,9 +486,7 @@ export class Render25d implements MapRenderer {
   }
 
   private wall(ctx: Context2d, p: Projection, cell: SceneCell) {
-    // Cut foreground walls down beside known open ground, so actors behind them stay readable.
-    const behind = this.scene.cells.get(cellKey(cell.x, cell.y - 1))
-    const height = behind?.visibility === 'visible' && !behind.occluder ? 0.18 : 0.58
+    const height = wallHeight(this.scene, cell)
     const roof = planeRect(p, cell.x, cell.y, height, this.dpr)
     const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
     const tile = cell.wallTile ?? cell.featureTile ?? cell.floorTile

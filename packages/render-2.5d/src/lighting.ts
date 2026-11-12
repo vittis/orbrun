@@ -1,6 +1,7 @@
 export { lightingFor, lightPulse, type Light, type Emitter, type LightPool } from '@orbrun/scene'
 import { cellKey, lightReaches, lightingFor, type Billboard, type Emitter, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect, project, type Projection, type SurfaceRect } from './projection.js'
+import { wallHeight } from './walls.js'
 import type { Context2d, SurfaceLighting } from './tiles.js'
 export function lightField(scene: Scene) { return lightingFor(scene).field }
 
@@ -12,8 +13,7 @@ export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?:
   const cell = scene.cells.get(cellKey(source.x, source.y))
   const billboard = scene.billboards.find(b => b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
   if (!billboard && cell?.occluder) {
-    const behind = scene.cells.get(cellKey(cell.x, cell.y - 1))
-    const z = behind?.visibility === 'visible' && !behind.occluder ? 0.18 : 0.58
+    const z = wallHeight(scene, cell)
     const roof = planeRect(p, cell.x, cell.y, z, 1)
     return { x: roof.x + roof.width / 2, y: roof.y + roof.height * 0.4 }
   }
@@ -98,8 +98,7 @@ export class DungeonLighting implements SurfaceLighting {
       for (const cell of cells) {
         const r = planeRect(p, cell.x, cell.y, 0, 1)
         if (cell.occluder) {
-          const behind = scene.cells.get(cellKey(cell.x, cell.y - 1))
-          const z = behind?.visibility === 'visible' && !behind.occluder ? 0.18 : 0.58
+          const z = wallHeight(scene, cell)
           const roof = planeRect(p, cell.x, cell.y, z, 1)
           mask.rect(r.x, roof.y, r.width, r.y + r.height - roof.y)
         } else mask.rect(r.x, r.y, r.width, r.height)
