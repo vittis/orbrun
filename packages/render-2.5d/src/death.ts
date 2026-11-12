@@ -25,6 +25,14 @@ const palettes: Record<DeathKind, readonly (readonly [number, number, number])[]
 const durations: Record<DeathKind, number> = { flesh: 4.6, bone: 3.8, slime: 4.6, stone: 3.8, spirit: 2, fire: 2, ice: 3, plant: 3.8, insect: 4.4, water: 2.8 }
 interface Burst extends DeathEffect { born: number; seed: number }
 
+/** Mix similar actor IDs thoroughly so consecutive kills get distinct sprays. */
+function randomFrom(seed: number) {
+  seed = Math.imul(seed ^ seed >>> 16, 0x21f0aaad)
+  seed = Math.imul(seed ^ seed >>> 15, 0x735a2d97)
+  seed = (seed ^ seed >>> 15) >>> 0
+  return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296 }
+}
+
 /** Bounded, deterministic gore history for the 2.5D dungeon view. */
 export class DungeonDeaths {
   private bursts: Burst[] = []
@@ -61,26 +69,41 @@ export class DungeonDeaths {
       const gory = b.kind === 'flesh' || b.kind === 'insect'
       const liquid = b.kind === 'slime' || b.kind === 'water'
       const leafy = b.kind === 'plant'
+      // Sample the same profile every frame: variation belongs to the death,
+      // not the render clock. Keep material-specific art and motion intact.
+      const random = randomFrom(b.seed)
+      const density = 0.75 + random() * 0.55, energy = 0.75 + random() * 0.6
+      const liftScale = 0.85 + random() * 0.25, sizeScale = 0.85 + random() * 0.3
+      const distribution = Math.floor(random() * 3) // Radial, forward fan, or opposing fans.
+      const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
+        + (random() - 0.5) * 1.4
+      const spread = 0.7 + random() * 1.8, width = 0.55 + random() * 0.6
+      const push = 0.65 + random() * 0.7, originSpread = 0.03 + random() * 0.1
+      const poolCount = 5 + Math.floor(random() * 6), poolScale = 0.8 + random() * 0.4
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
-      if (t < 0.14) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: 0.26 + Math.floor(t * 30) * 0.055,
-        angle: 0, stretch: 1, alpha: 1 - t / 0.14, colour: palette[1], sprite: 'burst', ground: false })
-      let seed = b.seed
-      const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296 }
-      const chunks = gory ? 9 : b.kind === 'bone' ? 10 : 7
-      const count = chunks + Math.round((gory ? 38 : 24) + b.height * 8)
+      if (t < 0.14) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.26 + Math.floor(t * 30) * 0.055) * sizeScale,
+        angle: Math.round(heading / (Math.PI / 2)) * Math.PI / 2, stretch: width,
+        alpha: 1 - t / 0.14, colour: palette[1], sprite: 'burst', ground: false })
+      const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
+      const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
       for (let i = 0; i < count; i++) {
         const large = i < chunks
-        const angle = random() * Math.PI * 2, speed = (large ? 1.2 + random() * 1.6 : 1.6 + random() * 2.5) * (leafy || airy ? 0.65 : 1)
+        const angle = heading + (distribution === 0 ? random() * Math.PI * 2
+          : (random() - 0.5) * spread + (distribution === 2 && i % 2 ? Math.PI : 0))
+        const speed = (large ? 1.2 + random() * 1.6 : 1.6 + random() * 2.5) * energy * (leafy || airy ? 0.65 : 1)
         const weight = b.kind === 'stone' ? 1.35 : leafy ? 0.7 : 1
-        const lift = (0.65 + random() * 1.65) / weight, z0 = b.height * (0.18 + random() * 0.38)
-        const size = (large ? 0.065 + random() * 0.048 : 0.018 + random() * 0.027) * Math.sqrt(b.height)
+        const lift = (0.65 + random() * 1.65) * liftScale / weight, z0 = b.height * (0.18 + random() * 0.38)
+        const size = (large ? 0.065 + random() * 0.048 : 0.018 + random() * 0.027) * Math.sqrt(b.height) * sizeScale
         const spin = (random() - 0.5) * 14, fade = 0.8 + random() * 0.2
+        const originAngle = random() * Math.PI * 2, originRadius = Math.sqrt(random()) * originSpread
         const elapsed = Math.floor(t * 60) / 60
         const drag = large ? 2.9 : 3.5, drift = (1 - Math.exp(-elapsed * drag)) / drag
         const swirl = airy ? elapsed * 1.6 : 0
-        const vx = Math.cos(angle + swirl) * speed + b.direction.x * (gory ? 1.3 : 0.8)
-        const vy = Math.sin(angle + swirl) * speed + b.direction.y * (gory ? 1.3 : 0.8)
-        const x = b.x + Math.round(vx * drift * 64) / 64, y = b.y + Math.round(vy * drift * 64) / 64
+        const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * width
+        const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * (gory ? 1.3 : 0.8) * push
+        const vy = Math.sin(heading) * along + Math.cos(heading) * across + b.direction.y * (gory ? 1.3 : 0.8) * push
+        const x = b.x + Math.round((Math.cos(originAngle) * originRadius + vx * drift) * 64) / 64
+        const y = b.y + Math.round((Math.sin(originAngle) * originRadius + vy * drift) * 64) / 64
         const gravity = 4 * weight
         const hit = (lift + Math.sqrt(lift * lift + 4 * gravity * z0)) / (2 * gravity)
         const grounded = !airy && elapsed >= hit
@@ -109,15 +132,17 @@ export class DungeonDeaths {
           size: size * 0.75, alpha: alpha * 0.7 })
       }
       // Pools are irregular stamps, with separate flecks; no circular decals.
-      if ((gory || liquid) && t > 0.04) for (let i = 0; i < 8; i++) {
-        const a = random() * Math.PI * 2, reach = i === 0 ? 0 : 0.15 + random() * 0.48
+      if ((gory || liquid) && t > 0.04) for (let i = 0; i < poolCount; i++) {
+        const a = random() * Math.PI * 2, reach = (i === 0 ? 0 : 0.15 + random() * 0.48) * poolScale
+        const size = (i === 0 ? 0.3 + Math.min(3, Math.floor(t * 12)) * 0.035 : 0.09 + random() * 0.13) * poolScale
+        const angle = Math.floor(random() * 4) * Math.PI / 2
         const x = b.x + Math.cos(a) * reach + b.direction.x * reach * 0.3
         const y = b.y + Math.sin(a) * reach + b.direction.y * reach * 0.3
         const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
         if (!cell || cell.visibility !== 'visible' || cell.occluder || !lightReaches(scene, b, cell)) continue
         const colour = palette[i % palette.length].map(c => Math.round(c * (liquid ? 0.75 : 0.62))) as [number, number, number]
-        particles.push({ x, y, z: 0.012, size: i === 0 ? 0.3 + Math.min(3, Math.floor(t * 12)) * 0.035 : 0.09 + random() * 0.13,
-          angle: Math.floor(random() * 4) * Math.PI / 2, stretch: i === 0 ? 1.25 : 1,
+        particles.push({ x, y, z: 0.012, size,
+          angle, stretch: i === 0 ? 1.25 : 1,
           alpha: Math.max(0, Math.min(1, (duration - t) / 0.8)), colour, sprite: 'splat', ground: true })
       }
     }

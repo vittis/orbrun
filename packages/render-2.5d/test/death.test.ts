@@ -13,6 +13,44 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it('varies count, launch speed and spray shape between consecutive enemies of every material', () => {
+    const scene = room()
+    for (const kind of ['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const) {
+      const counts = new Set<number>(), travel = new Set<number>(), shapes = new Set<number>()
+      for (let id = 1; id <= 24; id++) {
+        const fx = new DeathEffects()
+        fx.observe(scene, true); fx.spawn(scene, death(kind, id), 1)
+        const launch = fx.sample(scene, 1).filter(p => p.sprite !== 'burst')
+        const spray = fx.sample(scene, 1.2).filter(p => !p.ground && p.sprite !== 'burst')
+        counts.add(launch.length)
+        expect(launch.length).toBeGreaterThan(20)
+        expect(launch.length).toBeLessThan(80)
+        // Mean displacement measures energy; lateral/forward spread measures shape.
+        travel.add(Math.round(spray.reduce((sum, p) => sum + Math.hypot(p.x, p.y), 0) / spray.length * 100))
+        const lateral = spray.reduce((sum, p) => sum + p.y * p.y, 0)
+        const forward = spray.reduce((sum, p) => sum + p.x * p.x, 0)
+        shapes.add(Math.round(lateral / forward * 100))
+      }
+      expect(counts.size, kind).toBeGreaterThan(8)
+      expect(travel.size, kind).toBeGreaterThan(8)
+      expect(shapes.size, kind).toBeGreaterThan(8)
+    }
+  })
+
+  it('keeps each death deterministic across redraws and different frame cadences', () => {
+    const scene = room(), continuous = new DeathEffects(), sparse = new DeathEffects()
+    for (const fx of [continuous, sparse]) {
+      fx.observe(scene, true); fx.spawn(scene, death(), 1)
+    }
+    for (const t of [1, 1.04, 1.1, 1.3]) continuous.sample(scene, t)
+    const particles = continuous.sample(scene, 1.4)
+    expect(particles).toEqual(sparse.sample(scene, 1.4))
+    expect(continuous.sample(scene, 1.4)).toEqual(particles)
+    const landed = continuous.sample(scene, 2.5)
+    expect(landed).toEqual(sparse.sample(scene, 2.5))
+    expect(landed.filter(p => p.ground).length).toBeGreaterThan(0)
+  })
+
   it('draws the burst and debris on the exact frame the enemy is removed', () => {
     const scene = room(), fx = new DeathEffects(), now = 1.234
     fx.observe(scene, true)

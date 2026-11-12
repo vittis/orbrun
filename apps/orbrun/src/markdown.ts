@@ -13,7 +13,7 @@ import { h, type Child } from './dom'
  */
 
 /** where a relative link (`LICENSE`, `ATTRIBUTION.md`) is found */
-const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.54/'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.55/'
 
 /**
  * @param dropTitle leave out the document's own first heading: the screen

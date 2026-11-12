@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.57 point at the `cloudflare-online-v1.54` release tag in
+Source links for 0.3.58 point at the `cloudflare-online-v1.55` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1460,3 +1460,28 @@ cleanup, projectile arrival and first-person batch restoration. The guarded
 production dry-run precedes an atomic, non-forced
 main/source-tag push through Workers Builds. Verify the hosted version, source
 links, asset identity, CSP and proxy restrictions after rollout.
+
+
+## 0.3.58 varied 2.5D enemy death effects — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+worktrees. Based on origin/main `c34fea5`, retaining entity hit flashes, flight
+corrections and all earlier integrated changes. Immutable source tag:
+`cloudflare-online-v1.55`.
+
+Each Dungeon death now has a stable seeded profile: particle density varies
+from 75–130%, launch speed from 75–135%, with varied lift, size, impact push,
+origin scatter and spray width. Bursts alternate between radial, forward fan
+and opposing fan distributions. Impact silhouettes and floor pool sizes and
+fleck counts also vary. Actor ID mixing keeps consecutive enemies distinct.
+Material palettes, pixel art, first-frame timing, clipping, reduced-motion
+cleanup and the bounded 24-death history remain in place. Sampling never uses
+frame-dependent randomness.
+
+Validation passed TypeScript and 2,570 unit tests with two optional-engine
+skips. New regressions cover count, travel and spread variation over 24
+consecutive enemies for all ten materials, plus frame-cadence independence.
+Optional engine E2E reports 44 skips because engine artifacts are absent.
+The guarded production dry-run precedes an atomic, non-forced main/source-tag
+push through Workers Builds. Fetch and integrate again if main advances;
+preserve any newer deployment that already contains this change.
