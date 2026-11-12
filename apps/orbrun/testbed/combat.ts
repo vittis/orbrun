@@ -33,7 +33,10 @@ let paused = false
 let freezeAt = 0
 let attackAt = 0
 let attackDuration = 320
-const frozenTime = () => attackAt + Number((document.getElementById('effect-age') as HTMLInputElement).value) / 100 * attackDuration
+let lastEffect = ''
+const frozenTime = () => attackAt + (lastEffect === 'kill'
+  ? Number((document.getElementById('death-age') as HTMLSelectElement).value)
+  : Number((document.getElementById('effect-age') as HTMLInputElement).value) / 100 * attackDuration)
 const camera = makeCamera(11, 5)
 const victim = scene.billboards.find(b => b.kind === 'monster' && b.name === 'goblin')!
 function restoreVictim() {
@@ -108,7 +111,10 @@ function play(kind: string) {
   if (kind === 'level') send({ msg: 'player', xl: state.player.xl + 1 })
   const now = performance.now()
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
-  if (renderer instanceof Render25d) renderer.setOptions({ animate: !reduced })
+  if (renderer instanceof Render25d) {
+    if (kind === 'kill') renderer.setOptions({ animate: false })
+    renderer.setOptions({ animate: !reduced })
+  }
   if (renderer instanceof Render3d) renderer.setOptions({ motion: !reduced })
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
@@ -117,6 +123,7 @@ function play(kind: string) {
   popups.add(timed, now)
   attackAt = now
   attackDuration = meleeTiming(kind === 'incoming' ? 'crush' : meleeStyle(weapon) ?? 'slash').duration * 1000
+  lastEffect = kind
   if (paused) freezeAt = frozenTime()
   wake()
 }
@@ -134,6 +141,9 @@ document.getElementById('paused')!.addEventListener('change', e => {
 })
 document.getElementById('effect-age')!.addEventListener('input', () => {
   if (paused) { freezeAt = frozenTime(); wake() }
+})
+document.getElementById('death-age')!.addEventListener('change', () => {
+  if (paused && lastEffect === 'kill') play('kill')
 })
 document.getElementById('reduced')!.addEventListener('change', () => {
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })

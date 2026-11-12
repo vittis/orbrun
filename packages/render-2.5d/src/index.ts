@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, DeathEffects, type DeathEffect, type DeathParticle,
+  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -10,6 +10,8 @@ import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects, type SpellBurst } from './effects.js'
 import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
 import { drawMelee } from './melee-draw.js'
+import { DeathArt } from './death-draw.js'
+import { DungeonDeaths, type DeathParticle } from './death.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
@@ -52,7 +54,8 @@ export class Render25d implements MapRenderer {
   private life = new DungeonLife()
   private movement = new DungeonMovement()
   private effects = new DungeonEffects()
-  private deaths = new DeathEffects()
+  private deaths = new DungeonDeaths()
+  private deathArt = new DeathArt()
   private visibility = new DungeonVisibility()
   private arrival = new DungeonArrival()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
@@ -228,6 +231,7 @@ export class Render25d implements MapRenderer {
     const p = this.projection(), s = p.scale, sy = groundDepth(p.tilt)
     this.active = this.movement.cameraMoving(now)
     this.effects.tick(this.scene, now)
+    const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.map(entry => {
       if (!entry.billboard) return entry
@@ -235,7 +239,8 @@ export class Render25d implements MapRenderer {
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
     if (this.opts.animate) {
-      for (const death of this.deaths.sample(this.scene, now)) {
+      for (const death of deathParticles) {
+        if (death.ground) continue
         const cell = this.scene.cells.get(cellKey(Math.round(death.x), Math.round(death.y)))!
         standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
       }
@@ -315,6 +320,7 @@ export class Render25d implements MapRenderer {
       drawSpellTrace(ctx, p, trace, now); ctx.restore()
       this.active = true
     }
+    for (const death of deathParticles) if (death.ground && this.inFrame(p, death)) this.deathArt.draw(ctx, p, this.scene, death, this.dpr)
     // Ground haze must stay beneath raised terrain. Drawing it after walls
     // projects a remembered neighbour's rectangular boundary across their art.
     this.memoryFog(ctx, p, cells, time)
@@ -342,18 +348,7 @@ export class Render25d implements MapRenderer {
       if (!this.inFrame(p, entry)) continue
       if (entry.moving) this.active = true
       if (entry.death) {
-        const d = entry.death, q = project(p, d.x, d.y, d.z), radius = d.size * s
-        ctx.save(); ctx.translate(q.x, q.y); ctx.globalAlpha = d.alpha
-        const colour = `rgb(${d.colour.join(',')})`
-        if (d.shape === 'ring') {
-          ctx.scale(1, sy); ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, s * 0.018)
-          ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke()
-        } else {
-          ctx.rotate(d.angle); ctx.fillStyle = colour
-          if (d.shape === 'mote') { ctx.beginPath(); ctx.ellipse(0, 0, radius * d.stretch, radius, 0, 0, Math.PI * 2); ctx.fill() }
-          else ctx.fillRect(-radius * d.stretch, -radius * 0.55, radius * d.stretch * 2, radius * 1.1)
-        }
-        ctx.restore()
+        this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
       else if (entry.burst) {
         const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
@@ -535,6 +530,7 @@ export class Render25d implements MapRenderer {
   private impactRipples(ctx: Context2d, p: Projection, time: number) {
     if (!this.opts.animate) return
     for (const ripple of this.life.ripples) {
+      if (this.deaths.coversImpact(ripple.x, ripple.y, time)) continue
       const age = time - ripple.born
       if (age < 0 || age >= 0.9) continue
       this.active = true
@@ -827,6 +823,7 @@ export class Render25d implements MapRenderer {
     this.life.clear()
     this.effects.clear()
     this.deaths.clear()
+    this.deathArt.clear()
     this.visibility.clear()
     this.arrival.clear()
     this.fogField = null
