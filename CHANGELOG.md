@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.66 — 2026-11-12
+
+- Add three varied gestures per melee style, with smoother paths and follow-through in Dungeon (2.5D).
+- Keep swings aligned with moving creatures and preserve material splatters at the existing contact time.
+
 ## 0.3.65 — 2026-11-12
 
 - Give deaths a middle-ground lifetime and density, with more outward travel along the hit direction.

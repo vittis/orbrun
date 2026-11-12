@@ -8,6 +8,7 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
+import * as meleeArt from '../src/melee-draw.js'
 import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
@@ -358,6 +359,36 @@ describe('picking and visibility', () => {
     r.render(2.1)
     expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
     expect(r.animating).toBe(false)
+  })
+
+  it.each([false, true])('anchors swings and impacts to the moving sprites, including incoming=%s', incoming => {
+    const draw = vi.spyOn(meleeArt, 'drawMelee').mockImplementation(() => {})
+    const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
+    const { r } = renderer()
+    try {
+      r.setOptions({ center: { x: 1, y: 0 }, movementDuration: 0.2, movementEasing: 'linear' })
+      const start = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
+      start.billboards = [
+        { x: 0, y: 0, kind: 'player', tile: 2, height: 1 },
+        { id: 7, x: 2, y: 0, kind: 'monster', tile: 3, height: 1 },
+      ]
+      r.setScene(start, 0)
+      const player = { ...start.billboards[0], x: 1 }, enemy = start.billboards[1]
+      const scene = { ...start, revision: 1, player: { x: 1, y: 0 }, billboards: [player, enemy] }
+      r.setScene(scene, 1)
+      r.melee({ from: incoming ? enemy : player, to: incoming ? player : enemy,
+        fromId: incoming ? 'id:7' : 'player', toId: incoming ? 'player' : 'id:7', style: 'slash', hit: true }, 1)
+      for (const time of [1.1, 1.18]) {
+        r.render(time)
+        const anchors = draw.mock.calls.at(-1)![2]
+        expect(r.project(anchors.from.x, anchors.from.y)).toEqual(r.projectBillboard(incoming ? enemy : player))
+        expect(r.project(anchors.to.x, anchors.to.y)).toEqual(r.projectBillboard(incoming ? player : enemy))
+      }
+      // The player is still finishing a step; using its confirmed cell would float ahead.
+      const anchors = draw.mock.calls[0][2]
+      expect((incoming ? anchors.to : anchors.from).x).toBeLessThan(player.x)
+      expect(spray).toHaveBeenCalled()
+    } finally { draw.mockRestore(); spray.mockRestore(); r.destroy() }
   })
 
   it('does not keep rendering for offscreen melee or expired spell residue', () => {

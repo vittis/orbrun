@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, meleeTiming, type Billboard, type MeleeAttack, type Scene } from '@orbrun/scene'
 import { DungeonEffects } from '../src/effects.js'
 
@@ -58,6 +58,28 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
+  it.each(['slash', 'thrust', 'cleave', 'crush', 'unarmed'] as const)('keeps %s gesture variations on the existing material-spray contact clock', style => {
+    const scene = world(), fx = new DungeonEffects()
+    scene.billboards = [player, { ...target, id: 7, name: 'jelly' }]
+    fx.observe(scene, 0, true)
+    let previous: number | undefined
+    for (let i = 0; i < 6; i++) {
+      const now = 1 + i, contact = now + meleeTiming(style).contact
+      scene.turn = i
+      fx.tick(scene, now)
+      fx.melee(scene, { ...attack, style, fromId: 'player', toId: 'id:7' }, now)
+      const stroke = fx.strokes.at(-1)!
+      expect(stroke.variant).not.toBe(previous)
+      expect(stroke.duration).toBe(meleeTiming(style).duration)
+      previous = stroke.variant
+      fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: i }, contact)
+      fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: i, kind: 'fire' }, contact)
+      expect(fx.visibleBursts(contact - 0.001)).toEqual([])
+      expect(fx.visibleBursts(contact)).toMatchObject([{ born: contact, duration: 0.65, spray: { kind: 'slime', source: 'melee' } }])
+      expect(fx.bursts).toHaveLength(1)
+    }
+  })
+
   it('interpolates one head along the native path without guessing another impact', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
@@ -213,6 +235,33 @@ describe('bounded dungeon combat presentation', () => {
     fx.tick(scene, 12)
     expect(fx.strokes).toHaveLength(0)
     expect(fx.melee(scene, attack, 12)).toBe(false)
+  })
+
+  it.each(['slash', 'thrust', 'cleave', 'crush', 'unarmed'] as const)('chooses %s variations once per accepted swing without consecutive repeats', style => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+    try {
+      const fx = new DungeonEffects(), scene = world(), swing = { ...attack, style, fromId: 'player' }
+      fx.observe(scene, 0, true)
+      fx.melee(scene, swing, 1)
+      expect(fx.strokes[0].variant).toBe(0)
+      fx.melee(scene, swing, 1.02)
+      expect(random).toHaveBeenCalledTimes(1)
+      fx.tick(scene, 1.05); fx.offset(player, 1.05)
+      expect(fx.strokes[0].variant).toBe(0)
+      expect(random).toHaveBeenCalledTimes(1)
+      // Even after the previous stroke expires, preserve the combo's variation.
+      fx.tick(scene, 2)
+      fx.melee(scene, swing, 2)
+      expect(fx.strokes[0].variant).toBe(1)
+      random.mockReturnValue(0.999)
+      fx.melee(scene, swing, 2.1)
+      expect(fx.strokes[1].variant).toBe(2)
+      fx.melee(scene, swing, 2.2)
+      expect(fx.strokes[2].variant).toBe(1)
+      fx.clear()
+      fx.melee(scene, swing, 3)
+      expect(fx.strokes[0].variant).toBe(2)
+    } finally { random.mockRestore() }
   })
 
   it('leaves one trace when a confirmed spell disappears, with no refresh on unrelated updates', () => {

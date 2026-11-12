@@ -421,7 +421,7 @@ export class Render25d implements MapRenderer {
       const to = stroke.toId && this.scene.billboards.find(b => combatActorId(b) === stroke.toId)
       ctx.clip(); drawMelee(ctx, p, { ...stroke,
         from: from ? this.actorPosition(from, now) : stroke.from,
-        to: to ? this.actorPosition(to, now) : stroke.to }, now, false); ctx.restore()
+        to: to ? this.actorPosition(to, now) : stroke.to }, now); ctx.restore()
       this.active = true
     }
     this.impactRipples(ctx, p, time)

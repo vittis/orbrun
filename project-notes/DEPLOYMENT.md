@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.65 point at the `cloudflare-online-v1.62` release tag in
+Source links for 0.3.66 point at the `cloudflare-online-v1.63` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1716,3 +1716,42 @@ engine skips. Optional engine E2E reports 44 skips because artifacts are absent.
 The guarded production dry-run precedes an atomic, non-forced main/source-tag
 push through Workers Builds. Fetch and integrate again if main advances;
 preserve newer deployments containing these changes.
+
+
+## 0.3.66 integrated melee gestures and paths — prepared 2026-11-12
+
+User explicitly authorized integrating the gesture/path experiment onto current
+main, preserving splatters and timing, testing, committing and deploying without
+losing other agents' changes. Based on origin/main `e0cc104`, retaining 0.3.65's
+directional splatters and middle-ground deaths, wall-corner alignment and prior
+work. Immutable source tag: `cloudflare-online-v1.63`.
+
+Selectively ported the uncommitted `a8fe` experiment from its older 0.3.50 base:
+`melee-path.ts`, three gestures per slash/thrust/cleave/crush/unarmed style,
+non-repeating per-actor/style selection, smoother follow-through, and the
+15-gesture development preview. The source worktree remains untouched as a
+backup. These gesture/path application changes are now part of this release;
+the old worktree's dirty status alone does not indicate they are absent.
+
+Current identity-based sprite interpolation and lunge/recoil anchors remain.
+The existing 320/400 ms attack durations and 42% contact point still schedule
+the sole material spray. The old experiment's generic contact painter was
+omitted entirely from the weapon renderer. A small thrust-tip adjustment keeps
+northward contact visible after pixel rounding without relying on an impact
+flash. Material hit/death samplers and popup behavior retain the prior release's
+implementation. Gesture memory is bounded to 64 actor/style pairs, advances
+only on accepted swings, and clears with presentation state.
+
+Validation passed TypeScript and 2,668 unit tests with two optional-engine
+skips. New path tests cover all gestures, eight directions, one/two-cell reach,
+three tilts, smooth contact tangents, overhead descent, misses and bounds.
+Additional checks cover stable non-repeating variants, duplicate reports,
+material-spray contact timing, incoming/outgoing moving anchors and absence of
+legacy impacts. Optional engine E2E reports 44 skips because artifacts are
+absent. The Canvas gallery rendered all 15 gestures, northward reaching contact
+and 100 ms randomized combos without browser errors; the combat preview
+verified the new axe gesture alongside the current slime splatter.
+
+Release checks and the guarded production dry-run precede an atomic, non-forced
+main/source-tag push through Workers Builds. If main advances, integrate and
+revalidate; preserve any newer deployment containing this work.
