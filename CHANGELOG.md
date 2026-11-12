@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.38 — 2026-11-12
+
+- Speed up idle breathing slightly while keeping its pronounced movement and smooth edges.
+
 ## 0.3.37 — 2026-11-12
 
 - Make idle breathing more pronounced while keeping its slow rhythm and smooth edges.
