@@ -1,7 +1,7 @@
-import type { MeleeStroke, SpellTrace, SpellBurst } from './effects.js'
+import type { SpellTrace, SpellBurst } from './effects.js'
 import { project, type Projection } from './projection.js'
 import type { Context2d } from './tiles.js'
-import { impactStrength, meleeTiming } from '@orbrun/scene'
+import { impactStrength } from '@orbrun/scene'
 
 const burstColours: Record<SpellBurst['kind'], string> = {
   physical: '#eee1c4',
@@ -80,55 +80,6 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
   ctx.restore()
 }
 
-/** Short weapon gestures sit below health bars and leave the tile silhouette clear. */
-export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, now: number) {
-  const age = (now - stroke.born) / stroke.duration
-  if (age < 0 || age >= 1) return
-  const from = project(p, stroke.from.x, stroke.from.y + 0.3)
-  const to = project(p, stroke.to.x, stroke.to.y + 0.3)
-  const s = p.scale, reach = Math.hypot(to.x - from.x, to.y - from.y)
-  const contact = meleeTiming(stroke.style).contact / stroke.duration
-  const advance = Math.max(0, Math.min(1, (age - 0.16) / (contact - 0.16)))
-  const recovery = Math.max(0, (age - contact) / (1 - contact))
-  const strength = impactStrength(stroke.intensity)
-  ctx.save()
-  ctx.translate(from.x, from.y - s * 0.42)
-  ctx.rotate(Math.atan2(to.y - from.y, to.x - from.x))
-  ctx.globalAlpha = Math.min(1, age / 0.16) * (1 - recovery) * (stroke.hit ? 0.85 : 0.4)
-  ctx.strokeStyle = stroke.tone && stroke.tone !== 'physical' ? burstColours[stroke.tone] : stroke.toId === 'player' ? '#ff8b9e' : '#eee1c4'
-  ctx.lineWidth = Math.max(0.8, s * (0.02 + strength * 0.018))
-  ctx.lineCap = 'round'
-  const tip = reach * (0.18 + advance * 0.82 - recovery * 0.12)
-  // The trail begins at the attacker; the leading edge reaches the defender
-  // on the same frame as recoil, sparks, ripples and the damage popup.
-  ctx.beginPath(); ctx.moveTo(reach * 0.12, 0); ctx.lineTo(tip, 0); ctx.stroke()
-  ctx.beginPath()
-  if (stroke.style === 'thrust') {
-    ctx.moveTo(tip - s * 0.32, 0); ctx.lineTo(tip, 0)
-    ctx.moveTo(tip - s * 0.09, -s * 0.055); ctx.lineTo(tip, 0); ctx.lineTo(tip - s * 0.09, s * 0.055)
-  } else if (stroke.style === 'slash' || stroke.style === 'cleave') {
-    const radius = s * (stroke.style === 'cleave' ? 0.38 : 0.27)
-    ctx.arc(tip - radius, 0, radius, -1.15, -1.0 + advance * 2.2)
-    ctx.stroke()
-    ctx.globalAlpha *= 0.3
-    ctx.beginPath(); ctx.arc(tip - radius, 0, radius * 0.78, -1.05, -1.0 + advance * 1.9)
-  } else if (stroke.style === 'crush') {
-    ctx.moveTo(tip - s * 0.3, -s * 0.18 * (1 - advance)); ctx.lineTo(tip, 0)
-    ctx.moveTo(tip, -s * 0.09); ctx.lineTo(tip, s * 0.09)
-  } else {
-    ctx.ellipse(tip - s * 0.06, 0, s * 0.08, s * 0.1, 0, -1.6, 1.6)
-  }
-  ctx.stroke()
-  if (stroke.hit && age >= contact) {
-    ctx.fillStyle = ctx.strokeStyle; ctx.globalAlpha = (1 - recovery) ** 2
-    for (let i = 0; i < 3 + Math.round(strength * 4); i++) {
-      const a = i * 2.4, r = s * (0.035 + recovery * (0.18 + strength * 0.15))
-      ctx.fillRect(reach + Math.cos(a) * r, Math.sin(a) * r, Math.max(0.9, s / 50), Math.max(0.9, s / 50))
-    }
-  }
-  ctx.restore()
-}
-
 /** Faint floor traces are cosmetic and intentionally unlike solid spell/cloud tiles. */
 export function drawSpellTrace(ctx: Context2d, p: Projection, trace: SpellTrace, now: number) {
   const age = (now - trace.born) / trace.duration
@@ -142,8 +93,8 @@ export function drawSpellTrace(ctx: Context2d, p: Projection, trace: SpellTrace,
   const fire = kind === 'fire' || trace.source.pulse === 'fire', electric = kind === 'electric' || trace.source.pulse === 'electric'
   const cold = kind === 'cold' || !kind && !electric && b > r * 1.25 && g > r
   const fade = (1 - age) ** 1.5
-  // A small arrival puff/spark burst is driven by the observed overlay ending,
-  // including misses and resisted hits. It makes no claim about damage.
+  // Arrival dust and sparks begin when the moving sprite reaches its endpoint,
+  // including misses and resisted hits. They make no claim about damage.
   const impact = (now - trace.born) / (physical ? 0.4 : 0.32)
   if (impact >= 0 && impact < 1) {
     ctx.save(); ctx.fillStyle = `rgb(${r},${g},${b})`

@@ -48,7 +48,7 @@ function harness(animate = true) {
 }
 
 describe('projectile receipt before the next animation frame', () => {
-  it.each(['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST'])('preserves a complete %s flight in one synchronous message burst', name => {
+  it.each(['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW'])('preserves a complete %s flight in one synchronous message burst', name => {
     const { session, deliver, renderer, frames } = harness()
     const tile = gd.main.id(name)!
     const draws: { tile: number; thin: boolean | undefined }[] = []
@@ -64,8 +64,8 @@ describe('projectile receipt before the next animation frame', () => {
       expect(session.scene.billboards.some(b => b.kind === 'projectile')).toBe(false)
       renderer.render(1.016)
       const retained = draws.filter(d => d.tile === tile)
-      expect(retained).toHaveLength(2)
-      if (name !== 'BOLT_FROST') expect(retained.every(d => d.thin === false)).toBe(true)
+      expect(retained).toHaveLength(1)
+      expect(retained.every(d => d.thin === false)).toBe(true)
       draws.length = 0
       renderer.render(1.3)
       expect(draws.some(d => d.tile === tile)).toBe(false)

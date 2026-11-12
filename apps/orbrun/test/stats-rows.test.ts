@@ -65,6 +65,27 @@ describe('stats pane rows beside the portrait', () => {
     }
   })
 
+  it('keeps a Djinni’s AC and Str aligned with the other stats below the portrait', () => {
+    for (const width of [STAT_WIDTH, 28]) {
+      for (const lead of [0, 5]) {
+        const { rows, bars } = statsRows({ ...st.player, species: 'Djinni' }, st.options, {}, width, lead)
+        const text = (row: Row) => row.map((s) => s.text).join('')
+        expect(bars.mp).toBeNull()
+        expect(text(rows[3]).trim()).toBe('')
+        expect(rows[3].some((s) => s.bg !== undefined)).toBe(false)
+        const ac = text(rows[PORTRAIT_ROWS])
+        const ev = text(rows[PORTRAIT_ROWS + 1])
+        const sh = text(rows[PORTRAIT_ROWS + 2])
+        expect(ac.indexOf('AC:')).toBe(0)
+        expect(ac.indexOf('AC:')).toBe(ev.indexOf('EV:'))
+        expect(ac.indexOf('AC:')).toBe(sh.indexOf('SH:'))
+        expect(ac.indexOf(width < 36 ? 'St:' : 'Str:')).toBe(ev.indexOf(width < 36 ? 'In:' : 'Int:'))
+        expect(ac.indexOf(width < 36 ? 'St:' : 'Str:')).toBe(sh.indexOf(width < 36 ? 'Dx:' : 'Dex:'))
+        for (const row of rows) expect(rowLength(row)).toBeLessThanOrEqual(width)
+      }
+    }
+  })
+
   it('names a drained maximum as WebTiles does, HP with the real max in parentheses', () => {
     const { rows } = statsRows({ ...st.player, hp: 13, hp_max: 13, real_hp_max: 20 }, st.options)
     const barEnd = rows[2].findLastIndex((s) => typeof s.bg === 'string')
