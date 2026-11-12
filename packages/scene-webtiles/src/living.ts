@@ -76,8 +76,12 @@ export function projectileAppearance(name: string, variants?: number): Projectil
   return appearance('magic', glow?.colour ?? [194, 177, 218], /^BOLT_DEFAULT_|^BOLT_(?:DRAIN|SHADOW|NEGATIVE|FORCE_BOLT)/.test(name))
 }
 
-export function creatureLife(name: string, flags: FlagWord, b: Billboard): TileLife {
+export function creatureLife(name: string, flags: FlagWord, b: Billboard, tileName = name): TileLife {
   const n = name.toUpperCase().replace(/ /g, '_')
+  // tileidx_monster also sets FLYING to suppress water clipping for these
+  // grounded creatures. Use tile identity too, since apostles can be named.
+  const unclipped = /^(?:MONS_)?(?:ORC_APOSTLE|SACRED_LOTUS)(?:_\d+)?$/
+  const flying = !!flags.FLYING && !unclipped.test(n) && !unclipped.test(tileName.toUpperCase())
   let motion: LifeMotion = /PLANT|TREE|BUSH|FUNGUS|OKLOB|LOTUS/.test(n) ? 'plant'
     : /STATUE|GOLEM|TURRET|GARGOYLE|BLOCK_OF_ICE|SALT|DEBRIS/.test(n) ? 'still'
     : /GHOST|WRAITH|SPECTRAL|PHANTOM/.test(n) ? 'float'
@@ -91,10 +95,10 @@ export function creatureLife(name: string, flags: FlagWord, b: Billboard): TileL
   let amplitude = flags.STAB ? 1.7 : b.threat === 'nasty' ? 1.3 : 1
   if (b.height >= 0.7) { rate *= 0.75; amplitude *= 1.3 }
   if (b.damage && b.damage !== 'uninjured') { rate *= 0.8; amplitude *= 0.8 }
-  if (flags.FLYING) motion = 'fly'
+  if (flying) motion = 'fly'
   if (held) motion = 'still'
   const glow = tileLight('MONS_' + n)
-  return { motion, held, rate, amplitude, flying: !!flags.FLYING, weary: !!b.damage && b.damage !== 'uninjured', fleeing: !!flags.FLEEING, lights: glow ? [glow] : undefined }
+  return { motion, held, rate, amplitude, flying, weary: !!b.damage && b.damage !== 'uninjured', fleeing: !!flags.FLEEING, lights: glow ? [glow] : undefined }
 }
 
 export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: MapCell, gd: Gamedata, state: GameState) {
@@ -108,7 +112,7 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
   for (const b of billboards) {
     const tileName = gd.main.baseName(b.tile) ?? gd.player.baseName(b.tile) ?? ''
     if (b.kind === 'monster') {
-      b.life = creatureLife(b.name ?? tileName, gd.fg(t?.fg), b)
+      b.life = creatureLife(b.name ?? tileName, gd.fg(t?.fg), b, tileName)
       b.life.wading = cell.flags.water
     }
     else {
@@ -119,7 +123,10 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
     if (b.kind === 'player') {
       const hp = state.player.hp / Math.max(1, state.player.hp_max)
       const status = state.player.status.map(s => `${s.light ?? ''} ${s.text ?? ''}`).join(' ')
-      const flying = !!gd.fg(t?.fg).FLYING || state.player.species === 'Djinni' || /\b(?:fly|flying|flight|airborne)\b/i.test(status)
+      // tileidx_player sets FLYING whenever !you.in_water(), even on dry land.
+      // STATUS_AIRBORNE reports actual flight, including innate Djinni flight
+      // and its suppression by forms; neither tile flags nor species prove it.
+      const flying = state.player.status.some(s => /^fly$/i.test(s.light ?? '') || /^flying(?: \(expiring\))?$/i.test(s.text ?? ''))
       b.life = {
         ...b.life, motion: flying ? 'fly' : 'breath', flying, rate: 0.8 + (1 - hp) * 1.2,
         amplitude: hp < 0.5 ? 0.8 : 1.1, wading: cell.flags.water,

@@ -65,4 +65,20 @@ describe('server tile semantics for atmosphere', () => {
     expect(livingPose(life, 0, 0, 1).sy).toBe(1)
     expect(livingPose(life, 0, 0, 1).y).toBeGreaterThan(0)
   })
+  it.each(['gnoll', 'orc', 'goblin', 'ogre', 'rat', 'adder', 'iron golem'])('keeps a grounded %s on the floor', name => {
+    const life = creatureLife(name, {} as FlagWord, monster)
+    expect(life.flying).toBe(false)
+    expect(life.motion).not.toBe('fly')
+    expect(livingPose(life, 0, 0, 1).y).toBe(0)
+  })
+  it.each([
+    ['orc apostle', 'MONS_ORC_APOSTLE'],
+    ['named apostle', 'MONS_ORC_APOSTLE'],
+    ['sacred lotus', 'MONS_SACRED_LOTUS'],
+  ])('does not confuse %s water-clipping flags with flight', (name, tileName) => {
+    const life = creatureLife(name, { FLYING: true } as unknown as FlagWord, monster, tileName)
+    expect(life.flying).toBe(false)
+    expect(life.motion).not.toBe('fly')
+    expect(livingPose(life, 0, 0, 1).y).toBe(0)
+  })
 })

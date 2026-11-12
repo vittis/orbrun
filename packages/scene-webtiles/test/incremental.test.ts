@@ -102,15 +102,16 @@ describe('incremental scene building', () => {
     let scene = buildScene(state, gd)
     const player = () => scene.billboards.find(b => b.kind === 'player')!
     const refresh = () => { scene = buildScene(state, gd, { previous: scene, dirty: { cells: new Set(), mapCleared: false } }) }
-    // The recording's player is airborne through the foreground flag alone.
-    expect(player().life).toMatchObject({ motion: 'fly', flying: true })
+    // Player tile FLYING means no water clipping, not actual flight.
     const mc = [...state.map.cells.values()].find(c => c.x === state.player.pos.x && c.y === state.player.pos.y)!
-    mc.t!.fg = gd.fg(mc.t?.fg).value
-    scene = buildScene(state, gd)
+    expect(gd.fg(mc.t?.fg).FLYING).toBe(true)
     expect(player().life).toMatchObject({ motion: 'breath', flying: false })
-    state.player.species = 'Djinni'; refresh()
+    state.player.species = 'Djinni'; state.player.status = [{ light: 'Fly', text: 'flying' }]; refresh()
     expect(player().life).toMatchObject({ motion: 'fly', flying: true })
-    state.player.species = 'Human'; refresh()
+    // A form suppressing innate flight must also stop a Djinni's hover.
+    state.player.status = [{ light: 'Tree', text: 'tree-form' }]; refresh()
+    expect(player().life).toMatchObject({ motion: 'breath', flying: false })
+    state.player.species = 'Gnoll'; state.player.status = []; refresh()
     expect(player().life).toMatchObject({ motion: 'breath', flying: false })
     state.player.status = [{ light: 'Fly', text: 'flying' }]; refresh()
     expect(player().life).toMatchObject({ motion: 'fly', flying: true })
@@ -119,8 +120,35 @@ describe('incremental scene building', () => {
     expect(player().life).toMatchObject({ motion: 'fly', flying: true })
     state.player.status = [{ light: 'Other', text: 'grounded' }]; refresh()
     expect(player().life).toMatchObject({ motion: 'breath', flying: false })
-    state.player.species = 'Djinni'; state.player.status = [{ light: 'Para', text: 'paralysed' }]; refresh()
+    state.player.species = 'Djinni'; state.player.status = [{ light: 'Fly', text: 'flying' }, { light: 'Para', text: 'paralysed' }]; refresh()
     expect(player().life).toMatchObject({ motion: 'fly', flying: true, held: true })
+  })
+
+  it.each(['Gnoll', 'Human', 'Minotaur', 'Merfolk', 'Naga', 'Gargoyle', 'Tengu', 'Draconian', 'Djinni'])(
+    'keeps a %s grounded without an active flight status, despite the player tile flag', species => {
+      const state = fixtureState()
+      state.player.species = species; state.player.status = []
+      const scene = buildScene(state, gd)
+      expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion: 'breath', flying: false })
+    },
+  )
+
+  it.each([
+    { light: 'Fly', text: 'flying' },
+    { text: 'flying' },
+    { text: 'flying (expiring)' },
+  ])('recognises active flight status %j for a normally grounded player', status => {
+    const state = fixtureState()
+    state.player.species = 'Gnoll'; state.player.status = [status]
+    const scene = buildScene(state, gd)
+    expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion: 'fly', flying: true })
+  })
+
+  it.each(['flightless', 'no flight', 'flight', 'water walking'])('does not infer player flight from %s', text => {
+    const state = fixtureState()
+    state.player.species = 'Gnoll'; state.player.status = [{ text }]
+    const scene = buildScene(state, gd)
+    expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion: 'breath', flying: false })
   })
 
   it('moves the lid of a cell whose wall neighbourhood changed', () => {
