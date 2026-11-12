@@ -2,10 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.47 — 2026-11-12
+## 0.3.48 — 2026-11-12
 
 - Give projectiles, spell hits, melee and shared impact feedback shaded pixel bursts, debris and elemental remnants that match the dungeon artwork.
 - Fix batched Magic Dart paths and repeated-cast impacts, and make projectile travel nearly instant.
+
+## 0.3.47 — 2026-11-12
 
 - Keep projectiles moving toward their targets, double travel speed, and align directional sprites with their flight.
 

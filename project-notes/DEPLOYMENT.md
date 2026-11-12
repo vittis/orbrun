@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.47 point at the `cloudflare-online-v1.44` release tag in
+Source links for 0.3.48 point at the `cloudflare-online-v1.45` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1202,3 +1202,36 @@ All 56 real-art browser checks and 2,450 unit tests pass, with two
 optional-engine skips. Forced TypeScript rebuild passes. The guarded
 production dry-run precedes the atomic main/source-tag push. Follow the
 existing main deployment pipeline and preserve any newer integrated release.
+
+
+## 0.3.48 pixel impact art and recorded Magic Dart correction — prepared 2026-11-12
+
+Continues the authorized projectile release, preserving origin/main `5a19fd8`
+and its build optimizations and all preceding gameplay changes. Immutable
+source tag: `cloudflare-online-v1.45`.
+
+Dungeon (2.5D) replaces generic impact rings, vector spell bursts and floor
+traces with shaded, outlined pixel stamps at the dungeon's 32-texel scale.
+Physical sparks, stone/sand, flame/smoke, ice splinters, forked lightning,
+acid/poison splashes, arcane fragments, healing/holy runes and other spell
+families have distinct silhouettes and colour ramps. Melee contact and generic
+damage/arrival feedback share the art; natural water motion has separate pixel
+splashes. Whole texels dissolve on expiry and cached frames are bounded.
+
+A public, anonymous spectator capture reproduced the reported Magic Dart issue:
+Crawl sent full rays in map order, with six distance variants wrapping on long
+casts. The renderer now matches distance phases against the caster and orders
+batched rays correctly. Session publishes removals immediately, preserving
+cast boundaries even without a RAF. Confirmed endpoint effects claim generic
+hit feedback so it cannot trigger a second delayed burst. Presentation runs
+at 240 cells/second with a 20 ms minimum, typically 20–50 ms, without queuing
+input or delaying game state. A normalized fixture keeps only coordinates,
+variant phases and timings from 35 captured casts; no account data or chat.
+
+Validation passed 2,508 unit tests with two optional-engine skips, a forced
+TypeScript rebuild, all 68 pixel-art gallery checks and all 56 actual projectile
+Canvas checks. The captured casts each produce one forward sprite and exactly
+one endpoint impact, including wrapped variants and repeated casts. Final
+release checks and the guarded production dry-run precede an atomic main/tag
+push. Follow the existing main deployment pipeline; integrate newer main and
+preserve concurrent work if it advances before publication.
