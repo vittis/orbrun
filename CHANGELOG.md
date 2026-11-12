@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.63 — 2026-11-12
+
+- Make melee and ranged material splatters more pronounced with larger fragments and denser sprays.
+- Keep death effects much closer to the body, with fewer particles and quicker settling and fading.
+
 ## 0.3.62 — 2026-11-12
 
 - Give ranged damage subtle, varied splatters matched to the struck creature's body material and timed to projectile arrival in Dungeon (2.5D).

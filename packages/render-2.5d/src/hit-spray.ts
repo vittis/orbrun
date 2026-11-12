@@ -12,13 +12,13 @@ export interface HitSpray {
   origin?: { x: number; y: number }
 }
 
-/** A few material fragments, using death art at a much smaller scale. */
+/** Readable directional splatters using the same material art as deaths. */
 export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }): DeathParticle[] {
   const spray = burst.spray, t = now - burst.born
   if (!spray || t < 0 || t >= burst.duration) return []
   const origin = spray.origin ??= { ...position }
   const random = debrisRandom(spray.seed), strength = impactStrength(burst.intensity)
-  const count = Math.round((5 + random() * 5) * (0.7 + strength * 0.5))
+  const count = Math.round((7 + random() * 6) * (0.7 + strength * 0.5))
   const energy = 0.7 + random() * 0.65, spread = 0.7 + random() * 1.1
   const heading = Math.atan2(spray.direction.y, spray.direction.x) + (random() - 0.5) * 0.3
   const z0 = spray.height * (0.35 + random() * 0.25), scatter = 0.015 + random() * 0.035
@@ -28,7 +28,7 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
   for (let i = 0; i < count; i++) {
     const a = heading + (random() - 0.5) * spread
     const speed = (0.9 + random() * 0.9) * energy * (0.7 + strength * 0.4)
-    const lift = 0.15 + random() * 0.5, size = (0.014 + random() * 0.018) * Math.sqrt(spray.height)
+    const lift = 0.15 + random() * 0.5, size = (0.022 + random() * 0.024) * Math.sqrt(spray.height)
     const lateral = (random() - 0.5) * scatter, vertical = (random() - 0.5) * scatter
     const spin = (random() - 0.5) * 10, lifetime = burst.duration * (0.75 + random() * 0.25)
     const elapsed = Math.floor(t * 60) / 60, drift = (1 - Math.exp(-elapsed * 2.7)) / 2.7
@@ -42,7 +42,7 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
     if (!alpha) continue
     particles.push({ x, y, z: Math.max(0.012, Math.round(z * 64) / 64), size: size * (ground ? 1.7 : 1),
       angle: Math.round((a + spin * elapsed) / (Math.PI / 2)) * Math.PI / 2,
-      stretch: ground ? 1.3 : spray.kind === 'plant' ? 1.4 : 1, alpha, minPixels: 4,
+      stretch: ground ? 1.3 : spray.kind === 'plant' ? 1.4 : 1, alpha, minPixels: 6,
       colour: debrisPalettes[spray.kind][i % 3],
       sprite: ground ? 'splat' : airy ? 'wisp' : liquid ? 'drop' : spray.kind === 'bone' || spray.kind === 'ice' ? 'shard' : 'chip', ground })
   }
