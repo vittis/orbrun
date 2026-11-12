@@ -45,7 +45,7 @@ try {
     const kind: SpellEffect['kind'] = /SANDBLAST|STONE/.test(name) ? 'earth' : /IRON|MI_/.test(name) ? 'physical' : /FROST/.test(name) ? 'cold' : 'magic'
     renderer.spell({ x: dx * 2, y: dy * 2, actorId: 'id:7', kind }, 1.04)
     renderer.impact(dx * 2, dy * 2, 0.6, 1.04)
-    for (const [phase, time] of [['Travel', 1.016], ['Contact', 1.055], ['Impact', 1.16], ['Expired', 4]] as const) {
+    for (const [phase, time] of [['Travel', 1.016], ['Contact', 1.085], ['Impact', 1.16], ['Expired', 4]] as const) {
       renderer.render(time); plain.render(time)
       const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
       const before = baseline.getContext('2d')!.getImageData(0, 0, baseline.width, baseline.height).data

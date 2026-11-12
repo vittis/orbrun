@@ -19,7 +19,8 @@ export interface ProjectileSprite extends Billboard {
 }
 export interface ProjectileContact { time(): number }
 const LANDING_TIME = 0.06
-const MIN_TRAVEL = 0.04
+const MIN_TRAVEL = 0.07
+const TRAVEL_STRETCH = 1.35
 const key = (b: Billboard) => `${b.x},${b.y}:${b.tile}`
 const family = (b: Billboard) => {
   const art = b.life?.projectile
@@ -32,7 +33,8 @@ const length = (f: Flight) => f.points.reduce((sum, b, i) => sum + (i ? distance
 const duration = (f: Flight) => {
   const native = f.clock !== undefined && f.endClock !== undefined ? f.endClock - f.clock : 0
   // Native delays describe the whole batch, not a delay to add at every tile.
-  return Math.max(MIN_TRAVEL, Math.min(0.3, native > 0 ? native : Math.max(f.seen - f.born, length(f) * 0.025)))
+  const pacing = native > 0 ? native : Math.max(f.seen - f.born, length(f) * 0.025)
+  return Math.max(MIN_TRAVEL, Math.min(0.3, pacing * TRAVEL_STRETCH))
 }
 const arrival = (f: Flight) => f.born + duration(f)
 const visible = (scene: Scene, b: { x: number; y: number }) => scene.cells.get(cellKey(Math.round(b.x), Math.round(b.y)))?.visibility === 'visible'

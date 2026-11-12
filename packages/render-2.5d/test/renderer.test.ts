@@ -165,7 +165,7 @@ describe('picking and visibility', () => {
       r.render(1.035)
       expect(art).not.toHaveBeenCalled() // wait for the head to arrive
       projectile.mockClear(); art.mockClear(); order.length = 0
-      r.render(1.05)
+      r.render(1.08)
       const heads = projectile.mock.calls.filter(c => c[1][0].tile === 9)
       expect(heads).toHaveLength(1)
       const rect = heads[0][2], body = r.projectBillboard(moved)
