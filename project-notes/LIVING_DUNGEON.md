@@ -112,7 +112,7 @@ The URL is explicit because another worktree can already occupy the renderer
 harness's default port. The harness leaves captures on `window.__livingCaptures`
 while the page is open and prints the check results.
 
-## Pending combat feedback correction
+## 0.3.36 combat feedback correction
 
 Enemy damage is numeric only when explicitly reported by the engine/server.
 Punctuation supplies light/solid/heavy visual strength, never an HP estimate;

@@ -1,5 +1,26 @@
 # Project status
 
+## 0.3.36 confirmed damage and contact feedback — prepared 2026-11-11
+
+User authorized committing to main and deploying. Integrated origin/main
+4abf3c7, retaining 0.3.35's corridor clearance and the deployment freshness
+checks. Immutable source tag: `cloudflare-online-v1.33`.
+
+Enemy damage is numeric only when explicitly reported. Unknown hits use
+light/solid/heavy physical or elemental cues; player HP changes remain exact
+net changes between updates. Dungeon (2.5D) melee uses attacker/defender IDs,
+wind-up, directional contact and recovery. Recoil, popups, elemental bursts
+and explicit impact rings share the contact clock. Still mode and views
+without melee animation show feedback immediately. Game state and input
+are never delayed.
+
+Integrated validation: 2,331 unit tests passed with two optional-engine skips;
+forced TypeScript rebuild passed. Optional engine E2E reports 44 skips because
+engine artifacts are absent. Browser checks covered all three views, confirmed
+numbers, unknown Magic Dart damage, incoming HP loss and Still mode. Guarded
+production build/dry-run precedes the atomic main/source-tag push; hosted
+source, bundle identity and CSP checks follow the Workers Builds result.
+
 ## 0.3.35 stale-deployment recovery — prepared 2026-11-11
 
 The corridor deployment accidentally used a 0.3.24 branch over production
