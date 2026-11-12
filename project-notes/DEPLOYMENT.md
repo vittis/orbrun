@@ -1036,3 +1036,30 @@ because engine artifacts are absent. Browser checks covered blood, slime and
 complete expiry. The guarded production build/dry-run precedes the atomic
 main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
 source links, bundle identity and proxy checks follow rollout.
+
+
+## 0.3.43 weapon-specific pixel melee swings — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' work. Integrated origin/main `aaad668`, retaining 0.3.42's pixel gore,
+0.3.41's travel arrivals and all prior releases. Merge resolution preserves
+both the melee renderer and the new pixel-death renderer, with separate
+attack-progress and death-phase controls in the development preview.
+Immutable source tag: `cloudflare-online-v1.40`.
+
+Dungeon (2.5D) melee uses shaded pixel ribbons for slashes, broad cleaves,
+narrow thrusts, overhead crushes and short unarmed strikes. Weapon families
+and natural cutting, piercing and crushing attacks select the gesture.
+Trail weight and contact sparks follow confirmed hit strength and damage
+type. Misses pass beside the defender without contact flashes or debris.
+Existing contact timing, recoil, visibility limits and Still mode remain.
+
+Integrated validation passed a forced TypeScript rebuild and 2,422 unit tests
+with two optional-engine skips. One unrelated geometry test timed out during
+concurrent validation; the full suite passed with four workers. Optional
+engine E2E reports 44 explicit skips because engine artifacts are absent.
+Browser checks confirmed melee swings, pixel-gore kills and complete expiry
+coexist after integration. A guarded production build/dry-run precedes the
+atomic main/source-tag push to the existing Workers Builds pipeline. Verify
+hosted source links, bundle identity, CSP and proxy checks after rollout;
+retain any newer main release that includes this change.
