@@ -402,10 +402,10 @@ export class Session {
       this.sceneChangedAt = performance.now()
     }
     this.emit({ type: 'state', msg: m })
-    // A single WebSocket batch can contain a projectile's entire flight and
+    // A single WebSocket batch can contain a projectile's entire path and
     // its removal. Publish confirmed effect frames before another delta can
-    // overwrite them. Publish clear frames too, so identical casts in one batch
-    // cannot reuse a previous flight; ordinary map updates remain frame-batched.
+    // overwrite them. Publish clear frames too to preserve consecutive casts;
+    // ordinary map updates remain frame-batched.
     const ranges = this.gamedata?.ranges
     if (!this.replayingLoad && m.msg === 'map' && ranges && Array.isArray(m.cells) && m.cells.some(cell =>
       Array.isArray(cell?.t?.ov) && (cell.t.ov.some((tile: unknown) => typeof tile === 'number' && tile >= ranges.featMax && tile < ranges.mainMax)

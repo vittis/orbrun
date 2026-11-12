@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.50 point at the `cloudflare-online-v1.47` release tag in
+Source links for 0.3.51 point at the `cloudflare-online-v1.48` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1280,3 +1280,34 @@ projectile Canvas checks passed during implementation. Release validation and
 the guarded production dry-run precede an atomic non-forced main/tag push through
 the existing Workers Builds pipeline; verify hosted version, source links, CSP
 and proxies after rollout.
+
+
+## 0.3.51 native projectile paths and unified impacts — prepared 2026-11-12
+
+User authorized committing, merging to main and deploying. Based on origin/main
+`e382e65`, preserving the auto-explore arrival-impact correction and all earlier
+integrated gameplay and build changes. Immutable source tag:
+`cloudflare-online-v1.48`.
+
+Dungeon (2.5D) draws every native WebTiles projectile overlay at its supplied
+path cell, briefly retaining sub-frame updates. Single-head interpolation,
+custom flight speed/rotation and particle trails are removed. Clearing an
+overlay no longer guesses an endpoint hit. Confirmed damage, flashes, wound
+changes and melee share one impact owner and clock; explicit results take
+priority over inferred colour or generic damage. Rapid later hits replace the
+visible stamp rather than stacking different effects on the same recipient.
+
+Spell feedback carries the recipient identity and confirmed turn. Impact
+anchors follow that actor's confirmed location and interpolated body position,
+including an approaching step in the hit's turn. Recent previous cells bind
+late flashes to their visible recipient. Melee gestures use the same rendered
+actor positions and leave contact stamps to the shared owner.
+
+Implementation validation passed 2,518 tests with two optional-engine skips,
+a forced TypeScript rebuild, production build and all 42 native projectile
+Canvas checks. Regressions cover recorded batched rays, different-type duplicate
+reports, shared melee contact, visibility/reset cleanup and an approaching
+creature's body-centred impact. Release validation and the guarded deployment
+dry-run precede the atomic, non-forced main/source-tag push through the existing
+Workers Builds pipeline. Verify live version, source links, exact bundle, CSP,
+proxies and anonymous spectating after rollout.

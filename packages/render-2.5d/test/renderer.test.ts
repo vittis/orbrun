@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, makeCamera, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, makeCamera, meleeTiming, type SceneCell } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
@@ -108,6 +108,55 @@ describe('picking and visibility', () => {
     art.mockRestore(); r.destroy()
   })
 
+  it('draws one impact on an approaching actor at its interpolated body position', () => {
+    const { r } = renderer()
+    const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    try {
+      r.setOptions({ center: { x: 0, y: 0 }, movementEasing: 'linear', movementDuration: 0.1 })
+      const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
+      scene.turn = 10
+      scene.billboards = [{ id: 7, kind: 'monster', name: 'goblin', tile: 2, x: 2, y: 0, height: 1, damage: 'uninjured', life: { motion: 'still' } }]
+      r.setScene(scene, 0)
+      const next = { ...scene, turn: 11, revision: 1, billboards: [{ ...scene.billboards[0], x: 1, damage: 'moderately_damaged' as const }] }
+      next.cells.get(cellKey(2, 0))!.flash = { r: 120, g: 180, b: 255, a: 100 }
+      r.setScene(next, 1)
+      r.impact(1, 0, 0.6, 1)
+      r.spell({ x: 1, y: 0, actorId: 'id:7', turn: 11, kind: 'fire' }, 1)
+      for (const time of [1.01, 1.05, 1.1, 1.2]) {
+        art.mockClear(); r.render(time)
+        const impacts = art.mock.calls.filter(c => c[10] !== true)
+        expect(impacts).toHaveLength(1)
+        expect(impacts[0][1]).toBe('fire')
+        const body = r.projectBillboard(next.billboards[0])
+        const offset = r.project(0, 0.3).y - r.project(0, 0).y
+        const scale = r.project(1, 0).x - r.project(0, 0).x
+        expect(impacts[0][5]).toBeCloseTo(body.x)
+        expect(impacts[0][6]).toBeCloseTo(body.y + offset - scale * 0.5)
+      }
+    } finally { art.mockRestore(); r.destroy() }
+  })
+
+  it('shares one contact stamp between melee, a flash, a wound and explicit elemental feedback', () => {
+    const { r } = renderer()
+    const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    try {
+      const scene = sceneOf(cell(0, 0), cell(1, 0))
+      scene.billboards = [{ id: 7, kind: 'monster', name: 'goblin', tile: 2, x: 1, y: 0, height: 1, damage: 'uninjured', life: { motion: 'still' } }]
+      r.setScene(scene, 0)
+      scene.cells.get(cellKey(1, 0))!.flash = { r: 120, g: 180, b: 255, a: 100 }
+      scene.revision++; r.setScene(scene, 1)
+      r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, toId: 'id:7', style: 'slash', hit: true }, 1)
+      const contact = 1 + meleeTiming('slash').contact
+      r.impact(1, 0, 0.6, contact)
+      r.spell({ x: 1, y: 0, actorId: 'id:7', kind: 'cold' }, contact)
+      r.render(contact - 0.01)
+      expect(art).not.toHaveBeenCalled()
+      r.render(contact + 0.03)
+      expect(art.mock.calls.filter(c => c[10] !== true)).toHaveLength(1)
+      expect(art.mock.calls[0][1]).toBe('cold')
+    } finally { art.mockRestore(); r.destroy() }
+  })
+
   it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {
     const { r } = renderer()
     const c = cell(0, 0, { visibility: 'remembered' }), scene = sceneOf(c)
@@ -191,7 +240,7 @@ describe('picking and visibility', () => {
     r.melee({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, style: 'crush', hit: true }, 1)
     r.render(1.1)
     expect(r.animating).toBe(false)
-    const bolt = { x: 0, y: 0, kind: 'projectile' as const, tile: 2, height: 1,
+    const bolt = { x: 0, y: 0, kind: 'cloud' as const, tile: 2, height: 1,
       life: { lights: [{ colour: [255, 118, 30] as [number, number, number], radius: 2.8, power: 0.4, pulse: 'fire' as const, transient: true }] } }
     r.setScene({ ...scene, revision: 1, billboards: [bolt] }, 2)
     r.setScene({ ...scene, revision: 2, billboards: [] }, 2.1)

@@ -65,7 +65,7 @@ describe('confirmed non-projectile spells and abilities', () => {
     moved.billboards[0].x = 2
     h.text('Flames lash the goblin.')
     h.feedback.flush(moved)
-    expect(h.feedback.takeSpells()).toEqual([{ x: 2, y: 0, kind: 'fire' }])
+    expect(h.feedback.takeSpells()).toEqual([{ x: 2, y: 0, kind: 'fire', actorId: 'id:1', turn: undefined }])
     h.feedback.flush(world(false))
     const hidden = world()
     hidden.cells.get(cellKey(1, 0))!.visibility = 'remembered'
@@ -80,8 +80,8 @@ describe('confirmed non-projectile spells and abilities', () => {
     h.send({ msg: 'player', status: [{ light: 'Fast', text: 'hasted' }] })
     h.feedback.flush(h.scene)
     expect(h.feedback.takeSpells()).toEqual(expect.arrayContaining([
-      { x: 0, y: 0, kind: 'teleport' }, { x: 0, y: 0, kind: 'poison' },
-      { x: 0, y: 0, kind: 'heal' }, { x: 0, y: 0, kind: 'buff' },
+      { x: 0, y: 0, kind: 'teleport', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'poison', actorId: 'player', turn: undefined },
+      { x: 0, y: 0, kind: 'heal', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'buff', actorId: 'player', turn: undefined },
     ]))
   })
 
@@ -91,7 +91,7 @@ describe('confirmed non-projectile spells and abilities', () => {
     h.send({ msg: 'player', status: [{ light: 'Regen', text: 'regenerating (8 turns)' }, { light: 'Dragon form', text: 'dragon form' }] })
     h.feedback.flush(h.scene)
     expect(h.feedback.takeSpells()).toEqual(expect.arrayContaining([
-      { x: 0, y: 0, kind: 'cold' }, { x: 0, y: 0, kind: 'magic' }, { x: 0, y: 0, kind: 'buff' },
+      { x: 0, y: 0, kind: 'cold', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'magic', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'buff', actorId: 'player', turn: undefined },
     ]))
     h.send({ msg: 'player', status: [{ light: 'Regen', text: 'regenerating (7 turns)' }, { light: 'Dragon form', text: 'dragon form' }] })
     h.feedback.flush(h.scene)
@@ -108,7 +108,7 @@ describe('confirmed non-projectile spells and abilities', () => {
   ])('also presents incoming abilities: %s', (line, kind) => {
     const h = harness()
     h.text(line); h.feedback.flush(h.scene)
-    expect(h.feedback.takeSpells()).toEqual(expect.arrayContaining([{ x: 0, y: 0, kind }]))
+    expect(h.feedback.takeSpells()).toEqual(expect.arrayContaining([{ x: 0, y: 0, kind, actorId: 'player', turn: undefined }]))
   })
 
   it('ignores cancelled casts, failures, prompts, weapon brands and old logs', () => {

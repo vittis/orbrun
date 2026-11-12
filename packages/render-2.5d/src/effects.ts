@@ -2,29 +2,15 @@ import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStre
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
-export interface SpellBurst extends SpellEffect { born: number; duration: number; impact?: boolean; material?: ProjectileAppearance['kind']; direction?: number }
-export interface ProjectileTrail { x: number; y: number; kind: ProjectileAppearance['kind']; colour: [number, number, number]; age: number; seed: number }
+type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind'] }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
-interface ProjectilePoint { billboard: Billboard; at: number }
-interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number; presented?: boolean; impacted?: boolean }
-// A full LOS flight stays below ~150 ms; short shots last several frames.
-const PROJECTILE_SPEED = 72
-const MIN_PROJECTILE_TIME = 0.05
-const trailDuration = (kind: ProjectileAppearance['kind']) => kind === 'fire' ? 0.16
-  : kind === 'poison' || kind === 'acid' ? 0.15 : kind === 'metal' || kind === 'electric' ? 0.075 : 0.12
-const trailAppearance = (b: Billboard): Pick<ProjectileAppearance, 'kind' | 'colour'> => {
-  const light = b.life?.lights?.find(l => l.transient)
-  return b.life?.projectile || { kind: light?.pulse === 'fire' ? 'fire' : light?.pulse === 'electric' ? 'electric' : 'magic',
-    colour: light?.colour ?? [194, 177, 218] }
-}
+interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
+interface ProjectileSample { billboard: Billboard; ended?: number }
+const PROJECTILE_EXPOSURE = 0.12
+const priority: Record<ImpactSource, number> = { generic: 0, flash: 1, melee: 2, confirmed: 3 }
 const shotKey = (b: Billboard) => `${b.x},${b.y}:${b.tile}`
-const shotFamily = (b: Billboard) => {
-  const a = b.life?.projectile
-  return a ? a.family ?? `${a.kind}:${a.colour}:${a.beam}` : `tile:${b.tile}`
-}
-const separation = (a: Billboard, b: Billboard) => Math.hypot(a.x - b.x, a.y - b.y)
-const tail = (flight: ProjectileFlight) => flight.points[flight.points.length - 1]
-const arrival = (flight: ProjectileFlight) => Math.max(flight.ended ?? Infinity, tail(flight).at, flight.points[0].at + MIN_PROJECTILE_TIME)
+const creature = (b: Billboard) => b.kind === 'player' || b.kind === 'monster' && !b.scenery
 const visible = (scene: Scene, p: { x: number; y: number }) => scene.cells.get(cellKey(p.x, p.y))?.visibility === 'visible'
 const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 
@@ -35,8 +21,8 @@ export class DungeonEffects {
   bursts: SpellBurst[] = []
   private flashes = new Map<ReturnType<typeof cellKey>, string>()
   private spells = new Map<string, SpellSample>()
-  private shots = new Map<string, ProjectileFlight>()
-  private flights: ProjectileFlight[] = []
+  private shots = new Map<string, ProjectileSample>()
+  private actors = new Map<string, ActorPosition>()
   private level: string | undefined
   private onLevel = false
 
@@ -45,6 +31,11 @@ export class DungeonEffects {
     if (!animate || !scene.playerOnLevel || !this.onLevel || scene.levelKey !== this.level) this.clear()
     this.level = scene.levelKey
     this.onLevel = scene.playerOnLevel
+    this.actors = new Map(scene.billboards.filter(b => creature(b) && visible(scene, b)).map(b => {
+      const id = combatActorId(b), old = this.actors.get(id)
+      const previous = old && (old.x !== b.x || old.y !== b.y) ? { x: old.x, y: old.y, at: now } : old?.previous
+      return [id, { x: b.x, y: b.y, at: now, previous }]
+    }))
     const flashes = new Map<ReturnType<typeof cellKey>, string>()
     if (animate && scene.playerOnLevel) for (const cell of scene.cells.values()) {
       const f = cell.flash
@@ -57,64 +48,20 @@ export class DungeonEffects {
       const kind: SpellEffect['kind'] = f.r > f.b * 1.3 && f.r > f.g * 1.3 ? 'fire'
         : f.b > f.r * 1.2 && f.g > f.r * 1.1 ? 'cold'
         : f.g > f.r * 1.3 && f.g > f.b * 1.2 ? 'poison' : 'magic'
-      this.spell(scene, { x: cell.x, y: cell.y, kind }, now)
+      this.spell(scene, { x: cell.x, y: cell.y, kind }, now, 'flash')
     }
     this.flashes = flashes
-    // Projectile lights belong to the moving head, never to every path cell.
+    // Native overlays own projectile artwork; they never invent hit locations.
     const nonProjectiles = { ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }
     const next = new Map<string, SpellSample>(emittersFor(nonProjectiles).filter(s => s.transient).map(source => [signature(source), { source }]))
-    const shots = new Map<string, ProjectileFlight>()
-    const groups = new Map<string, Billboard[]>()
-    for (const b of scene.billboards) {
-      if (b.kind !== 'projectile') continue
-      const a = b.life?.projectile, key = `${shotFamily(b)}:${a ? a.angle : ''}`
-      const group = groups.get(key) ?? []
-      group.push(b); groups.set(key, group)
-    }
-    const projectiles = [...groups.values()].flatMap(group => this.orderProjectiles(scene, group))
-    if (animate && scene.playerOnLevel) for (const billboard of projectiles) {
+    const current = new Set<string>()
+    if (animate && scene.playerOnLevel) for (const billboard of scene.billboards) {
       if (billboard.kind !== 'projectile' || billboard.life?.projectile === false || !visible(scene, billboard)) continue
       const key = shotKey(billboard)
-      let flight = this.shots.get(key)
-      if (!flight) {
-        // Overlay deltas have no missile ID. Join only nearby, fresh samples of
-        // the same art family; old/remote shots remain separate flights.
-        const candidates = this.flights.filter(f => {
-          const last = tail(f).billboard, previous = f.points.at(-2)?.billboard
-          const dx = last.x - (previous?.x ?? last.x), dy = last.y - (previous?.y ?? last.y)
-          const forward = !previous || (billboard.x - last.x) * dx + (billboard.y - last.y) * dy >= 0
-          return now - f.seen < 0.12 && now < arrival(f) && forward
-            && shotFamily(last) === shotFamily(billboard)
-            && separation(last, billboard) > 0 && separation(last, billboard) <= Math.SQRT2 + 0.01
-        })
-        flight = candidates.length === 1 ? candidates[0] : undefined
-        if (flight) {
-          const previous = tail(flight)
-          // Only extend the launch backwards once the observed path establishes
-          // which adjacent actor is behind the missile. Never pick the target.
-          if (flight.points.length === 1 && !flight.presented) {
-            this.launch(scene, flight, billboard.x - previous.billboard.x, billboard.y - previous.billboard.y)
-          }
-          if (flight.presented) previous.at = Math.max(previous.at, now)
-          flight.points.push({ billboard, at: Math.max(now, tail(flight).at + separation(previous.billboard, billboard) / PROJECTILE_SPEED) })
-          // Bound long-lived/bouncing paths without dropping unplayed samples.
-          if (flight.points.length > 128) flight.points.splice(0, flight.points.length - 128)
-          flight.ended = undefined
-        } else {
-          flight = { points: [{ billboard, at: now }], seen: now }
-          const appearance = billboard.life?.projectile
-          const angle = appearance ? appearance.angle : undefined
-          if (angle !== undefined) this.launch(scene, flight,
-            Math.cos(angle), Math.sin(angle))
-          this.flights.push(flight)
-        }
-      }
-      flight.seen = now
-      shots.set(key, flight)
+      current.add(key)
+      this.shots.set(key, { billboard })
     }
-    const live = new Set(shots.values())
-    for (const flight of this.flights) if (!live.has(flight) && flight.ended === undefined) flight.ended = now
-    this.shots = shots
+    for (const [key, shot] of this.shots) if (!current.has(key) && shot.ended === undefined) shot.ended = now
     if (animate && scene.playerOnLevel) for (const [key, { source, appearance }] of this.spells) {
       if (next.has(key) || !visible(scene, source)) continue
       // Fire smoulders longer; electrical/cold/magic traces dissipate sooner.
@@ -126,113 +73,65 @@ export class DungeonEffects {
     this.spells = animate ? next : new Map()
     this.tick(scene, now)
     this.traces = this.traces.slice(-48)
-    this.flights = this.flights.slice(-48)
+    while (this.shots.size > 128) this.shots.delete(this.shots.keys().next().value!)
   }
 
-  private orderProjectiles(scene: Scene, group: Billboard[]) {
-    const appearance = group[0].life?.projectile
-    if (!appearance) return group
-    const angle = appearance.angle
-    if (angle !== undefined) return group.sort((p, q) => (p.x - q.x) * Math.cos(angle) + (p.y - q.y) * Math.sin(angle))
-    if (!appearance.distanceCycle || group.length < 2) return group
-    // Crawl batches a complete ray in map order. Magic Dart's six variants
-    // encode distance, NOT direction or a unique sequence (distance 7 wraps).
-    // Score visible actors outside the ray against every encoded distance.
-    const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
-    const matches = (origin: { x: number; y: number }) => !group.some(b => b.x === origin.x && b.y === origin.y)
-      && group.some(b => distance(b, origin) === 1)
-      && group.every(b => {
-        const art = b.life?.projectile
-        return !art || art.distancePhase === undefined || !art.distanceCycle || (distance(b, origin) - 1) % art.distanceCycle === art.distancePhase
-      })
-    const actors = [scene.player, ...scene.billboards.filter(b => b.kind === 'monster' && !b.scenery)]
-      .filter(a => visible(scene, a) && matches(a))
-    if (actors.length === 1) return group.sort((a, b) => distance(a, actors[0]) - distance(b, actors[0]))
-    // An offscreen shooter is still safe when all possible ray origins imply
-    // the same ordering. Otherwise retain chronological samples, never flip.
-    const origins = new Map<string, { x: number; y: number }>()
-    for (const b of group) if (b.life?.projectile && b.life.projectile.distancePhase === 0) {
-      for (let y = b.y - 1; y <= b.y + 1; y++) for (let x = b.x - 1; x <= b.x + 1; x++) {
-        if (matches({ x, y })) origins.set(`${x},${y}`, { x, y })
-      }
-    }
-    const orders = [...origins.values()].map(origin => [...group].sort((a, b) => distance(a, origin) - distance(b, origin)))
-    if (orders.length && orders.every(order => order.every((b, i) => b === orders[0][i]))) return orders[0]
-    const known = group.map(b => this.shots.get(shotKey(b))).find(f => f && f.points.length > 1)
-    if (known) return group.sort((a, b) => distance(a, known.points[0].billboard) - distance(b, known.points[0].billboard))
-    // With no trustworthy direction, do not invent a backwards flight or fake
-    // impacts along an unordered snapshot. Later confirmed samples may resolve it.
-    return []
-  }
-
-  private launch(scene: Scene, flight: ProjectileFlight, dx: number, dy: number) {
-    const first = flight.points[0]
-    const actors = [scene.player, ...scene.billboards.filter(b => b.kind === 'monster' && !b.scenery)]
-    const origins = actors.filter(a => {
-      const x = first.billboard.x - a.x, y = first.billboard.y - a.y
-      return Math.hypot(x, y) > 0 && Math.hypot(x, y) <= Math.SQRT2 + 0.01
-        && x * dx + y * dy > 0.01 && visible(scene, a) && !scene.cells.get(cellKey(a.x, a.y))?.occluder
-    })
-    if (origins.length !== 1) return
-    const { x, y } = origins[0]
-    flight.points.unshift({ billboard: { ...first.billboard, x, y }, at: first.at })
-    first.at += separation(first.billboard, flight.points[0].billboard) / PROJECTILE_SPEED
-  }
-
-  /** One interpolated sprite per flight, even when all deltas arrive in one RAF. */
+  /** Preserve every native path tile, including additions/removals inside one RAF. */
   projectiles(now: number): Billboard[] {
-    return this.flights.flatMap(flight => {
-      if (now >= arrival(flight)) return []
-      flight.presented = true
-      const points = flight.points
-      const index = points.findIndex(point => point.at > now)
-      const from = points[Math.max(0, index < 0 ? points.length - 2 : index - 1)]
-      const to = index < 0 ? tail(flight) : points[index]
-      const t = to.at > from.at ? Math.max(0, Math.min(1, (now - from.at) / (to.at - from.at))) : 1
-      const artwork = to.billboard.life?.projectile
-      const dx = to.billboard.x - from.billboard.x, dy = to.billboard.y - from.billboard.y
-      const aimX = tail(flight).billboard.x - points[0].billboard.x
-      const aimY = tail(flight).billboard.y - points[0].billboard.y
-      const rotation = artwork && artwork.angle !== undefined && (aimX || aimY)
-        ? Math.atan2(aimY, aimX) - artwork.angle : undefined
-      return [{ ...to.billboard, rotation, x: from.billboard.x + dx * t, y: from.billboard.y + dy * t }]
+    return [...this.shots.values()].flatMap(({ billboard, ended }) => {
+      if (ended === undefined) return [billboard]
+      const age = (now - ended) / PROJECTILE_EXPOSURE
+      return age < 0 || age >= 1 ? [] : [{ ...billboard, alpha: (billboard.alpha ?? 0.95) * (1 - age) }]
     })
   }
 
-  /** Time-based path samples: stable between frames and retained briefly after contact. */
-  projectileTrails(scene: Scene, now: number): ProjectileTrail[] {
-    const samples: ProjectileTrail[] = []
-    for (const flight of this.flights) {
-      const points = flight.points, appearance = trailAppearance(tail(flight).billboard)
-      const duration = trailDuration(appearance.kind)
-      for (let i = 1; i < points.length; i++) {
-        const from = points[i - 1], to = points[i]
-        if (to.at < now - duration || from.at >= now) continue
-        const steps = Math.ceil(separation(from.billboard, to.billboard) / 0.2)
-        for (let step = 0; step < steps; step++) {
-          const t = step / steps, born = from.at + (to.at - from.at) * t
-          const age = (now - born) / duration
-          if (age <= 0 || age >= 1) continue
-          const x = from.billboard.x + (to.billboard.x - from.billboard.x) * t
-          const y = from.billboard.y + (to.billboard.y - from.billboard.y) * t
-          const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
-          if (cell?.visibility !== 'visible' || cell.occluder) continue
-          samples.push({ x, y, kind: appearance.kind, colour: appearance.colour, age, seed: i * 17 + step * 7 })
-        }
-      }
-    }
-    return samples
+  private target(scene: Scene, effect: SpellEffect, now: number) {
+    const actors = scene.billboards.filter(b => creature(b) && visible(scene, b))
+    if (effect.actorId) return actors.find(b => combatActorId(b) === effect.actorId)
+    const atCell = actors.filter(b => b.x === effect.x && b.y === effect.y)
+    if (atCell.length === 1) return atCell[0]
+    // A flash can refer to the cell occupied before this turn's approaching step.
+    const moved = actors.filter(b => {
+      const history = this.actors.get(combatActorId(b))
+      return [history, history?.previous].some(old => old && now - old.at < 0.2 && old.x === effect.x && old.y === effect.y
+        && Math.max(Math.abs(b.x - old.x), Math.abs(b.y - old.y)) <= 1)
+    })
+    return moved.length === 1 ? moved[0] : undefined
   }
 
-  spell(scene: Scene, effect: SpellEffect, now: number) {
-    if (!scene.playerOnLevel || !visible(scene, effect) || scene.cells.get(cellKey(effect.x, effect.y))?.occluder) return false
-    const existing = this.bursts.find(b => b.x === effect.x && b.y === effect.y && b.kind === effect.kind && Math.abs(now - b.born) < 0.09)
+  spell(scene: Scene, effect: SpellEffect, now: number, source: ImpactSource = 'confirmed') {
+    const target = this.target(scene, effect, now)
+    const previous = target && this.actors.get(combatActorId(target))?.previous
+    const art = [...this.shots.values()].filter(shot => (shot.ended === undefined || now - shot.ended < PROJECTILE_EXPOSURE)
+      && (shot.billboard.x === effect.x && shot.billboard.y === effect.y
+        || previous && now - previous.at < 0.2 && shot.billboard.x === previous.x && shot.billboard.y === previous.y))
+      .map(shot => shot.billboard.life?.projectile).filter((a): a is ProjectileAppearance => !!a)
+    const material = art.length && art.every(a => a.kind === art[0].kind) ? art[0].kind : undefined
+    const kind = effect.kind !== 'physical' || !material ? effect.kind
+      : material === 'stone' || material === 'sand' ? 'earth' : material === 'metal' ? 'physical' : material
+    const placed = { ...effect, kind, material, turn: effect.turn ?? scene.turn,
+      ...(target ? { x: target.x, y: target.y, actorId: combatActorId(target) } : {}) }
+    if (!scene.playerOnLevel || !visible(scene, placed) || scene.cells.get(cellKey(placed.x, placed.y))?.occluder) return false
+    const utility = (kind: SpellEffect['kind']) => ['heal', 'buff', 'debuff', 'teleport'].includes(kind)
+    const existing = this.bursts.find(b => {
+      const sameTarget = b.actorId && placed.actorId ? b.actorId === placed.actorId : b.x === placed.x && b.y === placed.y
+      const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.born) < 0.2
+      return sameTarget && sameResult
+    })
     if (existing) {
-      if (impactStrength(effect.intensity) > impactStrength(existing.intensity)) existing.intensity = effect.intensity
+      // Explicit results replace colour guesses and generic damage. One owner,
+      // one clock: another report cannot start a differently coloured second hit.
+      const intensity = impactStrength(placed.intensity) > impactStrength(existing.intensity) ? placed.intensity : existing.intensity
+      if (priority[source] > priority[existing.source]
+        || source === existing.source && existing.kind === 'physical' && placed.kind !== 'physical') {
+        Object.assign(existing, placed, { source })
+        if (source === 'melee') existing.born = now
+      }
+      existing.intensity = intensity
       return false
     }
-    const duration = ['heal', 'buff', 'debuff', 'teleport', 'drain'].includes(effect.kind) ? 0.85 : effect.kind === 'electric' ? 0.5 : 0.7
-    this.bursts.push({ ...effect, born: now, duration })
+    const duration = utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
+    this.bursts.push({ ...placed, born: now, duration, source })
     this.bursts = this.bursts.slice(-48)
     return true
   }
@@ -244,6 +143,8 @@ export class DungeonEffects {
     if (this.strokes.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
     this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration })
     this.strokes = this.strokes.slice(-12)
+    if (attack.hit) this.spell(scene, { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity },
+      now + meleeTiming(attack.style).contact, 'melee')
     return true
   }
 
@@ -267,40 +168,29 @@ export class DungeonEffects {
   }
 
   tick(scene: Scene, now: number) {
+    for (const burst of this.bursts) {
+      const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
+      if (target) { burst.x = target.x; burst.y = target.y }
+    }
     this.bursts = this.bursts.filter(b => now - b.born < b.duration && visible(scene, b))
     this.strokes = this.strokes.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
     this.traces = this.traces.filter(t => now - t.born < t.duration && visible(scene, t.source))
-    this.flights = this.flights.filter(flight => {
-      const billboard = tail(flight).billboard
-      if (!visible(scene, billboard)) return false
-      const born = arrival(flight)
-      if (now < born) return true
-      if (flight.impacted) return now < born + trailDuration(trailAppearance(billboard).kind)
-      flight.impacted = true
-      const appearance = billboard.life?.projectile || undefined
-      const light = billboard.life?.lights?.find(l => l.transient)
-      const source: Emitter = light ? { ...light, x: billboard.x, y: billboard.y } : {
-        x: billboard.x, y: billboard.y, colour: appearance?.colour ?? [194, 177, 218], radius: 0.5, power: 0,
-      }
-      const physical = appearance && ['sand', 'stone', 'metal'].includes(appearance.kind)
-      const duration = physical ? 1.7 : source.pulse === 'fire' ? 2.8 : 2.1
-      if (now - born < duration) this.traces.push({ source, appearance, born, duration })
-      const kind = appearance?.kind === 'sand' || appearance?.kind === 'stone' ? 'earth' : physical ? 'physical' : appearance?.kind ?? 'magic'
-      const burstDuration = kind === 'electric' ? 0.5 : 0.4
-      if (now - born < burstDuration) this.bursts.push({ x: billboard.x, y: billboard.y, kind: kind as SpellEffect['kind'], born, duration: burstDuration, impact: true, material: appearance?.kind, direction: Math.atan2(billboard.y - flight.points[0].billboard.y, billboard.x - flight.points[0].billboard.x) })
-      return now < born + trailDuration(trailAppearance(billboard).kind)
-    })
+    for (const [key, shot] of this.shots) if (!visible(scene, shot.billboard) || shot.ended !== undefined && now - shot.ended >= PROJECTILE_EXPOSURE) this.shots.delete(key)
     this.traces = this.traces.slice(-48)
     this.bursts = this.bursts.slice(-48)
-    for (const [key, flight] of this.shots) if (!this.flights.includes(flight)) this.shots.delete(key)
   }
 
-  coversImpact(x: number, y: number, now: number) {
-    return this.traces.some(t => t.source.x === x && t.source.y === y && now >= t.born && now - t.born < t.duration)
-      || this.bursts.some(b => b.x === x && b.y === y && now - b.born >= 0 && now - b.born < b.duration)
-      || this.strokes.some(s => s.hit && s.to.x === x && s.to.y === y && now - s.born >= 0 && now - s.born < s.duration)
-      || this.flights.some(f => tail(f).billboard.x === x && tail(f).billboard.y === y && now < arrival(f))
+  /** Rapid later hits replace the visible stamp instead of stacking over it. */
+  visibleBursts(now: number) {
+    const current = new Map<string, SpellBurst>()
+    for (const burst of this.bursts) {
+      if (now < burst.born || now - burst.born >= burst.duration) continue
+      const key = burst.actorId ?? `cell:${burst.x},${burst.y}`
+      const previous = current.get(key)
+      if (!previous || burst.born >= previous.born) current.set(key, burst)
+    }
+    return [...current.values()]
   }
 
-  clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.flights = []; this.onLevel = false; this.level = undefined }
+  clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

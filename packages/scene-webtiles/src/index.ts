@@ -318,6 +318,7 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
   scene.revision = (opts.previous?.revision ?? 0) + 1
   const map = state.map
   scene.player = { x: state.player.pos.x, y: state.player.pos.y }
+  scene.turn = state.player.turn
   scene.playerOnLevel = map.playerOnLevel
   const b = map.bounds
   scene.bounds = b ? { ...b } : { left: 0, top: 0, right: -1, bottom: -1 }

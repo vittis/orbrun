@@ -61,7 +61,7 @@ function ribbon(ctx: Context2d, path: (t: number) => Point, start: number, end: 
 
 /** All geometry is in screen-facing cell units; only the travel axis is
  * projected. Vertical attacks still show a broad swing instead of flattening. */
-export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, now: number) {
+export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, now: number, drawContact = true) {
   const age = (now - stroke.born) / stroke.duration
   if (age <= 0 || age >= 1 || p.scale <= 0) return
   const from = project(p, stroke.from.x, stroke.from.y + 0.3)
@@ -117,7 +117,7 @@ export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, no
     }
   }
 
-  if (stroke.hit && age >= contact) {
+  if (drawContact && stroke.hit && age >= contact) {
     ctx.save(); ctx.translate(Math.round(dx * 32), Math.round(dy * 32))
     paintImpact(ctx, stroke.tone ?? 'physical', recovery,
       Math.floor(stroke.from.x * 11 + stroke.to.y * 23), strength, Math.atan2(dy, dx))

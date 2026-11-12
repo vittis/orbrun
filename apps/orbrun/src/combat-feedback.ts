@@ -289,7 +289,8 @@ export class CombatFeedback {
       const position = cue.player ? scene.player : placed ?? matches[0]
       if (placed?.actorId) cueUsed.add(placed.actorId)
       else if (matches[0]) cueUsed.add(actorKey(matches[0]))
-      if (position && position.x !== undefined && position.y !== undefined) this.spells.push({ x: position.x, y: position.y, kind: cue.kind })
+      if (position && position.x !== undefined && position.y !== undefined) this.spells.push({ x: position.x, y: position.y, kind: cue.kind,
+        actorId: cue.player ? 'player' : placed?.actorId ?? (matches[0] ? actorKey(matches[0]) : undefined), turn: placed?.turn })
     }
     for (const event of resolved) {
       let kind: SpellEffect['kind'] | undefined
@@ -305,7 +306,7 @@ export class CombatFeedback {
       // generic tone attached to the same damage sentence.
       if (kind && position) {
         const existing = event.kind === 'hit' ? this.spells.find(s => s.x === position.x && s.y === position.y) : undefined
-        if (!existing) this.spells.push({ ...position, kind, intensity: event.intensity })
+        if (!existing) this.spells.push({ ...position, kind, intensity: event.intensity, actorId: event.player ? 'player' : event.actorId, turn: event.turn })
         else if (impactStrength(event.intensity) > impactStrength(existing.intensity)) existing.intensity = event.intensity
       }
     }

@@ -305,6 +305,8 @@ export interface SceneLevel {
 }
 
 export interface Scene {
+  /** Confirmed player turn, when the producer supplies one. */
+  turn?: number
   /** Producer identity used to discard transient effects at level transitions. */
   levelKey?: string
   bounds: Rect
@@ -562,6 +564,10 @@ export interface MeleeAttack {
 export interface SpellEffect {
   x: number
   y: number
+  /** Stable recipient identity, so presentation follows the rendered actor. */
+  actorId?: string
+  /** Confirmed game turn, used to coalesce reports for the same result. */
+  turn?: number
   kind: DamageType | 'air' | 'earth' | 'drain' | 'holy' | 'heal' | 'buff' | 'debuff' | 'teleport'
   intensity?: HitIntensity
 }

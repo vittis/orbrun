@@ -58,202 +58,70 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
-  it('retains sub-frame non-glowing projectile art and creates dust impact/residue once', () => {
+  it('retains every native path tile without interpolation, rotation or guessed endpoint impacts', () => {
     const fx = new DungeonEffects(), scene = world()
-    const sand = { ...spell(), life: { projectile: { kind: 'sand' as const, colour: [216, 181, 116] as [number, number, number], beam: false } } }
     fx.observe(scene, 0, true)
-    fx.observe({ ...scene, billboards: [sand] }, 1, true)
-    expect(fx.projectiles(1)).toMatchObject([{ tile: sand.tile, x: 1 }])
-    fx.observe({ ...scene, billboards: [] }, 1.001, true)
-    expect(fx.projectiles(1.008)).toHaveLength(1)
-    expect(fx.projectiles(1.008)[0].x).toBe(1)
-    expect(fx.traces).toHaveLength(0)
-    fx.tick(scene, 1.09)
-    expect(fx.traces).toMatchObject([{ born: 1.05, appearance: { kind: 'sand' }, source: { power: 0 } }])
-    fx.observe({ ...scene, billboards: [] }, 1.1, true)
-    expect(fx.traces).toHaveLength(1)
-    expect(fx.traces[0].born).toBeCloseTo(1.05)
+    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
+    fx.observe(scene, 1.001, true)
+    expect(fx.projectiles(1.016).map(b => [b.x, b.y, b.rotation])).toEqual([[1, 0, undefined], [2, 0, undefined], [3, 0, undefined]])
+    expect(fx.projectiles(1.08)[0].alpha).toBeLessThan(fx.projectiles(1.016)[0].alpha!)
     fx.tick(scene, 1.2)
-    expect(fx.projectiles(1.2)).toHaveLength(0)
-    expect(fx.traces).toHaveLength(1)
-    fx.tick(scene, 3)
-    expect(fx.traces).toHaveLength(0)
-  })
-
-  it('clears traveling projectiles on lost visibility, level changes, Still and remote maps', () => {
-    for (const reset of ['visibility', 'level', 'still', 'remote']) {
-      const fx = new DungeonEffects(), scene = world()
-      fx.observe(scene, 0, true)
-      for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
-      fx.observe(scene, 1.001, true)
-      expect(fx.projectileTrails(scene, 1.008).length).toBeGreaterThan(0)
-      if (reset === 'visibility') scene.cells.get(cellKey(3, 0))!.visibility = 'remembered'
-      if (reset === 'level') scene.levelKey = 'D:2'
-      if (reset === 'remote') scene.playerOnLevel = false
-      fx.observe(scene, 1.01, reset !== 'still')
-      expect(fx.projectiles(1.008)).toHaveLength(0)
-      expect(fx.projectileTrails(scene, 1.008)).toEqual([])
-      expect(fx.traces).toHaveLength(0)
-    }
-  })
-
-  it('joins a synchronous path into one moving sprite and one endpoint impact', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
-    fx.observe(scene, 1, true)
-    for (const [time, x] of [[1 + 0.5 / 72, 0.5], [1 + 1.5 / 72, 1.5], [1 + 2.5 / 72, 2.5], [1 + 2.96 / 72, 2.96]]) {
-      const shots = fx.projectiles(time)
-      expect(shots).toHaveLength(1)
-      expect(shots[0].x).toBeCloseTo(x)
-      fx.tick(scene, time)
-      expect(fx.traces).toHaveLength(0)
-    }
-    fx.tick(scene, 1.075)
-    expect(fx.projectiles(1.075)).toEqual([])
-    expect(fx.traces).toMatchObject([{ source: { x: 3, y: 0 } }])
-    expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
-    fx.tick(scene, 1.2)
-    expect(fx.traces).toHaveLength(1)
-  })
-
-  it.each(['sand', 'stone', 'metal', 'air', 'fire', 'cold', 'electric', 'poison', 'acid', 'magic'] as const)('leaves a fading %s trail behind one head and keeps one impact after arrival', kind => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [{ ...spell(x), life: { projectile: {
-      kind, colour: [200, 170, 120], beam: false,
-    } } }] }, 1, true)
-    fx.observe(scene, 1, true)
-    const head = fx.projectiles(1.025)
-    const trail = fx.projectileTrails(scene, 1.025)
-    expect(head).toHaveLength(1)
-    expect(trail.length).toBeGreaterThan(2)
-    expect(trail.every(t => t.kind === kind && t.x < head[0].x && t.age > 0 && t.age < 1)).toBe(true)
-    const first = trail[0]
-    expect(fx.projectileTrails(scene, 1.04).find(t => t.x === first.x)!.age).toBeGreaterThan(first.age)
-    // Short shots survive three 60 Hz frames, then only the trail remains.
-    expect(fx.projectiles(1.049)).toHaveLength(1)
-    fx.tick(scene, 1.055)
-    expect(fx.projectiles(1.055)).toEqual([])
-    expect(fx.projectileTrails(scene, 1.055).length).toBeGreaterThan(0)
-    expect(fx.bursts).toHaveLength(1)
-    fx.tick(scene, 1.07)
-    expect(fx.bursts).toHaveLength(1)
-    scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
-    expect(fx.projectileTrails(scene, 1.07).every(t => Math.round(t.x) !== 1)).toBe(true)
-    fx.tick(scene, 1.25)
-    expect(fx.projectileTrails(scene, 1.25)).toEqual([])
-    expect(fx.bursts).toHaveLength(1)
-    fx.clear()
-    expect(fx.projectileTrails(scene, 1.03)).toEqual([])
-  })
-
-  it('never launches an incoming shot backwards from its target', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    fx.observe({ ...scene, billboards: [spell(1)] }, 1, true)
-    // With no known shooter, wait at the confirmed sample instead of choosing
-    // the nearby player (who is actually the target) as the launch point.
-    expect(fx.projectiles(1)).toMatchObject([{ x: 1 }])
-    fx.observe({ ...scene, billboards: [spell(0)] }, 1.001, true)
-    fx.observe(scene, 1.002, true)
-    expect(fx.projectiles(1.001 + 0.5 / 72)[0].x).toBeCloseTo(0.5)
-    fx.tick(scene, 1.06)
-    expect(fx.bursts).toMatchObject([{ x: 0, y: 0, impact: true }])
-  })
-
-  it('never pulls an already displayed missile back to an inferred shooter', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    fx.observe({ ...scene, billboards: [spell(1)] }, 1, true)
-    expect(fx.projectiles(1.01)[0].x).toBe(1)
-    fx.observe({ ...scene, billboards: [spell(2)] }, 1.02, true)
-    expect(fx.projectiles(1.02)[0].x).toBeGreaterThanOrEqual(1)
-    expect(fx.projectiles(1.02 + 0.5 / 72)[0].x).toBeCloseTo(1.5)
-  })
-
-  it('keeps consecutive short shots from becoming a return flight', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    for (const x of [1, 2]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
-    fx.observe(scene, 1, true)
-    fx.observe({ ...scene, billboards: [spell(1)] }, 1.001, true)
-    expect(fx.projectiles(1 + 0.5 / 72)).toHaveLength(2)
-    expect(fx.projectiles(1 + 1.5 / 72)[0].x).toBeCloseTo(1.5)
-  })
-
-  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]])('flies correctly in direction %s,%s, even with cells supplied in reverse order', (dx, dy) => {
-    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(0, 0))!
-    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) scene.cells.set(cellKey(x, y), { ...cell, x, y })
-    const shot = (n: number): Billboard => ({ ...spell(), x: dx * n, y: dy * n, life: { projectile: {
-      kind: 'metal', colour: [190, 200, 210], beam: false, family: 'MI_ARROW', angle: Math.atan2(dy, dx),
-    } } })
-    fx.observe(scene, 0, true)
-    fx.observe({ ...scene, billboards: [shot(2), shot(1)] }, 1, true)
-    fx.observe(scene, 1, true)
-    const halfway = fx.projectiles(1 + Math.hypot(dx, dy) / 144)
-    expect(halfway).toHaveLength(1)
-    expect(halfway[0].x).toBeCloseTo(dx * 0.5)
-    expect(halfway[0].y).toBeCloseTo(dy * 0.5)
-    expect(halfway[0].rotation).toBeCloseTo(0)
-    fx.tick(scene, 1.08)
-    expect(fx.projectiles(1.08)).toEqual([])
-    expect(fx.bursts).toMatchObject([{ x: dx * 2, y: dy * 2 }])
-  })
-
-  it('rotates directional artwork to the complete origin/destination angle', () => {
-    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(0, 0))!
-    for (let x = 0; x <= 3; x++) scene.cells.set(cellKey(x, 1), { ...cell, x, y: 1 })
-    const shot = (x: number, y: number): Billboard => ({ ...spell(x), y, life: { projectile: {
-      kind: 'stone', colour: [184, 168, 137], beam: false, family: 'BOLT_STONE_ARROW', angle: -Math.PI / 2,
-    } } })
-    fx.observe(scene, 0, true)
-    for (const b of [shot(1, 0), shot(2, 1), shot(3, 1)]) fx.observe({ ...scene, billboards: [b] }, 1, true)
-    const b = fx.projectiles(1.01)[0]
-    expect(b.rotation).toBeCloseTo(Math.atan2(1, 3) + Math.PI / 2)
-  })
-
-  it('creates the arrival VFX for a wall endpoint too', () => {
-    const fx = new DungeonEffects(), scene = world()
-    scene.cells.get(cellKey(3, 0))!.occluder = true
-    fx.observe(scene, 0, true)
-    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
-    fx.observe(scene, 1, true)
-    fx.tick(scene, 1.075)
-    expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
-  })
-
-  it('keeps separate launches separate, including repeated shots of the same art', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
-    fx.observe(scene, 1, true)
-    fx.observe({ ...scene, billboards: [spell(1)] }, 1.01, true)
-    expect(fx.projectiles(1.012)).toHaveLength(2)
-    fx.observe(scene, 1.02, true)
-    fx.tick(scene, 1.3)
-    expect(fx.traces.map(t => t.source.x).sort()).toEqual([1, 3])
-  })
-
-  it('does not restart a stationary overlay on unrelated updates', () => {
-    const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    const shot = { ...scene, billboards: [spell()] }
-    fx.observe(shot, 1, true)
-    fx.observe(shot, 1.01, true)
-    expect(fx.projectiles(1.025)[0].x).toBe(1)
-    expect(fx.projectiles(1.1)).toMatchObject([{ x: 1 }])
+    expect(fx.projectiles(1.2)).toEqual([])
+    expect(fx.bursts).toEqual([])
     expect(fx.traces).toEqual([])
   })
 
-  it('never creates visible effects for intentionally invisible projectile tiles', () => {
+  it.each(['visibility', 'level', 'still', 'remote'])('clears native projectile art on %s', reset => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [spell(1), spell(2)] }, 1, true)
+    fx.observe(scene, 1.001, true)
+    if (reset === 'visibility') for (const cell of scene.cells.values()) cell.visibility = 'remembered'
+    if (reset === 'level') scene.levelKey = 'D:2'
+    if (reset === 'remote') scene.playerOnLevel = false
+    fx.observe(scene, 1.01, reset !== 'still')
+    expect(fx.projectiles(1.016)).toEqual([])
+  })
+
+  it('never creates art or impacts for intentionally invisible projectile tiles', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [{ ...spell(), life: { projectile: false } }] }, 1, true)
     fx.observe(scene, 1.001, true)
-    expect(fx.projectiles(1.008)).toHaveLength(0)
-    expect(fx.traces).toHaveLength(0)
+    expect(fx.projectiles(1.016)).toEqual([])
+    expect(fx.bursts).toEqual([])
   })
+
+  it('coalesces different impact types for one recipient and turn, preferring confirmed results', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, id: 7 }]
+    fx.observe(scene, 0, true)
+    fx.spell(scene, { x: 1, y: 0, kind: 'physical' }, 1, 'generic')
+    fx.spell(scene, { x: 1, y: 0, kind: 'magic' }, 1.01, 'flash')
+    fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: 10, kind: 'cold' }, 1.02)
+    fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: 10, kind: 'physical', intensity: 'heavy' }, 1.3)
+    expect(fx.bursts).toMatchObject([{ actorId: 'id:7', kind: 'cold', born: 1, intensity: 'heavy', turn: 10 }])
+    fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: 11, kind: 'fire' }, 1.31)
+    expect(fx.bursts).toHaveLength(2) // a later turn remains a distinct hit
+    fx.spell(scene, { x: 2, y: 0, kind: 'cold' }, 1.02)
+    expect(fx.bursts).toHaveLength(3) // an actual second victim keeps its own effect
+  })
+
+  it('attaches a previous-cell flash to an approaching creature and updates its anchor', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, x: 2, id: 7 }]
+    fx.observe(scene, 1, true)
+    scene.billboards = [{ ...scene.billboards[0], x: 1 }]
+    scene.cells.get(cellKey(2, 0))!.flash = { r: 140, g: 200, b: 255, a: 100 }
+    scene.revision++; fx.observe(scene, 1.03, true)
+    expect(fx.bursts).toMatchObject([{ x: 1, actorId: 'id:7', kind: 'cold' }])
+    fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', kind: 'fire', turn: 2 }, 1.03)
+    expect(fx.bursts).toHaveLength(1)
+    scene.billboards = [{ ...scene.billboards[0], x: 0 }]
+    scene.revision++; fx.observe(scene, 1.08, true)
+    expect(fx.bursts).toMatchObject([{ x: 0, actorId: 'id:7', kind: 'fire' }])
+  })
+
   it('lunges and recoils without changing confirmed cells, settles, and ignores miss recoil', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
@@ -300,7 +168,7 @@ describe('bounded dungeon combat presentation', () => {
 
   it('leaves one trace when a confirmed spell disappears, with no refresh on unrelated updates', () => {
     const fx = new DungeonEffects(), scene = world()
-    scene.billboards = [spell()]
+    scene.billboards = [{ ...spell(), kind: 'cloud' }]
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, revision: 1 }, 0.1, true)
     expect(fx.traces).toHaveLength(0)
@@ -315,7 +183,7 @@ describe('bounded dungeon combat presentation', () => {
   it('clears histories across levels, still mode, remote maps, and loss of visibility', () => {
     for (const reset of ['level', 'still', 'remote', 'visibility']) {
       const fx = new DungeonEffects(), scene = world()
-      scene.billboards = [spell()]
+      scene.billboards = [{ ...spell(), kind: 'cloud' }]
       fx.observe(scene, 0, true)
       fx.observe({ ...scene, billboards: [] }, 0.1, true)
       fx.melee(scene, attack, 0.1)

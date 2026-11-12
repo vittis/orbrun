@@ -1,5 +1,6 @@
 import { loadGamedata, browserIo } from '@orbrun/gamedata'
 import { Render25d } from '@orbrun/render-2.5d'
+import { type SpellEffect } from '@orbrun/scene'
 import { type Connection, type ServerMessage } from '@orbrun/webtiles'
 import { Session } from '../src/session'
 import type { ServerInfo } from '../src/servers'
@@ -38,7 +39,10 @@ try {
     }
     deliver({ msg: 'map', cells: [{ x: dx * 2, y: dy * 2, t: { ov: [] } }] })
     session.flushScene()
-    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.12], ['Residue', 1.8], ['Expired', 4]] as const) {
+    const kind: SpellEffect['kind'] = /SANDBLAST|STONE/.test(name) ? 'earth' : /IRON|MI_/.test(name) ? 'physical' : /FROST/.test(name) ? 'cold' : 'magic'
+    renderer.spell({ x: dx * 2, y: dy * 2, kind }, 1.04)
+    renderer.impact(dx * 2, dy * 2, 0.6, 1.04)
+    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.16], ['Expired', 4]] as const) {
       renderer.render(time); plain.render(time)
       const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
       const before = baseline.getContext('2d')!.getImageData(0, 0, baseline.width, baseline.height).data

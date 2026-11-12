@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.51 — 2026-11-12
+
+- Restore WebTiles projectile artwork repeated along the path.
+- Show one impact per hit and keep it centred on creatures as they move.
+
 ## 0.3.50 — 2026-11-12
 
 - Make single projectiles easier to follow with slightly slower travel and fading trails matched to their material or element.

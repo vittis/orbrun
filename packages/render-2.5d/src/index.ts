@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect,
+  cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -7,8 +7,8 @@ import { fittedScale, groundDepth, planeRect, project, unproject, type Projectio
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
 import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
-import { DungeonEffects, type SpellBurst, type ProjectileTrail } from './effects.js'
-import { drawSpellTrace, drawSpellBurst, drawProjectileTrail } from './effects-draw.js'
+import { DungeonEffects, type SpellBurst } from './effects.js'
+import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
 import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
@@ -39,7 +39,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; trail?: ProjectileTrail; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -211,7 +211,7 @@ export class Render25d implements MapRenderer {
 
   impact(x: number, y: number, strength: number, now: number) {
     if (!this.opts.animate || this.scene.cells.get(cellKey(x, y))?.visibility !== 'visible') return
-    this.life.ripple(x, y, now, strength)
+    this.effects.spell(this.scene, { x, y, kind: 'physical', intensity: strength < 0.45 ? 'light' : strength > 0.8 ? 'heavy' : 'solid' }, now, 'generic')
     this.active = true
   }
 
@@ -234,6 +234,12 @@ export class Render25d implements MapRenderer {
     this.frameTime = now
     const p = this.projection(), s = p.scale, sy = groundDepth(p.tilt)
     this.active = this.movement.cameraMoving(now)
+    if (this.opts.animate) for (const ripple of this.life.ripples) {
+      if (ripple.kind === 'water' || this.claimedImpacts.has(ripple)) continue
+      this.claimedImpacts.add(ripple)
+      this.effects.spell(this.scene, { x: ripple.x, y: ripple.y, kind: 'physical',
+        intensity: ripple.strength < 0.45 ? 'light' : ripple.strength > 0.8 ? 'heavy' : 'solid' }, ripple.born, 'generic')
+    }
     this.effects.tick(this.scene, now)
     const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
@@ -249,40 +255,20 @@ export class Render25d implements MapRenderer {
         standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
       }
       if (this.deaths.active) this.active = true
-      for (const trail of this.effects.projectileTrails(this.scene, now)) {
-        if (!this.inFrame(p, trail)) continue
-        const cell = this.scene.cells.get(cellKey(Math.round(trail.x), Math.round(trail.y)))!
-        standing.push({ cell, trail, x: trail.x, y: trail.y, depth: trail.y + 0.29 })
-        this.active = true
-      }
       for (const billboard of this.effects.projectiles(now)) {
         const cell = this.scene.cells.get(cellKey(Math.round(billboard.x), Math.round(billboard.y)))
         if (!cell || !this.inFrame(p, billboard)) continue
         standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
         this.active = true
       }
-      // Generic hit/arrival feedback shares the same shaded pixel contact art.
-      // Existing melee, projectile and spell contacts already own their bursts.
-      for (const ripple of this.life.ripples) {
-        if (ripple.kind === 'water' || this.claimedImpacts.has(ripple)) continue
-        if (this.deaths.coversImpact(ripple.x, ripple.y, now) || this.effects.coversImpact(ripple.x, ripple.y, now)) {
-          this.claimedImpacts.add(ripple); continue
-        }
-        const duration = ripple.kind === 'arrival' ? 0.55 : 0.45, age = now - ripple.born
-        if (age >= duration) continue
-        this.active = true
-        if (age < 0) continue
-        const cell = this.scene.cells.get(cellKey(ripple.x, ripple.y))
-        if (!cell || cell.visibility !== 'visible' || cell.occluder || !this.inFrame(p, ripple)) continue
-        const burst: SpellBurst = { x: ripple.x, y: ripple.y, born: ripple.born, duration,
-          kind: ripple.kind === 'arrival' ? 'earth' : 'physical',
-          intensity: ripple.strength < 0.45 ? 'light' : ripple.strength > 0.8 ? 'heavy' : 'solid' }
-        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + 0.35 })
-      }
-      for (const burst of this.effects.bursts) {
+      if (this.effects.bursts.some(b => now < b.born && this.inFrame(p, b))) this.active = true
+      for (const burst of this.effects.visibleBursts(now)) {
+        if (this.deaths.coversImpact(burst.x, burst.y, now)) continue
         const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
-        if (!cell || cell.occluder && !burst.impact || !this.inFrame(p, burst)) continue
-        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + (burst.impact && cell.occluder ? 0.55 : 0.35) })
+        const actor = burst.actorId && this.scene.billboards.find(b => combatActorId(b) === burst.actorId)
+        const position = actor ? this.actorPosition(actor, now) : burst
+        if (!cell || cell.occluder || !this.inFrame(p, position)) continue
+        standing.push({ cell, burst, x: position.x, y: position.y, depth: position.y + 0.65 })
         this.active = true
       }
       standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
@@ -361,7 +347,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.death || entry.burst || entry.trail || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.death || entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -381,16 +367,15 @@ export class Render25d implements MapRenderer {
       if (entry.death) {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
-      else if (entry.trail) drawProjectileTrail(ctx, p, entry.trail, this.dpr)
       else if (entry.burst) {
         ctx.save(); ctx.beginPath()
-        for (let y = entry.y - 1; y <= entry.y + 1; y++) for (let x = entry.x - 1; x <= entry.x + 1; x++) {
+        for (let y = Math.round(entry.y) - 1; y <= Math.round(entry.y) + 1; y++) for (let x = Math.round(entry.x) - 1; x <= Math.round(entry.x) + 1; x++) {
           const cell = this.scene.cells.get(cellKey(x, y))
           if (cell?.visibility !== 'visible' || cell.occluder && (x !== entry.x || y !== entry.y)) continue
           const rect = planeRect(p, x, y, 0, this.dpr)
           ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1)
         }
-        ctx.clip(); drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr); ctx.restore()
+        ctx.clip(); drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y }); ctx.restore()
       }
       else if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
       else if (entry.cell.occluder) this.wall(ctx, p, entry.cell)
@@ -408,7 +393,11 @@ export class Render25d implements MapRenderer {
         const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
         ctx.rect(rect.x, rect.y - s, rect.width, rect.height + s)
       }
-      ctx.clip(); drawMelee(ctx, p, stroke, now); ctx.restore()
+      const from = stroke.fromId && this.scene.billboards.find(b => combatActorId(b) === stroke.fromId)
+      const to = stroke.toId && this.scene.billboards.find(b => combatActorId(b) === stroke.toId)
+      ctx.clip(); drawMelee(ctx, p, { ...stroke,
+        from: from ? this.actorPosition(from, now) : stroke.from,
+        to: to ? this.actorPosition(to, now) : stroke.to }, now, false); ctx.restore()
       this.active = true
     }
     this.impactRipples(ctx, p, time)
@@ -679,20 +668,12 @@ export class Render25d implements MapRenderer {
     const s = p.scale, visible = cell.visibility === 'visible'
     if (b.kind === 'projectile') {
       if (!visible) return
-      // A single missile follows the confirmed path on the ground plane.
+      // Repeat the native overlay artwork at each confirmed path cell.
       // It has no creature shadow or hit box.
       const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
       const thin = false
       ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
-      let spriteRect = rect
-      if (b.rotation) {
-        // Rotate in the dungeon plane before applying the camera's foreshortening.
-        ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
-        ctx.scale(1, rect.height / rect.width)
-        ctx.rotate(b.rotation)
-        spriteRect = { x: -rect.width / 2, y: -rect.width / 2, width: rect.width, height: rect.width }
-      }
-      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], spriteRect, 1, false, undefined, undefined, undefined, thin)
+      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
       return
     }
