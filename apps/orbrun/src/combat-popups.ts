@@ -7,9 +7,10 @@ import './combat-popups.css'
 const LIFETIME = 1100
 const MAX_POPUPS = 10
 const MAX_AT_ANCHOR = 3
-const lifetime = (event: CombatPopup) => event.kind === 'level' ? 2400 : LIFETIME
+const visualHit = (event: CombatPopup) => event.kind === 'hit' && event.amount === undefined && event.text === 'HIT'
+const lifetime = (event: CombatPopup) => event.kind === 'level' ? 2400 : visualHit(event) ? 500 : LIFETIME
 interface LivePopup { event: CombatPopup; node: HTMLElement; born: number; slot: number }
-const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.player ? 'on-player' : 'on-enemy'} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.estimated ? ' estimated' : ''}${event.amount === 0 ? ' no-damage' : ''}`
+const popupClass = (event: CombatPopup) => `combat-popup ${event.kind} ${event.player ? 'on-player' : 'on-enemy'} ${event.tone ?? 'physical'}${event.heavy ? ' heavy' : ''}${event.intensity ? ' intensity-' + event.intensity : ''}${visualHit(event) ? ' visual-hit' : ''}${event.amount === 0 ? ' no-damage' : ''}`
 const statusIcons: Record<string, CombatIcon> = {
   POISONED: 'poison', CONFUSED: 'confused', PARALYSED: 'paralysed', SLOWED: 'slowed',
   HASTED: 'hasted', BERSERK: 'berserk', CORRODED: 'acid', PETRIFYING: 'petrifying',
@@ -27,8 +28,9 @@ function popupContent(event: CombatPopup): { icon?: CombatIcon; value: string; l
   if (event.kind === 'miss' || event.kind === 'block' || event.kind === 'kill') {
     return { icon: event.kind === 'block' ? 'shield' : event.kind, value: '', label: event.text }
   }
+  if (visualHit(event)) return { icon: event.tone && event.tone !== 'physical' ? event.tone : 'hit', value: '', label: `${event.intensity ?? 'light'} ${event.tone ?? 'physical'} hit` }
   const icon = event.tone && event.tone !== 'physical' ? event.tone : event.kind === 'hurt' ? 'hurt' : undefined
-  return { icon, value: event.estimated ? String(event.amount) : event.text === 'HIT' && icon ? '' : event.text, label: event.text }
+  return { icon, value: event.text === 'HIT' && icon ? '' : event.text, label: event.text }
 }
 function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.className = popupClass(event)
@@ -37,11 +39,10 @@ function paintPopup(node: HTMLElement, event: CombatPopup) {
   node.classList.toggle('icon-only', !value)
   let number = node.querySelector('.combat-number')
   if (!number) { number = h('span', { class: 'combat-number' }); node.append(number) }
-  // Keep this wrapper mounted when an estimate/brand refines the same hit,
+  // Keep this wrapper mounted when a brand recolors the same hit,
   // so its compositor entrance runs once instead of restarting.
   number.replaceChildren(...(icon ? [combatIcon(icon)] : []))
   if (value) {
-    if (event.estimated) number.append(h('span', { class: 'combat-estimate' }, '≈'))
     number.append(h('span', { class: 'combat-value' }, value))
   }
   if (event.kind === 'level' && !node.querySelector('.combat-celebration')) {
@@ -104,31 +105,20 @@ export class CombatPopups {
     })
     for (const event of events) {
       const atAnchor = (p: LivePopup) => !!p.event.player === !!event.player && (event.actorId && p.event.actorId ? event.actorId === p.event.actorId : p.event.x === event.x && p.event.y === event.y)
-      const hit = (event.brandOnly ?? event.followup) && (event.estimated || event.text === 'HIT') ? [...this.live].reverse().find(p => atAnchor(p) && p.event.kind === 'hit' && !p.event.followup && (event.turn === undefined || p.event.turn === event.turn)) : undefined
+      const hit = (event.brandOnly ?? event.followup) && event.text === 'HIT' ? [...this.live].reverse().find(p => atAnchor(p) && p.event.kind === 'hit' && !p.event.followup && (event.turn === undefined || p.event.turn === event.turn)) : undefined
       if (hit) {
         hit.event = { ...hit.event, tone: event.tone, followup: true }
         paintPopup(hit.node, hit.event)
         continue
       }
-      const previous = event.estimated && event.turn !== undefined ? this.live.find(p => atAnchor(p) && p.event.kind === 'hit' && p.event.estimated && p.event.turn === event.turn) : undefined
-      if (previous) {
-        // A delayed wound observation refines the existing estimate. Separate
-        // attack messages in the same turn accumulate without more text clutter.
-        const amount = event.fromWound || previous.event.fromWound ? Math.max(previous.event.amount!, event.amount!) : previous.event.amount! + event.amount!
-        previous.event = { ...event, amount, text: '≈' + amount, heavy: amount >= 18 }
-        paintPopup(previous.node, previous.event)
-        if (!event.fromWound) previous.born = now
-        continue
-      }
-      // A kill replaces generic hit words; an actual damage number can remain beside it.
+      // Keep the contact cue or confirmed number beside a killing blow.
       if (event.kind === 'kill') this.live = this.live.filter(p => {
-        if (!atAnchor(p) || (p.event.kind === 'hit' && (p.event.estimated || /^\d+$/.test(p.event.text)))) return true
+        if (!atAnchor(p) || p.event.kind === 'hit') return true
         p.node.remove()
         return false
       })
-      // Retain kill events for damage estimation and cleanup, without adding
-      // a redundant death label. Unknown brand hits can still recolor a number above.
-      if (concise && (event.kind === 'kill' || event.kind === 'hit' && event.amount === undefined && !/^\d+$/.test(event.text))) continue
+      // Concise mode keeps the impact cue without a redundant death label.
+      if (concise && event.kind === 'kill') continue
       const nearby = this.live.filter(atAnchor)
       while (nearby.length >= MAX_AT_ANCHOR) {
         const oldest = nearby.shift()!
@@ -139,9 +129,10 @@ export class CombatPopups {
       let slot = 0
       while (slots.has(slot)) slot++
       const node = h('span')
+      node.hidden = true
       paintPopup(node, event)
       this.root.append(node)
-      this.live.push({ event, node, born: now, slot })
+      this.live.push({ event, node, born: now + (event.delay ?? 0), slot })
     }
     while (this.live.length > MAX_POPUPS) this.live.shift()!.node.remove()
   }
@@ -151,11 +142,12 @@ export class CombatPopups {
     const width = view.clientWidth, height = view.clientHeight
     this.live = this.live.filter(p => {
       const age = (now - p.born) / lifetime(p.event)
+      if (age < 0) { p.node.hidden = true; return true }
       if (age >= 1) { p.node.remove(); return false }
       const e = p.event
       const billboard = scene.billboards.find(b => e.player ? b.kind === 'player'
         : b.kind === 'monster' && (e.actorId?.startsWith('id:') ? `id:${b.id ?? (b.ref as { id?: number } | undefined)?.id}` === e.actorId : b.x === e.x && b.y === e.y))
-      const anchorHeight = e.player ? 0.8 : e.height
+      const anchorHeight = e.player ? 0.8 : visualHit(e) ? (e.height ?? 0.8) * 0.55 : e.height
       const anchor = e.player && firstPerson
         ? { x: width * 0.5, y: height * 0.66 }
         : billboard && renderer.projectBillboard ? renderer.projectBillboard(billboard, anchorHeight)
@@ -166,10 +158,10 @@ export class CombatPopups {
         if (e.kind === 'level') celebrate(p.node, age, reducedMotion)
         const motion = popupMotion(e, age, p.slot % 2 ? -1 : 1, reducedMotion)
         const drift = reducedMotion ? 0 : (e.kind === 'miss' ? 22 : 6) * age * (p.slot % 2 ? -1 : 1)
-        const rise = reducedMotion ? 0 : (e.amount === 0 || e.kind === 'block' ? 22 : 30) * age
+        const rise = reducedMotion || visualHit(e) ? 0 : (e.amount === 0 || e.kind === 'block' ? 22 : 30) * age
         p.node.style.left = `${Math.max(Math.min(48, width / 2), Math.min(width - Math.min(48, width / 2), anchor.x))}px`
-        p.node.style.top = `${Math.max(32, anchor.y - 12 - p.slot * 20)}px`
-        p.node.style.transform = `translate(calc(-50% + ${drift + motion.x}px), calc(-100% - ${rise - motion.y}px)) rotate(${motion.angle}deg) scale(${motion.scale * motion.sx}, ${motion.scale * motion.sy})`
+        p.node.style.top = `${Math.max(32, anchor.y - (visualHit(e) ? 0 : 12 + p.slot * 20))}px`
+        p.node.style.transform = `translate(calc(-50% + ${drift + motion.x}px), calc(${visualHit(e) ? '-50%' : '-100%'} - ${rise - motion.y}px)) rotate(${motion.angle}deg) scale(${motion.scale * motion.sx}, ${motion.scale * motion.sy})`
         p.node.style.setProperty('--glow', `${motion.glow}`)
         p.node.style.setProperty('--heat-rise', `${reducedMotion ? -3 : -3 - age * 3}px`)
         p.node.dataset.motion = reducedMotion ? 'still' : 'full'
@@ -177,8 +169,7 @@ export class CombatPopups {
       }
       return true
     })
-    this.root.dataset.estimates = String(this.live.some(p => p.event.estimated && !p.node.hidden))
   }
 
-  clear() { this.live = []; this.root.replaceChildren(); delete this.root.dataset.estimates }
+  clear() { this.live = []; this.root.replaceChildren() }
 }

@@ -39,7 +39,7 @@ import { PredictiveMovement } from './predictive-movement'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { CombatPopups } from './combat-popups'
-import { meleeFor } from './melee-effects'
+import { presentCombat } from './combat-presentation'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
 const VIEW_MAX_DPR = 1
@@ -1054,9 +1054,9 @@ export class GameScreen {
     const popups = this.feedback.flush(this.session.scene)
     const incomingMelee = this.feedback.takeMelee()
     const spells = this.feedback.takeSpells()
-    if (spells.length || incomingMelee.length || popups.some(p => p.melee || p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
-    if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now, this.renderMode === '2.5d')
-    else this.combatPopups.clear()
+    if (spells.length || incomingMelee.length || popups.length) this.needsRender = true
+    const showCombat = settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')
+    if (!showCombat) this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
@@ -1103,21 +1103,11 @@ export class GameScreen {
       // 3D view marks the way that view faces, which a north-up map otherwise loses.
       if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
       this.syncRendererScene(this.session.scene, now / 1000)
-      if (!this.mapShown) for (const effect of spells) this.renderer.spell?.(effect, now / 1000)
-      if (!this.mapShown) for (const attack of incomingMelee) this.renderer.melee?.(attack, now / 1000)
-      if (!this.mapShown) for (const event of popups) {
-        if (this.renderer.melee) {
-          const weapon = st.player.inv[st.player.weapon_index]?.name
-          const attack = meleeFor(event, this.session.scene, weapon)
-          if (attack) this.renderer.melee(attack, now / 1000)
-        }
-        if (event.kind !== 'hit' && event.kind !== 'hurt' && event.kind !== 'level') continue
-        if (event.amount === 0) continue
-        const x = event.player ? this.session.scene.player.x : event.x
-        const y = event.player ? this.session.scene.player.y : event.y
-        if (x === undefined || y === undefined) continue
-        const damage = Math.abs(event.amount ?? Number(event.text.replace(/^≈/, ''))) || 4
-        this.renderer.impact?.(x, y, event.kind === 'level' ? 1 : Math.min(1, 0.2 + damage / 30), now / 1000)
+      if (!this.mapShown) {
+        const weapon = st.player.inv[st.player.weapon_index]?.name
+        const animate = this.renderMode === '2.5d' && dungeonAnimation(settings, this.cam.reducedMotion)
+        const timed = presentCombat(this.renderer, this.session.scene, popups, incomingMelee, spells, weapon, now, animate)
+        if (showCombat) this.combatPopups.add(timed, now, this.renderMode === '2.5d')
       }
       this.renderer.setCamera(this.cam.camera)
       const r3d = this.renderer instanceof Render3d ? this.renderer : null

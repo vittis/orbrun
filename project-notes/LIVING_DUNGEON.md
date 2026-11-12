@@ -111,3 +111,16 @@ node tools/build/render-compare.mjs eval tools/build/living-checks.browser.js ht
 The URL is explicit because another worktree can already occupy the renderer
 harness's default port. The harness leaves captures on `window.__livingCaptures`
 while the page is open and prints the check results.
+
+## Pending combat feedback correction
+
+Enemy damage is numeric only when explicitly reported by the engine/server.
+Punctuation supplies light/solid/heavy visual strength, never an HP estimate;
+monster wounds remain useful for target resolution. Player HP changes remain
+numeric. Unknown hits use short physical/elemental contact symbols in every
+view, with intensity-scaled bursts and melee sparks in Dungeon (2.5D).
+
+Melee presentation shares a wind-up/contact/recovery clock with popup, burst
+and explicit ripple timing. Actor IDs distinguish attacker lunges from defender
+recoil. Still mode and renderers without melee presentation keep immediate
+feedback. This affects presentation only; server state and input are immediate.

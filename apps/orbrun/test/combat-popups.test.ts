@@ -26,10 +26,10 @@ describe('popup presentation', () => {
     expect(zero.hidden).toBe(false)
     expect(zero.querySelector('.combat-estimate')).toBeNull()
     expect(popupMotion({ kind: 'hit', text: '0', amount: 0, tone: 'cold' }, 0.1, 1, false).glow).toBe(0)
-    popups.add([{ kind: 'hit', text: '≈4', amount: 4, estimated: true, tone: 'cold', x: 1, y: 0, turn: 2 }], 150, concise)
+    popups.add([{ kind: 'hit', text: '4', amount: 4, tone: 'cold', x: 1, y: 0, turn: 2 }], 150, concise)
     render(200)
-    expect([...popups.root.children].map(n => n.textContent)).toEqual(['', '≈4'])
-    expect(popups.root.querySelector('.estimated [data-icon="cold"]')).not.toBeNull()
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['', '4'])
+    expect(popups.root.querySelector('.hit:not(.no-damage) [data-icon="cold"]')).not.toBeNull()
   })
 
   it.each([false, true])('distinguishes player and enemy armor from shield blocks (concise=%s)', concise => {
@@ -44,7 +44,7 @@ describe('popup presentation', () => {
     [{ kind: 'miss', text: 'MISS' }, 'miss', ''],
     [{ kind: 'miss', text: 'DODGED', player: true }, 'miss', ''],
     [{ kind: 'kill', text: 'SLAIN' }, 'kill', ''],
-    [{ kind: 'hit', text: 'HIT' }, undefined, 'HIT'],
+    [{ kind: 'hit', text: 'HIT' }, 'hit', ''],
     [{ kind: 'hit', text: '7', amount: 7 }, undefined, '7'],
     [{ kind: 'heal', text: '+7 HP', player: true }, 'heal', '+7'],
     [{ kind: 'heal', text: 'POISON CLEARED', player: true }, 'cured', ''],
@@ -56,7 +56,7 @@ describe('popup presentation', () => {
     popups.add([event], 0)
     expect(popups.root.querySelector('.combat-icon')?.getAttribute('data-icon')).toBe(icon)
     expect(popups.root.textContent).toBe(value)
-    expect((popups.root.firstElementChild as HTMLElement).title).toBe(event.text)
+    expect((popups.root.firstElementChild as HTMLElement).title).toBe(event.text === 'HIT' ? 'light physical hit' : event.text)
   })
 
   it('identifies the receiver for defenses and other effects, including zero-damage player hits', () => {
@@ -133,15 +133,15 @@ describe('popup presentation', () => {
     const { popups } = preview()
     popups.add([
       { kind: 'hit', text: 'HIT', x: 1, y: 0 },
-      { kind: 'hit', text: '≈7', amount: 7, estimated: true, x: 1, y: 0 },
+      { kind: 'hit', text: '7', amount: 7, x: 1, y: 0 },
       { kind: 'hit', text: 'HIT', followup: true, tone: 'fire', x: 1, y: 0 },
       { kind: 'kill', text: 'SLAIN', x: 1, y: 0 },
       { kind: 'hurt', text: '-3', player: true },
       { kind: 'miss', text: 'DODGED', player: true },
     ], 0, true)
-    expect([...popups.root.children].map(n => n.textContent)).toEqual(['≈7', '-3', ''])
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['', '7', '-3', ''])
     expect(popups.root.querySelector('.miss [data-icon="miss"]')).not.toBeNull()
-    expect(popups.root.querySelector('.hit')?.classList.contains('fire')).toBe(true)
+    expect(popups.root.querySelector('.hit.fire')).not.toBeNull()
     popups.clear()
     popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 10, true)
     expect(popups.active).toBe(false)
@@ -197,7 +197,7 @@ describe('popup presentation', () => {
     expect(popups.root.childElementCount).toBe(1)
     expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
     popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 100)
-    expect(popups.root.childElementCount).toBe(1)
+    expect(popups.root.childElementCount).toBe(2)
     expect(popups.root.textContent).toBe('')
     expect(popups.root.querySelector('[data-icon="kill"]')).not.toBeNull()
     popups.clear()
@@ -206,50 +206,50 @@ describe('popup presentation', () => {
   })
 })
 
-describe('estimated number UX', () => {
-  it('marks estimates separately, explains the symbol and keeps their number beside a kill', () => {
+describe('contact feedback', () => {
+  it('shows unknown amounts as typed intensity symbols and keeps exact amounts numeric', () => {
     const { popups, render } = preview()
-    popups.add([{ kind: 'hit', text: '≈12', amount: 12, estimated: true, x: 1, y: 0, turn: 1 }], 0)
+    popups.add([
+      { kind: 'hit', text: 'HIT', intensity: 'light', tone: 'cold', x: 1, y: 0 },
+      { kind: 'hit', text: 'HIT', intensity: 'heavy', tone: 'fire', x: 2, y: 0 },
+      { kind: 'hit', text: '8', amount: 8, x: 3, y: 0 },
+    ], 0, true)
     render(100)
-    expect(popups.root.querySelector('.combat-estimate')?.textContent).toBe('≈')
-    expect(popups.root.querySelector('.combat-value')?.textContent).toBe('12')
-    expect(popups.root.dataset.estimates).toBe('true')
-    popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 120)
-    expect(popups.root.childElementCount).toBe(2)
-    popups.clear()
-    expect(popups.root.dataset.estimates).toBeUndefined()
-  })
-  it('accumulates a same-turn number across frames without creating a stack', () => {
-    const { popups } = preview()
-    const hit = { kind: 'hit' as const, text: '≈4', amount: 4, estimated: true, turn: 10, actorId: 'id:1', x: 1, y: 0 }
-    popups.add([hit], 0)
-    popups.add([{ ...hit, x: 2 }], 100)
-    expect(popups.root.childElementCount).toBe(1)
-    expect(popups.root.textContent).toBe('≈8')
-    popups.add([{ ...hit, turn: 11 }], 200)
-    expect(popups.root.childElementCount).toBe(2)
-    popups.add([{ ...hit, amount: 9, text: '≈9', fromWound: true }], 250)
-    expect(popups.root.childElementCount).toBe(2)
-    expect(popups.root.textContent).toBe('≈9≈4')
-  })
-  it('recolors a delayed unknown brand without adding a guessed second hit', () => {
-    const { popups } = preview()
-    const hit = { kind: 'hit' as const, text: '≈4', amount: 4, estimated: true, turn: 10, x: 1, y: 0 }
-    popups.add([hit], 0)
-    const entrance = popups.root.querySelector('.combat-number')
-    popups.add([{ ...hit, text: '≈12', amount: 12, tone: 'fire', followup: true, brandOnly: true }], 100)
-    expect(popups.root.childElementCount).toBe(1)
-    expect(popups.root.textContent).toBe('≈4')
-    expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
-    expect(popups.root.querySelector('.combat-number')).toBe(entrance)
-    expect(popups.root.querySelector('[data-icon="fire"]')).not.toBeNull()
-    expect(popups.root.querySelector('[data-icon="hit"]')).toBeNull()
-  })
-  it('does not mark exact damage as approximate', () => {
-    const { popups, render } = preview()
-    popups.add([{ kind: 'hit', text: '12', amount: 12, x: 1, y: 0 }], 0)
-    render(100)
+    expect(popups.root.textContent).toBe('8')
+    expect(popups.root.querySelector('.intensity-light [data-icon="cold"]')).not.toBeNull()
+    expect(popups.root.querySelector('.intensity-heavy [data-icon="fire"]')).not.toBeNull()
     expect(popups.root.querySelector('.combat-estimate')).toBeNull()
-    expect(popups.root.dataset.estimates).toBe('false')
+    render(550)
+    expect(popups.root.textContent).toBe('8')
+    expect(popups.root.querySelectorAll('.visual-hit')).toHaveLength(0)
+  })
+  it('keeps a popup hidden until contact and measures its lifetime from impact', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'hit', text: '8', amount: 8, x: 1, y: 0, delay: 150 }], 0)
+    const node = popups.root.firstElementChild as HTMLElement
+    expect(node.hidden).toBe(true)
+    render(149)
+    expect(node.hidden).toBe(true)
+    expect(popups.active).toBe(true)
+    render(150)
+    expect(node.hidden).toBe(false)
+    expect(node.textContent).toBe('8')
+    render(1200)
+    expect(popups.active).toBe(true)
+    render(1250)
+    expect(popups.active).toBe(false)
+  })
+  it('recolors a delayed brand while preserving a confirmed number and its contact time', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'hit', text: '7', amount: 7, turn: 10, x: 1, y: 0, delay: 150 }], 0)
+    const entrance = popups.root.querySelector('.combat-number')
+    popups.add([{ kind: 'hit', text: 'HIT', tone: 'fire', followup: true, brandOnly: true, turn: 10, x: 1, y: 0 }], 50)
+    expect(popups.root.childElementCount).toBe(1)
+    expect(popups.root.textContent).toBe('7')
+    expect(popups.root.querySelector('.combat-number')).toBe(entrance)
+    render(100)
+    expect((popups.root.firstElementChild as HTMLElement).hidden).toBe(true)
+    render(150)
+    expect(popups.root.querySelector('[data-icon="fire"]')).not.toBeNull()
   })
 })

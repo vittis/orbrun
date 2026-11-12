@@ -1,4 +1,4 @@
-import type { MeleeAttack, Scene } from '@orbrun/scene'
+import { hitIntensity, type MeleeAttack, type Scene, type DamageType, type HitIntensity } from '@orbrun/scene'
 import type { CombatPopup } from './combat-feedback'
 
 /** Inventory names include enchantments and brands; match the weapon noun. */
@@ -19,18 +19,23 @@ export function meleeFor(event: CombatPopup, scene: Scene, weapon: string | unde
   const distance = Math.max(Math.abs(event.x - scene.player.x), Math.abs(event.y - scene.player.y))
   const reaching = /\b(?:spear|trident|halberd|glaive|bardiche|scythe|lance)\b/i.test(weapon ?? '')
   if (distance < 1 || distance > (reaching ? 2 : 1)) return null
-  return { from: { ...scene.player }, to: { x: event.x, y: event.y }, style, hit: event.kind === 'hit' && event.amount !== 0 }
+  return { from: { ...scene.player }, to: { x: event.x, y: event.y }, style, hit: event.kind === 'hit' && event.amount !== 0, fromId: 'player', toId: event.actorId, tone: event.tone, intensity: event.intensity }
 }
 
 /** Only explicit physical contact verbs; spell/ranged prose never creates a lunge. */
-export function incomingMelee(text: string): { attacker: string; style: MeleeAttack['style']; hit: boolean }[] {
+export function incomingMelee(text: string): { attacker: string; style: MeleeAttack['style']; hit: boolean; tone: DamageType; intensity: HitIntensity }[] {
   const attempts: ReturnType<typeof incomingMelee> = []
   for (const sentence of text.split(/(?<=[.!?])\s+/)) {
-    const m = /^(?:The|Your) (.+?) (?:(?:barely|closely|completely) )?(hits|bites|claws|pecks|stings|kicks|punches|tramples|headbutts|gores|tentacle-slaps|misses) you(?: with (.+?))?(?: but (?:does|do) no damage)?[.!]+$/.exec(sentence.trim())
+    const m = /^(?:The|Your) (.+?) (?:(?:barely|closely|completely) )?(hits|bites|claws|pecks|stings|kicks|punches|tramples|headbutts|gores|tentacle-slaps|misses) you(?: with (.+?))?(?: but (?:does|do) no damage)?(?: for \d+(?: damage)?)?[.!]+$/.exec(sentence.trim())
     if (!m) continue
-    if (m[3] && /\b(?:arrow|bolt|stone|dart|javelin|boomerang|sling bullet)\b/i.test(m[3])) continue
-    const style = m[3] ? meleeStyle(m[3]) : 'unarmed'
-    if (style) attempts.push({ attacker: m[1], style, hit: m[2] !== 'misses' && !/no damage/.test(sentence) })
+    const weapon = m[3]?.replace(/(?: but | for ).*$/, '')
+    if (weapon && /\b(?:arrow|bolt|stone|dart|javelin|boomerang|sling bullet)\b/i.test(weapon)) continue
+    const style = weapon ? meleeStyle(weapon) : 'unarmed'
+    if (!style) continue
+    const reported = / for (\d+)(?: damage)?[.!]/.exec(sentence)
+    const hit = m[2] !== 'misses' && !/no damage/.test(sentence) && reported?.[1] !== '0'
+    const intensity = hitIntensity(reported ? Number(reported[1]) : undefined, /[.!]+$/.exec(sentence)?.[0])
+    attempts.push({ attacker: m[1], style, hit, tone: 'physical', intensity })
   }
   return attempts
 }

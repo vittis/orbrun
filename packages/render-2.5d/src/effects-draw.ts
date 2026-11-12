@@ -1,8 +1,10 @@
 import type { MeleeStroke, SpellTrace, SpellBurst } from './effects.js'
 import { project, type Projection } from './projection.js'
 import type { Context2d } from './tiles.js'
+import { impactStrength, meleeTiming } from '@orbrun/scene'
 
 const burstColours: Record<SpellBurst['kind'], string> = {
+  physical: '#eee1c4',
   cold: '#a5e7ff', fire: '#ff9a47', electric: '#c0d9ff', poison: '#9de85e', acid: '#d1f46c',
   air: '#d8edf0', earth: '#d7b68b', drain: '#c178dd', holy: '#ffe6a0', magic: '#d1acff',
   heal: '#7ff0bd', buff: '#f6d998', debuff: '#cda1ec', teleport: '#b8a3ff',
@@ -13,7 +15,9 @@ const burstColours: Record<SpellBurst['kind'], string> = {
 export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst, now: number) {
   const age = (now - burst.born) / burst.duration
   if (age < 0 || age >= 1) return
-  const q = project(p, burst.x, burst.y + 0.22), s = p.scale, kind = burst.kind
+  const q = project(p, burst.x, burst.y + 0.22), kind = burst.kind
+  const strength = impactStrength(burst.intensity)
+  const s = p.scale * (burst.intensity ? 0.65 + strength * 0.5 : 1)
   const fade = (1 - age) ** 1.2, expand = 1 - (1 - age) ** 3
   const seed = burst.x * 2.31 + burst.y * 1.73
   ctx.save(); ctx.translate(q.x, q.y - s * 0.42)
@@ -38,14 +42,17 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
       ctx.stroke()
     }
   }
-  for (let i = 0; i < 8; i++) {
-    const angle = seed + i * Math.PI / 4
+  const particles = burst.intensity === 'light' ? 4 : burst.intensity === 'heavy' ? 10 : 7
+  for (let i = 0; i < particles; i++) {
+    const angle = seed + i * Math.PI * 2 / particles
     const radius = s * (0.12 + expand * 0.29)
     const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius * 0.85 - age * s * 0.12
     const size = s * (0.065 - age * 0.025)
     ctx.globalAlpha = fade * (0.65 + (i % 3) * 0.12)
     ctx.beginPath()
-    if (kind === 'cold') {
+    if (kind === 'physical') {
+      ctx.moveTo(x * 0.55, y * 0.55); ctx.lineTo(x, y)
+    } else if (kind === 'cold') {
       // Six-point ice crystals radiate out of the contact point.
       for (let j = 0; j < 3; j++) {
         const a = j * Math.PI / 3
@@ -80,42 +87,43 @@ export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, no
   const from = project(p, stroke.from.x, stroke.from.y + 0.3)
   const to = project(p, stroke.to.x, stroke.to.y + 0.3)
   const s = p.scale, reach = Math.hypot(to.x - from.x, to.y - from.y)
+  const contact = meleeTiming(stroke.style).contact / stroke.duration
+  const advance = Math.max(0, Math.min(1, (age - 0.16) / (contact - 0.16)))
+  const recovery = Math.max(0, (age - contact) / (1 - contact))
+  const strength = impactStrength(stroke.intensity)
   ctx.save()
   ctx.translate(from.x, from.y - s * 0.42)
   ctx.rotate(Math.atan2(to.y - from.y, to.x - from.x))
-  ctx.globalAlpha = Math.sin(Math.PI * age) * (stroke.hit ? 0.65 : 0.38)
-  ctx.strokeStyle = '#eee1c4'
-  ctx.lineWidth = Math.max(0.8, s * 0.028)
+  ctx.globalAlpha = Math.min(1, age / 0.16) * (1 - recovery) * (stroke.hit ? 0.85 : 0.4)
+  ctx.strokeStyle = stroke.tone && stroke.tone !== 'physical' ? burstColours[stroke.tone] : stroke.toId === 'player' ? '#ff8b9e' : '#eee1c4'
+  ctx.lineWidth = Math.max(0.8, s * (0.02 + strength * 0.018))
   ctx.lineCap = 'round'
-  const advance = Math.min(1, age / 0.6)
+  const tip = reach * (0.18 + advance * 0.82 - recovery * 0.12)
+  // The trail begins at the attacker; the leading edge reaches the defender
+  // on the same frame as recoil, sparks, ripples and the damage popup.
+  ctx.beginPath(); ctx.moveTo(reach * 0.12, 0); ctx.lineTo(tip, 0); ctx.stroke()
   ctx.beginPath()
   if (stroke.style === 'thrust') {
-    const tip = reach * (0.45 + advance * 0.43)
     ctx.moveTo(tip - s * 0.32, 0); ctx.lineTo(tip, 0)
     ctx.moveTo(tip - s * 0.09, -s * 0.055); ctx.lineTo(tip, 0); ctx.lineTo(tip - s * 0.09, s * 0.055)
   } else if (stroke.style === 'slash' || stroke.style === 'cleave') {
     const radius = s * (stroke.style === 'cleave' ? 0.38 : 0.27)
-    ctx.arc(reach * 0.64, 0, radius, -1.15, -1.0 + advance * 2.2)
+    ctx.arc(tip - radius, 0, radius, -1.15, -1.0 + advance * 2.2)
     ctx.stroke()
     ctx.globalAlpha *= 0.3
-    ctx.beginPath(); ctx.arc(reach * 0.64, 0, radius * 0.78, -1.05, -1.0 + advance * 1.9)
+    ctx.beginPath(); ctx.arc(tip - radius, 0, radius * 0.78, -1.05, -1.0 + advance * 1.9)
   } else if (stroke.style === 'crush') {
-    const kick = Math.sin(Math.PI * advance)
-    ctx.moveTo(reach * 0.35, -s * 0.18 * (1 - advance)); ctx.lineTo(reach * 0.83, s * 0.04)
-    for (let i = 0; i < 3; i++) {
-      const angle = (i - 1) * 0.9
-      ctx.moveTo(reach * 0.85 + Math.cos(angle) * s * 0.07, Math.sin(angle) * s * 0.07)
-      ctx.lineTo(reach * 0.85 + Math.cos(angle) * s * (0.08 + kick * 0.13), Math.sin(angle) * s * (0.08 + kick * 0.13))
-    }
+    ctx.moveTo(tip - s * 0.3, -s * 0.18 * (1 - advance)); ctx.lineTo(tip, 0)
+    ctx.moveTo(tip, -s * 0.09); ctx.lineTo(tip, s * 0.09)
   } else {
-    ctx.ellipse(reach * (0.55 + advance * 0.25), 0, s * 0.08, s * 0.12, 0, -1.6, 1.6)
+    ctx.ellipse(tip - s * 0.06, 0, s * 0.08, s * 0.1, 0, -1.6, 1.6)
   }
   ctx.stroke()
-  if (stroke.hit && age > 0.3) {
-    ctx.fillStyle = '#dcc8a3'; ctx.globalAlpha *= (1 - age) * 0.7
-    for (let i = 0; i < 3; i++) {
-      const a = i * 2.4, r = s * (age - 0.2) * 0.28
-      ctx.fillRect(reach * 0.9 + Math.cos(a) * r, Math.sin(a) * r, Math.max(0.7, s / 65), Math.max(0.7, s / 65))
+  if (stroke.hit && age >= contact) {
+    ctx.fillStyle = ctx.strokeStyle; ctx.globalAlpha = (1 - recovery) ** 2
+    for (let i = 0; i < 3 + Math.round(strength * 4); i++) {
+      const a = i * 2.4, r = s * (0.035 + recovery * (0.18 + strength * 0.15))
+      ctx.fillRect(reach + Math.cos(a) * r, Math.sin(a) * r, Math.max(0.9, s / 50), Math.max(0.9, s / 50))
     }
   }
   ctx.restore()

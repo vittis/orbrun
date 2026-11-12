@@ -1,4 +1,4 @@
-import { cellKey, emittersFor, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStrength, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
@@ -81,7 +81,11 @@ export class DungeonEffects {
 
   spell(scene: Scene, effect: SpellEffect, now: number) {
     if (!scene.playerOnLevel || !visible(scene, effect) || scene.cells.get(cellKey(effect.x, effect.y))?.occluder) return false
-    if (this.bursts.some(b => b.x === effect.x && b.y === effect.y && b.kind === effect.kind && Math.abs(now - b.born) < 0.09)) return false
+    const existing = this.bursts.find(b => b.x === effect.x && b.y === effect.y && b.kind === effect.kind && Math.abs(now - b.born) < 0.09)
+    if (existing) {
+      if (impactStrength(effect.intensity) > impactStrength(existing.intensity)) existing.intensity = effect.intensity
+      return false
+    }
     const duration = ['heal', 'buff', 'debuff', 'teleport', 'drain'].includes(effect.kind) ? 0.85 : effect.kind === 'electric' ? 0.5 : 0.7
     this.bursts.push({ ...effect, born: now, duration })
     this.bursts = this.bursts.slice(-48)
@@ -93,7 +97,7 @@ export class DungeonEffects {
     if (!scene.playerOnLevel || !visible(scene, attack.from) || !visible(scene, attack.to) || distance < 0.5 || distance > 2.9) return false
     // Multiple reports for a cleave/brand must not stack the same stroke.
     if (this.strokes.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
-    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: attack.style === 'crush' || attack.style === 'cleave' ? 0.3 : 0.23 })
+    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration })
     this.strokes = this.strokes.slice(-12)
     return true
   }
@@ -105,14 +109,15 @@ export class DungeonEffects {
       const age = (now - stroke.born) / stroke.duration
       if (age < 0 || age >= 1) continue
       const dx = stroke.to.x - stroke.from.x, dy = stroke.to.y - stroke.from.y, length = Math.hypot(dx, dy)
-      const attacker = b.x === stroke.from.x && b.y === stroke.from.y
-      const target = stroke.hit && b.x === stroke.to.x && b.y === stroke.to.y
-      const kick = attacker ? Math.sin(Math.PI * age) * 0.085
-        : target ? Math.sin(Math.PI * Math.max(0, (age - 0.22) / 0.78)) * 0.045 : 0
+      const id = combatActorId(b)
+      const attacker = stroke.fromId ? id === stroke.fromId : b.x === stroke.from.x && b.y === stroke.from.y
+      const target = stroke.hit && (stroke.toId ? id === stroke.toId : b.x === stroke.to.x && b.y === stroke.to.y)
+      const pose = meleePose(stroke.style, now - stroke.born)
+      const kick = attacker ? pose.lunge : target ? pose.recoil * (0.6 + impactStrength(stroke.intensity) * 0.4) : 0
       x += dx / length * kick; y += dy / length * kick
     }
     // Rapid actions never accumulate more than a small fraction of a cell.
-    const limit = Math.max(1, Math.hypot(x, y) / 0.12)
+    const limit = Math.max(1, Math.hypot(x, y) / 0.18)
     return { x: x / limit, y: y / limit }
   }
 

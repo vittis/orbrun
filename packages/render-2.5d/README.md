@@ -93,8 +93,12 @@ and picking regions. The existing first-person renderer remains independent.
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.
 - `effects.ts` keeps bounded melee and spell histories on the existing frame
-  clock. Confirmed `MeleeAttack` events produce a small lunge/recoil and sword,
-  thrust, axe, blunt or unarmed gestures. The app resolves these from combat
+  clock. Confirmed `MeleeAttack` events identify attacker and defender, with a
+  wind-up, directional lunge, contact and recovery for sword, thrust, axe, blunt
+  or unarmed gestures. Shared timing aligns recoil, bursts, ripples and popups
+  with contact; missed and fully absorbed hits do not create recoil or sparks.
+  Qualitative light/solid/heavy strength scales contact effects without inferring
+  an HP amount. Physical and elemental hits use distinct shapes and colors. The app resolves these from combat
   feedback and the wielded inventory item, independently of popup settings.
   Disappearing transient spell lights leave faint fire, frost, electrical or
   magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.

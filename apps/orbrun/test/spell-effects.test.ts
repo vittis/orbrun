@@ -45,7 +45,7 @@ describe('confirmed non-projectile spells and abilities', () => {
   ])('places %s on the visible target (%s)', (line, kind) => {
     const h = harness()
     h.text(line); h.feedback.flush(h.scene)
-    expect(h.feedback.takeSpells()).toEqual([{ x: 1, y: 0, kind }])
+    expect(h.feedback.takeSpells()).toMatchObject([{ x: 1, y: 0, kind }])
     expect(h.feedback.takeMelee()).toEqual([])
     expect(h.feedback.takeSpells()).toEqual([])
   })
@@ -54,7 +54,7 @@ describe('confirmed non-projectile spells and abilities', () => {
     const h = harness()
     h.text('You freeze the goblin! You kill the goblin!')
     h.feedback.flush(world(false))
-    expect(h.feedback.takeSpells()).toEqual([{ x: 1, y: 0, kind: 'cold' }])
+    expect(h.feedback.takeSpells()).toMatchObject([{ x: 1, y: 0, kind: 'cold' }])
     h.text('You freeze the goblin! You kill the goblin! You feel stronger.', 1)
     h.feedback.flush(world(false))
     expect(h.feedback.takeSpells()).toEqual([])

@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.36 — 2026-11-11
+
+- Replace estimated enemy damage numbers with light, solid and heavy hit cues that show damage type; keep confirmed numbers and player HP changes.
+- Make Dungeon (2.5D) melee travel from attacker to defender, with recoil and combat feedback timed to contact.
+
 ## 0.3.35 — 2026-11-11
 
 - Restore the latest combat popup icons, receiver colors, level-up celebration and spell effects after a stale deployment.

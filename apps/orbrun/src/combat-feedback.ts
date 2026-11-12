@@ -1,11 +1,10 @@
-import { cellKey, type Billboard, type Scene, type MeleeAttack, type SpellEffect } from '@orbrun/scene'
+import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type Billboard, type Scene, type MeleeAttack, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
 import { formattedStringToText, type GameState, type ServerMessage, type StatusEntry } from '@orbrun/webtiles'
-import { estimateDamage, hitDamageBand, woundRank, type DamageBand } from './damage-estimate'
 import { incomingMelee } from './melee-effects'
 import { spellText, spellStatuses, type SpellCue } from './spell-effects'
 
 export type PopupKind = 'hit' | 'miss' | 'block' | 'kill' | 'hurt' | 'heal' | 'status' | 'level'
-export type PopupTone = 'physical' | 'fire' | 'cold' | 'poison' | 'acid' | 'electric' | 'magic'
+export type PopupTone = DamageType
 export interface CombatPopup {
   text: string
   kind: PopupKind
@@ -22,12 +21,11 @@ export interface CombatPopup {
   followup?: boolean
   brandOnly?: boolean
   amount?: number
-  estimated?: boolean
-  band?: DamageBand
+  intensity?: HitIntensity
+  /** Presentation delay in milliseconds, measured from the confirmed attack. */
+  delay?: number
   turn?: number
   actorId?: string
-  /** A later wound update refines an earlier estimate instead of adding another hit. */
-  fromWound?: boolean
 }
 
 // Includes Crawl's set_attack_verb variants for weak/strong weapon and unarmed hits.
@@ -44,7 +42,7 @@ function toneOf(s: string): PopupTone {
   return 'physical'
 }
 
-/** Parse reported damage exactly, retaining strength bounds for an explicit estimate later. */
+/** Only reported damage becomes a number; unknown amounts retain qualitative strength. */
 export function combatText(text: string): CombatPopup[] {
   const out: CombatPopup[] = []
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
@@ -84,7 +82,7 @@ export function combatText(text: string): CombatPopup[] {
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
       const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
-      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), amount: damage ?? undefined, band: damage === null ? hitDamageBand(punctuation) : undefined, target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup, brandOnly: followup, melee })
+      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup, brandOnly: followup, melee })
     }
   }
   return out
@@ -153,7 +151,7 @@ export class CombatFeedback {
         // Max-HP changes (berserk, forms, draining, levelling) aren't damage/healing.
         if (next.max === prev.max && next.hp !== prev.hp) {
           const change = next.hp - prev.hp
-          if (change < 0 || change >= 3) this.pending.push({ kind: change < 0 ? 'hurt' : 'heal', text: change < 0 ? String(change) : '+' + change + ' HP', player: true, heavy: -change >= next.max * 0.2 })
+          if (change < 0 || change >= 3) this.pending.push({ kind: change < 0 ? 'hurt' : 'heal', text: change < 0 ? String(change) : '+' + change + ' HP', player: true, amount: Math.abs(change), intensity: hitIntensity(Math.abs(change)), heavy: -change >= next.max * 0.2 })
         }
         if (next.xl > prev.xl) this.pending.push({ kind: 'level', text: 'LEVEL ' + next.xl, player: true, heavy: true })
         for (const [text, tone] of next.statuses) if (!prev.statuses.has(text)) this.pending.push({ kind: 'status', text, tone, player: true })
@@ -222,7 +220,7 @@ export class CombatFeedback {
         && Math.max(Math.abs(b.x - scene.player.x), Math.abs(b.y - scene.player.y)) === 1)
         .sort((a, b) => Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
       const source = attackers[0]
-      if (source) this.melee.push({ from: { x: source.x, y: source.y }, to: { ...scene.player }, style: attempt.style, hit: attempt.hit })
+      if (source) this.melee.push({ from: { x: source.x, y: source.y }, to: { ...scene.player }, fromId: actorKey(source), toId: 'player', style: attempt.style, hit: attempt.hit, tone: attempt.tone, intensity: attempt.intensity })
     }
     this.melee = this.melee.slice(-12)
     const used = new Set<string>()
@@ -272,66 +270,26 @@ export class CombatFeedback {
       let kind: SpellEffect['kind'] | undefined
       if (event.kind === 'heal') kind = 'heal'
       else if (event.kind === 'status') kind = /HASTED|BERSERK|INVISIBLE|SILENCED/.test(event.text) ? 'buff' : 'debuff'
-      else if (event.kind === 'hit' && !event.melee && event.tone && event.tone !== 'physical') {
+      else if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
         // A frost/flame brand is already presented by the weapon gesture.
         const brandedMelee = resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
-        if (!brandedMelee) kind = event.tone
+        if (!brandedMelee) kind = event.tone ?? 'physical'
       }
       const position = event.player ? scene.player : event.x === undefined || event.y === undefined ? undefined : { x: event.x, y: event.y }
       // Prefer a specific direct result (draining, holy, air...) over the
       // generic tone attached to the same damage sentence.
-      if (kind && position && !(event.kind === 'hit' && this.spells.some(s => s.x === position.x && s.y === position.y))) this.spells.push({ ...position, kind })
+      if (kind && position) {
+        const existing = event.kind === 'hit' ? this.spells.find(s => s.x === position.x && s.y === position.y) : undefined
+        if (!existing) this.spells.push({ ...position, kind, intensity: event.intensity })
+        else if (impactStrength(event.intensity) > impactStrength(existing.intensity)) existing.intensity = event.intensity
+      }
     }
     this.spells = this.spells.slice(-48)
-    // Wound flags arrive independently of attack messages (often in another
-    // render frame or player turn). They refine reported hits below, but cannot
-    // establish another hit: doing so creates duplicate numbers for one attack.
-    const groups = new Map<string, CombatPopup[]>()
-    for (const event of resolved) if (event.kind === 'hit' && event.actorId && !event.fromWound) {
-      const list = groups.get(event.actorId) ?? []
-      list.push(event)
-      groups.set(event.actorId, list)
-    }
-    const replacements = new Map<CombatPopup, CombatPopup>(), removed = new Set<CombatPopup>()
-    for (const [id, hits] of groups) {
-      const unknown = hits.filter(p => p.amount === undefined)
-      if (!unknown.length) continue
-      const was = before.get(id), now = after.get(id)
-      const compatible = !was || !now || sameForm(was, now)
-      const amount = estimateDamage({
-        bands: unknown.flatMap(p => p.band ? [p.band] : []),
-        averageHp: averageHp(was ?? now),
-        before: compatible ? was?.damage : undefined,
-        after: compatible ? now?.damage : undefined,
-        killed: resolved.some(p => p.kind === 'kill' && p.actorId === id),
-        knownDamage: hits.reduce((sum, p) => sum + (p.amount ?? 0), 0),
-      })
-      if (amount === null) continue
-      // One estimate per target/turn, even for quick blades, cleave or several hits.
-      const turns = new Map<number | undefined, CombatPopup[]>()
-      for (const event of unknown) {
-        const list = turns.get(event.turn) ?? []
-        list.push(event)
-        turns.set(event.turn, list)
-      }
-      const weight = (list: CombatPopup[]) => list.reduce((sum, p) => sum + (p.band ? (p.band.min + p.band.max) / 2 : 1), 0)
-      let budget = Math.max(amount, turns.size), remainingWeight = weight(unknown), left = turns.size
-      for (const list of turns.values()) {
-        const part = left === 1 ? budget : Math.max(1, Math.min(budget - left + 1, Math.round(budget * weight(list) / remainingWeight)))
-        const first = list[0], last = list[list.length - 1]
-        replacements.set(first, { ...first, text: '≈' + part, amount: part, estimated: true, brandOnly: list.every(p => p.brandOnly), tone: last.tone ?? first.tone, heavy: part >= 18 })
-        for (const extra of list.slice(1)) removed.add(extra)
-        budget -= part; remainingWeight -= weight(list); left--
-      }
-    }
-    return resolved.filter(p => !removed.has(p)).map(p => replacements.get(p) ?? p)
+    // Wounds help resolve identity above, but never establish an HP amount.
+    return resolved
   }
 }
 
-function actorKey(b: Billboard) {
-  const id = b.id ?? (b.ref as { id?: number } | undefined)?.id
-  return id === undefined ? `cell:${b.x},${b.y}:${bare(b.name ?? '')}` : 'id:' + id
-}
 function actorsIn(scene: Scene | null) {
   const result = new Map<string, Billboard>()
   if (scene) for (const b of scene.billboards) {
@@ -339,9 +297,6 @@ function actorsIn(scene: Scene | null) {
   }
   return result
 }
-function averageHp(b: Billboard | undefined): number | undefined {
-  return (b?.ref as { typedata?: { avghp?: number } } | undefined)?.typedata?.avghp
-}
-function sameForm(a: Billboard, b: Billboard) {
-  return bare(a.name ?? '') === bare(b.name ?? '') && averageHp(a) === averageHp(b)
+function woundRank(wound: Billboard['damage']) {
+  return wound ? ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(wound) : -1
 }

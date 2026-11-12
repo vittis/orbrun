@@ -548,18 +548,27 @@ export interface SceneCursor {
 // Renderer contract
 
 /** Confirmed melee presentation. Coordinates remain the authoritative cells. */
+export type HitIntensity = 'light' | 'solid' | 'heavy'
+export type DamageType = 'physical' | 'fire' | 'cold' | 'poison' | 'acid' | 'electric' | 'magic'
+export { combatActorId, hitIntensity, impactStrength, meleeTiming, meleePose } from './combat.js'
+
 export interface MeleeAttack {
   from: { x: number; y: number }
   to: { x: number; y: number }
   style: 'slash' | 'thrust' | 'cleave' | 'crush' | 'unarmed'
   hit: boolean
+  fromId?: string
+  toId?: string
+  tone?: DamageType
+  intensity?: HitIntensity
 }
 
 /** Confirmed spell/ability feedback, independent of projectile artwork or damage. */
 export interface SpellEffect {
   x: number
   y: number
-  kind: 'cold' | 'fire' | 'electric' | 'poison' | 'acid' | 'air' | 'earth' | 'drain' | 'holy' | 'magic' | 'heal' | 'buff' | 'debuff' | 'teleport'
+  kind: DamageType | 'air' | 'earth' | 'drain' | 'holy' | 'heal' | 'buff' | 'debuff' | 'teleport'
+  intensity?: HitIntensity
 }
 
 export interface MapRenderer {

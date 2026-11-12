@@ -27,13 +27,20 @@ describe('confirmed melee presentation', () => {
   })
 
   it('recognizes explicit enemy contact while leaving spell and projectile hits alone', () => {
-    expect(incomingMelee('The goblin hits you with a +0 club. The adder bites you!')).toEqual([
+    expect(incomingMelee('The goblin hits you with a +0 club. The adder bites you!')).toMatchObject([
       { attacker: 'goblin', style: 'crush', hit: true }, { attacker: 'adder', style: 'unarmed', hit: true },
     ])
-    expect(incomingMelee('The orc barely misses you.')).toEqual([{ attacker: 'orc', style: 'unarmed', hit: false }])
+    expect(incomingMelee('The orc barely misses you.')).toMatchObject([{ attacker: 'orc', style: 'unarmed', hit: false }])
     expect(incomingMelee('The orc hits you with a mace but does no damage.')[0]?.hit).toBe(false)
-    expect(incomingMelee('The bolt of fire hits you! The wall freezes you. The centaur hits you with a shortbow. The goblin hits you with a dart.')).toEqual([
+    expect(incomingMelee('The bolt of fire hits you! The wall freezes you. The centaur hits you with a shortbow. The goblin hits you with a dart.')).toMatchObject([
       { attacker: 'bolt of fire', style: 'unarmed', hit: true },
     ]) // Non-actors are discarded when resolving the scene, not guessed to be attackers.
+  })
+  it('recognizes engine-reported incoming damage without treating the amount as a weapon', () => {
+    expect(incomingMelee('The goblin hits you with a +0 club for 12!')).toMatchObject([
+      { attacker: 'goblin', style: 'crush', hit: true, intensity: 'solid' },
+    ])
+    expect(incomingMelee('The adder bites you for 0.')[0].hit).toBe(false)
+    expect(incomingMelee('The adder bites you for 3.')[0].intensity).toBe('light')
   })
 })

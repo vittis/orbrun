@@ -8,6 +8,7 @@ import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { CombatPopups } from '../src/combat-popups'
+import { presentCombat } from '../src/combat-presentation'
 
 const tiles = await loadRoomTiles()
 const { scene } = antechamberScene(tiles)
@@ -15,7 +16,7 @@ scene.player = { x: 11, y: 5 }
 scene.playerOnLevel = true
 scene.billboards.push(
   { x: 11, y: 5, tile: 4519, kind: 'player', height: 1 },
-  { x: 11, y: 3, tile: 7189, kind: 'monster', height: 0.8, attitude: 'hostile', name: 'goblin', ref: { id: 1, name: 'goblin' } },
+  { x: 11, y: 4, tile: 7189, kind: 'monster', height: 0.8, attitude: 'hostile', name: 'goblin', ref: { id: 1, name: 'goblin' } },
   { x: 13, y: 4, tile: 7114, kind: 'monster', height: 1, attitude: 'hostile', name: 'orc', ref: { id: 2, name: 'orc' } },
 )
 const state = initialState()
@@ -53,29 +54,30 @@ function choose() {
 }
 function frame(now: number) {
   raf = 0
-  renderer.render(now / 1000)
+  const time = paused ? freezeAt : now
+  renderer.render(time / 1000)
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
-  popups.render(paused ? freezeAt : now, renderer, scene, canvas, mode === '3d', reduced)
-  if (popups.active || renderer.animating) wake()
+  popups.render(time, renderer, scene, canvas, mode === '3d', reduced)
+  if (!paused && (popups.active || renderer.animating)) wake()
 }
 function wake() { if (!raf) raf = requestAnimationFrame(frame) }
 function send(msg: ServerMessage) { reduce(state, msg); feedback.observe(state, msg) }
 function play(kind: string) {
   send({ msg: 'player', turn: state.player.turn + 1 })
   const messages: Record<string, string> = {
-    hit: 'You slash the goblin!!', exact: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
+    light: 'You slash the goblin.', solid: 'You slash the goblin!', hit: 'You slash the goblin!!', dart: 'The magic dart hits the goblin!', exact: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
     fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
     block: 'You block the goblin\'s attack.', kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
-    dodge: 'The goblin misses you.', enemyBlock: 'The goblin blocks your attack.',
+    incoming: 'The goblin hits you with a +0 club!', dodge: 'The goblin misses you.', enemyBlock: 'The goblin blocks your attack.',
   }
-  if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })
-  if (kind === 'hurt') {
+  if (kind === 'hurt' || kind === 'incoming') {
     Object.assign(state.player, { hp: 30 })
     feedback.observe(state, { msg: 'player' })
     feedback.flush(scene)
     send({ msg: 'player', hp: 21 })
   }
+  if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })
   if (kind === 'status') {
     send({ msg: 'player', status: [] }); feedback.flush(scene)
     send({ msg: 'player', status: [{ light: 'Pois', text: 'poisoned' }] })
@@ -83,7 +85,11 @@ function play(kind: string) {
   if (kind === 'heal') send({ msg: 'player', hp: state.player.hp + 7 })
   if (kind === 'level') send({ msg: 'player', xl: state.player.xl + 1 })
   const now = performance.now()
-  popups.add(feedback.flush(scene), now)
+  const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
+  if (renderer instanceof Render25d) renderer.setOptions({ animate: !reduced })
+  const events = feedback.flush(scene)
+  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), 'long sword', now, mode === '2.5d' && !reduced)
+  popups.add(timed, now)
   if (paused) freezeAt = now + 180
   wake()
 }
@@ -98,4 +104,7 @@ document.getElementById('paused')!.addEventListener('change', e => {
   if (!paused) popups.clear()
   wake()
 })
-document.getElementById('reduced')!.addEventListener('change', wake)
+document.getElementById('reduced')!.addEventListener('change', () => {
+  if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
+  wake()
+})

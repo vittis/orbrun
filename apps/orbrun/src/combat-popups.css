@@ -32,7 +32,7 @@
   display: inline-flex;
   align-items: center;
   transform-origin: 50% 75%;
-  animation: combat-number-enter 280ms both;
+  animation: combat-number-enter 200ms both;
   will-change: transform, opacity;
 }
 .combat-icon {
@@ -49,30 +49,10 @@
   to { opacity: 0.85; }
 }
 @keyframes combat-number-enter {
-  0% { opacity: 0; transform: translateY(8px) scale(0.25); animation-timing-function: cubic-bezier(0.16, 0.8, 0.35, 1); }
-  45% { opacity: 1; transform: translateY(-3px) scale(1.2); animation-timing-function: ease-in-out; }
+  0% { opacity: 1; transform: translateY(0) scale(0.85); animation-timing-function: cubic-bezier(0.16, 0.8, 0.35, 1); }
+  30% { opacity: 1; transform: translateY(-3px) scale(1.15); animation-timing-function: ease-in-out; }
   75% { transform: translateY(0) scale(0.94); animation-timing-function: ease-out; }
   100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-.combat-estimate {
-  display: inline-block;
-  margin-right: 0.09em;
-  font-size: 0.65em;
-  font-weight: 500;
-  opacity: 0.8;
-  vertical-align: 0.12em;
-}
-.combat-popups[data-estimates="true"]::after {
-  content: '≈ estimated';
-  position: absolute;
-  right: 12px;
-  bottom: 10px;
-  padding: 3px 6px;
-  border-radius: 3px;
-  background: #080c13bb;
-  color: #bbc2cb;
-  font: 11px/1.3 var(--mono, monospace);
-  text-shadow: 0 1px 2px #000;
 }
 .combat-popup[hidden] { display: none; }
 .combat-popup.on-player { --recipient: #7be3ff; }
@@ -152,4 +132,20 @@
   .combat-popup { will-change: opacity; }
   .combat-value::after { display: none; }
   .combat-popup:not([data-motion="full"]) .combat-celebration { display: none; }
+}
+
+/* Unknown amounts use a short contact symbol, never a floating HP estimate. */
+.combat-popup.visual-hit { --impact: var(--element, #eee1c4); font-size: 18px; }
+.combat-popup.visual-hit.intensity-solid { font-size: 25px; }
+.combat-popup.visual-hit.intensity-heavy { font-size: 33px; }
+.combat-popup.visual-hit[data-motion="full"] .combat-number { animation: combat-contact 240ms both; }
+.combat-popup.visual-hit .combat-icon { filter: drop-shadow(0 0 3px var(--impact)) drop-shadow(0 1px 1px #100e16); }
+.combat-popup.visual-hit.cold .combat-icon { filter: drop-shadow(1px 0 #effcff) drop-shadow(0 0 3px #88dfff); }
+.combat-popup.visual-hit.electric .combat-icon { filter: drop-shadow(-2px 0 #75baff) drop-shadow(2px 0 #fff); }
+.combat-popup.visual-hit.poison .combat-icon, .combat-popup.visual-hit.acid .combat-icon { filter: drop-shadow(0 3px 3px var(--impact)); }
+@keyframes combat-contact {
+  0% { opacity: 1; transform: scale(1.25); }
+  20% { opacity: 1; transform: scale(1.1); }
+  65% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0.75; transform: scale(0.9); }
 }

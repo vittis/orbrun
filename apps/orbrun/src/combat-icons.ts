@@ -1,5 +1,6 @@
 /** Small, monochrome combat symbols; SVG keeps them consistent across platforms. */
 const paths = {
+  hit: 'm12 2 2 7 7-4-5 7 6 2-8 1 3 7-6-5-4 5 1-8-7-2 7-3Z',
   armor: 'M8 3 4 5 2 10l4 2v9h12v-9l4-2-2-5-4-2c0 4-8 4-8 0Z M9 12h6 M9 16h6',
   shield: 'M12 3 3 6v6c0 5 9 9 9 9s9-4 9-9V6Z M8 12l3 3 5-6',
   miss: 'M4 8h11l-4-4 M15 8l-4 4 M20 16H9l4-4 M9 16l4 4',

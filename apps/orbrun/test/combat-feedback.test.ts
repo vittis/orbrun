@@ -34,7 +34,8 @@ describe('combat sentences', () => {
   ])('recognizes trunk Ice Thorns damage: %s', text => {
     const [hit] = combatText(text)
     expect(hit).toMatchObject({ kind: 'hit', target: 'the goblin', tone: 'cold', text: 'HIT' })
-    expect(hit.band?.min).toBeGreaterThan(0)
+    expect(hit.intensity).toBeDefined()
+    expect(hit.amount).toBeUndefined()
   })
 
   it.each([
@@ -44,7 +45,7 @@ describe('combat sentences', () => {
     'The ice thorns skewer the goblin for 0 damage.',
   ])('retains an explicit zero without estimating damage: %s', text => {
     expect(combatText(text)).toMatchObject([{ kind: 'hit', target: 'the goblin', amount: 0, text: '0' }])
-    expect(combatText(text)[0].band).toBeUndefined()
+    expect(combatText(text)[0].amount).toBe(0)
   })
 
   it.each([
@@ -101,11 +102,11 @@ describe('combat updates', () => {
     const h = harness()
     h.text('The goblin hits you with a +0 club.')
     expect(h.feedback.flush(h.scene)).toEqual([])
-    expect(h.feedback.takeMelee()).toEqual([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'crush', hit: true }])
+    expect(h.feedback.takeMelee()).toMatchObject([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'crush', hit: true }])
     expect(h.feedback.takeMelee()).toEqual([])
     h.text('The bolt of fire hits you! The goblin barely misses you.')
     h.feedback.flush(h.scene)
-    expect(h.feedback.takeMelee()).toEqual([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'unarmed', hit: false }])
+    expect(h.feedback.takeMelee()).toMatchObject([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'unarmed', hit: false }])
   })
 
   it('places Ice Thorns zero and damage popups on a stepping enemy without requiring a wound change', () => {
@@ -114,14 +115,14 @@ describe('combat updates', () => {
     const moved = world(goblin(1, 2))
     expect(feedback.flush(moved)).toMatchObject([{ kind: 'hit', actorId: 'id:1', x: 2, y: 0, amount: 0, text: '0', tone: 'cold' }])
     text('The ice thorns skewer the goblin.')
-    expect(feedback.flush(moved)).toMatchObject([{ kind: 'hit', actorId: 'id:1', x: 2, estimated: true, amount: 4, tone: 'cold' }])
+    expect(feedback.flush(moved)).toMatchObject([{ kind: 'hit', actorId: 'id:1', x: 2, text: 'HIT', intensity: 'light', tone: 'cold' }])
     expect(feedback.flush(scene)).toEqual([])
   })
 
   it('does not replay an Ice Thorns hit when Crawl appends a wound sentence', () => {
     const { feedback, scene, text } = harness()
     text('The ice thorns skewer the goblin!')
-    expect(feedback.flush(scene)).toMatchObject([{ text: '≈12', estimated: true, tone: 'cold' }])
+    expect(feedback.flush(scene)).toMatchObject([{ text: 'HIT', intensity: 'solid', tone: 'cold' }])
     text('The ice thorns skewer the goblin! The goblin is heavily wounded.', 1)
     expect(feedback.flush(scene)).toEqual([])
   })
@@ -132,7 +133,7 @@ describe('combat updates', () => {
     feedback.flush(scene)
     text('<lightgrey>You perforate the hornet like a sieve!!!<lightgrey> <red>You kill the hornet!<lightgrey>')
     expect(feedback.flush(world())).toMatchObject([
-      { kind: 'hit', actorId: 'id:7', x: 1, y: 0, estimated: true },
+      { kind: 'hit', actorId: 'id:7', x: 1, y: 0, intensity: 'heavy' },
       { kind: 'kill', actorId: 'id:7', x: 1, y: 0 },
     ])
   })
@@ -146,7 +147,7 @@ describe('combat updates', () => {
       reduce(state, msg); feedback.observe(state, msg)
       events.push(...feedback.flush(scene))
     }
-    expect(events.some(p => p.kind === 'hit' && p.estimated && p.amount! > 0)).toBe(true)
+    expect(events.some(p => p.kind === 'hit' && p.amount === undefined && p.intensity)).toBe(true)
     expect(events.some(p => p.kind === 'miss' && p.text === 'MISS')).toBe(true)
     expect(events.some(p => p.kind === 'hurt' && p.player)).toBe(true)
   })
@@ -164,14 +165,14 @@ describe('combat updates', () => {
     expect(feedback.flush(scene)).toEqual([])
     const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin!' }] }
     reduce(state, msg); feedback.observe(state, msg)
-    expect(feedback.flush(scene).map(p => p.text)).toEqual(['≈12'])
+    expect(feedback.flush(scene).map(p => p.text)).toEqual(['HIT'])
   })
   it('folds an unknown brand hit into its base hit, retaining actual damage', () => {
     const { feedback, scene, text } = harness()
     text('The bolt hits the goblin for 7! The bolt burns the goblin!')
     expect(feedback.flush(scene)).toMatchObject([{ text: '7', tone: 'fire' }])
     text('You hit the goblin. You freeze the goblin!')
-    expect(feedback.flush(scene)).toMatchObject([{ text: '≈4', tone: 'cold', estimated: true }])
+    expect(feedback.flush(scene)).toMatchObject([{ text: 'HIT', tone: 'cold', intensity: 'light' }])
   })
   it('handles appended message rollbacks without repeating a hit', () => {
     const { feedback, scene, text } = harness()
@@ -248,31 +249,38 @@ function wounded(id: number, x: number, damage: Billboard['damage'], hp = 100): 
   return { ...goblin(id, x), damage, ref: { id, name: 'goblin', typedata: { avghp: hp } } }
 }
 
-describe('estimated outgoing damage', () => {
-  it('refines an unknown hit with the observed wound decline', () => {
+describe('confirmed numbers and qualitative hits', () => {
+  it('uses the strongest simultaneous hit for one burst without creating a total damage number', () => {
+    const { feedback, scene, text } = harness()
+    text('The magic dart hits the goblin. The magic dart hits the goblin!')
+    const hits = feedback.flush(scene)
+    expect(hits.map(h => h.amount)).toEqual([undefined, undefined])
+    expect(feedback.takeSpells()).toMatchObject([{ kind: 'magic', intensity: 'solid' }])
+  })
+  it('never derives a number from a wound decline or average HP', () => {
     const { feedback, text } = harness()
     feedback.flush(world(wounded(1, 1, 'uninjured', 20)))
     text('You hit the goblin.')
-    expect(feedback.flush(world(wounded(1, 1, 'lightly_damaged', 20)))).toMatchObject([{ amount: 3, text: '≈3', estimated: true }])
+    expect(feedback.flush(world(wounded(1, 1, 'lightly_damaged', 20)))).toMatchObject([{ amount: undefined, text: 'HIT', intensity: 'light' }])
   })
-  it('still shows a positive estimate when damage stays inside one health category', () => {
+  it('keeps Magic Dart qualitative even when punctuation previously produced 12', () => {
     const { feedback, text } = harness()
     const scene = world(wounded(1, 1, 'moderately_damaged'))
     feedback.flush(scene)
-    text('You hit the goblin!')
+    text('The magic dart hits the goblin!')
     const [hit] = feedback.flush(scene)
-    expect(hit.estimated).toBe(true)
-    expect(hit.amount).toBeGreaterThan(0)
-    expect(hit.text).not.toBe('HIT')
+    expect(hit.intensity).toBe('solid')
+    expect(hit.amount).toBeUndefined()
+    expect(hit.text).toBe('HIT')
   })
-  it('groups several strikes in one turn but keeps different turns separate', () => {
+  it('keeps individual hit feedback without inventing a combined amount', () => {
     const { feedback, scene, send, text } = harness()
     text('You hit the goblin. You hit the goblin.')
-    expect(feedback.flush(scene)).toMatchObject([{ text: '≈7', amount: 7, estimated: true }])
+    expect(feedback.flush(scene)).toMatchObject([{ text: 'HIT', amount: undefined }, { text: 'HIT', amount: undefined }])
     send({ msg: 'msgs', messages: [{ text: 'You hit the goblin.', turn: 20 }, { text: 'You hit the goblin.', turn: 21 }] })
     const hits = feedback.flush(scene)
     expect(hits.map(p => p.turn)).toEqual([20, 21])
-    expect(hits.reduce((n, p) => n + p.amount!, 0)).toBe(7)
+    expect(hits.every(p => p.amount === undefined && p.text === 'HIT')).toBe(true)
   })
   it('never estimates over an exact reported number or an explicit zero', () => {
     const { feedback, text } = harness()
@@ -280,15 +288,14 @@ describe('estimated outgoing damage', () => {
     text('You hit the goblin for 8!')
     const [hit] = feedback.flush(world(wounded(1, 1, 'heavily_damaged')))
     expect(hit.text).toBe('8')
-    expect(hit.estimated).not.toBe(true)
     text('You hit the goblin but do no damage.')
     expect(feedback.flush(world(wounded(1, 1, 'heavily_damaged')))).toMatchObject([{ text: '0', amount: 0 }])
   })
-  it('retains estimated damage alongside a kill and caps average net overkill', () => {
+  it('retains the impact alongside a kill without estimating overkill', () => {
     const { feedback, text } = harness()
     feedback.flush(world(wounded(1, 1, 'uninjured', 10)))
     text('You impale the goblin!!! You kill the goblin!')
-    expect(feedback.flush(world()).map(p => p.text)).toEqual(['≈10', 'SLAIN'])
+    expect(feedback.flush(world()).map(p => p.text)).toEqual(['HIT', 'SLAIN'])
   })
   it('uses wound evidence to choose a farther same-name target', () => {
     const { feedback, text } = harness()
@@ -296,7 +303,7 @@ describe('estimated outgoing damage', () => {
     text('You hit the goblin!!')
     const hits = feedback.flush(world(wounded(1, 1, 'uninjured'), wounded(2, 3, 'moderately_damaged')))
     expect(hits).toHaveLength(1)
-    expect(hits[0]).toMatchObject({ actorId: 'id:2', x: 3, estimated: true })
+    expect(hits[0]).toMatchObject({ actorId: 'id:2', x: 3, intensity: 'heavy' })
   })
   it('does not emit independent damage numbers from wound-status changes', () => {
     const { feedback } = harness()

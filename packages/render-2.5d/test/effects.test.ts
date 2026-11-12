@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellKey, emptyScene, type Billboard, type MeleeAttack, type Scene } from '@orbrun/scene'
+import { cellKey, emptyScene, meleeTiming, type Billboard, type MeleeAttack, type Scene } from '@orbrun/scene'
 import { DungeonEffects } from '../src/effects.js'
 
 function world(): Scene {
@@ -105,7 +105,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     fx.melee(scene, attack, 1)
     expect(fx.offset(player, 1.1).x).toBeGreaterThan(0)
-    expect(fx.offset(target, 1.1).x).toBeGreaterThan(0)
+    expect(fx.offset(target, 1.2).x).toBeGreaterThan(0)
     expect(player.x).toBe(0); expect(target.x).toBe(1)
     expect(fx.offset({ ...player, life: { held: true } }, 1.1).x).toBe(0)
     fx.tick(scene, 2)
@@ -116,6 +116,20 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.offset(player, 2.1).x).toBeGreaterThan(0)
   })
 
+  it('keeps recoil after contact and assigns the lunge to the incoming attacker by ID', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    const enemy = { ...target, id: 7 }, receiver = { ...player }
+    fx.melee(scene, { ...attack, from: attack.to, to: attack.from, fromId: 'id:7', toId: 'player' }, 1)
+    const contact = 1 + meleeTiming('slash').contact
+    expect(fx.offset(receiver, contact - 0.001)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(enemy, contact).x).toBeLessThan(-0.1)
+    expect(fx.offset(receiver, contact + 0.04).x).toBeLessThan(0)
+    // A different actor standing at the attacker's cell must not lunge.
+    expect(fx.offset({ ...enemy, id: 8 }, contact)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(enemy, 1.5)).toEqual({ x: 0, y: 0 })
+  })
+
   it('deduplicates rapid reports, caps history and motion, and refuses hidden targets', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
@@ -123,7 +137,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.strokes).toHaveLength(1)
     for (let i = 0; i < 100; i++) fx.melee(scene, attack, 2 + i * 0.1)
     expect(fx.strokes.length).toBeLessThanOrEqual(12)
-    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.12)
+    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.18)
     scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     fx.tick(scene, 12)
     expect(fx.strokes).toHaveLength(0)
