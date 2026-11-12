@@ -13,6 +13,7 @@ import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
+import { sampleMeleeSpray } from './melee-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
@@ -279,7 +280,15 @@ export class Render25d implements MapRenderer {
         const actor = burst.actorId && this.scene.billboards.find(b => combatActorId(b) === burst.actorId)
         const position = actor ? this.actorPosition(actor, now) : burst
         if (!cell || cell.occluder || !this.inFrame(p, position)) continue
-        standing.push({ cell, burst, x: position.x, y: position.y, depth: position.y + 0.65 })
+        if (burst.spray) {
+          for (const particle of sampleMeleeSpray(this.scene, burst, now, position)) {
+            if (particle.ground) deathParticles.push(particle)
+            else {
+              const cell = this.scene.cells.get(cellKey(Math.round(particle.x), Math.round(particle.y)))!
+              standing.push({ cell, death: particle, x: particle.x, y: particle.y, depth: particle.y + 0.65 })
+            }
+          }
+        } else standing.push({ cell, burst, x: position.x, y: position.y, depth: position.y + 0.65 })
         this.active = true
       }
       standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
