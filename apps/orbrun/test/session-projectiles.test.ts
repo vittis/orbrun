@@ -44,11 +44,11 @@ function harness(animate = true) {
     frames.push(event.scene.billboards.filter(b => b.kind === 'projectile').map(b => b.tile))
     renderer.setScene(event.scene, 1)
   })
-  return { session, deliver, renderer, frames }
+  return { session, deliver, renderer, frames, ctx }
 }
 
 describe('projectile receipt before the next animation frame', () => {
-  it.each(['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW'])('preserves a complete %s flight in one synchronous message burst', name => {
+  it.each(['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW', 'MI_ARROW2', 'BOLT_STONE_ARROW_2'])('preserves a complete %s flight in one synchronous message burst', name => {
     const { session, deliver, renderer, frames } = harness()
     const tile = gd.main.id(name)!
     const draws: { tile: number; thin: boolean | undefined }[] = []
@@ -72,6 +72,22 @@ describe('projectile receipt before the next animation frame', () => {
       expect(renderer.animating).toBe(true) // impact/traces outlive the short projectile
       renderer.render(4)
       expect(renderer.animating).toBe(false)
+    } finally { draw.mockRestore(); renderer.destroy(); session.close() }
+  })
+
+  it('rotates a north-facing stone-arrow sprite onto an eastbound flight', () => {
+    const { session, deliver, renderer, ctx } = harness()
+    const tile = gd.main.id('BOLT_STONE_ARROW')!
+    const draw = vi.spyOn(TileCache.prototype, 'drawPlane').mockReturnValue(true)
+    try {
+      for (const x of [1, 2]) deliver({ msg: 'map', cells: [
+        { x, y: 0, t: { ov: [tile] } }, ...(x > 1 ? [{ x: x - 1, y: 0, t: { ov: [] } }] : []),
+      ] })
+      deliver({ msg: 'map', cells: [{ x: 2, y: 0, t: { ov: [] } }] })
+      session.flushScene()
+      renderer.render(1.016)
+      expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2)
+      expect(draw.mock.calls.filter(c => c[1][0].tile === tile)).toHaveLength(1)
     } finally { draw.mockRestore(); renderer.destroy(); session.close() }
   })
 

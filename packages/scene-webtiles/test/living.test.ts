@@ -16,6 +16,15 @@ describe('server tile semantics for atmosphere', () => {
       expect(projectileAppearance(name)).toMatchObject({ beam: false })
     }
   })
+  it('distinguishes directional artwork from distance/animation variants', () => {
+    expect(projectileAppearance('MI_ARROW0')).toMatchObject({ family: 'MI_ARROW', angle: -Math.PI / 2 })
+    expect(projectileAppearance('MI_ARROW6')).toMatchObject({ family: 'MI_ARROW', angle: Math.PI })
+    expect(projectileAppearance('BOLT_STONE_ARROW_2')).toMatchObject({ family: 'BOLT_STONE_ARROW', angle: 0 })
+    expect(projectileAppearance('BOLT_IRON_SHOT_5')).toMatchObject({ family: 'BOLT_IRON_SHOT', angle: 3 * Math.PI / 4 })
+    for (const name of ['BOLT_MAGIC_DART_3', 'BOLT_SANDBLAST_2', 'BOLT_FROST_1']) {
+      expect(projectileAppearance(name)).not.toHaveProperty('angle')
+    }
+  })
   it('preserves compact/unknown missile art and deliberately invisible spells', () => {
     expect(projectileAppearance('BOLT_MAGIC_DART')).toMatchObject({ beam: false })
     expect(projectileAppearance('MI_BOLT_MAGIC')).toMatchObject({ beam: false })

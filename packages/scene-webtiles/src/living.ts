@@ -43,10 +43,21 @@ export function tileMotion(name: string): LifeMotion | undefined {
   if (/SCROLL|BOOK/.test(name)) return 'paper'
 }
 
+/** Crawl's directional tile variants run clockwise from north. Other spell
+ * variants (magic dart, sandblast, frost) describe animation/distance, not aim.
+ * Keep that distinction when interpreting server artwork. */
+function projectileArt(name: string): Pick<ProjectileAppearance, 'angle' | 'family'> {
+  const missile = /^(MI_(?:ARROW|BOLT|DART|JAVELIN|THROWING_NET|SLUG))([0-7])$/.exec(name)
+  const spell = /^(BOLT_(?:STONE_ARROW|CRYSTAL_SPEAR|ICICLE(?:_SALVO)?|LIGHT|IRON_SHOT|BLOOD_ARROW|SPLINTERSPRAY|PIE|POISON_ARROW|SHADOW_SHOT|FORCE_LANCE|HARPOON_SHOT|METAL_SPLINTERS|FROSTFIRE|SIROCCO))(?:_([1-7]))?$/.exec(name)
+  const directional = missile ?? spell
+  if (directional) return { family: directional[1], angle: Number(directional[2] ?? 0) * Math.PI / 4 - Math.PI / 2 }
+  return { family: name.replace(/_\d+$/, '') }
+}
+
 /** Projectile presentation is independent of emission: sand/rocks must not glow. */
 export function projectileAppearance(name: string): ProjectileAppearance | false {
   if (/_GONE|_EXPIRED|_INACTIVE|BOLT_DEFAULT_BLACK/.test(name)) return false
-  const appearance = (kind: ProjectileAppearance['kind'], colour: ProjectileAppearance['colour'], beam = false): ProjectileAppearance => ({ kind, colour, beam })
+  const appearance = (kind: ProjectileAppearance['kind'], colour: ProjectileAppearance['colour'], beam = false): ProjectileAppearance => ({ kind, colour, beam, ...projectileArt(name) })
   if (/SANDBLAST|DUST|FRAG/.test(name)) return appearance('sand', [216, 181, 116])
   if (/STONE|ROCK|BOULDER/.test(name)) return appearance('stone', [184, 168, 137])
   if (/ARROW|BOLT|DART|JAVELIN|TOMAHAWK|SPEAR|BOOMERANG|BULLET/.test(name) && /^MI_/.test(name)) return appearance('metal', [190, 200, 210])
@@ -100,7 +111,7 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
     else {
       const glow = tileLight(tileName)
       b.life = { motion: b.kind === 'cloud' ? 'cloud' : b.kind === 'player' ? 'breath' : tileMotion(tileName), lights: glow ? [glow] : undefined,
-        projectile: b.kind === 'projectile' ? projectileAppearance(tileName) : undefined }
+        projectile: b.kind === 'projectile' ? projectileAppearance(gd.main.name(b.tile) ?? tileName) : undefined }
     }
     if (b.kind === 'player') {
       const hp = state.player.hp / Math.max(1, state.player.hp_max)

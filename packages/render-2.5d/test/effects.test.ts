@@ -63,16 +63,16 @@ describe('bounded dungeon combat presentation', () => {
     const sand = { ...spell(), life: { projectile: { kind: 'sand' as const, colour: [216, 181, 116] as [number, number, number], beam: false } } }
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [sand] }, 1, true)
-    expect(fx.projectiles(1)).toMatchObject([{ tile: sand.tile, x: 0 }])
+    expect(fx.projectiles(1)).toMatchObject([{ tile: sand.tile, x: 1 }])
     fx.observe({ ...scene, billboards: [] }, 1.001, true)
     expect(fx.projectiles(1.016)).toHaveLength(1)
-    expect(fx.projectiles(1.016)[0].x).toBeCloseTo(0.32)
+    expect(fx.projectiles(1.016)[0].x).toBe(1)
     expect(fx.traces).toHaveLength(0)
     fx.tick(scene, 1.09)
-    expect(fx.traces).toMatchObject([{ born: 1.085, appearance: { kind: 'sand' }, source: { power: 0 } }])
+    expect(fx.traces).toMatchObject([{ born: 1.04, appearance: { kind: 'sand' }, source: { power: 0 } }])
     fx.observe({ ...scene, billboards: [] }, 1.1, true)
     expect(fx.traces).toHaveLength(1)
-    expect(fx.traces[0].born).toBeCloseTo(1.085)
+    expect(fx.traces[0].born).toBeCloseTo(1.04)
     fx.tick(scene, 1.2)
     expect(fx.projectiles(1.2)).toHaveLength(0)
     expect(fx.traces).toHaveLength(1)
@@ -100,19 +100,84 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1, true)
-    for (const [time, x] of [[1.025, 0.5], [1.075, 1.5], [1.125, 2.5], [1.16, 3]]) {
+    for (const [time, x] of [[1.0125, 0.5], [1.0375, 1.5], [1.0625, 2.5], [1.074, 2.96]]) {
       const shots = fx.projectiles(time)
       expect(shots).toHaveLength(1)
       expect(shots[0].x).toBeCloseTo(x)
       fx.tick(scene, time)
       expect(fx.traces).toHaveLength(0)
     }
-    fx.tick(scene, 1.19)
-    expect(fx.projectiles(1.19)).toEqual([])
+    fx.tick(scene, 1.075)
+    expect(fx.projectiles(1.075)).toEqual([])
     expect(fx.traces).toMatchObject([{ source: { x: 3, y: 0 } }])
     expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
     fx.tick(scene, 1.2)
     expect(fx.traces).toHaveLength(1)
+  })
+
+  it('never launches an incoming shot backwards from its target', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [spell(1)] }, 1, true)
+    // With no known shooter, wait at the confirmed sample instead of choosing
+    // the nearby player (who is actually the target) as the launch point.
+    expect(fx.projectiles(1)).toMatchObject([{ x: 1 }])
+    fx.observe({ ...scene, billboards: [spell(0)] }, 1.001, true)
+    fx.observe(scene, 1.002, true)
+    expect(fx.projectiles(1.0135)[0].x).toBeCloseTo(0.5)
+    fx.tick(scene, 1.042)
+    expect(fx.bursts).toMatchObject([{ x: 0, y: 0, impact: true }])
+  })
+
+  it('never pulls an already displayed missile back to an inferred shooter', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [spell(1)] }, 1, true)
+    expect(fx.projectiles(1.01)[0].x).toBe(1)
+    fx.observe({ ...scene, billboards: [spell(2)] }, 1.02, true)
+    expect(fx.projectiles(1.02)[0].x).toBeGreaterThanOrEqual(1)
+    expect(fx.projectiles(1.0325)[0].x).toBeCloseTo(1.5)
+  })
+
+  it('keeps consecutive short shots from becoming a return flight', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    for (const x of [1, 2]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
+    fx.observe(scene, 1, true)
+    fx.observe({ ...scene, billboards: [spell(1)] }, 1.001, true)
+    expect(fx.projectiles(1.0125)).toHaveLength(2)
+    expect(fx.projectiles(1.0375)[0].x).toBeCloseTo(1.5)
+  })
+
+  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]])('flies correctly in direction %s,%s, even with cells supplied in reverse order', (dx, dy) => {
+    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(0, 0))!
+    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) scene.cells.set(cellKey(x, y), { ...cell, x, y })
+    const shot = (n: number): Billboard => ({ ...spell(), x: dx * n, y: dy * n, life: { projectile: {
+      kind: 'metal', colour: [190, 200, 210], beam: false, family: 'MI_ARROW', angle: Math.atan2(dy, dx),
+    } } })
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [shot(2), shot(1)] }, 1, true)
+    fx.observe(scene, 1, true)
+    const halfway = fx.projectiles(1 + Math.hypot(dx, dy) / 80)
+    expect(halfway).toHaveLength(1)
+    expect(halfway[0].x).toBeCloseTo(dx * 0.5)
+    expect(halfway[0].y).toBeCloseTo(dy * 0.5)
+    expect(halfway[0].rotation).toBeCloseTo(0)
+    fx.tick(scene, 1.08)
+    expect(fx.projectiles(1.08)).toEqual([])
+    expect(fx.bursts).toMatchObject([{ x: dx * 2, y: dy * 2 }])
+  })
+
+  it('rotates directional artwork to the complete origin/destination angle', () => {
+    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(0, 0))!
+    for (let x = 0; x <= 3; x++) scene.cells.set(cellKey(x, 1), { ...cell, x, y: 1 })
+    const shot = (x: number, y: number): Billboard => ({ ...spell(x), y, life: { projectile: {
+      kind: 'stone', colour: [184, 168, 137], beam: false, family: 'BOLT_STONE_ARROW', angle: -Math.PI / 2,
+    } } })
+    fx.observe(scene, 0, true)
+    for (const b of [shot(1, 0), shot(2, 1), shot(3, 1)]) fx.observe({ ...scene, billboards: [b] }, 1, true)
+    const b = fx.projectiles(1.01)[0]
+    expect(b.rotation).toBeCloseTo(Math.atan2(1, 3) + Math.PI / 2)
   })
 
   it('creates the arrival VFX for a wall endpoint too', () => {
@@ -121,7 +186,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1, true)
-    fx.tick(scene, 1.19)
+    fx.tick(scene, 1.075)
     expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
   })
 
@@ -143,7 +208,7 @@ describe('bounded dungeon combat presentation', () => {
     const shot = { ...scene, billboards: [spell()] }
     fx.observe(shot, 1, true)
     fx.observe(shot, 1.01, true)
-    expect(fx.projectiles(1.025)[0].x).toBeCloseTo(0.5)
+    expect(fx.projectiles(1.025)[0].x).toBe(1)
     expect(fx.projectiles(1.1)).toMatchObject([{ x: 1 }])
     expect(fx.traces).toEqual([])
   })

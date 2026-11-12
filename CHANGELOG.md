@@ -4,6 +4,8 @@ Notable changes to Orbrun, newest first.
 
 ## 0.3.46 — 2026-11-12
 
+- Keep projectiles moving toward their targets, double travel speed, and align directional sprites with their flight.
+
 - Start death VFX as soon as the enemy disappears, removing the brief gap before gore and debris appear.
 
 ## 0.3.45 — 2026-11-12
