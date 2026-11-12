@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.37 — 2026-11-12
+
+- Make idle breathing more pronounced while keeping its slow rhythm and smooth edges.
+
 ## 0.3.36 — 2026-11-11
 
 - Skip LOS fades when fast auto-explore or travel jumps to a new location, so the surroundings appear at their final brightness.
