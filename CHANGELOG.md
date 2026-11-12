@@ -4,6 +4,7 @@ Notable changes to Orbrun, newest first.
 
 ## 0.3.37 — 2026-11-12
 
+- Give enemy deaths a sharp burst and fading debris in dungeon and first-person views, with bone shards, slime splashes, rubble, embers and spectral wisps matched to the creature.
 - Make idle breathing more pronounced while keeping its slow rhythm and smooth edges.
 
 ## 0.3.36 — 2026-11-11

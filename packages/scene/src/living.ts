@@ -1,4 +1,5 @@
-import { cellKey, type Billboard, type CellKey, type Scene, type SceneCell } from './index.js'
+import type { Billboard, CellKey, Scene, SceneCell } from './index.js'
+import { cellKey } from './coordinates.js'
 
 export type LifeMotion = 'breath' | 'plant' | 'undead' | 'float' | 'ooze' | 'swirl' | 'serpent' | 'skitter' | 'cloud' | 'flame' | 'water' | 'lava' | 'crystal' | 'portal' | 'altar' | 'fountain' | 'bog' | 'grass' | 'up' | 'down' | 'gold' | 'gem' | 'potion' | 'paper' | 'still'
 export interface TileLight { colour: [number, number, number]; radius: number; power: number; pulse?: 'fire' | 'slow' | 'electric'; transient?: boolean }

@@ -31,6 +31,15 @@ let mode = '2.5d'
 let paused = false
 let freezeAt = 0
 const camera = makeCamera(11, 5)
+const victim = scene.billboards.find(b => b.kind === 'monster' && b.name === 'goblin')!
+function restoreVictim() {
+  if (!scene.billboards.includes(victim)) scene.billboards.push(victim)
+  victim.name = (document.getElementById('death-kind') as HTMLSelectElement).value
+  victim.ref = { id: 1, name: victim.name }
+  scene.revision++
+  feedback.flush({ ...scene, billboards: [...scene.billboards] })
+  renderer.setScene(scene)
+}
 function fit() {
   Object.assign(canvas.style, { left: '0px', top: '0px', width: view.clientWidth + 'px', height: view.clientHeight + 'px' })
   renderer.resize(view.clientWidth, view.clientHeight, devicePixelRatio)
@@ -63,6 +72,7 @@ function frame(now: number) {
 function wake() { if (!raf) raf = requestAnimationFrame(frame) }
 function send(msg: ServerMessage) { reduce(state, msg); feedback.observe(state, msg) }
 function play(kind: string) {
+  restoreVictim()
   send({ msg: 'player', turn: state.player.turn + 1 })
   const messages: Record<string, string> = {
     light: 'You slash the goblin.', solid: 'You slash the goblin!', hit: 'You slash the goblin!!', dart: 'The magic dart hits the goblin!', exact: 'You slash the goblin for 23!!', miss: 'You miss the goblin.',
@@ -77,7 +87,8 @@ function play(kind: string) {
     feedback.flush(scene)
     send({ msg: 'player', hp: 21 })
   }
-  if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind] }] })
+  if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind].replaceAll('goblin', victim.name!) }] })
+  if (kind === 'kill') { scene.billboards = scene.billboards.filter(b => b !== victim); scene.revision++ }
   if (kind === 'status') {
     send({ msg: 'player', status: [] }); feedback.flush(scene)
     send({ msg: 'player', status: [{ light: 'Pois', text: 'poisoned' }] })
@@ -87,8 +98,10 @@ function play(kind: string) {
   const now = performance.now()
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !reduced })
+  if (renderer instanceof Render3d) renderer.setOptions({ motion: !reduced })
   const events = feedback.flush(scene)
-  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), 'long sword', now, mode === '2.5d' && !reduced)
+  renderer.setScene(scene, now / 1000)
+  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), 'long sword', now, mode !== '2d' && !reduced)
   popups.add(timed, now)
   if (paused) freezeAt = now + 180
   wake()
@@ -97,6 +110,7 @@ feedback.flush(scene)
 choose()
 new ResizeObserver(fit).observe(view)
 document.getElementById('projection')!.addEventListener('change', choose)
+document.getElementById('death-kind')!.addEventListener('change', () => { restoreVictim(); wake() })
 document.querySelectorAll<HTMLButtonElement>('button[data-effect]').forEach(button => button.addEventListener('click', () => play(button.dataset.effect!)))
 document.getElementById('paused')!.addEventListener('change', e => {
   paused = (e.target as HTMLInputElement).checked
@@ -106,5 +120,6 @@ document.getElementById('paused')!.addEventListener('change', e => {
 })
 document.getElementById('reduced')!.addEventListener('change', () => {
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
+  if (renderer instanceof Render3d) renderer.setOptions({ motion: !(document.getElementById('reduced') as HTMLInputElement).checked })
   wake()
 })

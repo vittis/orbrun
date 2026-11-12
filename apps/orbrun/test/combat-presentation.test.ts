@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, meleeTiming, type MapRenderer, type MeleeAttack } from '@orbrun/scene'
+import { deathFor } from '../src/death-effects'
 import { combatText } from '../src/combat-feedback'
 import { presentCombat } from '../src/combat-presentation'
 
@@ -9,11 +10,22 @@ function harness() {
   for (const x of [0, 1, 2]) scene.cells.set(cellKey(x, 0), {
     x, y: 0, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 0, flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false },
   })
-  const renderer = { melee: vi.fn(), spell: vi.fn(), impact: vi.fn() } as unknown as MapRenderer
+  const renderer = { melee: vi.fn(), spell: vi.fn(), impact: vi.fn(), death: vi.fn() } as unknown as MapRenderer
   return { scene, renderer }
 }
 
 describe('combat contact timing', () => {
+  it('spawns death VFX at melee contact and immediately for ranged kills, respecting Still mode', () => {
+    const { scene, renderer } = harness()
+    const death = deathFor({ kind: 'monster', id: 1, name: 'jelly', tile: 1, height: 0.8, x: 1, y: 0 }, scene.player)
+    const events = combatText('You slash the jelly! You kill the jelly!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1', ...(e.kind === 'kill' ? { death } : {}) }))
+    presentCombat(renderer, scene, events, [], [], 'long sword', 1000, true)
+    expect(renderer.death).toHaveBeenLastCalledWith(death, 1 + meleeTiming('slash').contact)
+    presentCombat(renderer, scene, [events[1]], [], [], undefined, 2000, true)
+    expect(renderer.death).toHaveBeenLastCalledWith(death, 2)
+    presentCombat(renderer, scene, events, [], [], 'long sword', 3000, false)
+    expect(renderer.death).toHaveBeenCalledTimes(2)
+  })
   it('aligns the confirmed number, elemental burst and ripple with the outgoing stroke', () => {
     const { scene, renderer } = harness()
     const events = combatText('You slash the goblin for 8! You kill the goblin!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))

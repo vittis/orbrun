@@ -6,6 +6,7 @@ import {
   getCell,
   shadeOf,
   type Billboard,
+  type DeathEffect,
   type Camera,
   type CellKey,
   type HandItem,
@@ -34,6 +35,7 @@ import {
 } from './sprites.js'
 import { CURSOR_FRAG, CURSOR_VERT, FLAT_FRAG, LEVEL_FRAG, LEVEL_VERT, SHADOW_VERT, SPRITE_FRAG, SPRITE_VERT, VOID_FRAG } from './shaders.js'
 import { bodyRect, sceneClassAt } from './footprint.js'
+import { DeathVfx } from './death-vfx.js'
 
 /**
  * @orbrun/render-3d
@@ -325,6 +327,7 @@ export class Render3d implements MapRenderer {
   private crowdRevision = -1
   private crowdSelection = ''
   private movers = new Movers()
+  private deaths = new DeathVfx(this.three)
   private motionRevision = -1
   private ghostCount = 0
   // ---- the frame
@@ -664,6 +667,7 @@ export class Render3d implements MapRenderer {
   }
 
   setScene(scene: Scene, now = nowSeconds()): void {
+    this.deaths.observe(scene, this.opts.motion)
     this.life.observe(scene, now)
     if (this.scene !== scene) this.lightTime = -Infinity
     this.scene = scene
@@ -672,6 +676,7 @@ export class Render3d implements MapRenderer {
   }
 
   resetMotion(): void {
+    this.deaths.clear()
     this.movers.clear()
     this.motionRevision = -1
     this.crowdRevision = -1
@@ -783,7 +788,7 @@ export class Render3d implements MapRenderer {
 
   /** True while something is still moving, so the host keeps rendering frames. */
   get animating(): boolean {
-    return this.opts.motion && (this.livingActive || this.life.active) || !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
+    return this.deaths.active || this.opts.motion && (this.livingActive || this.life.active) || !Number.isNaN(this.vmLift) || this.movers.active || this.mesher.hasPending || [...this.peeling.keys()].some((n) => this.waitingOnPeel(n))
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -800,6 +805,7 @@ export class Render3d implements MapRenderer {
   }
 
   destroy(): void {
+    this.deaths.destroy()
     this.clearLevel()
     this.dropAtlases()
     this.movers.clear()
@@ -1296,11 +1302,16 @@ export class Render3d implements MapRenderer {
     this.life.ripple(x, y, now, strength)
   }
 
+  death(effect: DeathEffect, now: number) {
+    if (this.opts.motion && this.scene) this.deaths.spawn(this.scene, effect, now)
+  }
+
   render(now = nowSeconds()): void {
     const r = this.renderer
     const scene = this.scene
     const cam = this.camera
     if (!r || !scene || !cam) return
+    this.deaths.update(scene, now)
     this.life.tick(now)
     this.fieldUniforms.lifeTime.value = this.opts.motion ? now : 0
     this.fieldUniforms.lifeMoving.value = this.opts.motion ? 1 : 0

@@ -226,6 +226,29 @@ describe('combat updates', () => {
     const next = world(goblin(2, 2))
     expect(feedback.flush(next).map(p => [p.text, p.x])).toEqual([['8', 1], ['SLAIN', 1]])
   })
+  it('preserves the slain creature material and identity after its billboard is removed', () => {
+    const { feedback, text } = harness()
+    const skeleton = { ...goblin(), name: 'skeleton', ref: { id: 1, name: 'skeleton' } }
+    const before = world(skeleton)
+    feedback.flush(before)
+    text('You destroy the skeleton!')
+    const after = { ...before, billboards: [] }
+    const [kill] = feedback.flush(after)
+    expect(kill.death).toMatchObject({ actorId: 'id:1', kind: 'bone', x: 1, y: 0, direction: { x: 1, y: 0 } })
+    expect(feedback.flush(after)).toEqual([])
+  })
+  it('does not infer death when an actor simply leaves sight', () => {
+    const { feedback } = harness()
+    expect(feedback.flush(world())).toEqual([])
+  })
+  it('spawns separate deaths for same-name victims and recognizes damage-over-time death messages', () => {
+    const { feedback, text } = harness()
+    const before = world(goblin(1, 1), goblin(2, 2))
+    feedback.flush(before)
+    text('You slash the goblin! You kill the goblin! The goblin dies!')
+    const kills = feedback.flush({ ...before, billboards: [] }).filter(e => e.kind === 'kill')
+    expect(kills.map(e => e.death?.actorId)).toEqual(['id:1', 'id:2'])
+  })
   it('spreads same-name cleave attacks and ignores unknown or invisible targets', () => {
     const { feedback, text } = harness()
     const scene = world(goblin(1, 1), goblin(2, 2))

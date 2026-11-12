@@ -19,6 +19,8 @@ export interface Rect {
 }
 
 import type { WoundLevel } from './bars.js'
+import { cellKey, type CellKey } from './coordinates.js'
+export { cellKey, keyToXY, type CellKey } from './coordinates.js'
 
 export * from './bars.js'
 export * from './motion.js'
@@ -68,17 +70,6 @@ export function yawDelta(a: number, b: number): number {
 
 // ---------------------------------------------------------------------------
 // Cells
-
-export type CellKey = number
-
-/** Coordinates in [-512, 512) pack into one integer key. */
-export function cellKey(x: number, y: number): CellKey {
-  return ((y + 512) << 10) | (x + 512)
-}
-
-export function keyToXY(key: CellKey): { x: number; y: number } {
-  return { x: (key & 1023) - 512, y: (key >> 10) - 512 }
-}
 
 export type CellKind = 'unknown' | 'floor' | 'wall' | 'door' | 'feature'
 export type Visibility = 'visible' | 'remembered' | 'unseen'
@@ -551,6 +542,8 @@ export interface SceneCursor {
 export type HitIntensity = 'light' | 'solid' | 'heavy'
 export type DamageType = 'physical' | 'fire' | 'cold' | 'poison' | 'acid' | 'electric' | 'magic'
 export { combatActorId, hitIntensity, impactStrength, meleeTiming, meleePose } from './combat.js'
+export { DeathEffects } from './death.js'
+export type { DeathEffect, DeathKind, DeathParticle } from './death.js'
 
 export interface MeleeAttack {
   from: { x: number; y: number }
@@ -584,6 +577,7 @@ export interface MapRenderer {
   impact?(x: number, y: number, strength: number, now: number): void
   melee?(attack: MeleeAttack, now: number): void
   spell?(effect: SpellEffect, now: number): void
+  death?(effect: import('./death.js').DeathEffect, now: number): void
   render(now?: number): void
   /** Cell centre at height (0 floor, 1 wall top), in CSS pixels; null behind the lens. */
   project?(x: number, y: number, height?: number): { x: number; y: number } | null

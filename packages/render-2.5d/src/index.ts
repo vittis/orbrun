@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, DungeonLife, livingPose,
+  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, DeathEffects, type DeathEffect, type DeathParticle,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -34,7 +34,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -50,6 +50,7 @@ export class Render25d implements MapRenderer {
   private life = new DungeonLife()
   private movement = new DungeonMovement()
   private effects = new DungeonEffects()
+  private deaths = new DeathEffects()
   private visibility = new DungeonVisibility()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
   private frameTime = 0
@@ -76,7 +77,7 @@ export class Render25d implements MapRenderer {
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
-    if (!this.opts.animate) { this.effects.clear(); this.visibility.finish() }
+    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.visibility.finish() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -101,6 +102,7 @@ export class Render25d implements MapRenderer {
     this.visibility.observe(scene, now, this.opts.animate)
     this.life.observe(scene, now)
     this.effects.observe(scene, now, this.opts.animate)
+    this.deaths.observe(scene, this.opts.animate)
     // Never render effects or entities in unseen cells, even if a producer supplies them.
     this.cells = [...scene.cells.values()].filter(c => c.visibility !== 'unseen' && c.kind !== 'unknown')
     this.standing = []
@@ -209,6 +211,10 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
   }
 
+  death(effect: DeathEffect, now: number) {
+    if (this.opts.animate && this.deaths.spawn(this.scene, effect, now)) this.active = true
+  }
+
   render(now = performance.now() / 1000) {
     const ctx = this.ctx
     if (!ctx) return
@@ -224,6 +230,11 @@ export class Render25d implements MapRenderer {
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
     if (this.opts.animate) {
+      for (const death of this.deaths.sample(this.scene, now)) {
+        const cell = this.scene.cells.get(cellKey(Math.round(death.x), Math.round(death.y)))!
+        standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
+      }
+      if (this.deaths.active) this.active = true
       for (const billboard of this.effects.retainedProjectiles(now)) {
         const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
         if (!cell || !this.inFrame(p, billboard)) continue
@@ -308,7 +319,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.death || entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -325,7 +336,21 @@ export class Render25d implements MapRenderer {
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
       if (entry.moving) this.active = true
-      if (entry.burst) {
+      if (entry.death) {
+        const d = entry.death, q = project(p, d.x, d.y, d.z), radius = d.size * s
+        ctx.save(); ctx.translate(q.x, q.y); ctx.globalAlpha = d.alpha
+        const colour = `rgb(${d.colour.join(',')})`
+        if (d.shape === 'ring') {
+          ctx.scale(1, sy); ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, s * 0.018)
+          ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke()
+        } else {
+          ctx.rotate(d.angle); ctx.fillStyle = colour
+          if (d.shape === 'mote') { ctx.beginPath(); ctx.ellipse(0, 0, radius * d.stretch, radius, 0, 0, Math.PI * 2); ctx.fill() }
+          else ctx.fillRect(-radius * d.stretch, -radius * 0.55, radius * d.stretch * 2, radius * 1.1)
+        }
+        ctx.restore()
+      }
+      else if (entry.burst) {
         const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
         ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1); ctx.clip()
         drawSpellBurst(ctx, p, entry.burst, now); ctx.restore()
@@ -753,6 +778,7 @@ export class Render25d implements MapRenderer {
     this.movement.clear()
     this.life.clear()
     this.effects.clear()
+    this.deaths.clear()
     this.visibility.clear()
     this.fogField = null
     this.tiles.clear()
