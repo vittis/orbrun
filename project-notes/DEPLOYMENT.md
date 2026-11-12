@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.24 point at the `cloudflare-online-v1.21` release tag in
+Source links for 0.3.35 point at the `cloudflare-online-v1.32` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -621,19 +621,259 @@ Optional engine E2E reports 44 skips. Evidence:
 `evidence/release-0324-ice-thorns.json`. Hosted rollout follows publication.
 
 
-### Successful 0.3.24 rollout
+## 0.3.25 2.5D animation and combat polish — prepared 2026-11-11
 
-- Main and immutable source tag `cloudflare-online-v1.21` point to
-  `670dc21a793204aaa3e622e005d1be751acbd206`, pushed atomically.
-- Cloudflare build `e31fd8a5-ebc0-4e1d-a5e0-398d123e7d62` succeeded. Worker
-  `2f08c8fc-f899-417b-a546-4f43133e7304` serves 100% of traffic; deployment
-  created 2026-11-11 at 17:24:10 America/Sao_Paulo.
-- All 15 hosted checks pass: version/source/CSP, scripts/licenses/fonts,
-  allowed gamedata and rejected offline/unlisted proxy routes. Three JavaScript
-  and two CSS bundles match the locally validated build byte for byte.
-- Evidence: `evidence/release-0324-ice-thorns.json` and
-  `evidence/release-0324-http-checks.json`.
-- Rollback: 0.3.23 Worker `c420b95c-c942-4c55-a622-b96852572c9c`.
+User explicitly requested committing to main and deploying the animation changes.
+New immutable source tag: `cloudflare-online-v1.22`. Adds slightly stronger,
+crisper idle motion; wound-dependent strain; confirmed player/enemy melee with
+five weapon gestures; faint elemental spell traces; compact emitter cores and
+capped embers/motes/fountain spray. Presentation histories are visibility-gated,
+bounded, and cleared by Still mode and level transitions. Damage popups remain
+independent of melee effects. The dungeon testbed previews all variants.
 
-Post-rollout evidence stays on the working branch; main and the source tag
-retain the exact deployed source commit.
+Feature checks: 2,204 unit tests pass / two optional-engine skips, 900 real Canvas
+checks pass, typecheck and production build pass. Full tests use two workers to
+avoid unrelated 3D mesh timeouts under concurrent build/Canvas load. Final release
+validation passed: forced TypeScript, 2,204 unit tests/two optional-engine skips,
+production build, ASSETS-only Worker dry-run (104 asset files, 20.95 KiB), and
+diff checks. Optional engine E2E reports 44 explicit skips. Prior production
+Worker `2f08c8fc-f899-417b-a546-4f43133e7304` is the rollback target. Hosted
+rollout follows publication.
+
+
+### Successful 0.3.25 rollout
+
+- Main and immutable source tag `cloudflare-online-v1.22` point to
+  `41dc68b51bf11a681e9497b1d36bd664ceb0c13b`, pushed atomically after validation.
+- Cloudflare build `a433f31b-d289-48a9-b3ec-8ad8ef204908` succeeded. Worker
+  `f39a789a-660a-4371-bbfd-d10072e9e6e7` serves 100% of production traffic;
+  deployed 2026-11-11 at 17:48:48 America/Sao_Paulo.
+- All 15 hosted checks pass: 0.3.25 notes, immutable source links, strict CSP,
+  scripts/fonts/licenses, allowed gamedata and rejected offline/unlisted proxy
+  routes. Three JavaScript and two CSS bundles match local production bytes.
+- Evidence: `evidence/release-0325-http-checks.json`.
+- Rollback: Worker `2f08c8fc-f899-417b-a546-4f43133e7304` (0.3.24).
+
+Post-rollout evidence is committed on the working branch; main and the source
+release tag retain the exact deployed code commit.
+
+## 0.3.26 multi-cell movement — prepared 2026-11-11
+
+User authorized committing to main and deployment, with post-deployment checks
+left to the user. Source tag: `cloudflare-online-v1.23`. Confirmed multi-cell
+movement now tweens in Dungeon (2.5D), first-person monsters and the camera,
+including fast enemies, projectiles and rampage. Repeated updates preserve the
+drawn position and animate the remaining confirmed route over one duration.
+Level resets, visibility rules and reduced motion retain their existing behavior.
+
+Release checks passed: 2,219 unit tests / two optional-engine skips, forced
+TypeScript rebuild, production build, ASSETS-only Worker dry-run (104 assets,
+20.95 KiB), and diff checks. Optional engine E2E reports 44 explicit skips.
+The atomic main/source-tag push triggers Cloudflare Workers Builds. No
+deployment polling or hosted checks will be performed, as requested.
+
+
+## 0.3.27 2.5D wall depth — prepared 2026-11-11
+
+User authorized committing to main and deployment, with post-deployment checks
+left to the user. Source tag: `cloudflare-online-v1.24`. Exposed wall bases
+have stronger contact shadows and soft cast shadows that scale with wall height.
+Faces darken toward their feet and exposed roof edges have subtle bevels;
+connected roofs remain continuous. Transparent walls cast lighter shadows,
+and unseen geometry does not affect visible depth cues.
+
+Feature validation: 1,062 real Canvas checks passed. After integrating main,
+2,219 unit tests / two optional-engine skips, forced TypeScript rebuild,
+production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
+checks passed. Optional engine E2E reports 44 explicit skips. The atomic
+main/source-tag push triggers Cloudflare Workers Builds. No deployment polling
+or hosted checks will be performed, as requested.
+
+
+## 0.3.29 brief projectile and physical spell effects — prepared 2026-11-11
+
+User requested fixing invisible Sandblast visuals, covering similar cases and
+deploying the result. Source tag: `cloudflare-online-v1.26`. Integrated main's
+0.3.26 multi-cell movement and 0.3.27 wall-depth and 0.3.28 breathing releases before publication.
+
+Root causes: Session batched map rebuilding until RAF, so a complete projectile
+flight could be overwritten by later map deltas. Residue depended exclusively
+on transient light emitters, excluding Sandblast/Stone Arrow/Iron Shot. All
+projectiles also received alpha thinning intended for continuous beam segments.
+Session now publishes confirmed projectile map frames immediately (excluding
+historical load-queue replay); 2.5D keeps removed artwork for up to 180 ms and
+uses independent projectile semantics for impact/dust/chip traces. Compact art
+keeps its texels. Histories remain bounded and respect visibility, remote maps,
+level changes, Still mode and explicitly invisible black bolt tiles.
+
+Official source confirms Sandblast uses TILE_BOLT_SANDBLAST rather than a fire
+or magical light. The ordinary WebTiles client honors presentation delays;
+this fix preserves effects without blocking this client's authoritative updates:
+- https://github.com/crawl/crawl/blob/master/crawl-ref/source/zap-data.h
+- https://github.com/crawl/crawl/blob/master/crawl-ref/source/webserver/static/scripts/client.js
+
+Regression coverage drives real Session/reducer/builder/renderer wiring with
+Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost added and removed in one
+synchronous message burst. `/testbed/projectile-checks.html` uses actual public
+server artwork: 20 pixel checks verify projectile, impact, residue and complete
+expiry. Existing terrain/movement/wall Canvas checks are retained. Final release
+checks and rollout evidence follow below.
+
+
+Final integrated validation: forced TypeScript, 2,239 unit tests/two optional
+engine skips, production build, ASSETS-only Worker dry-run (104 assets,
+20.95 KiB) and diff checks passed. Optional engine E2E reports 44 explicit skips.
+All 1,062 terrain/movement/wall Canvas checks and 20 real-art spell checks pass.
+Evidence: `evidence/release-0329-{canvas-checks,projectiles}.json` and
+`evidence/release-0329-projectiles.png`. The source tag and main will be pushed
+atomically, followed by a production asset/source/CSP/proxy verification.
+
+## 0.3.28 smoother idle breathing — prepared 2026-11-11
+
+User authorized committing and deploying the completed breathing changes.
+Source tag: `cloudflare-online-v1.25`. Integrates the 0.3.27 wall-depth release.
+Breathing is slower and shallower without sideways stretching. Crisp sprites
+are enlarged by whole pixels before narrow edge smoothing eases row transitions;
+the cache retains its bounded pixel budget. Still mode and explicit filtering
+preferences remain supported.
+
+The actual GameScreen preview confirms animated frames and a single frozen
+frame in Still mode. Integrated release checks passed: forced TypeScript rebuild,
+2,220 unit tests / two optional-engine skips, production build, ASSETS-only
+Worker dry-run (104 assets, 20.95 KiB), and diff checks. Optional engine E2E
+reports 44 explicit skips. The atomic main/source-tag push triggers Cloudflare
+Workers Builds; the GitHub check reports the hosted deployment result.
+
+
+## 0.3.30 stronger wall bases and smooth LOS — prepared 2026-11-11
+
+User authorized committing to main and deployment, leaving post-deployment
+checks to the user. Immutable source tag: `cloudflare-online-v1.27`. Wall-base
+contact shadows and face bottoms are darker. LOS brightness fades over 220 ms
+for floors, roofs, faces and standing art, with matching memory fog and exposure
+to visible lights. Rapid reversals continue from the drawn brightness. Initial
+views, level transitions, remote maps and Still mode snap; hidden entities
+disappear immediately and picking follows confirmed visibility.
+
+Integrated the latest main, retaining crisp breathing raster sizes, bounded
+cache pixel budgets and short-lived spell projectile effects. Feature
+validation passed 1,157 real Canvas checks before integration. Final integrated
+checks passed: 2,250 unit tests / two optional-engine skips, 1,158 real Canvas
+checks (including enlarged breathing rasters), forced TypeScript rebuild,
+production build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff
+checks. Optional engine E2E reports 44 explicit skips. The atomic main/source-tag
+push triggers Cloudflare Workers Builds. No deployment polling or hosted checks
+will be performed, as requested.
+
+## 0.3.31 compact combat icons — prepared 2026-11-11
+
+User authorized committing to main and deploying. Immutable source tag:
+`cloudflare-online-v1.28`. Zero-damage player and enemy hits show a muted armor
+symbol with a quiet fade and shorter rise. Shield blocks, misses, kills, damage
+types, healing, status changes and leveling use distinct SVG symbols. Numeric
+damage and estimates remain visible; unknown statuses retain their wording.
+Popup sizes, stacking gaps and travel are smaller. Existing concise and reduced
+motion preferences remain supported.
+
+Integrated current main, retaining 0.3.29 spell effects and 0.3.30 wall/LOS
+changes. Release checks pass: forced TypeScript rebuild, 2,271 unit tests with
+two optional-engine skips, production build, ASSETS-only Worker dry-run
+(104 assets, 20.95 KiB), and diff checks. The optional engine E2E lane reports
+44 explicit skips because engine artifacts are absent. Headless Chrome verified
+the combat preview at 1280×800 and 390×844, including player/enemy armor,
+readable numeric damage, statuses and a gallery of all expression symbols.
+
+Push main and the source tag atomically to trigger Workers Builds, then verify
+that the hosted release source, popup bundles and strict CSP match this build.
+
+## 0.3.32 coherent 2.5D walls — prepared 2026-11-11
+
+User requested fixing wall lines and undersized terrain, committing to main and
+deploying. Immutable source tag: `cloudflare-online-v1.29`. Integrates 0.3.30's
+LOS fading and stronger base shadows. Walls now use one consistent raised
+height for drawing, picking, lighting and shadows. Original artwork maps once
+over the whole silhouette instead of restarting on a compressed face. Removed
+cap bevels and the hard recess line; foot shading starts transparently. Ground
+fog now renders before standing geometry, preventing remembered neighbours from
+projecting rectangular mist boundaries over visible walls and creatures.
+
+Real Canvas regressions cover textured cap continuity, original foot texels,
+corner/foreground picking and stable geometry when neighbouring LOS changes,
+across tilts, zooms, fractional DPR and both filtering settings. Existing terrain,
+visibility, lighting and movement regressions remain in the browser harness.
+
+Final integrated checks: 2,271 unit tests passed / two optional-engine skips;
+1,374 real Canvas checks passed; forced TypeScript rebuild, production build,
+ASSETS-only Worker dry-run (104 assets, 20.95 KiB) and diff checks passed.
+Optional engine E2E reports 44 explicit skips because engine artifacts are absent.
+Integrated main's 0.3.31 compact combat icons. Pixel results and real-art dungeon
+captures are in `evidence/release-0332-{canvas-checks.json,d1-fountains.png,room.png}`.
+Main and the immutable source tag will be pushed atomically; production rollout
+and hosted asset/source checks follow the Cloudflare Workers Builds result.
+
+
+## 0.3.33 combat celebration and receiver colors — prepared 2026-11-11
+
+User authorized committing to main and triggering deployment, with no deployment
+polling or hosted verification. Immutable source tag: `cloudflare-online-v1.30`.
+Physical damage numbers no longer carry a sword. Level-ups have larger gold
+text, 48 colorful confetti pieces and sparks, an expanding ring, and a 2.4-second
+lifetime. Confetti follows the popup frame clock and is suppressed in Still
+mode. Popup bounds and cleanup apply to the celebration as well.
+
+Player defenses use cyan and enemy defenses use amber; player damage is pink
+and player healing mint. Elemental/status feedback blends its type tint with
+the recipient palette so the affected actor remains distinguishable.
+
+Integrated the 0.3.32 wall-tile release. Local validation passed: forced
+TypeScript rebuild, 2,275 unit tests with two optional-engine skips, production
+build, ASSETS-only Worker dry-run (104 assets, 20.95 KiB), and diff checks.
+Optional engine E2E reports 44 explicit skips for absent engine artifacts.
+Local Chrome checks confirmed distinct computed defense colors, no sword or
+level icon, 48 confetti pieces, readable desktop/phone presentation, and fully
+suppressed text/confetti motion in Still mode. Push main and the source tag
+atomically to trigger Workers Builds. The user will verify the deployment.
+
+
+## 0.3.34 non-projectile spell VFX — prepared 2026-11-11
+
+User authorized committing and deploying the completed VFX changes. Integrated
+0.3.33's combat colors and level-up celebration. Immutable source tag:
+`cloudflare-online-v1.31`. Confirmed spell and ability feedback now produces
+bounded, depth-sorted bursts independently of projectile artwork and combat
+popup settings. Includes Freeze, Airstrike, Scorch, draining, smiting, electrical
+and hex effects, healing, buffs, transformations and summoning confirmations.
+Incoming abilities and zero-damage results also animate. Short server cell
+flashes survive receipt/clear between frames. Visibility, level transitions,
+remote maps and Still mode clear the histories.
+
+Feature validation passed 2,307 unit tests with two optional-engine skips,
+typecheck, production build and 19 real Canvas checks. The pixel checks cover
+all 14 effect families, complete expiry, four confirmed result sentences and a
+synchronous server flash. Evidence: `evidence/release-0334-spell-checks.json`.
+Final integrated checks passed: forced TypeScript rebuild, 2,311 unit tests
+with two optional-engine skips, production build, ASSETS-only Worker dry-run
+(104 assets, 20.95 KiB) and diff checks. Optional engine E2E reports 44 explicit
+skips because engine artifacts are absent. Push main and the immutable source
+tag atomically to trigger Cloudflare Workers Builds, then verify the hosted
+version, source links, bundle identity, CSP and proxies.
+
+
+## 0.3.35 recovery of stale corridor deployment — 2026-11-11
+
+The direct corridor deployment `67d38e30-5bdd-457f-bcc2-d347b9319975`
+was built from `codex/living-dungeon` at 2a0a1bb, based on 0.3.24.
+It replaced production 0.3.34 (`8efe30a9-98df-448f-989b-4470018812d8`)
+and therefore omitted 0.3.25–0.3.34, including compact popup icons, receiver
+colors, level confetti, projectile fixes, LOS fades, coherent walls and spell VFX.
+The Git source remained intact. The earlier HTTP/bundle comparison only proved
+that production matched the stale local artifact; it did not establish release
+freshness. Recovery integrates origin/main e45c669 before rebuilding and publishing.
+
+0.3.35 retains all 0.3.34 application features and adds deeper ground rows plus
+a low foreground lip only for single-cell horizontal passages. Drawing, lights,
+picking and shadows share that height, independent of visible/remembered LOS;
+room walls retain the current coherent texture and depth behavior.
+Immutable source tag: `cloudflare-online-v1.32`. Publish this integrated source
+to main so subsequent releases inherit the corridor fix. Future releases must
+fetch main and compare against the currently deployed release before building.

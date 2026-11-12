@@ -1,0 +1,113 @@
+{
+  "release": "0.3.25",
+  "commit": "41dc68b51bf11a681e9497b1d36bd664ceb0c13b",
+  "tag": "cloudflare-online-v1.22",
+  "checkedAt": "2026-11-11T20:49:27.406Z",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 9485,
+      "strictCsp": true,
+      "releaseSource": true,
+      "releaseVersion": true,
+      "passed": true
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 63158,
+      "strictCsp": true,
+      "releaseSource": true,
+      "releaseVersion": true,
+      "passed": true
+    },
+    {
+      "path": "/about/new",
+      "status": 200,
+      "bytes": 64610,
+      "strictCsp": true,
+      "releaseSource": true,
+      "releaseVersion": true,
+      "passed": true
+    },
+    {
+      "path": "/site-controls.js",
+      "status": 200,
+      "matchesLocal": true,
+      "passed": true
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "matchesLocal": true,
+      "passed": true
+    },
+    {
+      "path": "/fonts/barlow-condensed-700.ttf",
+      "status": 200,
+      "matchesLocal": true,
+      "passed": true
+    },
+    {
+      "path": "/fonts/BARLOW-OFL.txt",
+      "status": 200,
+      "matchesLocal": true,
+      "passed": true
+    },
+    {
+      "path": "/engine/stable/engine.json",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "path": "/gamedata-proxy/127.0.0.1/gamedata/abc/enums.js",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js",
+      "status": 200,
+      "amdData": true,
+      "passed": true
+    },
+    {
+      "path": "/assets/game-B32nSAtQ.css",
+      "status": 200,
+      "localSha256": "78d1b33c5e4c9de0557a343edc73cbdad1b44e6266c7c9fc4cf21c3700afd4b0",
+      "liveSha256": "78d1b33c5e4c9de0557a343edc73cbdad1b44e6266c7c9fc4cf21c3700afd4b0",
+      "passed": true
+    },
+    {
+      "path": "/assets/game-Ir10i1Oa.js",
+      "status": 200,
+      "localSha256": "063cfbaa721a9095c5cef0dfe9a6ffbf28d974b4390a9a21a5a565c8d0ef8365",
+      "liveSha256": "063cfbaa721a9095c5cef0dfe9a6ffbf28d974b4390a9a21a5a565c8d0ef8365",
+      "passed": true
+    },
+    {
+      "path": "/assets/index-CKGdMhjy.js",
+      "status": 200,
+      "localSha256": "032a020a11355b2994a212a5909480b1e3e9d506d097f2445bddd3ab982125d4",
+      "liveSha256": "032a020a11355b2994a212a5909480b1e3e9d506d097f2445bddd3ab982125d4",
+      "passed": true
+    },
+    {
+      "path": "/assets/main-CjufdUbD.js",
+      "status": 200,
+      "localSha256": "cc8fbd8385292cb696ee2eabce10fab5b38a51d40d197a813d358a45203ad77d",
+      "liveSha256": "cc8fbd8385292cb696ee2eabce10fab5b38a51d40d197a813d358a45203ad77d",
+      "passed": true
+    },
+    {
+      "path": "/assets/main-tUmqCCbK.css",
+      "status": 200,
+      "localSha256": "e39ff032b9246c8349c87b2df3e357f0facf853d547cef4581417faec4af3053",
+      "liveSha256": "e39ff032b9246c8349c87b2df3e357f0facf853d547cef4581417faec4af3053",
+      "passed": true
+    }
+  ],
+  "build": "a433f31b-d289-48a9-b3ec-8ad8ef204908",
+  "workerVersion": "f39a789a-660a-4371-bbfd-d10072e9e6e7",
+  "trafficPercentage": 100
+}

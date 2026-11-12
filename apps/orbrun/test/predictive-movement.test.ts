@@ -219,16 +219,26 @@ describe('predictive movement', () => {
     expect(h.send).toHaveBeenCalledTimes(2)
   })
 
-  it.each(['level', 'teleport'] as const)('discards prediction on %s changes', (kind) => {
+  it.each(['level', 'multi-cell'] as const)('discards prediction on %s changes', (kind) => {
     const h = harness()
     h.runner.step(0)
     h.frame(50)
     if (kind === 'level') h.state.player.depth++
     const x = kind === 'level' ? 0 : 20
     h.reply(60, x, -1)
-    expect(h.cam.camera.eyeX).toBe(x)
-    expect(h.cam.camera.eyeY).toBe(-1)
+    if (kind === 'level') {
+      expect(h.cam.camera.eyeX).toBe(x)
+      expect(h.cam.camera.eyeY).toBe(-1)
+    } else {
+      expect(h.cam.camera.eyeX).toBe(0)
+      expect(h.cam.camera.eyeY).toBeGreaterThan(-1)
+      expect(h.cam.camera.eyeY).toBeLessThan(0)
+      h.frame(80)
+      expect(h.cam.camera.eyeX).toBeGreaterThan(0)
+      expect(h.cam.camera.eyeX).toBeLessThan(x)
+    }
     h.frame(300)
+    expect(h.cam.camera.eyeX).toBe(x)
     expect(h.cam.camera.eyeY).toBe(-1)
   })
 

@@ -1,13 +1,16 @@
 import {
   cellKey, emptyScene, minibarRects, DungeonLife, livingPose,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
-  type Scene, type SceneCell, type SceneCursor, type TileSource,
+  type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
-import { drawTile, TileCache, type Context2d, type Layer } from './tiles.js'
-import { DungeonLighting } from './lighting.js'
+import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
+import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
-import { wallHeight } from './walls.js'
+import { DungeonEffects, type SpellBurst } from './effects.js'
+import { drawMelee, drawSpellTrace, drawSpellBurst } from './effects-draw.js'
+import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
+import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -31,7 +34,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -46,6 +49,9 @@ export class Render25d implements MapRenderer {
   private lighting = new DungeonLighting()
   private life = new DungeonLife()
   private movement = new DungeonMovement()
+  private effects = new DungeonEffects()
+  private visibility = new DungeonVisibility()
+  private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
   private frameTime = 0
   private cursor: SceneCursor | null = null
   private tiles = new TileCache()
@@ -70,6 +76,7 @@ export class Render25d implements MapRenderer {
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
+    if (!this.opts.animate) { this.effects.clear(); this.visibility.finish() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -84,13 +91,16 @@ export class Render25d implements MapRenderer {
     if (source === this.tiles.source) return
     this.tiles.source = source
     this.tiles.clear()
+    this.visibility.clear()
   }
 
   setScene(scene: Scene, now = performance.now() / 1000) {
     if (scene === this.scene && scene.revision === this.revision) return
     this.scene = scene
     this.revision = scene.revision
+    this.visibility.observe(scene, now, this.opts.animate)
     this.life.observe(scene, now)
+    this.effects.observe(scene, now, this.opts.animate)
     // Never render effects or entities in unseen cells, even if a producer supplies them.
     this.cells = [...scene.cells.values()].filter(c => c.visibility !== 'unseen' && c.kind !== 'unknown')
     this.standing = []
@@ -140,8 +150,13 @@ export class Render25d implements MapRenderer {
   }
 
   projectBillboard(billboard: Billboard, height = 0) {
-    const pos = this.movement.position(billboard, this.frameTime)
+    const pos = this.actorPosition(billboard, this.frameTime)
     return this.project(pos.x, pos.y, height)
+  }
+
+  private actorPosition(b: Billboard, now: number) {
+    const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now) : { x: 0, y: 0 }
+    return { x: pos.x + offset.x, y: pos.y + offset.y }
   }
 
   private inFrame(p: Projection, cell: { x: number; y: number }) {
@@ -154,15 +169,29 @@ export class Render25d implements MapRenderer {
     return 1
   }
 
-  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }) {
-    return this.tiles.draw(ctx, layers, x, y, size, this.light(), cell.visibility !== 'visible', cell.flash, cell.visibility === 'visible' ? this.lighting : undefined,
-      { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 })
+  private darkness(cell: SceneCell) { return this.visibility.darkness(cell, this.frameTime) }
+
+  private lightExposure(cell: SceneCell) { return Math.max(0, 1 - this.darkness(cell) / MEMORY_DARKNESS) }
+
+  private surfaceLighting(cell: SceneCell): SurfaceLighting | undefined {
+    const exposure = this.lightExposure(cell)
+    if (exposure <= 0) return undefined
+    if (exposure === 1) return this.lighting
+    return { draw: (ctx, rect, mask, sample) => {
+      ctx.save(); ctx.globalAlpha *= exposure
+      this.lighting.draw(ctx, rect, mask, sample); ctx.restore()
+    } }
+  }
+
+  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1) {
+    return this.tiles.draw(ctx, layers, x, y, size, this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell),
+      { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 }, rasterScale)
   }
 
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
     // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
-    return this.tiles.drawPlane(ctx, layers, rect, this.light(), cell.visibility !== 'visible', cell.flash, illuminate && cell.visibility === 'visible' ? this.lighting : undefined,
+    return this.tiles.drawPlane(ctx, layers, rect, this.light(), this.darkness(cell), cell.flash, illuminate ? this.surfaceLighting(cell) : undefined,
       rect)
   }
 
@@ -172,6 +201,14 @@ export class Render25d implements MapRenderer {
     this.active = true
   }
 
+  melee(attack: MeleeAttack, now: number) {
+    if (this.opts.animate && this.effects.melee(this.scene, attack, now)) this.active = true
+  }
+
+  spell(effect: SpellEffect, now: number) {
+    if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
+  }
+
   render(now = performance.now() / 1000) {
     const ctx = this.ctx
     if (!ctx) return
@@ -179,19 +216,38 @@ export class Render25d implements MapRenderer {
     this.frameTime = now
     const p = this.projection(), s = p.scale, sy = groundDepth(p.tilt)
     this.active = this.movement.cameraMoving(now)
+    this.effects.tick(this.scene, now)
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.map(entry => {
       if (!entry.billboard) return entry
-      const pos = this.movement.position(entry.billboard, now)
+      const pos = this.actorPosition(entry.billboard, now)
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
+    if (this.opts.animate) {
+      for (const billboard of this.effects.retainedProjectiles(now)) {
+        const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
+        if (!cell || !this.inFrame(p, billboard)) continue
+        standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
+        this.active = true
+      }
+      for (const burst of this.effects.bursts) {
+        const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
+        if (!cell || cell.occluder || !this.inFrame(p, burst)) continue
+        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + 0.35 })
+        this.active = true
+      }
+      standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
+    }
     this.life.tick(now)
-    this.lighting.build(this.scene, p, this.life.emitters(now), time, this.opts.animate, this.tiles.source, b => this.movement.position(b, now))
+    const emitters = this.life.emitters(now)
+    this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
+      cell => cell.visibility === 'visible' || this.visibility.moving(cell, now))
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
     this.unexploredFog(ctx, p, time)
     const cells = this.cells.filter(c => this.inFrame(p, c))
+    if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
     for (const cell of cells) {
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
@@ -208,9 +264,9 @@ export class Render25d implements MapRenderer {
         ctx.textAlign = 'center'
         ctx.fillText(cell.glyph ?? (cell.occluder ? '#' : '·'), q.x + s / 2, q.y + s * sy * 0.8)
       }
-      if (cell.visibility !== 'visible') {
+      if (this.darkness(cell) > 0) {
         if (!this.tiles.source) {
-          ctx.fillStyle = 'rgba(0,0,0,0.56)'
+          ctx.fillStyle = `rgba(0,0,0,${this.darkness(cell)})`
           ctx.fillRect(q.x, q.y, s, s * sy)
         }
       }
@@ -222,20 +278,37 @@ export class Render25d implements MapRenderer {
     }
 
     ctx.save(); ctx.beginPath()
-    for (const cell of cells) if (cell.visibility === 'visible' && !cell.occluder) {
+    for (const cell of cells) if (!cell.occluder && this.lightExposure(cell) === 1) {
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(rect.x, rect.y, rect.width, rect.height)
     }
     ctx.clip(); this.lighting.draw(ctx, { x: 0, y: 0, width: this.width, height: this.height }); ctx.restore()
+    for (const cell of cells) if (!cell.occluder && this.lightExposure(cell) > 0 && this.lightExposure(cell) < 1) {
+      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      this.surfaceLighting(cell)?.draw(ctx, rect)
+    }
     if (this.lighting.active) this.active = true
     this.waterSurface(ctx, p, cells, time)
     this.lavaSurface(ctx, p, cells, time)
-    for (const cell of cells) if (cell.visibility === 'visible') this.environment(ctx, p, cell, time)
-    this.wallShadows(ctx, p, cells)
+    // Traces stay on the floor, underneath silhouettes, badges and targeting.
+    if (this.opts.animate) for (const trace of this.effects.traces) {
+      if (!this.inFrame(p, trace.source)) continue
+      const cell = this.scene.cells.get(cellKey(trace.source.x, trace.source.y))
+      if (!cell || cell.occluder) continue
+      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 0.4, rect.width, rect.height + s * 0.4); ctx.clip()
+      drawSpellTrace(ctx, p, trace, now); ctx.restore()
+      this.active = true
+    }
+    // Ground haze must stay beneath raised terrain. Drawing it after walls
+    // projects a remembered neighbour's rectangular boundary across their art.
+    this.memoryFog(ctx, p, cells, time)
+    this.frontierFog(ctx, p, cells, time)
+    drawWallShadows(ctx, p, this.scene, cells, this.dpr, cell => this.darkness(cell))
 
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -252,14 +325,31 @@ export class Render25d implements MapRenderer {
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
       if (entry.moving) this.active = true
-      if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
-      else if (entry.cell.occluder) { this.wall(ctx, p, entry.cell); if (entry.cell.visibility === 'visible') this.environment(ctx, p, entry.cell, time) }
+      if (entry.burst) {
+        const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
+        ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1); ctx.clip()
+        drawSpellBurst(ctx, p, entry.burst, now); ctx.restore()
+      }
+      else if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
+      else if (entry.cell.occluder) this.wall(ctx, p, entry.cell)
       else this.actor(ctx, p, entry.cell, { x: entry.cell.x, y: entry.cell.y, tile: entry.cell.featureTile!, height: 1, kind: 'doll', scenery: true, life: entry.cell.life }, time)
     }
 
+    // Keep the old faint stair/crystal motes even when they emit no light.
+    const ornaments: Emitter[] = cells.filter(c => c.visibility === 'visible' && ['crystal', 'up', 'down'].includes(c.life?.motion ?? '') && !c.life?.lights?.length)
+      .map(c => ({ x: c.x, y: c.y, colour: [198, 222, 255], radius: 1, power: 0 }))
+    this.emitterParticles(ctx, p, [...emitters, ...ornaments], time)
+    if (this.opts.animate) for (const stroke of this.effects.strokes) {
+      if (!this.inFrame(p, stroke.from) && !this.inFrame(p, stroke.to)) continue
+      ctx.save(); ctx.beginPath()
+      for (const cell of cells) if (cell.visibility === 'visible') {
+        const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+        ctx.rect(rect.x, rect.y - s, rect.width, rect.height + s)
+      }
+      ctx.clip(); drawMelee(ctx, p, stroke, now); ctx.restore()
+      this.active = true
+    }
     this.impactRipples(ctx, p, time)
-    this.memoryFog(ctx, p, cells, time)
-    this.frontierFog(ctx, p, cells, time)
 
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {
@@ -391,43 +481,34 @@ export class Render25d implements MapRenderer {
     }
   }
 
-  private wallShadows(ctx: Context2d, p: Projection, cells: SceneCell[]) {
-    for (const cell of cells) {
-      if (cell.occluder) continue
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      const north = this.scene.cells.get(cellKey(cell.x, cell.y - 1))
-      const west = this.scene.cells.get(cellKey(cell.x - 1, cell.y))
-      if (north?.occluder && north.visibility !== 'unseen') {
-        const depth = rect.height * 0.34
-        const shadow = ctx.createLinearGradient(0, rect.y, 0, rect.y + depth)
-        shadow.addColorStop(0, 'rgba(0,0,0,0.18)')
-        shadow.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = shadow
-        ctx.fillRect(rect.x, rect.y, rect.width, depth)
-      }
-      if (west?.occluder && west.visibility !== 'unseen') {
-        const depth = rect.width * 0.22
-        const shadow = ctx.createLinearGradient(rect.x, 0, rect.x + depth, 0)
-        shadow.addColorStop(0, 'rgba(0,0,0,0.12)')
-        shadow.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = shadow
-        ctx.fillRect(rect.x, rect.y, depth, rect.height)
-      }
-    }
-  }
-
   private memoryFog(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
-    const memory = cells.filter(cell => cell.visibility === 'remembered')
+    const memory = cells.filter(cell => this.darkness(cell) > 0)
     if (!memory.length) return
-    ctx.save()
-    ctx.beginPath()
-    for (const cell of memory) {
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      ctx.rect(rect.x, rect.y, rect.width, rect.height)
+    const width = Math.ceil(this.width), height = Math.ceil(this.height)
+    this.fogField ??= typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height)
+      : typeof document !== 'undefined' ? Object.assign(document.createElement('canvas'), { width, height }) : null
+    const ink = this.fogField?.getContext('2d') as Context2d | null
+    if (ink && this.fogField) {
+      if (this.fogField.width !== width || this.fogField.height !== height) { this.fogField.width = width; this.fogField.height = height }
+      ink.setTransform(1, 0, 0, 1, 0, 0); ink.clearRect(0, 0, width, height)
+      // Generate the broad mist once, then fade each receiving cell with LOS.
+      const left = Math.floor(Math.min(...memory.map(c => c.x)) / 4) * 4
+      const right = Math.max(...memory.map(c => c.x)) + 4
+      const top = Math.floor(Math.min(...memory.map(c => c.y)) / 4) * 4
+      const bottom = Math.max(...memory.map(c => c.y)) + 4
+      ink.scale(1, groundDepth(p.tilt))
+      for (let y = top; y <= bottom; y += 4) for (let x = left; x <= right; x += 4) {
+        const phase = x * 1.31 + y * 2.17
+        const q = project(p, x + Math.sin(time * 0.14 + phase) * 0.6, y + Math.cos(time * 0.11 + phase) * 0.4)
+        const cy = q.y / groundDepth(p.tilt), radius = p.scale * 2.8
+        const mist = ink.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
+        mist.addColorStop(0, 'rgba(0,0,0,0.045)'); mist.addColorStop(1, 'rgba(0,0,0,0)')
+        ink.fillStyle = mist; ink.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
+      }
     }
-    ctx.clip()
     for (const cell of memory) {
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      ctx.save(); ctx.globalAlpha *= Math.min(1, this.darkness(cell) / MEMORY_DARKNESS)
       for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
         const neighbour = this.scene.cells.get(cellKey(cell.x + dx, cell.y + dy))
         if (neighbour && neighbour.visibility !== 'unseen' && neighbour.kind !== 'unknown') continue
@@ -439,24 +520,9 @@ export class Render25d implements MapRenderer {
         ctx.fillStyle = edge
         ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
       }
+      if (ink && this.fogField) ctx.drawImage(this.fogField, rect.x, rect.y, rect.width, rect.height, rect.x, rect.y, rect.width, rect.height)
+      ctx.restore()
     }
-    // Broad, world-anchored wisps cross tile boundaries instead of outlining cells.
-    const left = Math.floor(Math.min(...memory.map(c => c.x)) / 4) * 4
-    const right = Math.max(...memory.map(c => c.x)) + 4
-    const top = Math.floor(Math.min(...memory.map(c => c.y)) / 4) * 4
-    const bottom = Math.max(...memory.map(c => c.y)) + 4
-    ctx.scale(1, groundDepth(p.tilt))
-    for (let y = top; y <= bottom; y += 4) for (let x = left; x <= right; x += 4) {
-      const phase = x * 1.31 + y * 2.17
-      const q = project(p, x + Math.sin(time * 0.14 + phase) * 0.6, y + Math.cos(time * 0.11 + phase) * 0.4)
-      const cy = q.y / groundDepth(p.tilt), radius = p.scale * 2.8
-      const mist = ctx.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
-      mist.addColorStop(0, 'rgba(0,0,0,0.045)')
-      mist.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = mist
-      ctx.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
-    }
-    ctx.restore()
     this.active = true
   }
 
@@ -486,21 +552,20 @@ export class Render25d implements MapRenderer {
   }
 
   private wall(ctx: Context2d, p: Projection, cell: SceneCell) {
-    const height = wallHeight(this.scene, cell)
-    const roof = planeRect(p, cell.x, cell.y, height, this.dpr)
+    const roof = planeRect(p, cell.x, cell.y, wallHeight(this.scene, cell), this.dpr)
     const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
-    const tile = cell.wallTile ?? cell.featureTile ?? cell.floorTile
+    const tile = cell.faceTiles?.s ?? cell.wallTile ?? cell.featureTile ?? cell.floorTile
+    const surface = { ...roof, height: ground.y + ground.height - roof.y }
+    const face = { ...roof, y: roof.y + roof.height, height: surface.height - roof.height }
     ctx.save()
     if (cell.wallStyle === 'transparent') ctx.globalAlpha = 0.65
-    // Texture the vertical face independently from the roof.
-    const face = { x: roof.x, y: roof.y + roof.height, width: roof.width, height: ground.y + ground.height - roof.y - roof.height }
     ctx.fillStyle = '#343039'
-    ctx.fillRect(face.x, face.y, face.width, face.height)
-    this.tiles.drawPlane(ctx, [{ tile: cell.faceTiles?.s ?? tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], face, this.light(), cell.visibility !== 'visible', cell.flash,
-      cell.visibility === 'visible' ? this.lighting : undefined, face)
-    ctx.fillStyle = 'rgba(0,0,0,0.22)'
-    ctx.fillRect(face.x, face.y, face.width, face.height)
-    this.plane(ctx, p, cell, [{ tile }], height)
+    ctx.fillRect(surface.x, surface.y, surface.width, surface.height)
+    // Map the art once over the entire raised silhouette. Restarting it on a
+    // compressed front face produces a horizontal seam through every wall.
+    this.tiles.drawPlane(ctx, [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], surface,
+      this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), surface)
+    shadeWallFace(ctx, face)
     ctx.restore()
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }
@@ -513,26 +578,47 @@ export class Render25d implements MapRenderer {
       // the ground plane; soften/trim its alpha instead of shrinking it and
       // opening gaps between segments. It has no creature shadow or hit box.
       const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
-      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = b.alpha ?? 0.88
-      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, true)
+      const appearance = b.life?.projectile
+      const thin = appearance ? appearance.beam : true
+      ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
+      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
       return
     }
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const pose = livingPose(life, position.x, position.y, time, this.opts.animate && visible, { strength: 2, smooth: true })
+    const breathing = creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
+    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 2.5, smooth: true })
+    // Wound flags drive a small guarded lean and uneven breathing. This also
+    // works for bloodless creatures without painting red over identifying art.
+    const wound = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(b.damage ?? 'uninjured')
+    if (creature && !b.lying && wound > 0 && visible && !life.held && life.motion !== 'still') {
+      const strain = wound / 5, phase = b.x * 2.31 + b.y * 1.73
+      pose.angle -= strain * 0.035
+      pose.sy -= strain * 0.025
+      if (this.opts.animate) {
+        const effort = Math.sin(time * 1.8 + phase) * Math.sin(time * 0.9 + phase)
+        pose.sy += effort * strain * 0.012
+        pose.x += Math.sin(time * 0.85 + phase) * strain * 0.007
+      }
+    }
     if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
     const q = project(p, position.x, position.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre. First-person
     // billboard heights shrink that art a second time and must not scale it here.
     const size = s
-    const x = q.x - size / 2 + pose.x * s
-    const y = q.y - size - (cloud ? s * 0.15 : 0) - pose.y * s
+    const snap = (v: number) => Math.round(v * this.dpr) / this.dpr
+    // Snap only idle displacement: snapping the whole frame shifts the camera-
+    // centred player when half the fitted atlas size is a fractional pixel.
+    const x = q.x - size / 2 + snap(pose.x * s)
+    const foot = q.y - snap(pose.y * s)
+    const y = foot - size - (cloud ? s * 0.15 : 0)
     ctx.save()
-    // Subpixel breathing/sway must remain visible when the server's static
-    // tile scaling preference is nearest-neighbour (the default in live play).
-    if (position.moving || this.opts.animate && visible && life.motion && life.motion !== 'still' && !life.held) ctx.imageSmoothingEnabled = true
+    // Breathing filters an integer-enlarged sprite, keeping solid pixel centres
+    // while easing row transitions. Explicit smooth scaling uses the atlas directly.
+    const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
+    ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || breathing
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
     if (b.lying) {
       this.plane(ctx, p, { ...cell, x: position.x, y: position.y }, b.layers ?? [{ tile: b.tile }], 0.02)
@@ -544,12 +630,13 @@ export class Render25d implements MapRenderer {
         ctx.ellipse(q.x, q.y - 1, s * 0.34, s * 0.13, 0, 0, Math.PI * 2)
         ctx.stroke()
       }
-      ctx.translate(x, q.y)
-      ctx.translate(size / 2, -pose.y * s)
+      ctx.translate(x, foot)
+      ctx.translate(size / 2, 0)
       ctx.rotate(pose.angle)
       ctx.scale(pose.sx, pose.sy)
       ctx.translate(-size / 2, 0)
-      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y })) {
+      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y }, rasterScale)) {
+        ctx.globalAlpha *= 1 - this.darkness(cell)
         ctx.fillStyle = b.kind === 'player' ? '#fff0ba' : '#e5c4ae'
         ctx.font = `${size * 0.75}px monospace`
         ctx.textAlign = 'center'
@@ -594,28 +681,49 @@ export class Render25d implements MapRenderer {
       ctx.ellipse(q.x, q.y - s * 0.12, s * (0.08 + life * 0.21), s * (0.025 + life * 0.04), 0, 0, Math.PI * 2)
       ctx.stroke()
     }
+    if (this.opts.animate) {
+      ctx.fillStyle = '#b8edf4'
+      for (let i = 0; i < 5; i++) {
+        const life = ((time * 0.75 + i / 5 + phase) % 1 + 1) % 1
+        ctx.globalAlpha = Math.sin(life * Math.PI) * 0.45
+        const side = i % 2 ? -1 : 1, size = Math.max(0.7, s / 75)
+        ctx.fillRect(q.x + side * life * s * 0.2, q.y - s * (0.18 + Math.sin(life * Math.PI) * 0.19), size, size)
+      }
+    }
     ctx.restore()
   }
 
-  private environment(ctx: Context2d, p: Projection, cell: SceneCell, time: number) {
-    const s = p.scale, q = project(p, cell.x, cell.y)
-    const lava = cell.flags.lava
-    const portal = cell.feature?.type === 'portal' || cell.feature?.type === 'transporter' || cell.feature?.type === 'altar'
-    const flame = cell.life?.motion === 'flame'
-    const magic = cell.life?.motion === 'crystal' || cell.life?.motion === 'up' || cell.life?.motion === 'down'
-    if (!lava && !portal && !flame && !magic) return
-    this.active = true
-    const phase = cell.x * 1.31 + cell.y * 2.17
-    if (lava || portal || flame || magic) {
-      ctx.fillStyle = lava || flame ? '#ffd38b' : '#c6deff'
-      for (let i = 0; i < 2; i++) {
-        const life = (time * 0.2 + i / 2 + (phase % 1 + 1)) % 1
-        ctx.globalAlpha = Math.sin(life * Math.PI) ** 2 * 0.4
-        ctx.beginPath()
-        ctx.arc(q.x + Math.sin(phase + i * 8 + life * 2.4) * s * 0.16, q.y - (flame && cell.occluder ? 0.35 : 0) * s - life * s * 0.4, Math.max(0.45, s / 90), 0, Math.PI * 2)
-        ctx.fill()
+  private emitterParticles(ctx: Context2d, p: Projection, sources: Emitter[], time: number) {
+    const s = p.scale
+    let budget = 88
+    for (const source of sources) {
+      if (budget <= 0) break
+      if (source.transient || !this.inFrame(p, source) || this.scene.cells.get(cellKey(source.x, source.y))?.visibility !== 'visible') continue
+      const q = glowCenter(this.scene, p, source, this.tiles.source, b => this.actorPosition(b, this.frameTime))
+      const phase = source.x * 1.31 + source.y * 2.17
+      const fire = source.pulse === 'fire', count = Math.min(budget, fire ? 6 : 4)
+      budget -= count
+      ctx.save()
+      // A compact core brightens the actual source instead of fogging the room.
+      const radius = s * (fire ? 0.18 : 0.13)
+      const core = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, radius)
+      core.addColorStop(0, `rgba(${source.colour.join(',')},${Math.min(0.22, source.power * 0.28)})`)
+      core.addColorStop(1, `rgba(${source.colour.join(',')},0)`)
+      ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = core
+      ctx.fillRect(q.x - radius, q.y - radius, radius * 2, radius * 2)
+      if (this.opts.animate) {
+        this.active = true
+        ctx.fillStyle = fire ? '#ffdb91' : `rgb(${source.colour.join(',')})`
+        for (let i = 0; i < count; i++) {
+          const life = ((time * (fire ? 0.5 : 0.23) + i / count + phase) % 1 + 1) % 1
+          ctx.globalAlpha = Math.sin(life * Math.PI) ** 2 * (fire ? 0.62 : 0.42)
+          const size = Math.max(0.7, s / (fire ? 56 : 70))
+          const x = q.x + Math.sin(phase + i * 8 + life * 2.4) * s * (fire ? 0.13 : 0.22)
+          const y = q.y - life * s * (fire ? 0.52 : 0.38)
+          ctx.fillRect(Math.round(x * this.dpr) / this.dpr, Math.round(y * this.dpr) / this.dpr, size, size * (fire && i % 3 === 0 ? 1.8 : 1))
+        }
       }
-      ctx.globalAlpha = 1
+      ctx.restore()
     }
   }
 
@@ -644,6 +752,9 @@ export class Render25d implements MapRenderer {
   destroy() {
     this.movement.clear()
     this.life.clear()
+    this.effects.clear()
+    this.visibility.clear()
+    this.fogField = null
     this.tiles.clear()
     this.tiles.source = null
     this.canvas = null

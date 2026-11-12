@@ -1,10 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { creatureLife, tileLight, tileMotion } from '../src/living.js'
+import { creatureLife, tileLight, tileMotion, projectileAppearance } from '../src/living.js'
 import { livingPose, type Billboard } from '@orbrun/scene'
 import type { FlagWord } from '@orbrun/gamedata'
 
 const monster: Billboard = { x: 1, y: 0, kind: 'monster', tile: 1, height: 0.6, attitude: 'hostile' }
 describe('server tile semantics for atmosphere', () => {
+  it.each([
+    ['BOLT_SANDBLAST', 'sand'], ['BOLT_SANDBLAST_2', 'sand'], ['BOLT_STONE_ARROW', 'stone'],
+    ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],
+    ['BOLT_WEAK_AIR', 'air'], ['BOLT_MAGIC_DART', 'magic'], ['BOLT_ICICLE', 'cold'],
+  ] as const)('gives %s projectile effects independent of lighting', (name, kind) => {
+    expect(projectileAppearance(name)).toMatchObject({ kind })
+    if (['sand', 'stone', 'metal'].includes(kind)) {
+      expect(tileLight(name)).toBeUndefined()
+      expect(projectileAppearance(name)).toMatchObject({ beam: false })
+    }
+  })
+  it('preserves compact/unknown missile art and deliberately invisible spells', () => {
+    expect(projectileAppearance('BOLT_MAGIC_DART')).toMatchObject({ beam: false })
+    expect(projectileAppearance('MI_BOLT_MAGIC')).toMatchObject({ beam: false })
+    expect(projectileAppearance('BOLT_NEW_SPELL')).toMatchObject({ beam: false })
+    expect(projectileAppearance('BOLT_DEFAULT_BLACK')).toBe(false)
+    expect(projectileAppearance('BOLT_ZAP')).toMatchObject({ beam: true })
+  })
   it.each(['DNGN_LAVA_2', 'DNGN_WALL_TORCH', 'CLOUD_FIRE_2', 'CLOUD_COLD_1', 'CLOUD_POISON_3', 'BOLT_STRONG_ELEC', 'BOLT_MAGIC_DART', 'DNGN_ALTAR_ZIN', 'DNGN_PORTAL', 'MONS_FIRE_ELEMENTAL', 'MONS_ANGEL'])('classifies %s as an emitter', name => {
     expect(tileLight(name)?.power).toBeGreaterThan(0)
   })

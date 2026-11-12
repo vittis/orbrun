@@ -28,9 +28,19 @@ describe('living dungeon visibility', () => {
       expect(livingPose(life, 2, 3, 1, false, presentation)).toEqual(livingPose(undefined, 2, 3, 1))
       expect(livingPose({ ...life, held: true }, 2, 3, 1, true, presentation)).toEqual(livingPose(undefined, 2, 3, 1))
     }
-    const subtle = livingPose({ motion: 'breath' }, 2, 3, 1)
-    const fluid = livingPose({ motion: 'breath' }, 2, 3, 1, true, presentation)
-    expect(fluid.sy - 1).toBeCloseTo((subtle.sy - 1) * 1.7)
+  })
+  it('keeps overhead breathing shallow, continuous and free of sideways stretching', () => {
+    const presentation = { strength: 2.5, smooth: true }
+    let low = 1, high = 1
+    for (let frame = 0; frame < 300; frame++) {
+      const pose = livingPose({ motion: 'breath' }, 0, 0, frame / 60, true, presentation)
+      const next = livingPose({ motion: 'breath' }, 0, 0, (frame + 1) / 60, true, presentation)
+      expect(pose.sx).toBe(1)
+      expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0151)
+      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0005)
+      low = Math.min(low, pose.sy); high = Math.max(high, pose.sy)
+    }
+    expect(high - low).toBeGreaterThan(0.029)
   })
   it('lights walls on their near face but neither memory nor cells behind a wall', () => {
     const s = room()

@@ -41,7 +41,7 @@ export function surfaceLightChecks() {
       const c = scene.cells.get(cellKey(x, -1))!; c.kind = 'wall'; c.occluder = true; c.wallTile = 1
     }
     scene.revision++; r.setScene(scene); r.render(0)
-    const roof = [-0.56, -0.52, -0.48, -0.44].map(x => sample(x, -1, 0.18)[0])
+    const roof = [-0.56, -0.52, -0.48, -0.44].map(x => sample(x, -1, 0.58)[0])
     assert('continuous falloff across raised wall boundary', Math.max(...roof.slice(1).map((v, i) => Math.abs(v - roof[i]))) <= 3, { dpr, roof })
     const blocked = sample(-2, -2.3)
     assert('known walls block the shared light field', Math.abs(blocked[0] - ambient[0]) <= 1 && blocked[0] === blocked[2], { dpr, blocked, ambient })

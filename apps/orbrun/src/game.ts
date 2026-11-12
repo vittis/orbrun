@@ -39,6 +39,7 @@ import { PredictiveMovement } from './predictive-movement'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { CombatPopups } from './combat-popups'
+import { meleeFor } from './melee-effects'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
 const VIEW_MAX_DPR = 1
@@ -1051,7 +1052,9 @@ export class GameScreen {
     // the monster list or the edge pips, one or the other; in 2D the top-down view frames everything in sight, so the list stands in
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
-    if (popups.some(p => p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
+    const incomingMelee = this.feedback.takeMelee()
+    const spells = this.feedback.takeSpells()
+    if (spells.length || incomingMelee.length || popups.some(p => p.melee || p.kind === 'hit' || p.kind === 'hurt' || p.kind === 'level')) this.needsRender = true
     if (settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')) this.combatPopups.add(popups, now, this.renderMode === '2.5d')
     else this.combatPopups.clear()
     const nearby = this.is3d ? settings.nearby : 'list'
@@ -1100,7 +1103,14 @@ export class GameScreen {
       // 3D view marks the way that view faces, which a north-up map otherwise loses.
       if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
       this.syncRendererScene(this.session.scene, now / 1000)
+      if (!this.mapShown) for (const effect of spells) this.renderer.spell?.(effect, now / 1000)
+      if (!this.mapShown) for (const attack of incomingMelee) this.renderer.melee?.(attack, now / 1000)
       if (!this.mapShown) for (const event of popups) {
+        if (this.renderer.melee) {
+          const weapon = st.player.inv[st.player.weapon_index]?.name
+          const attack = meleeFor(event, this.session.scene, weapon)
+          if (attack) this.renderer.melee(attack, now / 1000)
+        }
         if (event.kind !== 'hit' && event.kind !== 'hurt' && event.kind !== 'level') continue
         if (event.amount === 0) continue
         const x = event.player ? this.session.scene.player.x : event.x
@@ -1502,11 +1512,10 @@ export class GameScreen {
         // cells (`travel_delay -1`, a blink, a teleport) has no hops: the
         // travel trail tells the last step, else the displacement stands in.
         const walk = sameLevel && hops.length > 0 && !jumped
-        // the eye glides after a walk, by the hops the server drew (the rc's
-        // `travel_delay`: a positive one sends every step, -1 sends the
-        // arrival alone, which is a jump here as it is a jump there)
+        // Glide all confirmed movement on this level, including rampage and
+        // arrivals spanning several cells. Use the route when it is known.
         if (!predicted) {
-          if (walk || (sameLevel && single)) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
+          if (sameLevel) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
           else this.cam.snapTo(p.x, p.y)
         }
         if (!sameLevel) {

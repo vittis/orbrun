@@ -1,8 +1,8 @@
 export { lightingFor, lightPulse, type Light, type Emitter, type LightPool } from '@orbrun/scene'
 import { cellKey, lightReaches, lightingFor, type Billboard, type Emitter, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect, project, type Projection, type SurfaceRect } from './projection.js'
-import { wallHeight } from './walls.js'
 import type { Context2d, SurfaceLighting } from './tiles.js'
+import { wallHeight } from './wall-depth.js'
 export function lightField(scene: Scene) { return lightingFor(scene).field }
 
 export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(1.35, source.radius * 0.32))
@@ -50,7 +50,8 @@ export class DungeonLighting implements SurfaceLighting {
   private pad = 0
   active = false
 
-  build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null, position?: ActorPosition) {
+  build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null, position?: ActorPosition,
+    receives = (cell: SceneCell) => cell.visibility === 'visible') {
     this.active = false
     if (!sources.length) return
     const key = sources.map(s => `${s.x},${s.y},${s.radius}`).join(';')
@@ -62,7 +63,7 @@ export class DungeonLighting implements SurfaceLighting {
           const cell = scene.cells.get(cellKey(x, y))
           // Include cells whose edge intersects the gradient, so its radius
           // ends smoothly rather than clipping at the last cell's centre.
-          if (cell?.visibility === 'visible' && Math.hypot(x - source.x, y - source.y) < glowRadius(source) + 1.4 && lightReaches(scene, source, cell)) cells.push(cell)
+          if (cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown' && receives(cell) && Math.hypot(x - source.x, y - source.y) < glowRadius(source) + 1.4 && lightReaches(scene, source, cell)) cells.push(cell)
         }
         return cells
       })
@@ -96,6 +97,8 @@ export class DungeonLighting implements SurfaceLighting {
       if (!ink || !mask) continue
       mask.setTransform(1, 0, 0, 1, -left, -top); mask.clearRect(left, top, size, size); mask.beginPath()
       for (const cell of cells) {
+        // A fading receiver can finish without another scene revision.
+        if (!receives(cell)) continue
         const r = planeRect(p, cell.x, cell.y, 0, 1)
         if (cell.occluder) {
           const z = wallHeight(scene, cell)
@@ -111,7 +114,7 @@ export class DungeonLighting implements SurfaceLighting {
       }
       // Retain headroom at each drawn position while actors travel between cells.
       if (position) for (const b of scene.billboards) {
-        if (!cells.some(c => c.x === b.x && c.y === b.y)) continue
+        if (!cells.some(c => c.x === b.x && c.y === b.y && receives(c))) continue
         const anchor = position(b), foot = project(p, anchor.x, anchor.y + 0.3)
         mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
       }

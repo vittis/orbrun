@@ -9,6 +9,12 @@ atmosphere. The pause menu also cycles all three views.
 At 100% zoom the full 17-cell field of view fits, including sprite headroom.
 Higher zoom values deliberately trade coverage for larger tiles.
 
+Ground rows have 25% extra depth to open horizontal corridors. A low foreground
+lip exposes single-cell passages while back walls and room walls retain their
+raised silhouettes and coherent artwork. Drawing, picking, lighting and shadows
+share the same wall height, which stays stable through LOS fades. The preview's
+**Narrow corridors** scene exercises the passage and a north–south junction.
+
 ## Architecture
 
 `Render25d` implements `@orbrun/scene`'s `MapRenderer` contract and consumes
@@ -24,27 +30,32 @@ flattened tiles; floors, creatures and wall faces retain their own depth
 and picking regions. The existing first-person renderer remains independent.
 
 - `projection.ts` owns ground projection, its inverse, and viewport fitting.
-  Ground rows have 25% extra depth so single-cell horizontal passages leave
-  room around upright art. Wall elevation still follows the camera tilt.
   World coordinates are cell centres. Input and drawing use CSS pixels;
   shared terrain edges snap to backing pixels at each zoom and device pixel
   ratio, capped at two, so adjacent quads meet without gaps or overlap strips.
 - `index.ts` paints ground layers, continuous floor lighting, contact
   shadows, depth-sorted walls and sprites, and readable targeting markers.
-  Foreground walls lower to a small lip beside visible open ground. The same
-  height drives their drawing, picking and light placement. Sprites retain doll
-  composition, atlas offsets, clipping, status badges and player minibars.
+  Walls share a consistent raised height, independent of neighbours and LOS.
+  Sprites retain doll composition, atlas offsets, clipping, status badges and
+  player minibars. Ground fog renders beneath raised terrain and upright art.
   Monsters and ordinary objects use the same atlas scale as the player;
   the artwork defines their relative proportions, independently of the
   first-person renderer's billboard heights. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
+  Exposed wall bases have dense contact shadows and soft south/east cast
+  shadows. Wall artwork maps once across each raised silhouette, with a soft
+  fade toward its foot. There are no cap outlines or separate compressed face
+  textures, so connected walls and corners stay visually consistent.
+  Dense contact shadows and darker face bottoms emphasize the height change.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
   emitters. Floors, wall roofs/faces and alpha-masked sprites all sample that
   field, without per-cell colour steps. Reachability is cached separately from
   smooth per-frame flicker and afterglow fading. Known occluders block light;
-  unseen and remembered terrain never receives it. The player emits no light.
+  unseen and settled remembered terrain never receives it. A departing LOS
+  tile fades its exposure to still-visible emitters with its terrain brightness.
+  The player emits no light.
   LOS has uniform bright ambient exposure and a gentle vignette.
 - `movement.ts` tweens confirmed entity positions and the following camera on
   the renderer's existing clock. Every billboard kind shares the same motion;
@@ -53,9 +64,10 @@ and picking regions. The existing first-person renderer remains independent.
   `Billboard.id` values identify entities across art changes (WebTiles supplies
   monster IDs); anonymous art only pairs unambiguous matching arrivals and
   departures after reserving stationary copies. Spawns, ambiguous matches,
-  teleports, level changes and transitions into/out of visibility snap. Fast
-  travel retargets from the current drawn position with at most two cells of
-  visual lag and no animation queue. The default player curve carries velocity
+  level changes and transitions into/out of visibility snap. Moves of any
+  distance tween, including fast enemies, projectiles and rampage. Fast
+  travel retargets from the current drawn position over one duration without
+  skipping ahead or queuing full animations. The default player curve carries velocity
   through repeated steps and adapts to observed arrival cadence within 1–1.4×
   the configured duration; the camera uses that exact curve. Targeting pans
   snap for immediate feedback. The app delivers the centre before every scene
@@ -71,6 +83,34 @@ and picking regions. The existing first-person renderer remains independent.
   waits for all needed atlas images, and clears when tile sources change or
   the renderer is destroyed. Scene lists and lighting rebuild on scene
   replacement; frames cull outside the viewport and reuse tile composites.
+- `visibility.ts` fades LOS brightness over 220 ms with a smooth curve. It
+  snapshots scalar visibility values, so mutable scenes and rapid reversals
+  continue from the drawn brightness. Floors, walls, standing art, light
+  exposure and memory fog follow the same fade. First discoveries brighten
+  from black; the initial view, level changes, remote maps and Still mode
+  snap. Hidden entities disappear immediately; picking uses confirmed LOS.
+  Reusable scratch surfaces per raster size preserve alpha and flashes without
+  growing the tile cache or quantizing fade steps. Only on-screen fades keep
+  the renderer awake, alongside existing atmosphere and movement.
+- `effects.ts` keeps bounded melee and spell histories on the existing frame
+  clock. Confirmed `MeleeAttack` events produce a small lunge/recoil and sword,
+  thrust, axe, blunt or unarmed gestures. The app resolves these from combat
+  feedback and the wielded inventory item, independently of popup settings.
+  Disappearing transient spell lights leave faint fire, frost, electrical or
+  magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
+  Confirmed `SpellEffect` events also produce upright, depth-sorted bursts for
+  non-projectile spells and abilities: Freeze crystals, Airstrike gusts, Scorch
+  flames, electrical arcs, draining wisps, holy/healing sparks and status rings.
+  The app resolves result sentences and status changes independently of combat
+  popup settings; zero-damage results still show their effect. Server cell
+  flashes also leave a short burst when received and cleared between frames.
+  These bursts last 0.5–0.85 seconds and never change damage or game state.
+  Histories clear on level changes, remote maps, lost visibility and Still mode.
+  Projectile appearance is independent of light emission: Sandblast/rock/metal
+  spells leave dust or chips without glowing. Compact missiles preserve their
+  original texels; continuous beams retain alpha thinning. Short-lived server
+  overlays remain visible for up to 180 ms after removal, without delaying game
+  state, so a flight received entirely between frames cannot disappear unseen.
 
 Unexplored space uses neutral, world-anchored dark mist behind known geometry.
 Remembered tiles and standing art retain 44% of their ambient brightness,
@@ -84,8 +124,15 @@ emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
 effects need it. Still mode and the operating system's reduced motion
 preference stop animation. No renderer starts a separate timer or RAF loop.
-Server flashes are rendered as supplied; spell types and damage are not
-guessed from message text.
+Server flashes keep their supplied colours. The renderer receives typed spell
+feedback from the app; it never parses messages or determines damage.
+Idle motion uses device-pixel-snapped offsets. Breathing is a shallow vertical
+rise; in crisp mode, sprites are enlarged by whole pixels before narrow edge
+smoothing eases the animation. Still sprites retain the selected tile filter.
+Severe wound flags add a guarded lean and uneven breathing without obscuring
+identifying sprite art.
+Lights have compact bright cores and up to six embers or four magical motes each,
+with an 88-mote frame budget; fountains add five small spray droplets.
 Movement also stops in Still/reduced-motion mode. Only visible, on-screen
 tweens keep frames awake, and motion history is discarded on destroy.
 
@@ -108,36 +155,52 @@ synthetic lava patch because the small room atlas has no lava tile. Live
 games use their server's complete tileset.
 Use **Move entities ↔** to compare tween durations/easing on real artwork,
 or the arrow keys to walk the player with a following camera. Clicks place the
-player directly; long-distance moves demonstrate teleport snapping.
+player directly; long-distance moves demonstrate multi-cell tweening.
+**Melee**, **Weapon** and **Wounds** preview combat beside a practice enemy;
+**Cast** previews contact spells, abilities, buffs and four projectile trace families. Append `?effectFrame=0.1` to freeze
+each triggered effect 100 ms into its lifetime for deterministic captures.
+**Toggle LOS** dims/reveals the area around the player; press again mid-fade
+to inspect a continuous reversal, or disable Animation to compare Still mode.
 
-The Scene chooser also loads narrow horizontal/vertical corridors and a
-recorded fountain dungeon. Original 2D
+The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
 Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
 alignment, independent ground badges, LOS contrast and neutral unexplored mist.
-Corridor checks cover floor clearance, exposed sprite heads/feet, raised wall
-faces and picking at all elevations, including 30° and 75°, on desktop and phone.
 Movement checks sample all three easing curves at the start, midpoint and
 landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
 a steady centred player and moving world under camera follow. These
 checks complement unit tests, whose DOM mocks cannot detect raster seams.
+Open `/testbed/projectile-checks.html` for 20 additional real-art checks using
+the public server's Sandblast, Stone Arrow, Iron Shot, Magic Dart and Frost
+tiles. A synchronous protocol burst creates and removes each flight before the
+first draw; pixel comparisons verify projectile, impact, residue and expiry.
+
+Wall-depth checks also verify fading base shadows, consistent wall heights,
+lighter transparent-wall shadows, face shading, hidden geometry and sleep
+at three elevations, zoom levels and device pixel ratios.
+Visibility checks sample actual floor, roof and sprite pixels through fades
+and reversals, including alpha preservation, flash ordering and cache bounds.
 
 Tests cover projection/picking at multiple elevations and viewport sizes,
 visibility, lighting occlusion, animation sleep, atlas composition, compass
 controls, persistence, and temporary level-map switching. Browser captures
 check real Canvas rendering at desktop and phone sizes.
 
+Wall coherence checks use striped artwork to detect texture restarts and hard
+cap seams at three tilts, zooms and device pixel ratios, with filtering on/off.
+They also verify original bottom texels, corner/foreground picking and stable
+wall silhouettes when the ground behind them leaves LOS.
+
 ## Extending the mode
 
-For richer combat effects, add typed, confirmed presentation events to the
-shared scene contract, with stable identities and timestamps. Keep their
-bounded lifetimes in a separate effect layer and respect visibility and
-reduced motion. Do not parse combat prose in the renderer. Camera rotation,
-perspective projection, full shadow maps and element-specific spell effects
-are not implemented; a future GPU backend can reuse the same scene and input
-contracts if those become necessary.
+For richer combat effects, extend the typed, confirmed presentation contract
+with stable identities and timestamps. Keep bounded lifetimes in the effect
+layer and respect visibility and reduced motion. Do not parse combat prose in
+the renderer. Spell traces use semantic light colours and pulses; they do not
+invent persistent hazards. Camera rotation, perspective projection and full
+shadow maps are not implemented; a future GPU backend can reuse these contracts.
 
 Visual inspiration: [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl/),
 particularly its raised walls, standing creatures and environmental lighting.

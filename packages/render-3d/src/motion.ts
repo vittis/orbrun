@@ -1,4 +1,4 @@
-import { MAX_WALK_LAG, StepCadence, planStep, sampleStep, type StepCurve, type Billboard } from '@orbrun/scene'
+import { StepCadence, planStep, sampleStep, type StepCurve, type Billboard } from '@orbrun/scene'
 
 export { STEP_SECONDS } from '@orbrun/scene'
 
@@ -18,10 +18,8 @@ export { STEP_SECONDS } from '@orbrun/scene'
  * `monster_info::client_id`, on the billboard's `ref`), which is what a move
  * is read from here.
  *
- * Only a single step glides. Anything further — a blink, a teleport, a fast
- * monster given two moves in one update, or a rest or travel that resolves
- * many turns before the client draws again — snaps, exactly as the camera
- * snaps rather than gliding a jump.
+ * Moves of any distance glide: fast monsters may cross several cells in one
+ * update. Distance alone cannot distinguish that from a blink or teleport.
  */
 
 /**
@@ -68,9 +66,8 @@ export class Movers {
 
   /**
    * Read the scene's monsters against the last one's: every id that changed
-   * cell by a single step starts a glide from where it was, and every other
-   * change of place snaps. A step begun while one is still under way carries
-   * its position, speed and remaining path into the new one. Timing follows
+   * cell starts a glide from where it was. A move begun while one is still
+   * under way carries its position, speed and remaining path into the new one. Timing follows
    * recent movement arrivals within 100–140 ms, never unconfirmed movement.
    */
   track(billboards: readonly Billboard[], now: number): void {
@@ -84,9 +81,8 @@ export class Movers {
       const cadence = was?.cadence ?? new StepCadence()
       this.seen.set(id, { x: b.x, y: b.y, at: now, gone: false, cadence })
       if (!was || (was.x === b.x && was.y === b.y)) continue
-      const step = Math.max(Math.abs(b.x - was.x), Math.abs(b.y - was.y))
       // a step it was away for is only a step while the gap is short enough to be one update split in two
-      if (step !== 1 || (was.gone && now - was.at > MEMORY_SECONDS)) {
+      if (was.gone && now - was.at > MEMORY_SECONDS) {
         this.moving.delete(id)
         cadence.reset()
         continue
@@ -94,18 +90,10 @@ export class Movers {
       const old = this.moving.get(id)
       const sample = old ? sampleStep(old.curve, now - old.start) : null
       const position = old && sample ? alongPath(old.fromX, old.fromY, old.path, sample.distance) : { x: was.x, y: was.y, next: 0 }
-      let path = [...(old ? old.path.slice(position.next) : []), { x: b.x, y: b.y }]
-      let { x, y } = position
-      let length = pathLength(x, y, path)
-      // Only a burst of confirmed replies can force catch-up. Never accumulate
-      // an unbounded playback queue; preserve the real route around corners.
-      if (length > MAX_WALK_LAG) {
-        const caught = alongPath(x, y, path, length - MAX_WALK_LAG)
-        x = caught.x
-        y = caught.y
-        path = path.slice(caught.next)
-        length = pathLength(x, y, path)
-      }
+      const path = [...(old ? old.path.slice(position.next) : []), { x: b.x, y: b.y }]
+      const { x, y } = position
+      // Animate the whole remaining route within one duration, even for a burst.
+      const length = pathLength(x, y, path)
       const { duration, continuous } = cadence.confirm(now)
       const speed = old && now - old.start < old.curve.duration - 1e-9 ? sample!.speed : undefined
       this.moving.set(id, { fromX: x, fromY: y, toX: b.x, toY: b.y, start: now, path, curve: planStep(length, duration, speed, continuous) })

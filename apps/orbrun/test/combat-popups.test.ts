@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { emptyScene, type MapRenderer } from '@orbrun/scene'
 import { CombatPopups, popupMotion } from '../src/combat-popups'
+import { combatText, type CombatPopup } from '../src/combat-feedback'
 
 function preview() {
   const popups = new CombatPopups(), view = document.createElement('canvas'), scene = emptyScene()
@@ -14,18 +15,91 @@ function preview() {
 }
 
 describe('popup presentation', () => {
-  it.each([false, true])('shows explicit NO DAMAGE text and separate cold damage feedback (concise=%s)', concise => {
+  it.each([false, true])('shows a subtle armor symbol and separate cold damage feedback (concise=%s)', concise => {
     const { popups, render } = preview()
     popups.add([{ kind: 'hit', text: '0', amount: 0, tone: 'cold', x: 1, y: 0, turn: 1 }], 0, concise)
     render(100)
     const zero = popups.root.querySelector<HTMLElement>('.no-damage')!
-    expect(zero.textContent).toBe('NO DAMAGE')
+    expect(zero.textContent).toBe('')
+    expect(zero.title).toBe('Blocked (no damage)')
+    expect(zero.querySelector('[data-icon="armor"]')).not.toBeNull()
     expect(zero.hidden).toBe(false)
     expect(zero.querySelector('.combat-estimate')).toBeNull()
     expect(popupMotion({ kind: 'hit', text: '0', amount: 0, tone: 'cold' }, 0.1, 1, false).glow).toBe(0)
     popups.add([{ kind: 'hit', text: '≈4', amount: 4, estimated: true, tone: 'cold', x: 1, y: 0, turn: 2 }], 150, concise)
     render(200)
-    expect([...popups.root.children].map(n => n.textContent)).toEqual(['NO DAMAGE', '≈4'])
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['', '≈4'])
+    expect(popups.root.querySelector('.estimated [data-icon="cold"]')).not.toBeNull()
+  })
+
+  it.each([false, true])('distinguishes player and enemy armor from shield blocks (concise=%s)', concise => {
+    const { popups } = preview()
+    popups.add(combatText('You hit the goblin but do no damage. The goblin hits you but does no damage. You block the goblin\'s attack. The goblin blocks your attack.'), 0, concise)
+    expect([...popups.root.querySelectorAll('.combat-icon')].map(n => n.getAttribute('data-icon'))).toEqual(['armor', 'armor', 'shield', 'shield'])
+    expect(popups.root.querySelectorAll('.no-damage')).toHaveLength(2)
+    expect(popups.root.textContent).toBe('')
+  })
+
+  it.each<[CombatPopup, string | undefined, string]>([
+    [{ kind: 'miss', text: 'MISS' }, 'miss', ''],
+    [{ kind: 'miss', text: 'DODGED', player: true }, 'miss', ''],
+    [{ kind: 'kill', text: 'SLAIN' }, 'kill', ''],
+    [{ kind: 'hit', text: 'HIT' }, undefined, 'HIT'],
+    [{ kind: 'hit', text: '7', amount: 7 }, undefined, '7'],
+    [{ kind: 'heal', text: '+7 HP', player: true }, 'heal', '+7'],
+    [{ kind: 'heal', text: 'POISON CLEARED', player: true }, 'cured', ''],
+    [{ kind: 'level', text: 'LEVEL 4', player: true }, undefined, 'LEVEL UP · 4'],
+    ...Object.entries({ POISONED: 'poison', CONFUSED: 'confused', PARALYSED: 'paralysed', SLOWED: 'slowed', HASTED: 'hasted', BERSERK: 'berserk', CORRODED: 'acid', PETRIFYING: 'petrifying', INVISIBLE: 'invisible', SILENCED: 'silenced', HELD: 'held' }).map(([text, icon]): [CombatPopup, string, string] => [{ kind: 'status', text, player: true }, icon, '']),
+    [{ kind: 'status', text: 'NEW STATUS', player: true }, 'magic', 'NEW STATUS'],
+  ])('uses recognizable symbols and compact values for %j', (event, icon, value) => {
+    const { popups } = preview()
+    popups.add([event], 0)
+    expect(popups.root.querySelector('.combat-icon')?.getAttribute('data-icon')).toBe(icon)
+    expect(popups.root.textContent).toBe(value)
+    expect((popups.root.firstElementChild as HTMLElement).title).toBe(event.text)
+  })
+
+  it('identifies the receiver for defenses and other effects, including zero-damage player hits', () => {
+    const { popups } = preview()
+    popups.add(combatText('You miss the goblin. The goblin misses you. You block the goblin\'s attack. The goblin blocks your attack. You hit the goblin but do no damage. The goblin hits you but does no damage.'), 0)
+    expect([...popups.root.children].map(n => n.classList.contains('on-player'))).toEqual([false, true, true, false, false, true])
+    expect(popups.root.querySelectorAll('.on-player')).toHaveLength(3)
+    expect(popups.root.querySelectorAll('.on-enemy')).toHaveLength(3)
+  })
+
+  it('keeps a level celebration alive longer than damage and freezes its particles with the frame clock', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'level', text: 'LEVEL 4', player: true }, { kind: 'hurt', text: '-3', player: true }], 0)
+    render(400)
+    const level = popups.root.querySelector<HTMLElement>('.level')!
+    expect(level.querySelector('svg')).toBeNull()
+    expect(level.querySelectorAll('.combat-confetti')).toHaveLength(48)
+    const piece = level.querySelector<HTMLElement>('.combat-confetti')!
+    const transform = piece.style.transform
+    render(400)
+    expect(piece.style.transform).toBe(transform)
+    render(1300)
+    expect(popups.root.querySelector('.hurt')).toBeNull()
+    expect(popups.root.querySelector('.level')).toBe(level)
+    expect(piece.style.transform).not.toBe(transform)
+    popups.add([{ kind: 'hurt', text: '-4', player: true }], 1400)
+    expect(popups.root.querySelector('.level')).toBe(level)
+    render(2400)
+    expect(popups.root.querySelector('.level')).toBeNull()
+    popups.clear()
+    expect(popups.root.querySelector('.combat-confetti')).toBeNull()
+  })
+
+  it('suppresses level confetti and movement in Still mode while keeping the announcement', () => {
+    const { popups, render } = preview()
+    popups.add([{ kind: 'level', text: 'LEVEL 4', player: true }], 0)
+    render(100, true, true)
+    const level = popups.root.querySelector<HTMLElement>('.level')!
+    const transform = level.style.transform
+    expect(level.textContent).toBe('LEVEL UP · 4')
+    expect(level.querySelector<HTMLElement>('.combat-celebration')!.hidden).toBe(true)
+    render(1000, true, true)
+    expect(level.style.transform).toBe(transform)
   })
 
   it('anchors text to interpolated entities while the camera and target are moving', () => {
@@ -65,7 +139,8 @@ describe('popup presentation', () => {
       { kind: 'hurt', text: '-3', player: true },
       { kind: 'miss', text: 'DODGED', player: true },
     ], 0, true)
-    expect([...popups.root.children].map(n => n.textContent)).toEqual(['≈7', '-3', 'DODGED'])
+    expect([...popups.root.children].map(n => n.textContent)).toEqual(['≈7', '-3', ''])
+    expect(popups.root.querySelector('.miss [data-icon="miss"]')).not.toBeNull()
     expect(popups.root.querySelector('.hit')?.classList.contains('fire')).toBe(true)
     popups.clear()
     popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 10, true)
@@ -123,7 +198,8 @@ describe('popup presentation', () => {
     expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
     popups.add([{ kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 100)
     expect(popups.root.childElementCount).toBe(1)
-    expect(popups.root.textContent).toBe('SLAIN')
+    expect(popups.root.textContent).toBe('')
+    expect(popups.root.querySelector('[data-icon="kill"]')).not.toBeNull()
     popups.clear()
     popups.add([{ kind: 'hit', text: '7', x: 1, y: 0 }, { kind: 'kill', text: 'SLAIN', x: 1, y: 0 }], 200)
     expect(popups.root.childElementCount).toBe(2)
@@ -166,6 +242,8 @@ describe('estimated number UX', () => {
     expect(popups.root.textContent).toBe('≈4')
     expect(popups.root.firstElementChild?.classList.contains('fire')).toBe(true)
     expect(popups.root.querySelector('.combat-number')).toBe(entrance)
+    expect(popups.root.querySelector('[data-icon="fire"]')).not.toBeNull()
+    expect(popups.root.querySelector('[data-icon="hit"]')).toBeNull()
   })
   it('does not mark exact damage as approximate', () => {
     const { popups, render } = preview()

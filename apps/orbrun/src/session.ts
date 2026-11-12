@@ -69,6 +69,7 @@ export class Session {
   private listeners = new Set<(e: SessionEvent) => void>()
   private queue: ServerMessage[] = []
   private queueBytes = 0
+  private replayingLoad = false
   /** A loading failure waiting for the socket close callback. */
   private loadFailure: string | null = null
   private loadingVersion: string | null = null
@@ -401,6 +402,12 @@ export class Session {
       this.sceneChangedAt = performance.now()
     }
     this.emit({ type: 'state', msg: m })
+    // A single WebSocket batch can contain a projectile's entire flight and
+    // its removal. Publish confirmed effect frames before another delta can
+    // overwrite them; ordinary map/movement updates remain frame-batched.
+    const ranges = this.gamedata?.ranges
+    if (!this.replayingLoad && m.msg === 'map' && ranges && Array.isArray(m.cells) && m.cells.some(cell =>
+      Array.isArray(cell?.t?.ov) && cell.t.ov.some((tile: unknown) => typeof tile === 'number' && tile >= ranges.featMax && tile < ranges.mainMax))) this.flushScene()
   }
 
   private async startLoad(version: string) {
@@ -446,7 +453,9 @@ export class Session {
         const q = this.queue
         this.queue = []
         this.queueBytes = 0
-        for (const m of q) this.apply(m)
+        this.replayingLoad = true
+        try { for (const m of q) this.apply(m) }
+        finally { this.replayingLoad = false }
         this.flushScene()
       }
     }

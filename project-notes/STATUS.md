@@ -1,6 +1,75 @@
 # Project status
 
-## 0.3.24 trunk Ice Thorns and no-damage feedback — deployed 2026-11-11
+## 0.3.35 stale-deployment recovery — prepared 2026-11-11
+
+The corridor deployment accidentally used a 0.3.24 branch over production
+0.3.34. Integrated current origin/main e45c669 to restore all intervening
+features, including popup icons/colors/confetti and spell VFX, and retained
+corridor spacing with cutaway limited to narrow passages. New source tag:
+`cloudflare-online-v1.32`. Root cause and prevention are in DEPLOYMENT.md.
+
+
+## 0.3.29 brief projectile and physical spell effects — prepared 2026-11-11
+
+User authorized fixing Sandblast and similar spell visuals and deploying when
+finished. New source tag: `cloudflare-online-v1.26`. Projectile map frames now
+reach the renderer before later deltas overwrite them; removed artwork remains
+visible briefly without holding game state or input. Non-emissive sand/stone/
+metal/air projectiles have independent impact and residue styles, and compact
+art avoids beam-only alpha thinning. Load history, invisible spells, Still,
+visibility and level-transition cleanup are preserved. Main's 0.3.26 movement
+and 0.3.27 wall-depth and 0.3.28 breathing changes are integrated. Real server artwork passes all
+20 projectile/impact/residue/expiry checks. Final integrated validation: 2,239
+unit tests/two optional-engine skips; 1,062 existing Canvas checks; forced
+TypeScript, production build and ASSETS-only dry-run pass. Optional engine E2E
+reports 44 skips. Evidence and rollout details are in DEPLOYMENT.md.
+
+## 0.3.28 smoother idle breathing — prepared 2026-11-11
+
+User authorized commit and deployment. New immutable source tag:
+`cloudflare-online-v1.25`. Integrates 0.3.27 wall depth. Breathing is slower and
+shallower, without sideways stretching; integer-enlarged sprites receive narrow
+edge smoothing while the cache keeps its pixel budget. The actual GameScreen
+preview confirms motion and Still-mode freezing. Forced TypeScript rebuild,
+2,220 unit tests / two optional-engine skips, build, and Worker dry-run pass;
+optional engine E2E has 44 skips. Main/source-tag publication triggers Cloudflare
+Workers Builds. See DEPLOYMENT.md for release details.
+
+## 0.3.26 multi-cell movement — prepared 2026-11-11
+
+User authorized commit to main and deployment and will check the result.
+New immutable source tag: `cloudflare-online-v1.23`. Fast enemies, projectiles
+and rampage tween across multiple cells. Player/camera follow shares the curve;
+repeated moves retarget from the drawn position without distance-based snaps.
+Release checks: 2,219 tests / two optional-engine skips, forced TypeScript,
+production build and Worker dry-run passed; optional engine E2E has 44 skips.
+The main/source-tag push triggers Cloudflare deployment. No post-deployment
+checks are requested; details are recorded in DEPLOYMENT.md.
+
+## 0.3.25 2.5D animation and combat polish — deployed 2026-11-11
+
+User authorized committing to main and deploying the completed animation work.
+New immutable source tag: `cloudflare-online-v1.22`. Idle poses are 25% stronger
+with crisp sprite filtering and pixel-snapped idle offsets. Wound flags add a
+small guarded lean and uneven breathing. Confirmed player/enemy melee uses
+bounded lunges, recoil and five weapon gestures, independently of popup settings.
+Transient semantic spell lights leave faint floor traces for 1.25–2.8 seconds.
+Light sources gain compact cores and capped motes; fountains add small droplets.
+Visibility, level transitions, Still and reduced-motion behavior remain covered.
+
+Feature verification: 2,204 unit tests passed / two optional-engine skips;
+900 real Canvas checks passed; typecheck and production build passed. The full
+suite used two workers after a concurrent build caused an unrelated 3D meshing
+test timeout. The interactive dungeon testbed includes weapon, wound and spell
+controls plus deterministic effect captures. Final release checks and deployment
+are recorded in DEPLOYMENT.md. Main and immutable tag point to `41dc68b`.
+Cloudflare build `a433f31b-d289-48a9-b3ec-8ad8ef204908` succeeded; Worker
+`f39a789a-660a-4371-bbfd-d10072e9e6e7` serves 100% of production traffic.
+All 15 hosted checks pass, including source/version/CSP, proxy behavior and
+three JavaScript/two CSS bundles matching local bytes. Evidence:
+`evidence/release-0325-http-checks.json`.
+
+## 0.3.24 trunk Ice Thorns and no-damage feedback — prepared 2026-11-11
 
 User identified Ice Thorns from trunk and requested damage/no-damage popups,
 then commit and deployment. Source tag: `cloudflare-online-v1.21`. The parser
@@ -11,12 +80,7 @@ Incoming explicit zero-damage hits also receive feedback without an HP delta.
 Official trunk terrain.cc/beam.cc/zap-data.h confirm the spell's exact messages
 and plural no-damage grammar. The actual GameScreen fixture displays both
 NO DAMAGE and ≈4 cold feedback and records one impact for the damaging hit.
-Forced TypeScript, 2,185 tests/two optional-engine skips, production build and
-ASSETS-only dry-run pass; engine E2E has 44 skips. Main and immutable source tag
-point to `670dc21`. Cloudflare build `e31fd8a5-ebc0-4e1d-a5e0-398d123e7d62`
-succeeded; Worker `2f08c8fc-f899-417b-a546-4f43133e7304` serves 100% of traffic.
-All 15 hosted checks pass, including exact three-JS/two-CSS asset hashes.
-Evidence: `evidence/release-0324-{ice-thorns,http-checks}.json`.
+Full release checks and rollout are recorded in DEPLOYMENT.md.
 
 ## 0.3.23 synchronized player/camera and native combat text — deployed 2026-11-11
 

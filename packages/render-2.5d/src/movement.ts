@@ -79,8 +79,8 @@ export class DungeonMovement {
       next.set(id, { kind: b.kind, signature: signature(b), tween })
       this.billboards.set(b, tween)
     }
-    const walked = this.player && !same(this.player, scene.player) && distance(this.player, scene.player) <= 1
-    // Only follow a walking camera. Targeting pans, teleports and level changes snap.
+    const walked = this.player && !same(this.player, scene.player)
+    // Follow confirmed player movement at any distance. Targeting pans still snap.
     const dx = this.player ? scene.player.x - this.player.x : 0
     const dy = this.player ? scene.player.y - this.player.y : 0
     const following = walked && this.camera && center.x - this.camera.to.x === dx && center.y - this.camera.to.y === dy
@@ -99,8 +99,8 @@ export class DungeonMovement {
   private retarget(old: Tween | undefined, to: Point, scene: Scene, now: number, options: MovementOptions, checkVisibility = true, player = false): Tween {
     if (!options.enabled || !old) return still(to)
     const from = sampleMovement(old, now)
-    // Never glide through unknown space or draw a long streak after a teleport.
-    if (distance(old.to, to) > 1 || distance(from, to) > 2 || checkVisibility && (!visible(scene, old.to) || !visible(scene, from))) {
+    // Distance alone cannot distinguish a teleport from fast movement.
+    if (checkVisibility && (!visible(scene, old.to) || !visible(scene, from))) {
       if (player) this.cadence.reset()
       return still(to)
     }

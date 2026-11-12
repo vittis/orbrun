@@ -2,6 +2,64 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.35 — 2026-11-11
+
+- Restore the latest combat popup icons, receiver colors, level-up celebration and spell effects after a stale deployment.
+- Give horizontal Dungeon (2.5D) corridors more floor space and lower the foreground lip in single-cell passages while retaining raised room walls.
+
+## 0.3.34 — 2026-11-11
+
+- Add Dungeon (2.5D) effects for Freeze and other spells and abilities without projectiles, including gusts, flames, draining, smiting, hexes, healing, buffs and summons.
+- Show confirmed zero-damage results and incoming abilities, even with combat popups disabled. Preserve brief server flashes received between rendered frames.
+- Keep effects bounded, depth sorted and consistent with visibility, level changes and Still mode.
+
+## 0.3.33 — 2026-11-11
+
+- Remove the sword beside physical damage numbers and celebrate level-ups with larger text, colorful confetti, sparks and an expanding ring.
+- Distinguish player and enemy combat feedback with different colors, including cyan player dodges/blocks and amber enemy dodges/blocks. Keep player damage pink and healing mint.
+
+## 0.3.32 — 2026-11-11
+
+- Remove artificial lines and texture seams from Dungeon (2.5D) walls, keeping soft shading at their bases.
+- Give walls a consistent height and artwork scale, including corners and foreground walls, so tiles no longer shrink as visibility changes.
+- Keep ground fog beneath walls and creatures so remembered terrain cannot paint rectangular bands across them.
+
+## 0.3.31 — 2026-11-11
+
+- Replace NO DAMAGE with a subtle armor-block icon for players and enemies.
+- Make combat popups smaller and use distinct icons for misses, shield blocks, kills, damage types, healing, statuses and leveling to reduce reading during combat.
+
+## 0.3.30 — 2026-11-11
+
+- Strengthen wall-base shadows in Dungeon (2.5D) so wall height is easier to read.
+- Fade terrain smoothly as it enters and leaves line of sight, including lighting and memory fog. Rapid LOS changes reverse smoothly; Still mode keeps instant changes.
+
+## 0.3.29 — 2026-11-11
+
+- Restore Sandblast and other brief spell projectiles that could be created and removed between rendered frames. Preserve confirmed flight artwork briefly without delaying game updates or input.
+- Give non-glowing sand, stone, metal and air spells their own subtle impacts and lingering dust/shard traces. Keep compact missiles crisp instead of applying continuous-beam thinning to them.
+- Apply the fix to other short-lived spell and missile overlays, with quiet fallbacks for new server art. Preserve intentionally invisible spells, Still mode, visibility and level-transition cleanup.
+
+## 0.3.28 — 2026-11-11
+
+- Make idle breathing slower and gentler, with smoother pixel edges that keep sprite details crisp.
+
+## 0.3.27 — 2026-11-11
+
+- Give Dungeon (2.5D) walls stronger base shadows, height-aware cast shadows, shaded faces and subtle roof edges so their depth is easier to read.
+
+## 0.3.26 — 2026-11-11
+
+- Tween multi-cell movement for fast enemies, projectiles and rampage instead of snapping to the destination. Keep the following camera synchronized with the player.
+- Continue repeated moves from the drawn position and animate the full remaining route within one tween duration.
+
+## 0.3.25 — 2026-11-11
+
+- Make Dungeon (2.5D) idle motion slightly stronger and preserve crisp sprite filtering during animation. Wounded enemies lean and breathe unevenly as their health drops.
+- Animate confirmed melee attacks with small lunges and recoil, plus sword, thrust, axe, blunt and unarmed gestures. Enemy melee attempts animate independently of damage-popup settings.
+- Leave faint, short-lived fire, frost, lightning and magical traces after spells. Add compact light cores, more embers and magical motes, and fountain spray while keeping sprites and targeting readable.
+- Bound effect histories and particle counts; respect visibility, level changes and Still/reduced-motion settings.
+
 ## 0.3.24 — 2026-11-11
 
 - Show damage popups when enemies step on Ice Thorns from Crawl trunk, including its plural “skewer” hit messages.

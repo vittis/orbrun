@@ -83,6 +83,91 @@ describe('picking and visibility', () => {
     }
   })
 
+
+  it('draws direct spells on its frame clock, sleeps after expiry, and respects Still mode', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0), cell(1, 0))
+    r.setScene(scene, 0)
+    r.spell({ x: 1, y: 0, kind: 'cold' }, 1)
+    r.render(1.1)
+    expect(r.animating).toBe(true)
+    expect(ctx.strokeStyle).toBe('#a5e7ff')
+    r.render(2)
+    expect(r.animating).toBe(false)
+    r.setOptions({ animate: false })
+    r.spell({ x: 1, y: 0, kind: 'cold' }, 3)
+    r.render(3.1)
+    expect(r.animating).toBe(false)
+    r.setOptions({ animate: true })
+    r.spell({ x: 100, y: 100, kind: 'fire' }, 4)
+    r.render(4.1)
+    expect(r.animating).toBe(false)
+  })
+
+  it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {
+    const { r } = renderer()
+    const c = cell(0, 0, { visibility: 'remembered' }), scene = sceneOf(c)
+    r.setScene(scene, 0)
+    c.visibility = 'visible'; scene.revision++
+    r.setScene(scene, 1); r.render(1.1)
+    expect(r.animating).toBe(true)
+    expect(r.pick(450, 350)).toBe(cellKey(0, 0))
+    r.render(1.23)
+    expect(r.animating).toBe(false)
+    c.visibility = 'remembered'; scene.revision++; r.setScene(scene, 2)
+    c.visibility = 'visible'; scene.revision++; r.setScene(scene, 2.1)
+    r.setOptions({ animate: false }); r.render(2.11)
+    r.setOptions({ animate: true }); r.render(2.12)
+    expect(r.animating).toBe(false)
+  })
+
+  it('does not keep rendering for offscreen visibility fades', () => {
+    const { r } = renderer()
+    const c = cell(100, 100, { visibility: 'remembered' }), scene = sceneOf(cell(0, 0), c)
+    r.setScene(scene, 0)
+    c.visibility = 'visible'; scene.revision++
+    r.setScene(scene, 1); r.render(1.1)
+    expect(r.animating).toBe(false)
+  })
+
+  it('keeps melee sprites, shadows and picking together, then sleeps after the stroke', () => {
+    const { r } = renderer()
+    const scene = sceneOf(cell(0, 0), cell(1, 0))
+    scene.billboards = [{ id: 'player', x: 0, y: 0, kind: 'player', tile: 2, height: 1, life: { motion: 'still' } }]
+    r.setScene(scene, 0)
+    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 1)
+    r.render(1.1)
+    const q = r.projectBillboard(scene.billboards[0]), base = r.project(0, 0)
+    expect(q.x).toBeGreaterThan(base.x)
+    expect(r.pick(q.x, q.y - 15)).toBe(cellKey(0, 0))
+    expect(r.animating).toBe(true)
+    r.render(1.5)
+    expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
+    expect(r.animating).toBe(false)
+    r.setOptions({ animate: false })
+    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 2)
+    r.render(2.1)
+    expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
+    expect(r.animating).toBe(false)
+  })
+
+  it('does not keep rendering for offscreen melee or expired spell residue', () => {
+    const { r } = renderer()
+    const scene = sceneOf(cell(0, 0), cell(100, 100), cell(101, 100))
+    r.setScene(scene, 0)
+    r.melee({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, style: 'crush', hit: true }, 1)
+    r.render(1.1)
+    expect(r.animating).toBe(false)
+    const bolt = { x: 0, y: 0, kind: 'projectile' as const, tile: 2, height: 1,
+      life: { lights: [{ colour: [255, 118, 30] as [number, number, number], radius: 2.8, power: 0.4, pulse: 'fire' as const, transient: true }] } }
+    r.setScene({ ...scene, revision: 1, billboards: [bolt] }, 2)
+    r.setScene({ ...scene, revision: 2, billboards: [] }, 2.1)
+    r.render(3)
+    expect(r.animating).toBe(true)
+    r.render(5)
+    expect(r.animating).toBe(false)
+  })
+
   it('sorts crossing actors by their drawn depth on every frame', () => {
     const { r } = renderer()
     const order: number[] = []
@@ -114,9 +199,9 @@ describe('picking and visibility', () => {
     r.render(1.05)
     const q = r.project(0.5, 0.3), size = fittedScale(900, 700, 50 * Math.PI / 180)
     expect(r.pick(q.x, q.y - size * 0.6)).toBe(cellKey(1, 0))
-    const shadow = vi.mocked(ctx.translate).mock.calls[0]
-    expect(shadow[0]).toBeCloseTo(r.project(0.5, 0.28).x)
-    expect(shadow[1]).toBeCloseTo(r.project(0.5, 0.28).y)
+    expect(vi.mocked(ctx.translate).mock.calls).toContainEqual([
+      expect.closeTo(r.project(0.5, 0.28).x), expect.closeTo(r.project(0.5, 0.28).y),
+    ])
     expect(r.animating).toBe(true)
     r.render(1.1)
     expect(r.animating).toBe(false)
@@ -270,14 +355,21 @@ describe('environmental lighting', () => {
     expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
-  it('filters live subpixel motion even when static server tile scaling is unfiltered', () => {
-    const { r } = renderer(), samples: boolean[] = []
-    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation(ctx => { samples.push(ctx.imageSmoothingEnabled); return true })
+  it('smooths breathing from crisp enlarged pixels and honours still mode and explicit smoothing', () => {
+    const { r } = renderer(), samples: { smooth: boolean; rasterScale: number }[] = []
+    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, _layers, _x, _y, _size, _light, _memory, _flash, _lighting, _sample, rasterScale = 1) => {
+      samples.push({ smooth: ctx.imageSmoothingEnabled, rasterScale }); return true
+    })
     const scene = sceneOf(cell(0, 0))
     scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life: { motion: 'breath' } }]
     r.setScene(scene); r.setOptions({ animate: false, filterScaling: false }); r.render(1)
     r.setOptions({ animate: true }); r.render(2)
-    expect(samples).toEqual([false, true])
+    r.setOptions({ filterScaling: true }); r.render(3)
+    expect(samples[0]).toEqual({ smooth: false, rasterScale: 1 })
+    expect(samples[1].smooth).toBe(true)
+    expect(samples[1].rasterScale).toBeGreaterThanOrEqual(2)
+    expect(samples[1].rasterScale).toBeLessThanOrEqual(4)
+    expect(samples[2]).toEqual({ smooth: true, rasterScale: 1 })
     tile.mockRestore()
   })
   it('the player never emits a light pool or lights ordinary dungeon cells', () => {

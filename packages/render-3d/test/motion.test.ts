@@ -41,12 +41,15 @@ describe('monsters mid-step', () => {
     expect(m.offset(1, 0.1)).toEqual({ x: 1, y: 1 })
   })
 
-  it('snaps anything further than a step: a blink, a teleport, a fast monster given two moves', () => {
+  it.each([2, 5])('glides the full %i-cell move from its previous position', steps => {
     const m = new Movers()
     m.track([mon(1, 5, 5)], 0)
-    m.track([mon(1, 7, 5)], 0.1)
-    expect(m.offset(1, 0.1)).toBeNull()
-    expect(m.active).toBe(false)
+    m.track([mon(1, 5 + steps, 5)], 0.1)
+    expect(m.offset(1, 0.1)).toEqual({ x: -steps, y: 0 })
+    expect(m.offset(1, 0.100001)!.x).toBeCloseTo(-steps, 3)
+    expect(m.offset(1, 0.15)!.x).toBeCloseTo(-steps * 0.125)
+    expect(m.offset(1, 0.2)).toEqual({ x: 0, y: 0 })
+    expect(m.landed(0.2)).toEqual([1])
   })
 
   it('glides a step however long the monster stood still first: standing still sends no updates', () => {
@@ -109,12 +112,13 @@ describe('monsters mid-step', () => {
     }
   })
 
-  it('bounds burst catch-up and stops at the last confirmed cell during a stall', () => {
+  it('keeps bursts continuous and stops at the last confirmed cell during a stall', () => {
     const m = new Movers()
     m.track([mon(1, 0, 0)], 0)
     for (let x = 1; x <= 30; x++) {
+      const drawn = x === 1 ? 0 : x - 1 + m.offset(1, x * 0.001)!.x
       m.track([mon(1, x, 0)], x * 0.001)
-      expect(m.offset(1, x * 0.001)!.x).toBeGreaterThanOrEqual(-2)
+      expect(x + m.offset(1, x * 0.001)!.x).toBeCloseTo(drawn, 12)
       expect(m.offset(1, x * 0.001)!.x).toBeLessThanOrEqual(0)
     }
     expect(m.offset(1, 0.17)).toEqual({ x: 0, y: 0 })
@@ -134,10 +138,11 @@ describe('monsters mid-step', () => {
     expect(m.landed(0.23)).toEqual([])
     expect(m.offset(1, 0.26)).toEqual({ x: 0, y: 0 })
     expect(m.landed(0.26)).toEqual([1])
-    // The jump resets cadence even when the next real step follows immediately.
+    // Multi-cell arrivals also keep cadence and animate all the way to the next cell.
     m.track([mon(1, 10, 0)], 0.27)
     m.track([mon(1, 11, 0)], 0.28)
-    expect(m.offset(1, 0.38)).toEqual({ x: 0, y: 0 })
+    expect(m.offset(1, 0.38)!.x).toBeLessThan(0)
+    expect(m.offset(1, 0.42)).toEqual({ x: 0, y: 0 })
   })
 
   it('glides a step split across two updates, the cell cleared before the next is filled', () => {

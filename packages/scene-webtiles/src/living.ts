@@ -1,4 +1,4 @@
-import type { Billboard, SceneCell, TileLife, TileLight, LifeMotion } from '@orbrun/scene'
+import type { Billboard, SceneCell, TileLife, TileLight, LifeMotion, ProjectileAppearance } from '@orbrun/scene'
 import type { Gamedata, FlagWord } from '@orbrun/gamedata'
 import type { GameState, MapCell } from '@orbrun/webtiles'
 
@@ -43,6 +43,25 @@ export function tileMotion(name: string): LifeMotion | undefined {
   if (/SCROLL|BOOK/.test(name)) return 'paper'
 }
 
+/** Projectile presentation is independent of emission: sand/rocks must not glow. */
+export function projectileAppearance(name: string): ProjectileAppearance | false {
+  if (/_GONE|_EXPIRED|_INACTIVE|BOLT_DEFAULT_BLACK/.test(name)) return false
+  const appearance = (kind: ProjectileAppearance['kind'], colour: ProjectileAppearance['colour'], beam = false): ProjectileAppearance => ({ kind, colour, beam })
+  if (/SANDBLAST|DUST|FRAG/.test(name)) return appearance('sand', [216, 181, 116])
+  if (/STONE|ROCK|BOULDER/.test(name)) return appearance('stone', [184, 168, 137])
+  if (/IRON|METAL|STEEL|SILVER|SLUG/.test(name)) return appearance('metal', [190, 200, 210])
+  if (/AIR|WIND/.test(name)) return appearance('air', [196, 215, 222], true)
+  if (/ACID/.test(name)) return appearance('acid', [177, 234, 89])
+  if (/POISON|STING|VENOM|MEPHITIC/.test(name)) return appearance('poison', [110, 220, 85])
+  if (/COLD|FROST|ICE|ICICLE|FREEZ/.test(name)) return appearance('cold', [140, 215, 255], /^BOLT_(?:FROST|COLD|ICE_BOLT)/.test(name))
+  if (/ELEC|LIGHTNING|ZAP|PLASMA/.test(name)) return appearance('electric', [150, 190, 255], true)
+  if (/FIRE|FLAME|MAGMA|IGNITE|SEARING|HELLFIRE|DAMNATION/.test(name)) return appearance('fire', [255, 118, 30], true)
+  // Every server overlay gets a quiet fallback, including newly added bolts and
+  // physical MI_* missiles. Never infer an attack from a selected spell or key.
+  const glow = tileLight(name)
+  return appearance('magic', glow?.colour ?? [194, 177, 218], /^BOLT_DEFAULT_|^BOLT_(?:DRAIN|SHADOW|NEGATIVE|FORCE_BOLT)/.test(name))
+}
+
 export function creatureLife(name: string, flags: FlagWord, b: Billboard): TileLife {
   const n = name.toUpperCase().replace(/ /g, '_')
   let motion: LifeMotion = /PLANT|TREE|BUSH|FUNGUS|OKLOB|LOTUS/.test(n) ? 'plant'
@@ -79,7 +98,8 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
     }
     else {
       const glow = tileLight(tileName)
-      b.life = { motion: b.kind === 'cloud' ? 'cloud' : b.kind === 'player' ? 'breath' : tileMotion(tileName), lights: glow ? [glow] : undefined }
+      b.life = { motion: b.kind === 'cloud' ? 'cloud' : b.kind === 'player' ? 'breath' : tileMotion(tileName), lights: glow ? [glow] : undefined,
+        projectile: b.kind === 'projectile' ? projectileAppearance(tileName) : undefined }
     }
     if (b.kind === 'player') {
       const hp = state.player.hp / Math.max(1, state.player.hp_max)
