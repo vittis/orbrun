@@ -96,15 +96,39 @@ describe('picking and visibility', () => {
     r.destroy()
   })
 
-  it.each(['gap', 'corner', 'unseen', 'unknown'] as const)('stops the cutaway at a %s', boundary => {
+  it.each([-1, 1])('keeps adjoining roofs level through a corner in direction %s', direction => {
+    const scene = sceneOf(...[-2, -1, 0].flatMap(y => [0, 1, 2, 3].map(i => {
+      const x = i * direction
+      return cell(x, y, y === 0 || y === -1 && i === 1 || y === -2 && i === 0
+        ? { kind: 'wall', occluder: true } : {})
+    })))
+    // Match a mixed stone/glass run ending in a corner and widened passage.
+    scene.cells.get(cellKey(2 * direction, 0))!.wallStyle = 'transparent'
+    const { r } = renderer()
+    r.setOptions({ animate: false })
+    r.setScene(scene); r.render(0)
+    for (let i = 0; i <= 3; i++) {
+      const x = i * direction
+      expect(wallHeight(scene, scene.cells.get(cellKey(x, 0))!)).toBe(0.08)
+      // Raised-height picking would incorrectly claim the space above this roof.
+      const q = r.project(x, -0.5, 0.3)
+      expect(r.pick(q.x, q.y)).not.toBe(cellKey(x, 0))
+      const roof = r.project(x, 0, 0.08)
+      expect(r.pick(roof.x, roof.y)).toBe(cellKey(x, 0))
+    }
+    for (const c of scene.cells.values()) c.visibility = 'remembered'
+    expect(wallHeight(scene, scene.cells.get(cellKey(direction, 0))!)).toBe(0.08)
+    r.destroy()
+  })
+
+  it.each(['gap', 'unseen', 'unknown'] as const)('stops the cutaway at a %s', boundary => {
     const scene = sceneOf(...[-2, -1, 0].flatMap(y => [0, 1, 2].map(x =>
       cell(x, y, y === 0 || y === -2 && x === 0 ? { kind: 'wall', occluder: true } : {}))))
     const target = scene.cells.get(cellKey(2, 0))!
     expect(wallHeight(scene, target)).toBe(0.08)
     if (boundary === 'gap') scene.cells.delete(cellKey(1, 0))
-    if (boundary === 'corner') Object.assign(scene.cells.get(cellKey(1, -1))!, { kind: 'wall', occluder: true })
     if (boundary === 'unseen') scene.cells.get(cellKey(1, 0))!.visibility = 'unseen'
-    if (boundary === 'unknown') scene.cells.get(cellKey(1, -1))!.kind = 'unknown'
+    if (boundary === 'unknown') scene.cells.get(cellKey(1, 0))!.kind = 'unknown'
     expect(wallHeight(scene, target)).toBe(WALL_HEIGHT)
   })
 

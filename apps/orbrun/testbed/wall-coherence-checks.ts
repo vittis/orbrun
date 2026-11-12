@@ -71,6 +71,18 @@ export function wallCoherenceChecks() {
     })
     assert('junction foreground roofs align without a raised tile or blocked passage',
       junctionRoofs.every(({ x, body, passage }) => body[1] > body[0] * 3 && passage === cellKey(x, -1)), junctionRoofs)
+    // Corners at both ends of the widened junction remain part of this row.
+    // They used to stop the cutaway, producing a tall roof beside a low one.
+    for (const x of [-1, 1]) Object.assign(scene.cells.get(cellKey(x, -1))!, { kind: 'wall', occluder: true })
+    scene.revision++; r.setScene(scene); r.render(0)
+    const cornerRoofs = [-1, 0, 1].map(x => {
+      const q = r.project(x, 0)
+      const body = sample(q.x, lip.y + lip.height * 0.8)
+      const above = r.project(x, -0.5, 0.3)
+      return { x, body, above: r.pick(above.x, above.y), roof: r.pick(q.x, lip.y + lip.height * 0.8) }
+    })
+    assert('connected roofs and picking stay aligned through corners', cornerRoofs.every(({ x, body, above, roof }) =>
+      body[1] > body[0] * 3 && above !== cellKey(x, 0) && roof === cellKey(x, 0)), cornerRoofs)
     r.destroy()
   }
   return { checks, failures }

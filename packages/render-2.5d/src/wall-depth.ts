@@ -8,24 +8,24 @@ export const WALL_HEIGHT = 0.58
 
 const known = (cell?: SceneCell): cell is SceneCell => !!cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown'
 
-/** Keep a continuous foreground edge level, including where a narrow passage widens. */
+/** Keep each connected wall row level, including passage junctions and corners. */
 export function wallHeight(scene: Scene, cell: SceneCell) {
-  const foreground = (x: number) => {
+  const connected = (x: number) => {
     const wall = scene.cells.get(cellKey(x, cell.y))
-    const behind = scene.cells.get(cellKey(x, cell.y - 1))
-    return known(wall) && wall.occluder && known(behind) && !behind.occluder
+    return known(wall) && wall.occluder
   }
   const narrow = (x: number) => {
+    const behind = scene.cells.get(cellKey(x, cell.y - 1))
     const back = scene.cells.get(cellKey(x, cell.y - 2))
-    return known(back) && back.occluder
+    return known(behind) && !behind.occluder && known(back) && back.occluder
   }
-  if (!foreground(cell.x)) return WALL_HEIGHT
+  if (!connected(cell.x)) return WALL_HEIGHT
   if (narrow(cell.x)) return 0.08
-  // A junction can interrupt the back wall without interrupting this wall.
-  // Share its cutaway across the whole exposed run, stopping at gaps,
-  // corners and unknown terrain rather than leaving isolated raised tiles.
+  // A corner interrupts the exposed edge, but not the wall itself. Share the
+  // cutaway through it so adjoining roofs cannot jump to a different height.
+  // Only a gap or unknown wall terrain ends the connected run.
   for (const direction of [-1, 1]) {
-    for (let x = cell.x + direction; foreground(x); x += direction) {
+    for (let x = cell.x + direction; connected(x); x += direction) {
       if (narrow(x)) return 0.08
     }
   }

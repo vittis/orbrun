@@ -10,8 +10,8 @@ At 100% zoom the full 17-cell field of view fits, including sprite headroom.
 Higher zoom values deliberately trade coverage for larger tiles.
 
 Ground rows have 25% extra depth to open horizontal corridors. A low foreground
-lip exposes single-cell passages and stays level along each continuous foreground
-edge, including junctions and widened sections. Back walls and other room walls retain their
+lip exposes single-cell passages and stays level along each connected wall row,
+including corners, junctions and widened sections. Back walls and other room walls retain their
 raised silhouettes and coherent artwork. Drawing, picking, lighting and shadows
 share the same wall height, which stays stable through LOS fades. The preview's
 **Narrow corridors** scene exercises the passage and a north–south junction.
