@@ -87,8 +87,9 @@ and picking regions. The existing first-person renderer remains independent.
   snapshots scalar visibility values, so mutable scenes and rapid reversals
   continue from the drawn brightness. Floors, walls, standing art, light
   exposure and memory fog follow the same fade. First discoveries brighten
-  from black; the initial view, level changes, remote maps and Still mode
-  snap. Hidden entities disappear immediately; picking uses confirmed LOS.
+  from black; the initial view, multi-cell player arrivals (including fast
+  explore/travel), level changes, remote maps and Still mode snap. Hidden
+  entities disappear immediately; picking uses confirmed LOS.
   Reusable scratch surfaces per raster size preserve alpha and flashes without
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.

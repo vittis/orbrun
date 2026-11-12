@@ -17,9 +17,13 @@ export class DungeonVisibility {
   private initialized = false
   private level: string | undefined
   private onLevel = false
+  private player = { x: 0, y: 0 }
 
   observe(scene: Scene, now: number, animate: boolean) {
-    const snap = !this.initialized || !animate || !scene.playerOnLevel || scene.levelKey !== this.level || scene.playerOnLevel !== this.onLevel
+    // Fast explore/travel can deliver only the destination. Settle the whole
+    // view on these arrivals instead of fading the new surroundings from black.
+    const jumped = Math.max(Math.abs(scene.player.x - this.player.x), Math.abs(scene.player.y - this.player.y)) > 1
+    const snap = !this.initialized || !animate || jumped || !scene.playerOnLevel || scene.levelKey !== this.level || scene.playerOnLevel !== this.onLevel
     const next = new Map<CellKey, Fade>()
     for (const [key, cell] of scene.cells) {
       if (cell.visibility === 'unseen' || cell.kind === 'unknown') continue
@@ -30,6 +34,7 @@ export class DungeonVisibility {
     }
     this.cells = next
     this.initialized = true; this.level = scene.levelKey; this.onLevel = scene.playerOnLevel
+    this.player = { x: scene.player.x, y: scene.player.y }
   }
 
   darkness(cell: SceneCell, now: number) {

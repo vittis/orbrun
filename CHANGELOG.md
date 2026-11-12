@@ -4,6 +4,7 @@ Notable changes to Orbrun, newest first.
 
 ## 0.3.36 — 2026-11-11
 
+- Skip LOS fades when fast auto-explore or travel jumps to a new location, so the surroundings appear at their final brightness.
 - Replace estimated enemy damage numbers with light, solid and heavy hit cues that show damage type; keep confirmed numbers and player HP changes.
 - Make Dungeon (2.5D) melee travel from attacker to defender, with recoil and combat feedback timed to contact.
 

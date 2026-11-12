@@ -57,6 +57,40 @@ describe('LOS brightness transitions', () => {
     expect(fade.darkness(cell, 1.13)).toBe(1)
   })
 
+  it.each([[12, 0], [0, -12], [-12, 12], [2, 0]])('settles all LOS changes on an arrival at (%i, %i)', (x, y) => {
+    const { fade, scene, cell } = world()
+    cell.visibility = 'remembered'; fade.observe(scene, 1, true)
+    expect(fade.moving(cell, 1.05)).toBe(true)
+    // Mutate the existing position just as producers can mutate scene cells.
+    scene.player.x = x; scene.player.y = y
+    const arrival: SceneCell = { ...cell, x, y, visibility: 'visible' }
+    scene.cells.set(cellKey(x, y), arrival)
+    fade.observe(scene, 1.05, true)
+    expect(fade.darkness(arrival, 1.05)).toBe(0)
+    expect(fade.moving(arrival, 1.05)).toBe(false)
+    expect(fade.darkness(cell, 1.05)).toBe(MEMORY_DARKNESS)
+    expect(fade.moving(cell, 1.05)).toBe(false)
+    // Repeated updates at the destination must not restart a reveal.
+    fade.observe(scene, 1.06, true)
+    expect(fade.darkness(arrival, 1.06)).toBe(0)
+    expect(fade.moving(arrival, 1.06)).toBe(false)
+    // Normal LOS changes resume fading after the arrival.
+    arrival.visibility = 'remembered'
+    fade.observe(scene, 1.1, true)
+    expect(fade.darkness(arrival, 1.21)).toBeCloseTo(MEMORY_DARKNESS / 2)
+  })
+
+  it.each([[1, 0], [0, -1], [-1, 1]])('keeps first discoveries fading during a step to (%i, %i)', (x, y) => {
+    const { fade, scene, cell } = world()
+    scene.player.x = x; scene.player.y = y
+    const discovery = { ...cell, x, y }
+    scene.cells.set(cellKey(x, y), discovery)
+    fade.observe(scene, 1, true)
+    expect(fade.darkness(discovery, 1)).toBe(1)
+    expect(fade.darkness(discovery, 1.11)).toBeCloseTo(0.5)
+    expect(fade.moving(discovery, 1.11)).toBe(true)
+  })
+
   it.each(['level', 'remote', 'disabled', 'clear'] as const)('snaps across %s changes', reset => {
     const { fade, scene, cell } = world()
     cell.visibility = 'remembered'; fade.observe(scene, 1, true)
