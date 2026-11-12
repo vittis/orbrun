@@ -652,7 +652,15 @@ export class Render25d implements MapRenderer {
       const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
       const thin = false
       ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
-      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
+      let spriteRect = rect
+      if (b.rotation) {
+        // Rotate in the dungeon plane before applying the camera's foreshortening.
+        ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
+        ctx.scale(1, rect.height / rect.width)
+        ctx.rotate(b.rotation)
+        spriteRect = { x: -rect.width / 2, y: -rect.width / 2, width: rect.width, height: rect.width }
+      }
+      this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], spriteRect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
       return
     }

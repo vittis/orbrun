@@ -1,40 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { initialState, reduce, type Monster, type ServerMessage } from '@orbrun/webtiles'
-import { loadGamedata, type Gamedata } from '@orbrun/gamedata'
+import { initialState, reduce, type Monster } from '@orbrun/webtiles'
+import type { Gamedata } from '@orbrun/gamedata'
+import { fixtureGamedata, fixtureMessages, fixtureState } from './recording'
 import { cellKey, emptyScene, monstersInView, type Scene } from '@orbrun/scene'
 import { buildScene, enumMismatches, missingTileNames, CEILING_REACH, classifyFeature, stanceFor, standsFree, levelPresentation, gateFaces, isScenery, isVegetation, isExcludedFromList, monsterGroups, monsterSort, viewmodelFor, itemTileName } from '../src/index.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const gdRoot = join(here, 'fixtures', 'gamedata')
-const version = readdirSync(gdRoot)[0]
-
-async function fixtureGamedata(): Promise<Gamedata> {
-  return loadGamedata({
-    base: 'fixture://x',
-    version,
-    skipImages: true,
-    io: {
-      async fetchText(url) {
-        const file = url.split('/').pop()!
-        return readFileSync(join(gdRoot, version, file), 'utf8')
-      },
-      async loadImage() {
-        throw new Error('no images in tests')
-      },
-    },
-  })
-}
-
-function fixtureMessages(): ServerMessage[] {
-  const text = readFileSync(join(here, '..', '..', 'webtiles', 'test', 'fixtures', 'cdi-0.34-watch.ndjson'), 'utf8')
-  return text
-    .trim()
-    .split('\n')
-    .map((l) => JSON.parse(l).m as ServerMessage)
-}
 
 describe('gamedata loader', () => {
   let gd: Gamedata
@@ -193,8 +167,7 @@ describe('buildScene on a recorded level', () => {
     gd = await fixtureGamedata()
   })
   it('stands a tree upright rather than laying it on the floor', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     const tree = gd.dngn.id('DNGN_TREE_2')!
     st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, g: '\u2663', t: { ...floor.t, bg: tree } })
@@ -205,8 +178,7 @@ describe('buildScene on a recorded level', () => {
     expect(cell.label).toBe('tree')
   })
   it('builds a wall dressed in feature art as a wall, not a picture on the floor', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     for (const name of ['STONE_SMOOTH_WALL_BEOGH', 'DNGN_DIMENSION_EDGE']) {
       const art = gd.dngn.id(name)!
@@ -224,8 +196,7 @@ describe('buildScene on a recorded level', () => {
     expect(standard.stance).toBe('upright')
   })
   it('gives an open door in a north–south gate the horizontal pieces its faces show, as a closed one has', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     const up = gd.dngn.id('DNGN_VGATE_OPEN_UP')!
     st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, g: "'", t: { ...floor.t, bg: up } })
@@ -235,8 +206,7 @@ describe('buildScene on a recorded level', () => {
     expect(cell.faceTiles).toEqual({ w: gd.dngn.id('DNGN_GATE_OPEN_LEFT'), e: gd.dngn.id('DNGN_GATE_OPEN_RIGHT') })
   })
   it('names the water shorelines among the overlays, so 3D can leave the flat wave lines out', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     const water = gd.dngn.id('DNGN_SHALLOW_WATER')!
     const shore = gd.dngn.id('SHORE_N')!
@@ -260,8 +230,7 @@ describe('buildScene on a recorded level', () => {
     expect(cell.wallShadows).toEqual([shadow])
   })
   it('names the travel-exclusion marks as translucent, on a floor and on a wall face, so 3D blends them instead of alpha-testing them to black', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const excl = gd.dngn.id('TRAVEL_EXCLUSION_BG')!
     const centre = gd.dngn.id('TRAVEL_EXCLUSION_CENTRE_BG')!
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
@@ -278,8 +247,7 @@ describe('buildScene on a recorded level', () => {
     expect(w.translucent).toEqual([excl])
   })
   it('names the targeter landing wash as translucent, so 3D blends it instead of alpha-testing it away', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const landing = gd.dngn.id('LANDING')!
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, t: { ...floor.t, ov: [...(floor.t!.ov ?? []), landing] } })
@@ -288,8 +256,7 @@ describe('buildScene on a recorded level', () => {
     expect(f.translucent).toEqual([landing])
   })
   it('names a shop by its wares, the only thing the tile says about it (tilepick.cc tileidx_shop)', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     const shop = gd.dngn.id('SHOP_WEAPONS')
     expect(shop).toBeDefined()
@@ -558,8 +525,7 @@ describe('buildScene on a recorded level', () => {
   })
 
   it('marks the net and the web as whole-cell badges and every corner badge as not', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const me = st.map.cells.get(cellKey(st.player.pos.x, st.player.pos.y))!
     // enums.js fg_flags: NET 0x00800000 and WEB 0x01000000 in the first word, POISON [0, 0x08000000] in the second (0.34)
     const fg = [gd.fg(me.t!.fg!).value | 0x00800000 | 0x01000000, 0x08000000]
@@ -657,8 +623,7 @@ describe('viewmodel', () => {
   })
   it('finds the watched player\'s weapon in the recorded session, and the shield from the paperdoll', async () => {
     const gd = await fixtureGamedata()
-    const st = initialState()
-    for (const m of fixtureMessages()) reduce(st, m)
+    const st = fixtureState()
     const vm = viewmodelFor(st, gd)
     expect(vm.weapon).not.toBeNull()
     expect(vm.weapon!.layers.length).toBeGreaterThan(0)

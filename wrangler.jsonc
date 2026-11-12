@@ -4,8 +4,12 @@
   // Cloudflare's build settings must have Root directory = / (the monorepo
   // root), because apps/orbrun depends on the workspace packages by name and
   // on the root's vite: an `npm ci` inside apps/orbrun resolves neither.
-  //   Build command:  npm ci --include=dev && npm run typecheck && NODE_ENV=test npm test && npm run build
-  //   Deploy command: npx wrangler deploy
+  //   Build variable: SKIP_DEPENDENCY_INSTALL=1
+  //   Build command:  npm ci --include=dev --prefer-offline --no-audit --no-fund && npm run typecheck && NODE_ENV=test npm test
+  //   Deploy command: npm run deploy
+  // Disable Cloudflare's automatic install so dependencies are installed once.
+  // The deploy hook below runs the single asset build, with Git checks before
+  // and after it. Do not add `npm run build` to the Cloudflare build command.
   //
   // The `--include=dev` is required. The build image exports
   // NPM_CONFIG_INCLUDE=prod and NPM_CONFIG_OMIT=dev, which outrank this repo's

@@ -1,9 +1,7 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import { readFileSync, readdirSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-import { initialState, reduce, type GameState, type ServerMessage } from '@orbrun/webtiles'
-import { loadGamedata, type Gamedata } from '@orbrun/gamedata'
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
+import type { Gamedata } from '@orbrun/gamedata'
+import { fixtureGamedata, fixtureMessages, fixtureState } from './recording'
 import { cellKey, type Scene } from '@orbrun/scene'
 import { buildScene } from '../src/index.js'
 
@@ -14,31 +12,6 @@ import { buildScene } from '../src/index.js'
  * as the plain `previous` chain. Replayed at several flush cadences, since a
  * flush may gather one message or many.
  */
-const here = dirname(fileURLToPath(import.meta.url))
-const gdRoot = join(here, 'fixtures', 'gamedata')
-const version = readdirSync(gdRoot)[0]
-
-async function fixtureGamedata(): Promise<Gamedata> {
-  return loadGamedata({
-    base: 'fixture://inc',
-    version,
-    skipImages: true,
-    io: {
-      async fetchText(url) {
-        return readFileSync(join(gdRoot, version, url.split('/').pop()!), 'utf8')
-      },
-      async loadImage() {
-        throw new Error('no images in tests')
-      },
-    },
-  })
-}
-
-function fixtureMessages(): ServerMessage[] {
-  const text = readFileSync(join(here, '..', '..', 'webtiles', 'test', 'fixtures', 'cdi-0.34-watch.ndjson'), 'utf8')
-  return text.trim().split('\n').map((l) => JSON.parse(l).m as ServerMessage)
-}
-
 /** Everything a scene says, with the bookkeeping revisions left out and the cells in key order. */
 function semantics(s: Scene) {
   const cells = [...s.cells.entries()].sort((a, b) => a[0] - b[0]).map(([k, c]) => [k, c] as const)
@@ -50,8 +23,8 @@ describe('incremental scene building', () => {
   let messages: ServerMessage[]
   beforeAll(async () => {
     gd = await fixtureGamedata()
-    messages = fixtureMessages()
   })
+  beforeEach(() => { messages = fixtureMessages() })
 
   for (const every of [1, 7, 50]) {
     it(`matches the full build at every flush, one flush every ${every} message${every > 1 ? 's' : ''}`, () => {
@@ -91,8 +64,7 @@ describe('incremental scene building', () => {
   }
 
   it('carries untouched cells and billboards over by identity, and rebuilds the touched ones', () => {
-    const state = initialState()
-    for (const m of messages) reduce(state, m)
+    const state = fixtureState()
     const a = buildScene(state, gd, { dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
     state.dirtyCells.clear()
     state.mapCleared = false
@@ -116,8 +88,7 @@ describe('incremental scene building', () => {
   })
 
   it('does not trust a previous scene built from another state', () => {
-    const state = initialState()
-    for (const m of messages) reduce(state, m)
+    const state = fixtureState()
     const other = initialState()
     for (const m of messages.slice(0, 40)) reduce(other, m)
     const foreign = buildScene(other, gd)
@@ -126,8 +97,7 @@ describe('incremental scene building', () => {
   })
 
   it('moves the lid of a cell whose wall neighbourhood changed', () => {
-    const state = initialState()
-    for (const m of messages) reduce(state, m)
+    const state = fixtureState()
     const a = buildScene(state, gd, { dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
     state.dirtyCells.clear()
     state.mapCleared = false

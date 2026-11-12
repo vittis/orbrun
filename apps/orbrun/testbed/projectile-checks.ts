@@ -7,9 +7,12 @@ import type { ServerInfo } from '../src/servers'
 const result = document.getElementById('result')!
 try {
   const gd = await loadGamedata({ base: '/gamedata-proxy/crawl.dcss.io', version: '0703b2fa62e821390161d95cf52f9da1183761d4', io: browserIo() })
-  const cases = ['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW']
+  const cases = [
+    ...['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW'].map(name => ({ name, dx: 1, dy: 0 })),
+    ...Array.from({ length: 8 }, (_, dir) => ({ name: `MI_ARROW${dir}`, dx: Math.round(Math.sin(dir * Math.PI / 4)), dy: -Math.round(Math.cos(dir * Math.PI / 4)) })),
+  ]
   const checks: { spell: string; phase: string; changedPixels: number; sleeping?: boolean; passed: boolean }[] = []
-  for (const name of cases) {
+  for (const { name, dx, dy } of cases) {
     let deliver: (m: ServerMessage) => void = () => {}
     const connection: Connection = { kind: 'remote', gamedataBase: '', open: true, send() {}, close() {},
       onMessage(fn) { deliver = fn; return () => {} }, onOpen: () => () => {}, onClose: () => () => {} }
@@ -17,7 +20,7 @@ try {
     session.gamedata = gd
     deliver({ msg: 'player', pos: { x: 0, y: 0 }, place: 'Dungeon', depth: 1 })
     const bg = gd.dngn.id('FLOOR_GREY_DIRT')!
-    const cells = [-2, -1, 0, 1, 2].flatMap(y => [-3, -2, -1, 0, 1, 2, 3].map(x => ({ x, y, f: 33, mf: 1, g: '.', t: { bg } })))
+    const cells = [-3, -2, -1, 0, 1, 2, 3].flatMap(y => [-3, -2, -1, 0, 1, 2, 3].map(x => ({ x, y, f: 33, mf: 1, g: '.', t: { bg } })))
     deliver({ msg: 'map', clear: true, player_on_level: true, cells })
     session.flushScene()
     const base = session.scene
@@ -29,13 +32,13 @@ try {
     session.on(event => { if (event.type === 'scene') renderer.setScene(event.scene, 1) })
     const tile = gd.main.id(name)
     if (tile === undefined) throw new Error(`Missing server artwork: ${name}`)
-    for (const x of [-1, 0, 1, 2]) {
-      deliver({ msg: 'map', cells: [{ x, y: 0, t: { ov: [tile] } }, ...(x > -1 ? [{ x: x - 1, y: 0, t: { ov: [] } }] : [])] })
+    for (const step of [1, 2]) {
+      deliver({ msg: 'map', cells: [{ x: dx * step, y: dy * step, t: { ov: [tile] } }, ...(step > 1 ? [{ x: dx * (step - 1), y: dy * (step - 1), t: { ov: [] } }] : [])] })
       deliver({ msg: 'delay', t: 10 })
     }
-    deliver({ msg: 'map', cells: [{ x: 2, y: 0, t: { ov: [] } }] })
+    deliver({ msg: 'map', cells: [{ x: dx * 2, y: dy * 2, t: { ov: [] } }] })
     session.flushScene()
-    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.3], ['Residue', 1.8], ['Expired', 4]] as const) {
+    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.12], ['Residue', 1.8], ['Expired', 4]] as const) {
       renderer.render(time); plain.render(time)
       const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
       const before = baseline.getContext('2d')!.getImageData(0, 0, baseline.width, baseline.height).data

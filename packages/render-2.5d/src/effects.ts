@@ -5,12 +5,17 @@ export interface SpellTrace { source: Emitter; born: number; duration: number; a
 export interface SpellBurst extends SpellEffect { born: number; duration: number; impact?: boolean }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ProjectilePoint { billboard: Billboard; at: number }
-interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number }
+interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number; presented?: boolean }
+const PROJECTILE_SPEED = 40
+const MIN_PROJECTILE_TIME = 0.04
 const shotKey = (b: Billboard) => `${b.x},${b.y}:${b.tile}`
-const shotFamily = (b: Billboard) => b.life?.projectile ? JSON.stringify(b.life.projectile) : `tile:${b.tile}`
+const shotFamily = (b: Billboard) => {
+  const a = b.life?.projectile
+  return a ? a.family ?? `${a.kind}:${a.colour}:${a.beam}` : `tile:${b.tile}`
+}
 const separation = (a: Billboard, b: Billboard) => Math.hypot(a.x - b.x, a.y - b.y)
 const tail = (flight: ProjectileFlight) => flight.points[flight.points.length - 1]
-const arrival = (flight: ProjectileFlight) => Math.max(flight.ended ?? Infinity, tail(flight).at + 0.035)
+const arrival = (flight: ProjectileFlight) => Math.max(flight.ended ?? Infinity, tail(flight).at, flight.points[0].at + MIN_PROJECTILE_TIME)
 const visible = (scene: Scene, p: { x: number; y: number }) => scene.cells.get(cellKey(p.x, p.y))?.visibility === 'visible'
 const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 
@@ -50,31 +55,55 @@ export class DungeonEffects {
     const nonProjectiles = { ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }
     const next = new Map<string, SpellSample>(emittersFor(nonProjectiles).filter(s => s.transient).map(source => [signature(source), { source }]))
     const shots = new Map<string, ProjectileFlight>()
-    if (animate && scene.playerOnLevel) for (const billboard of scene.billboards) {
+    const groups = new Map<string, Billboard[]>()
+    for (const b of scene.billboards) {
+      if (b.kind !== 'projectile') continue
+      const a = b.life?.projectile, key = `${shotFamily(b)}:${a ? a.angle : ''}`
+      const group = groups.get(key) ?? []
+      group.push(b); groups.set(key, group)
+    }
+    const projectiles = [...groups.values()].flatMap(group => {
+      const a = group[0].life?.projectile
+      // Several overlay cells may arrive together in map order. Directional
+      // art provides a travel order independent of east/west or north/south.
+      const angle = a ? a.angle : undefined
+      if (angle === undefined) return group
+      return group.sort((p, q) => (p.x - q.x) * Math.cos(angle) + (p.y - q.y) * Math.sin(angle))
+    })
+    if (animate && scene.playerOnLevel) for (const billboard of projectiles) {
       if (billboard.kind !== 'projectile' || billboard.life?.projectile === false || !visible(scene, billboard)) continue
       const key = shotKey(billboard)
       let flight = this.shots.get(key)
       if (!flight) {
         // Overlay deltas have no missile ID. Join only nearby, fresh samples of
         // the same art family; old/remote shots remain separate flights.
-        flight = this.flights.find(f => now - f.seen < 0.12 && now < arrival(f)
-          && shotFamily(tail(f).billboard) === shotFamily(billboard)
-          && separation(tail(f).billboard, billboard) > 0
-          && separation(tail(f).billboard, billboard) <= Math.SQRT2 + 0.01)
+        const candidates = this.flights.filter(f => {
+          const last = tail(f).billboard, previous = f.points.at(-2)?.billboard
+          const dx = last.x - (previous?.x ?? last.x), dy = last.y - (previous?.y ?? last.y)
+          const forward = !previous || (billboard.x - last.x) * dx + (billboard.y - last.y) * dy >= 0
+          return now - f.seen < 0.12 && now < arrival(f) && forward
+            && shotFamily(last) === shotFamily(billboard)
+            && separation(last, billboard) > 0 && separation(last, billboard) <= Math.SQRT2 + 0.01
+        })
+        flight = candidates.length === 1 ? candidates[0] : undefined
         if (flight) {
           const previous = tail(flight)
-          flight.points.push({ billboard, at: Math.max(now, previous.at + separation(previous.billboard, billboard) / 20) })
+          // Only extend the launch backwards once the observed path establishes
+          // which adjacent actor is behind the missile. Never pick the target.
+          if (flight.points.length === 1 && !flight.presented) {
+            this.launch(scene, flight, billboard.x - previous.billboard.x, billboard.y - previous.billboard.y)
+          }
+          if (flight.presented) previous.at = Math.max(previous.at, now)
+          flight.points.push({ billboard, at: Math.max(now, tail(flight).at + separation(previous.billboard, billboard) / PROJECTILE_SPEED) })
           // Bound long-lived/bouncing paths without dropping unplayed samples.
           if (flight.points.length > 128) flight.points.splice(0, flight.points.length - 128)
           flight.ended = undefined
         } else {
-          // Use a visible adjacent actor as the launch point only when unique.
-          const actors = [scene.player, ...scene.billboards.filter(b => b.kind === 'monster' && !b.scenery)]
-          const origins = actors.filter(a => visible(scene, a) && Math.hypot(a.x - billboard.x, a.y - billboard.y) > 0
-            && Math.hypot(a.x - billboard.x, a.y - billboard.y) <= Math.SQRT2 + 0.01)
-          const origin = origins.length === 1 ? { ...billboard, x: origins[0].x, y: origins[0].y } : billboard
-          flight = { points: [{ billboard: origin, at: now }], seen: now }
-          if (origin !== billboard) flight.points.push({ billboard, at: now + separation(origin, billboard) / 20 })
+          flight = { points: [{ billboard, at: now }], seen: now }
+          const appearance = billboard.life?.projectile
+          const angle = appearance ? appearance.angle : undefined
+          if (angle !== undefined) this.launch(scene, flight,
+            Math.cos(angle), Math.sin(angle))
           this.flights.push(flight)
         }
       }
@@ -98,17 +127,37 @@ export class DungeonEffects {
     this.flights = this.flights.slice(-48)
   }
 
+  private launch(scene: Scene, flight: ProjectileFlight, dx: number, dy: number) {
+    const first = flight.points[0]
+    const actors = [scene.player, ...scene.billboards.filter(b => b.kind === 'monster' && !b.scenery)]
+    const origins = actors.filter(a => {
+      const x = first.billboard.x - a.x, y = first.billboard.y - a.y
+      return Math.hypot(x, y) > 0 && Math.hypot(x, y) <= Math.SQRT2 + 0.01
+        && x * dx + y * dy > 0.01 && visible(scene, a) && !scene.cells.get(cellKey(a.x, a.y))?.occluder
+    })
+    if (origins.length !== 1) return
+    const { x, y } = origins[0]
+    flight.points.unshift({ billboard: { ...first.billboard, x, y }, at: first.at })
+    first.at += separation(first.billboard, flight.points[0].billboard) / PROJECTILE_SPEED
+  }
+
   /** One interpolated sprite per flight, even when all deltas arrive in one RAF. */
   projectiles(now: number): Billboard[] {
     return this.flights.flatMap(flight => {
       if (now >= arrival(flight)) return []
+      flight.presented = true
       const points = flight.points
       const index = points.findIndex(point => point.at > now)
-      if (index < 1) return [{ ...(index === 0 ? points[0] : tail(flight)).billboard }]
-      const from = points[index - 1], to = points[index]
-      const t = Math.max(0, Math.min(1, (now - from.at) / (to.at - from.at)))
-      return [{ ...to.billboard, x: from.billboard.x + (to.billboard.x - from.billboard.x) * t,
-        y: from.billboard.y + (to.billboard.y - from.billboard.y) * t }]
+      const from = points[Math.max(0, index < 0 ? points.length - 2 : index - 1)]
+      const to = index < 0 ? tail(flight) : points[index]
+      const t = to.at > from.at ? Math.max(0, Math.min(1, (now - from.at) / (to.at - from.at))) : 1
+      const artwork = to.billboard.life?.projectile
+      const dx = to.billboard.x - from.billboard.x, dy = to.billboard.y - from.billboard.y
+      const aimX = tail(flight).billboard.x - points[0].billboard.x
+      const aimY = tail(flight).billboard.y - points[0].billboard.y
+      const rotation = artwork && artwork.angle !== undefined && (aimX || aimY)
+        ? Math.atan2(aimY, aimX) - artwork.angle : undefined
+      return [{ ...to.billboard, rotation, x: from.billboard.x + dx * t, y: from.billboard.y + dy * t }]
     })
   }
 

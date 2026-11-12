@@ -8,6 +8,10 @@ export interface ProjectileAppearance {
   colour: [number, number, number]
   /** Only continuous beam art may be alpha-thinned; compact missiles retain their texels. */
   beam: boolean
+  /** Direction the artwork points on the ground plane (radians, east = 0). */
+  angle?: number
+  /** Stable tile family, excluding directional/animation variants. */
+  family?: string
 }
 export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[]; projectile?: ProjectileAppearance | false }
 export interface LivingPose { x: number; y: number; sx: number; sy: number; angle: number; glow: number }

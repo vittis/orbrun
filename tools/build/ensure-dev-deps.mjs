@@ -3,8 +3,9 @@
 // packages and no vite, and a build command of `npm install --include=dev` reports
 // "up to date" without repairing that tree (npm 10.9.2). Only a fresh `npm ci` does.
 //
-// The documented build command is `npm ci --include=dev && npm run build`; this hook
-// is the fallback for when it isn't, so `npm run build` works on a pruned tree.
+// Workers Builds disables automatic dependency installation and explicitly runs
+// `npm ci --include=dev` before checks and the guarded deploy-time build. This
+// hook remains a fallback so `npm run build` also works on a pruned local tree.
 import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
