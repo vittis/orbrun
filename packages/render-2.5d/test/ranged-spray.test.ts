@@ -32,10 +32,10 @@ describe('material-specific ranged hit splatters', () => {
     const burst = fx.bursts[0]
     expect(burst.spray).toMatchObject({ kind, source: 'ranged' })
     const particles = sampleHitSpray(scene, burst, 1.1)
-    expect(particles.length).toBeGreaterThanOrEqual(6)
-    expect(particles.length).toBeLessThanOrEqual(16)
-    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.06 && p.minPixels === 6 && p.sprite !== 'burst')).toBe(true)
-    expect(sampleHitSpray(scene, burst, 1.5)).toEqual([])
+    expect(particles.length).toBeGreaterThanOrEqual(8)
+    expect(particles.length).toBeLessThanOrEqual(26)
+    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.08 && [5, 8].includes(p.minPixels!) && p.sprite !== 'burst')).toBe(true)
+    expect(sampleHitSpray(scene, burst, 1.7)).toEqual([])
   })
 
   it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]])('uses projectile travel (%i, %i) and waits for contact', (dx, dy) => {
@@ -54,6 +54,9 @@ describe('material-specific ranged hit splatters', () => {
     const particles = sampleHitSpray(scene, burst, 1.25)
     expect(particles.length).toBeGreaterThan(0)
     expect(particles.every(p => p.x * dx + p.y * dy > 0.1)).toBe(true)
+    const travel = particles.map(p => (p.x * dx + p.y * dy) / Math.hypot(dx, dy))
+    expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.35)
+    expect(particles.some(p => p.minPixels === 5 && p.alpha < 1)).toBe(true)
   })
 
   it('varies repeated hits on one target and coalesces duplicate and flash reports without reseeding', () => {

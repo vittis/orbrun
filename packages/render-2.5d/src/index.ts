@@ -91,6 +91,7 @@ export class Render25d implements MapRenderer {
   }
 
   get animating() { return this.opts.animate && this.active }
+  get materialHitEffects() { return this.opts.animate }
 
   mount(target: HTMLCanvasElement | OffscreenCanvas) {
     this.canvas = target

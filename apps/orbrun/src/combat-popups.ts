@@ -145,6 +145,10 @@ export class CombatPopups {
       if (age < 0) { p.node.hidden = true; return true }
       if (age >= 1) { p.node.remove(); return false }
       const e = p.event
+      if (visualHit(e) && renderer.materialHitEffects && !reducedMotion) {
+        p.node.hidden = true
+        return true
+      }
       const billboard = scene.billboards.find(b => e.player ? b.kind === 'player'
         : b.kind === 'monster' && (e.actorId?.startsWith('id:') ? `id:${b.id ?? (b.ref as { id?: number } | undefined)?.id}` === e.actorId : b.x === e.x && b.y === e.y))
       const anchorHeight = e.player ? 0.8 : visualHit(e) ? (e.height ?? 0.8) * 0.55 : e.height

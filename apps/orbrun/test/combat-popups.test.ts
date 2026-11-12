@@ -11,10 +11,30 @@ function preview() {
   let anchor: { x: number; y: number } | null = { x: 200, y: 180 }
   const renderer = { project: () => anchor } as unknown as MapRenderer
   const render = (now: number, firstPerson = false, reduced = false) => popups.render(now, renderer, scene, view, firstPerson, reduced)
-  return { popups, render, move: (p: typeof anchor) => { anchor = p } }
+  return { popups, renderer, render, move: (p: typeof anchor) => { anchor = p } }
 }
 
 describe('popup presentation', () => {
+  it('lets animated material sprays replace generic hit icons while keeping damage numbers and defenses', () => {
+    const { popups, renderer, render } = preview()
+    Object.assign(renderer, { materialHitEffects: true })
+    popups.add([
+      { kind: 'hit', text: 'HIT', x: 1, y: 0 },
+      { kind: 'hit', text: '7', amount: 7, x: 1, y: 0 },
+      { kind: 'hit', text: '0', amount: 0, x: 2, y: 0 },
+      { kind: 'miss', text: 'MISS', x: 3, y: 0 },
+    ], 0)
+    render(100)
+    expect(popups.root.querySelector<HTMLElement>('.visual-hit')!.hidden).toBe(true)
+    for (const selector of ['.hit:not(.visual-hit):not(.no-damage)', '.no-damage', '.miss']) {
+      expect(popups.root.querySelector<HTMLElement>(selector)!.hidden).toBe(false)
+    }
+    render(100, false, true)
+    expect(popups.root.querySelector<HTMLElement>('.visual-hit')!.hidden).toBe(false)
+    Object.assign(renderer, { materialHitEffects: false })
+    render(100)
+    expect(popups.root.querySelector<HTMLElement>('.visual-hit')!.hidden).toBe(false)
+  })
   it.each([false, true])('shows a subtle armor symbol and separate cold damage feedback (concise=%s)', concise => {
     const { popups, render } = preview()
     popups.add([{ kind: 'hit', text: '0', amount: 0, tone: 'cold', x: 1, y: 0, turn: 1 }], 0, concise)

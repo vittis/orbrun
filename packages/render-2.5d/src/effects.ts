@@ -1,6 +1,6 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
-import type { HitSpray } from './hit-spray.js'
+import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
@@ -155,7 +155,7 @@ export class DungeonEffects {
       existing.intensity = intensity
       if (spray && (!existing.spray || spray.source === 'melee' && existing.spray.source !== 'melee')) {
         existing.spray = spray
-        existing.duration = 0.5
+        existing.duration = HIT_SPRAY_DURATION
         if (spray.source === 'melee') {
           existing.born = existing.requested = now
           existing.contact = undefined
@@ -164,7 +164,7 @@ export class DungeonEffects {
       if (contact && !existing.contact && existing.spray?.source !== 'melee') { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
       return false
     }
-    const duration = spray ? 0.5 : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
+    const duration = spray ? HIT_SPRAY_DURATION : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
     this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray })
     this.bursts = this.bursts.slice(-48)
     return true

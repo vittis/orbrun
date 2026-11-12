@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.64 point at the `cloudflare-online-v1.61` release tag in
+Source links for 0.3.65 point at the `cloudflare-online-v1.62` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1679,3 +1679,40 @@ validation passed a forced TypeScript rebuild and 2,633 tests, with two optional
 engine skips. Engine E2E explicitly skipped 44 checks because artifacts are
 absent. The guarded production dry-run precedes a non-forced atomic
 main/source-tag push, which triggers Workers Builds. If main advances, merge and revalidate before publication.
+
+
+## 0.3.65 middle-ground deaths and pronounced outward hits — prepared 2026-11-12
+
+Continues the user's authorized main/deployment workflow with care for other
+worktrees. Integrated origin/main `d7a7f80`, preserving aligned wall corners and
+all earlier work. Immutable source tag: `cloudflare-online-v1.62`.
+
+Death effects now last 1.2–2.8 seconds, between the preceding 0.65–1.3-second
+tuning and the original 2–4.6-second presentation. Particle density, size and
+floor pools also sit between those tunings. Stronger directional push, less
+drag, and broad/narrow/split forward fans carry debris outward along the hit
+instead of spreading equally backwards. Material and per-death variation remain.
+
+Hit splatters have larger eight-CSS-pixel stamps, more fragments, faster
+outward launch, a tighter directional cone, less drag and a 650 ms lifetime.
+Short five-pixel trailing stamps emphasize motion while fragments overlap the
+body; all materials use their own art and colours. The combat preview exposed
+a generic qualitative hit-icon popup covering the new effect. Animated Dungeon
+renderers now advertise material hit presentation, so that duplicate icon hides
+while splatters are available. Damage numbers and defenses remain visible;
+Still/reduced-motion and other renderers retain their existing hit cues.
+
+Directional regressions cover all ten death materials and five attack
+directions, require outward travel for melee/ranged splatters and check their
+trails. Lifetime and compactness checks cover ten materials, 24 profiles and
+three creature heights: debris remains bounded to 1.3 cells, stays visible
+through 0.9 seconds, and expires by 2.81 seconds. Popup regressions verify the
+duplicate icon hides only while material effects are active and preserve
+reported damage, armor and misses. The actual Canvas preview verified outward
+blood sprays and the longer death spray without browser errors.
+
+Integrated validation passed TypeScript and 2,644 unit tests with two optional
+engine skips. Optional engine E2E reports 44 skips because artifacts are absent.
+The guarded production dry-run precedes an atomic, non-forced main/source-tag
+push through Workers Builds. Fetch and integrate again if main advances;
+preserve newer deployments containing these changes.

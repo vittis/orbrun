@@ -578,6 +578,8 @@ export interface SpellEffect {
 }
 
 export interface MapRenderer {
+  /** Animated body-material effects replace generic qualitative hit icons. */
+  readonly materialHitEffects?: boolean
   /** Whether presentation effects need another frame without a new game state. */
   readonly animating?: boolean
   mount(target: HTMLCanvasElement | OffscreenCanvas): void

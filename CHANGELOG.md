@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.65 — 2026-11-12
+
+- Give deaths a middle-ground lifetime and density, with more outward travel along the hit direction.
+- Strengthen melee and ranged splatters with larger particles, longer travel and stepped trails.
+- Let animated Dungeon material splatters replace the generic hit icon that covered the body.
+
 ## 0.3.64 — 2026-11-12
 
 - Keep adjoining wall roofs level through corners and passage junctions in Dungeon (2.5D), with matching click targets.
