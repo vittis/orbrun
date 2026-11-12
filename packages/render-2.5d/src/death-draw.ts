@@ -33,8 +33,9 @@ export class DeathArt {
       this.cache.set(key, stamp)
     }
     const q = project(p, particle.x, particle.y, particle.z)
-    const width = Math.max(2, Math.round(particle.size * 2 * p.scale * particle.stretch * dpr)) / dpr
-    const height = Math.max(2, Math.round(particle.size * 2 * p.scale * (particle.ground ? groundDepth(p.tilt) : 1) * dpr)) / dpr
+    const minimum = particle.minPixels ? particle.minPixels * dpr : 2
+    const width = Math.max(minimum, Math.round(particle.size * 2 * p.scale * particle.stretch * dpr)) / dpr
+    const height = Math.max(minimum, Math.round(particle.size * 2 * p.scale * (particle.ground ? groundDepth(p.tilt) : 1) * dpr)) / dpr
     ctx.save()
     if (particle.ground) {
       ctx.beginPath()

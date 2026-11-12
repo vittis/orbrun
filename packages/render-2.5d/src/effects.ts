@@ -1,10 +1,11 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
-import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import type { MeleeSpray } from './melee-spray.js'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: MeleeSpray }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -28,6 +29,7 @@ export class DungeonEffects {
   private actors = new Map<string, ActorPosition>()
   private level: string | undefined
   private onLevel = false
+  private spraySequence = 0
 
   observe(scene: Scene, now: number, animate: boolean) {
     const continuing = animate && scene.playerOnLevel && this.onLevel && scene.levelKey === this.level
@@ -104,7 +106,7 @@ export class DungeonEffects {
     return moved.length === 1 ? moved[0] : undefined
   }
 
-  spell(scene: Scene, effect: SpellEffect, now: number, source: ImpactSource = 'confirmed') {
+  spell(scene: Scene, effect: SpellEffect, now: number, source: ImpactSource = 'confirmed', spray?: MeleeSpray) {
     const target = this.target(scene, effect, now)
     const previous = target && this.actors.get(combatActorId(target))?.previous
     const art = [...this.shots.values()].filter(shot => (shot.ended === undefined || now - shot.ended < PROJECTILE_EXPOSURE)
@@ -135,11 +137,17 @@ export class DungeonEffects {
         if (source === 'melee') { existing.requested = now; existing.born = now; existing.contact = undefined }
       }
       existing.intensity = intensity
-      if (contact && !existing.contact) { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
+      if (spray) {
+        existing.spray = spray
+        existing.born = existing.requested = now
+        existing.contact = undefined
+        existing.duration = 0.5
+      }
+      if (contact && !existing.contact && !existing.spray) { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
       return false
     }
-    const duration = utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
-    this.bursts.push({ ...placed, born, requested: now, contact, duration, source })
+    const duration = spray ? 0.5 : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
+    this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray })
     this.bursts = this.bursts.slice(-48)
     return true
   }
@@ -151,8 +159,15 @@ export class DungeonEffects {
     if (this.strokes.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
     this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration })
     this.strokes = this.strokes.slice(-12)
-    if (attack.hit) this.spell(scene, { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity },
-      now + meleeTiming(attack.style).contact, 'melee')
+    if (attack.hit) {
+      const effect = { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity }
+      const target = this.target(scene, effect, now)
+      const spray: MeleeSpray | undefined = target ? {
+        kind: creatureMaterial(target), height: Math.max(0.35, Math.min(1.4, target.height)), seed: ++this.spraySequence,
+        direction: { x: (attack.to.x - attack.from.x) / distance, y: (attack.to.y - attack.from.y) / distance },
+      } : undefined
+      this.spell(scene, effect, now + meleeTiming(attack.style).contact, 'melee', spray)
+    }
     return true
   }
 

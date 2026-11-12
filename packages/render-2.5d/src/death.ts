@@ -8,9 +8,11 @@ export interface DeathParticle {
   sprite: DeathSprite
   /** Floor stains are drawn underneath creatures and raised terrain. */
   ground: boolean
+  /** Preserve enough stamp texels for sparse hit debris to remain legible. */
+  minPixels?: number
 }
 
-const palettes: Record<DeathKind, readonly (readonly [number, number, number])[]> = {
+export const debrisPalettes: Record<DeathKind, readonly (readonly [number, number, number])[]> = {
   flesh: [[159, 25, 39], [198, 51, 57], [114, 18, 32]],
   bone: [[231, 220, 177], [168, 157, 125], [255, 244, 211]],
   slime: [[132, 206, 55], [190, 236, 86], [61, 133, 49]],
@@ -26,7 +28,7 @@ const durations: Record<DeathKind, number> = { flesh: 4.6, bone: 3.8, slime: 4.6
 interface Burst extends DeathEffect { born: number; seed: number }
 
 /** Mix similar actor IDs thoroughly so consecutive kills get distinct sprays. */
-function randomFrom(seed: number) {
+export function debrisRandom(seed: number) {
   seed = Math.imul(seed ^ seed >>> 16, 0x21f0aaad)
   seed = Math.imul(seed ^ seed >>> 15, 0x735a2d97)
   seed = (seed ^ seed >>> 15) >>> 0
@@ -65,13 +67,13 @@ export class DungeonDeaths {
     for (const b of this.bursts) {
       const t = now - b.born, duration = durations[b.kind]
       if (t < 0) continue
-      const palette = palettes[b.kind], airy = b.kind === 'spirit' || b.kind === 'fire'
+      const palette = debrisPalettes[b.kind], airy = b.kind === 'spirit' || b.kind === 'fire'
       const gory = b.kind === 'flesh' || b.kind === 'insect'
       const liquid = b.kind === 'slime' || b.kind === 'water'
       const leafy = b.kind === 'plant'
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
-      const random = randomFrom(b.seed)
+      const random = debrisRandom(b.seed)
       const density = 0.75 + random() * 0.55, energy = 0.75 + random() * 0.6
       const liftScale = 0.85 + random() * 0.25, sizeScale = 0.85 + random() * 0.3
       const distribution = Math.floor(random() * 3) // Radial, forward fan, or opposing fans.

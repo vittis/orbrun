@@ -7,6 +7,7 @@ import { glowCenter, glowRadius } from '../src/lighting.js'
 import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
+import { DeathArt } from '../src/death-draw.js'
 import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
@@ -224,9 +225,10 @@ describe('picking and visibility', () => {
     } finally { actor.mockRestore(); projectile.mockRestore(); art.mockRestore(); r.destroy() }
   })
 
-  it('shares one contact stamp between melee, a flash, a wound and explicit elemental feedback', () => {
+  it('replaces coalesced melee, flash, wound and elemental impacts with one material spray at contact', () => {
     const { r } = renderer()
     const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
     try {
       const scene = sceneOf(cell(0, 0), cell(1, 0))
       scene.billboards = [{ id: 7, kind: 'monster', name: 'goblin', tile: 2, x: 1, y: 0, height: 1, damage: 'uninjured', life: { motion: 'still' } }]
@@ -239,10 +241,15 @@ describe('picking and visibility', () => {
       r.spell({ x: 1, y: 0, actorId: 'id:7', kind: 'cold' }, contact)
       r.render(contact - 0.01)
       expect(art).not.toHaveBeenCalled()
+      expect(spray).not.toHaveBeenCalled()
       r.render(contact + 0.03)
-      expect(art.mock.calls.filter(c => c[10] !== true)).toHaveLength(1)
-      expect(art.mock.calls[0][1]).toBe('cold')
-    } finally { art.mockRestore(); r.destroy() }
+      expect(art).not.toHaveBeenCalled()
+      expect(spray.mock.calls.length).toBeGreaterThanOrEqual(4)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(12)
+      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      r.render(contact + 0.6)
+      expect(r.animating).toBe(false)
+    } finally { art.mockRestore(); spray.mockRestore(); r.destroy() }
   })
 
   it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {

@@ -27,6 +27,11 @@ function harness() {
 }
 
 describe('combat sentences', () => {
+  it.each(['.', '!', '!!'])('keeps ordinary melee target identity with %s punctuation', punctuation => {
+    expect(combatText(`You slash the goblin${punctuation}`)).toMatchObject([
+      { kind: 'hit', target: 'the goblin', melee: true },
+    ])
+  })
   // mon-death.cc uses passive wording for indirect kills and omits articles
   // for unique monsters. None of these sentences reports an HP amount.
   it.each([

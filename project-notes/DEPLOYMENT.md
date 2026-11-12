@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.59 point at the `cloudflare-online-v1.56` release tag in
+Source links for 0.3.60 point at the `cloudflare-online-v1.57` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1513,3 +1513,42 @@ through Workers Builds. Fetch and integrate again if main advances.
 Integrated validation passed a forced TypeScript rebuild and 2,577 unit tests
 with two optional-engine skips. The optional engine E2E lane reports 44 skips
 because engine artifacts are absent.
+
+
+## 0.3.60 subtle material-specific melee sprays — prepared 2026-11-12
+
+Continues the user's authorized commit-to-main and deployment workflow, with
+explicit care for concurrent worktrees. Integrated origin/main `6fa0c6e`,
+retaining the foreground-wall alignment release and all earlier changes. The
+renderer-test import conflict was resolved by retaining both test additions.
+Immutable source tag: `cloudflare-online-v1.57`.
+
+Dungeon (2.5D) melee contact now emits a small directional spray from the
+recipient's body instead of the conventional impact stamp. Flesh sheds blood,
+skeletons bone shards, slimes droplets, stone creatures chips, spectral and
+fiery creatures wisps, ice creatures shards, plants fragments and insects
+ichor. Wounds and deaths share one material classifier and shaded pixel art.
+Each hit varies density, speed, cone width, launch position, size, spin and
+lifetime using a stable seeded profile; approximately 4–12 fragments dissolve
+within half a second. Sparse stamps retain a four-CSS-pixel footprint so their
+coloured texels remain visible at normal tile scales.
+
+The effect uses weapon contact timing, detaches from the creature, coalesces
+flash/generic/brand feedback into one spray and yields to death effects. Misses
+and zero-damage contacts emit no spray. Existing clipping, visibility, Still
+mode and level cleanup remain. Other renderers and projectile/spell impacts
+retain their presentation. The combat preview's material selector covers hits
+and deaths.
+
+Integrated validation passed 2,602 unit tests with two optional-engine skips,
+including all ten materials, five attack directions, repeated hits, stable
+redraws, detached debris, duplicate reports and cleanup. TypeScript passed;
+optional engine E2E reports 44 skips because engine artifacts are absent. The
+real Canvas preview rendered flesh and slime contact effects without browser
+errors. The initial full-suite run encountered the preceding release's missing
+changelog entry and two resource-contention timeouts; integrating main restored
+the changelog, and all tests passed with two workers.
+
+Release validation and the guarded production dry-run precede an atomic,
+non-forced main/source-tag push through Workers Builds. If main advances,
+integrate and revalidate; preserve any newer deployment containing this change.

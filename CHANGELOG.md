@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.60 — 2026-11-12
+
+- Replace melee impact flashes in Dungeon (2.5D) with subtle directional sprays matched to the target's body material.
+- Vary particle count, speed, spread, size and launch point between hits.
+
 ## 0.3.59 — 2026-11-12
 
 - Keep foreground wall tiles aligned through corridor junctions and widened passages in Dungeon (2.5D).
