@@ -2,9 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.44 — 2026-11-12
+## 0.3.45 — 2026-11-12
 
 - Show dungeon projectiles as a single traveling sprite, with impact effects at their destination.
+
+## 0.3.44 — 2026-11-12
+
+- Give melee attacks pixel-art swings, thrusts and overhead blows matched to the weapon, with sharper contact sparks for heavier hits.
 
 ## 0.3.43 — 2026-11-12
 

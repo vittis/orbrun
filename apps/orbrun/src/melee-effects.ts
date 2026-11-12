@@ -5,8 +5,8 @@ import type { CombatPopup } from './combat-feedback'
 export function meleeStyle(weapon: string | undefined): MeleeAttack['style'] | null {
   if (!weapon) return 'unarmed'
   if (/\b(?:bow|longbow|shortbow|crossbow|arbalest|sling|hand cannon|triple crossbow)\b/i.test(weapon)) return null
-  if (/\b(?:spear|trident|halberd|glaive|bardiche|scythe|lance|rapier|dagger|quick blade)\b/i.test(weapon)) return 'thrust'
-  if (/\b(?:axe|battleaxe|executioner)\b/i.test(weapon)) return 'cleave'
+  if (/\b(?:spear|trident|lance|rapier|dagger|quick blade)\b/i.test(weapon)) return 'thrust'
+  if (/\b(?:axe|battleaxe|executioner|halberd|glaive|bardiche|scythe)\b/i.test(weapon)) return 'cleave'
   if (/\b(?:mace|flail|club|hammer|morningstar|eveningstar|whip|scourge|staff|quarterstaff)\b/i.test(weapon)) return 'crush'
   return 'slash'
 }
@@ -30,7 +30,9 @@ export function incomingMelee(text: string): { attacker: string; style: MeleeAtt
     if (!m) continue
     const weapon = m[3]?.replace(/(?: but | for ).*$/, '')
     if (weapon && /\b(?:arrow|bolt|stone|dart|javelin|boomerang|sling bullet)\b/i.test(weapon)) continue
-    const style = weapon ? meleeStyle(weapon) : 'unarmed'
+    const style = weapon ? meleeStyle(weapon) : /^(?:claws|tentacle-slaps)$/.test(m[2]) ? 'slash'
+      : /^(?:stings|pecks|gores)$/.test(m[2]) ? 'thrust'
+      : /^(?:tramples|headbutts)$/.test(m[2]) ? 'crush' : 'unarmed'
     if (!style) continue
     const reported = / for (\d+)(?: damage)?[.!]/.exec(sentence)
     const hit = m[2] !== 'misses' && !/no damage/.test(sentence) && reported?.[1] !== '0'

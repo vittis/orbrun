@@ -8,6 +8,7 @@ describe('confirmed melee presentation', () => {
     [undefined, 'unarmed'], ['a +2 long sword of flaming', 'slash'], ['a broad axe', 'cleave'],
     ['a +3 battleaxe', 'cleave'], ['an eveningstar', 'crush'],
     ['a +0 demon trident', 'thrust'], ['a quick blade', 'thrust'], ['a giant spiked club', 'crush'],
+    ['a +2 halberd of flaming', 'cleave'], ['a glaive', 'cleave'], ['a bardiche', 'cleave'], ['a scythe', 'cleave'],
     ['a +9 arbalest', null], ['a sling', null],
   ] as const)('varies gestures for %s', (weapon, style) => expect(meleeStyle(weapon)).toBe(style))
 
@@ -42,5 +43,10 @@ describe('confirmed melee presentation', () => {
     ])
     expect(incomingMelee('The adder bites you for 0.')[0].hit).toBe(false)
     expect(incomingMelee('The adder bites you for 3.')[0].intensity).toBe('light')
+  })
+  it('matches natural attacks to cutting, piercing and crushing gestures', () => {
+    expect(incomingMelee('The troll claws you! The hornet stings you. The yak gores you! The elephant tramples you! The minotaur headbutts you.')).toMatchObject([
+      { style: 'slash' }, { style: 'thrust' }, { style: 'thrust' }, { style: 'crush' }, { style: 'crush' },
+    ])
   })
 })
