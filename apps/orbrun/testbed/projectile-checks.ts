@@ -7,7 +7,7 @@ import type { ServerInfo } from '../src/servers'
 const result = document.getElementById('result')!
 try {
   const gd = await loadGamedata({ base: '/gamedata-proxy/crawl.dcss.io', version: '0703b2fa62e821390161d95cf52f9da1183761d4', io: browserIo() })
-  const cases = ['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST']
+  const cases = ['BOLT_SANDBLAST', 'BOLT_STONE_ARROW', 'BOLT_IRON_SHOT', 'BOLT_MAGIC_DART', 'BOLT_FROST', 'MI_ARROW']
   const checks: { spell: string; phase: string; changedPixels: number; sleeping?: boolean; passed: boolean }[] = []
   for (const name of cases) {
     let deliver: (m: ServerMessage) => void = () => {}
@@ -35,7 +35,7 @@ try {
     }
     deliver({ msg: 'map', cells: [{ x: 2, y: 0, t: { ov: [] } }] })
     session.flushScene()
-    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.22], ['Residue', 1.8], ['Expired', 4]] as const) {
+    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.3], ['Residue', 1.8], ['Expired', 4]] as const) {
       renderer.render(time); plain.render(time)
       const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
       const before = baseline.getContext('2d')!.getImageData(0, 0, baseline.width, baseline.height).data

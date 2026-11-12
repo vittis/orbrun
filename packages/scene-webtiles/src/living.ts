@@ -49,6 +49,7 @@ export function projectileAppearance(name: string): ProjectileAppearance | false
   const appearance = (kind: ProjectileAppearance['kind'], colour: ProjectileAppearance['colour'], beam = false): ProjectileAppearance => ({ kind, colour, beam })
   if (/SANDBLAST|DUST|FRAG/.test(name)) return appearance('sand', [216, 181, 116])
   if (/STONE|ROCK|BOULDER/.test(name)) return appearance('stone', [184, 168, 137])
+  if (/ARROW|BOLT|DART|JAVELIN|TOMAHAWK|SPEAR|BOOMERANG|BULLET/.test(name) && /^MI_/.test(name)) return appearance('metal', [190, 200, 210])
   if (/IRON|METAL|STEEL|SILVER|SLUG/.test(name)) return appearance('metal', [190, 200, 210])
   if (/AIR|WIND/.test(name)) return appearance('air', [196, 215, 222], true)
   if (/ACID/.test(name)) return appearance('acid', [177, 234, 89])

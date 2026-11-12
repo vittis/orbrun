@@ -142,8 +142,8 @@ export function drawSpellTrace(ctx: Context2d, p: Projection, trace: SpellTrace,
   const fire = kind === 'fire' || trace.source.pulse === 'fire', electric = kind === 'electric' || trace.source.pulse === 'electric'
   const cold = kind === 'cold' || !kind && !electric && b > r * 1.25 && g > r
   const fade = (1 - age) ** 1.5
-  // A small arrival puff/spark burst is driven by the observed overlay ending,
-  // including misses and resisted hits. It makes no claim about damage.
+  // Arrival dust and sparks begin when the moving sprite reaches its endpoint,
+  // including misses and resisted hits. They make no claim about damage.
   const impact = (now - trace.born) / (physical ? 0.4 : 0.32)
   if (impact >= 0 && impact < 1) {
     ctx.save(); ctx.fillStyle = `rgb(${r},${g},${b})`

@@ -63,21 +63,24 @@ describe('bounded dungeon combat presentation', () => {
     const sand = { ...spell(), life: { projectile: { kind: 'sand' as const, colour: [216, 181, 116] as [number, number, number], beam: false } } }
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [sand] }, 1, true)
-    expect(fx.retainedProjectiles(1)).toHaveLength(0) // the live scene owns this tile
+    expect(fx.projectiles(1)).toMatchObject([{ tile: sand.tile, x: 0 }])
     fx.observe({ ...scene, billboards: [] }, 1.001, true)
-    expect(fx.retainedProjectiles(1.016)).toMatchObject([{ tile: sand.tile, x: 1 }])
-    expect(fx.traces).toMatchObject([{ born: 1.001, appearance: { kind: 'sand' }, source: { power: 0 } }])
-    fx.observe({ ...scene, billboards: [] }, 1.05, true)
+    expect(fx.projectiles(1.016)).toHaveLength(1)
+    expect(fx.projectiles(1.016)[0].x).toBeCloseTo(0.32)
+    expect(fx.traces).toHaveLength(0)
+    fx.tick(scene, 1.09)
+    expect(fx.traces).toMatchObject([{ born: 1.085, appearance: { kind: 'sand' }, source: { power: 0 } }])
+    fx.observe({ ...scene, billboards: [] }, 1.1, true)
     expect(fx.traces).toHaveLength(1)
-    expect(fx.traces[0].born).toBe(1.001)
+    expect(fx.traces[0].born).toBeCloseTo(1.085)
     fx.tick(scene, 1.2)
-    expect(fx.retainedProjectiles(1.2)).toHaveLength(0)
+    expect(fx.projectiles(1.2)).toHaveLength(0)
     expect(fx.traces).toHaveLength(1)
     fx.tick(scene, 3)
     expect(fx.traces).toHaveLength(0)
   })
 
-  it('clears retained projectiles on lost visibility, level changes, Still and remote maps', () => {
+  it('clears traveling projectiles on lost visibility, level changes, Still and remote maps', () => {
     for (const reset of ['visibility', 'level', 'still', 'remote']) {
       const fx = new DungeonEffects(), scene = world()
       fx.observe(scene, 0, true)
@@ -87,9 +90,62 @@ describe('bounded dungeon combat presentation', () => {
       if (reset === 'level') scene.levelKey = 'D:2'
       if (reset === 'remote') scene.playerOnLevel = false
       fx.observe(scene, 1.01, reset !== 'still')
-      expect(fx.retainedProjectiles(1.016)).toHaveLength(0)
+      expect(fx.projectiles(1.016)).toHaveLength(0)
       expect(fx.traces).toHaveLength(0)
     }
+  })
+
+  it('joins a synchronous path into one moving sprite and one endpoint impact', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
+    fx.observe(scene, 1, true)
+    for (const [time, x] of [[1.025, 0.5], [1.075, 1.5], [1.125, 2.5], [1.16, 3]]) {
+      const shots = fx.projectiles(time)
+      expect(shots).toHaveLength(1)
+      expect(shots[0].x).toBeCloseTo(x)
+      fx.tick(scene, time)
+      expect(fx.traces).toHaveLength(0)
+    }
+    fx.tick(scene, 1.19)
+    expect(fx.projectiles(1.19)).toEqual([])
+    expect(fx.traces).toMatchObject([{ source: { x: 3, y: 0 } }])
+    expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
+    fx.tick(scene, 1.2)
+    expect(fx.traces).toHaveLength(1)
+  })
+
+  it('creates the arrival VFX for a wall endpoint too', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.cells.get(cellKey(3, 0))!.occluder = true
+    fx.observe(scene, 0, true)
+    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
+    fx.observe(scene, 1, true)
+    fx.tick(scene, 1.19)
+    expect(fx.bursts).toMatchObject([{ x: 3, y: 0, impact: true }])
+  })
+
+  it('keeps separate launches separate, including repeated shots of the same art', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
+    fx.observe(scene, 1, true)
+    fx.observe({ ...scene, billboards: [spell(1)] }, 1.01, true)
+    expect(fx.projectiles(1.025)).toHaveLength(2)
+    fx.observe(scene, 1.02, true)
+    fx.tick(scene, 1.3)
+    expect(fx.traces.map(t => t.source.x).sort()).toEqual([1, 3])
+  })
+
+  it('does not restart a stationary overlay on unrelated updates', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    const shot = { ...scene, billboards: [spell()] }
+    fx.observe(shot, 1, true)
+    fx.observe(shot, 1.01, true)
+    expect(fx.projectiles(1.025)[0].x).toBeCloseTo(0.5)
+    expect(fx.projectiles(1.1)).toMatchObject([{ x: 1 }])
+    expect(fx.traces).toEqual([])
   })
 
   it('never creates visible effects for intentionally invisible projectile tiles', () => {
@@ -97,7 +153,7 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [{ ...spell(), life: { projectile: false } }] }, 1, true)
     fx.observe(scene, 1.001, true)
-    expect(fx.retainedProjectiles(1.016)).toHaveLength(0)
+    expect(fx.projectiles(1.016)).toHaveLength(0)
     expect(fx.traces).toHaveLength(0)
   })
   it('lunges and recoils without changing confirmed cells, settles, and ignores miss recoil', () => {

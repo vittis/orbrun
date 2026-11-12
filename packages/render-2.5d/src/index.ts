@@ -104,7 +104,7 @@ export class Render25d implements MapRenderer {
     this.revision = scene.revision
     this.visibility.observe(scene, now, this.opts.animate)
     this.arrival.observe(scene, now, this.opts.animate)
-    this.life.observe(scene, now)
+    this.life.observe({ ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }, now)
     this.effects.observe(scene, now, this.opts.animate)
     this.deaths.observe(scene, this.opts.animate)
     // Never render effects or entities in unseen cells, even if a producer supplies them.
@@ -116,6 +116,7 @@ export class Render25d implements MapRenderer {
       if (cell.cloud !== undefined && !cloudCells.has(cellKey(cell.x, cell.y))) this.standing.push({ cell, x: cell.x, y: cell.y, depth: cell.y + 0.4, billboard: { x: cell.x, y: cell.y, tile: cell.cloud, kind: 'cloud', height: 1, alpha: 0.7 } })
     }
     for (const billboard of scene.billboards) {
+      if (this.opts.animate && billboard.kind === 'projectile') continue
       const cell = scene.cells.get(cellKey(billboard.x, billboard.y))
       if (cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown') this.standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 + (billboard.kind === 'cloud' ? 0.1 : 0) })
     }
@@ -239,22 +240,25 @@ export class Render25d implements MapRenderer {
         standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
       }
       if (this.deaths.active) this.active = true
-      for (const billboard of this.effects.retainedProjectiles(now)) {
-        const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
+      for (const billboard of this.effects.projectiles(now)) {
+        const cell = this.scene.cells.get(cellKey(Math.round(billboard.x), Math.round(billboard.y)))
         if (!cell || !this.inFrame(p, billboard)) continue
         standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
         this.active = true
       }
       for (const burst of this.effects.bursts) {
         const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
-        if (!cell || cell.occluder || !this.inFrame(p, burst)) continue
-        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + 0.35 })
+        if (!cell || cell.occluder && !burst.impact || !this.inFrame(p, burst)) continue
+        standing.push({ cell, burst, x: burst.x, y: burst.y, depth: burst.y + (burst.impact && cell.occluder ? 0.55 : 0.35) })
         this.active = true
       }
       standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
     }
     this.life.tick(now)
     const emitters = this.life.emitters(now)
+    if (this.opts.animate) for (const shot of this.effects.projectiles(now)) {
+      for (const light of shot.life?.lights ?? []) emitters.push({ ...light, x: Math.round(shot.x), y: Math.round(shot.y) })
+    }
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
       cell => cell.visibility === 'visible' || this.visibility.moving(cell, now))
     this.hits = []
@@ -646,12 +650,10 @@ export class Render25d implements MapRenderer {
     const s = p.scale, visible = cell.visibility === 'visible'
     if (b.kind === 'projectile') {
       if (!visible) return
-      // Server beam art spans neighbouring cells. Keep its full length on
-      // the ground plane; soften/trim its alpha instead of shrinking it and
-      // opening gaps between segments. It has no creature shadow or hit box.
+      // A single missile follows the confirmed path on the ground plane.
+      // It has no creature shadow or hit box.
       const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
-      const appearance = b.life?.projectile
-      const thin = appearance ? appearance.beam : true
+      const thin = false
       ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
       this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
