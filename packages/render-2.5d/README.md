@@ -96,6 +96,11 @@ and picking regions. The existing first-person renderer remains independent.
   from black; the initial view, multi-cell player arrivals (including fast
   explore/travel), level changes, remote maps and Still mode snap. Hidden
   entities disappear immediately; picking uses confirmed LOS.
+  Multi-cell arrivals add a separate, soft directional sweep across the map:
+  at most 14% shade clears from the origin side toward the travel direction
+  over 320 ms, with the destination visible throughout. It leaves targeting
+  markers readable, stops on a normal step, replaces rather than queues repeated
+  arrivals, and is disabled in Still mode. Level changes and remote maps skip it.
   Reusable scratch surfaces per raster size preserve alpha and flashes without
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.
@@ -172,6 +177,11 @@ player directly; long-distance moves demonstrate multi-cell tweening.
 each triggered effect 100 ms into its lifetime for deterministic captures.
 **Toggle LOS** dims/reveals the area around the player; press again mid-fade
 to inspect a continuous reversal, or disable Animation to compare Still mode.
+**Travel direction** and **Travel** jump two to four cells to a visible floor
+in the chosen direction to preview the arrival sweep. `?effectFrame=0.16`
+freezes its midpoint; disable Animation to compare an instant arrival.
+Open `/testbed/arrival-checks.html` for 96 focused Canvas checks of sweep
+direction, subtle brightness and exact expiry across desktop/portrait layouts.
 
 The Scene chooser also loads a recorded fountain dungeon. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.

@@ -13,6 +13,7 @@ import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
+import { DungeonArrival } from './arrival.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -55,6 +56,7 @@ export class Render25d implements MapRenderer {
   private deaths = new DungeonDeaths()
   private deathArt = new DeathArt()
   private visibility = new DungeonVisibility()
+  private arrival = new DungeonArrival()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
   private frameTime = 0
   private cursor: SceneCursor | null = null
@@ -80,7 +82,7 @@ export class Render25d implements MapRenderer {
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
-    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.visibility.finish() }
+    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.visibility.finish(); this.arrival.finish() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -96,6 +98,7 @@ export class Render25d implements MapRenderer {
     this.tiles.source = source
     this.tiles.clear()
     this.visibility.clear()
+    this.arrival.clear()
   }
 
   setScene(scene: Scene, now = performance.now() / 1000) {
@@ -103,6 +106,7 @@ export class Render25d implements MapRenderer {
     this.scene = scene
     this.revision = scene.revision
     this.visibility.observe(scene, now, this.opts.animate)
+    this.arrival.observe(scene, now, this.opts.animate)
     this.life.observe(scene, now)
     this.effects.observe(scene, now, this.opts.animate)
     this.deaths.observe(scene, this.opts.animate)
@@ -371,6 +375,8 @@ export class Render25d implements MapRenderer {
     }
     this.impactRipples(ctx, p, time)
     this.dungeonExposure(ctx, p, cells)
+
+    if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
 
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {
@@ -818,6 +824,7 @@ export class Render25d implements MapRenderer {
     this.deaths.clear()
     this.deathArt.clear()
     this.visibility.clear()
+    this.arrival.clear()
     this.fogField = null
     this.tiles.clear()
     this.tiles.source = null

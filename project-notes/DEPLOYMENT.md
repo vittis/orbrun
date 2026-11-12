@@ -992,3 +992,25 @@ because engine artifacts are absent. Browser checks covered both views. The
 guarded production build/dry-run precedes the atomic main/tag push, which
 triggers Cloudflare Workers Builds. Hosted version, source links, bundle
 identity, CSP and proxy checks follow production rollout.
+
+## 0.3.41 directional travel arrivals — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' work. Integrated origin/main `feb5628`, including 0.3.38's wall depth
+and atmosphere, 0.3.39's faster breathing, and 0.3.40's creature-specific death
+effects. Still-mode cleanup retains both death effects and the arrival cue.
+Immutable source tag: `cloudflare-online-v1.38`.
+
+Fast explore/travel arrivals retain immediate LOS brightness and add a 320 ms
+directional sweep, capped at 14% shade. It clears from the origin side toward
+the destination, supports diagonal travel, preserves targeting/input, replaces
+repeated arrivals without queues, and stops for normal steps and Still mode.
+
+Integrated validation passed a forced TypeScript rebuild and 2,390 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. The feature passed 96 focused real Canvas
+checks before integration. Guarded production build/dry-run precedes the atomic
+main/source-tag push. Use the existing main-triggered Workers Builds pipeline;
+do not upload a second local build over a potentially newer main deployment.
+Verify the hosted source tag and bundle after rollout; if main advances, retain
+the newer release when it includes this change instead of redeploying older code.

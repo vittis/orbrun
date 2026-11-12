@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Directional arrival pixel checks</title>
+<style>body { margin: 24px; background: #080c13; color: #ddd; font: 16px monospace; } pre { white-space: pre-wrap; }</style>
+<h1>Directional arrival: compass directions, brightness and expiry</h1>
+<pre id="result">Running pixel checks…</pre>
+<script type="module">
+  import { arrivalChecks } from './arrival-checks.ts'
+  const { checks, failures } = arrivalChecks()
+  document.querySelector('#result').textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)
+</script>
+</html>

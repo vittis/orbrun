@@ -174,6 +174,22 @@ canvas.addEventListener('click', event => {
 })
 let moveDirection = 1
 let dimmedLOS = false
+document.getElementById('travel')!.addEventListener('click', () => {
+  const [dx, dy] = (document.getElementById('travel-direction') as HTMLSelectElement).value.split(',').map(Number)
+  const next = [4, 3, 2].map(distance => scene.cells.get(cellKey(scene.player.x + dx * distance, scene.player.y + dy * distance)))
+    .find(cell => cell?.visibility === 'visible' && !cell.occluder)
+  if (!next) return
+  scene.player = { x: next.x, y: next.y }
+  scene.billboards = scene.billboards.map(b => b.kind === 'player' ? { ...b, ...scene.player } : b)
+  scene.revision++
+  const now = performance.now() / 1000
+  renderer.setOptions({ center: scene.player })
+  renderer.setScene(scene, now)
+  original.setOptions({ center: scene.player })
+  original.setScene(scene)
+  captureTime = effectFrame ? now + effectFrame : null
+  wake()
+})
 document.getElementById('los')!.addEventListener('click', () => {
   dimmedLOS = !dimmedLOS
   for (const cell of scene.cells.values()) {

@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.41 — 2026-11-12
+
+- Add a subtle directional sweep on fast explore/travel arrivals to show the general direction traveled.
+
 ## 0.3.40 — 2026-11-12
 
 - Give enemy deaths a sharp burst and fading debris in dungeon and first-person views, with bone shards, slime splashes, rubble, embers and spectral wisps matched to the creature.
