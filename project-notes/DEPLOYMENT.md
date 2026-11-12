@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.55 point at the `cloudflare-online-v1.52` release tag in
+Source links for 0.3.56 point at the `cloudflare-online-v1.53` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1407,3 +1407,32 @@ atomic, non-forced main/source-tag push. If main advances, fetch, integrate and
 revalidate; never force-push or replace a newer deployment from this worktree.
 Use the existing Workers Builds pipeline and verify live version, source links,
 exact bundles, CSP, proxies and anonymous spectating after rollout.
+
+
+## 0.3.56 actual flight versus water clipping — prepared 2026-11-12
+
+Corrects the deployed idle-flight feature after the user reported a grounded
+Gnoll hovering. Integrated origin/main `ce6a7b3`, preserving the projectile
+timing release. Immutable source tag: `cloudflare-online-v1.53`.
+
+Crawl's tileidx_player sets TILE_FLAG_FLYING whenever the player is not in
+water, including on dry land. Player hover now uses the authoritative Fly /
+flying status, including innate, temporary, expiring and form-suppressed flight.
+Species alone does not imply current flight. All grounded species share the
+correction. The monster flag remains meaningful for flight except orc apostles
+and sacred lotuses, where tileidx_monster also sets it for water clipping;
+these exceptions use monster/tile identity, including named apostles.
+
+Primary source: crawl-ref/source/tilepick-p.cc (tileidx_player), tilepick.cc
+(tileidx_monster) and status.cc (_describe_airborne) in crawl/crawl.
+Regressions cover nine player species with a misleading tile flag, flight
+activation and removal without map updates, Djinni in a grounded form, expiring
+flight, misleading status text, seven grounded monsters and the water-clipping
+monster exceptions. Existing immobilisation and reduced-motion checks remain.
+
+Integrated validation passed TypeScript and 2,559 unit tests, with two optional
+engine skips.
+
+The validated release follows the existing guarded build and atomic main/tag
+push through Workers Builds. Verify production assets, source links, CSP and
+anonymous spectator access after rollout.

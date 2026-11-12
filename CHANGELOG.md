@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.56 — 2026-11-12
+
+- Keep grounded characters, orc apostles and sacred lotuses from hovering; animate player flight only while the flying status is active.
+
 ## 0.3.55 — 2026-11-12
 
 - Slow projectiles slightly so their flight is easier to follow while keeping combat snappy.
