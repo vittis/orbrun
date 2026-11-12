@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.42 — 2026-11-12
+
+- Align Djinni defence and attribute rows below the character portrait.
+- Keep webs and nets at character size in overhead views instead of covering the screen.
+
 ## 0.3.41 — 2026-11-12
 
 - Add a subtle directional sweep on fast explore/travel arrivals to show the general direction traveled.

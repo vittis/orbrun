@@ -1014,3 +1014,24 @@ main/source-tag push. Use the existing main-triggered Workers Builds pipeline;
 do not upload a second local build over a potentially newer main deployment.
 Verify the hosted source tag and bundle after rollout; if main advances, retain
 the newer release when it includes this change instead of redeploying older code.
+
+
+## 0.3.42 character overview and web scale — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents’ work. Based on origin/main `e0ef8b7`, retaining directional arrivals,
+creature-specific death effects, wall depth and prior releases. Immutable
+source tag: `cloudflare-online-v1.39`.
+
+Djinni reserve the absent Magic row so AC/Str align with the other stats below
+the portrait. Overhead views keep whole-cell web/net art on the character;
+the large central overlay is reserved for first person. Switching projections
+updates the overlay without waiting for a game-state change.
+
+Validation: 2,394 unit tests passed with two optional-engine skips, and
+TypeScript passed. Release checks include a forced TypeScript rebuild, the
+full suite, optional engine E2E and guarded production build/dry-run. Publish
+main and the source tag atomically through the existing Workers Builds
+pipeline. Re-fetch and integrate main if another agent advances it; never
+force-push or upload a separate stale local build. Verify hosted source and
+bundle identity after rollout.
