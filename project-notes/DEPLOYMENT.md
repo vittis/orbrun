@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.39 point at the `cloudflare-online-v1.36` release tag in
+Source links for 0.3.40 point at the `cloudflare-online-v1.37` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -970,3 +970,25 @@ Integrated validation passed a forced TypeScript rebuild and 2,338 unit tests
 with two optional-engine skips. The guarded production build/dry-run precedes
 the atomic main/tag push, which triggers Cloudflare Workers Builds. Verify hosted source links
 and bundle identity after deployment.
+
+
+## 0.3.40 creature-specific death VFX — prepared 2026-11-12
+
+User authorized committing to main and deploying. Integrated origin/main
+`8cc3953`, retaining 0.3.38's wall extrusion and atmosphere and 0.3.39's faster
+idle breathing. Immutable source tag: `cloudflare-online-v1.37`.
+
+Confirmed visible kills spawn directional bursts and fading debris in Dungeon
+(2.5D) and first-person views. Ten creature materials use distinct colors,
+shapes and motion, including bone shards, slime splashes, rubble, embers, ice
+fragments, leaves, chitin and rising spectral wisps. Effects expire in
+1.5–2.8 seconds, respect visibility/level transitions and Still mode, and do
+not depend on combat popups. Melee deaths share the contact clock. Same-name
+victims and explicit damage-over-time deaths receive separate effects.
+
+Integrated validation passed a forced TypeScript rebuild and 2,368 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. Browser checks covered both views. The
+guarded production build/dry-run precedes the atomic main/tag push, which
+triggers Cloudflare Workers Builds. Hosted version, source links, bundle
+identity, CSP and proxy checks follow production rollout.
