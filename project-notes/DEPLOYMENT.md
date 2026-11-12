@@ -1037,15 +1037,36 @@ complete expiry. The guarded production build/dry-run precedes the atomic
 main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
 source links, bundle identity and proxy checks follow rollout.
 
-
-## 0.3.43 weapon-specific pixel melee swings — prepared 2026-11-12
+## 0.3.43 character overview and web scale — prepared 2026-11-12
 
 User authorized committing to main and deploying while preserving concurrent
-agents' work. Integrated origin/main `aaad668`, retaining 0.3.42's pixel gore,
-0.3.41's travel arrivals and all prior releases. Merge resolution preserves
+agents’ work. Integrated origin/main `aaad668`, retaining the concurrent pixel-gore
+release, directional arrivals, wall depth and prior releases. Immutable
+source tag: `cloudflare-online-v1.40`.
+
+Djinni reserve the absent Magic row so AC/Str align with the other stats below
+the portrait. Overhead views keep whole-cell web/net art on the character;
+the large central overlay is reserved for first person. Switching projections
+updates the overlay without waiting for a game-state change.
+
+Integrated validation: 2,403 unit tests passed with two optional-engine
+skips; the forced TypeScript rebuild passed. Optional engine E2E reports
+44 explicit skips because engine artifacts are absent. A guarded production
+build/dry-run precedes publication. Publish
+main and the source tag atomically through the existing Workers Builds
+pipeline. Re-fetch and integrate main if another agent advances it; never
+force-push or upload a separate stale local build. Verify hosted source and
+bundle identity after rollout.
+
+
+## 0.3.44 weapon-specific pixel melee swings — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' work. Integrated origin/main `548f1aa`, retaining 0.3.43's HUD/web
+fixes, 0.3.42's pixel gore, travel arrivals and all prior releases. Merge resolution preserves
 both the melee renderer and the new pixel-death renderer, with separate
 attack-progress and death-phase controls in the development preview.
-Immutable source tag: `cloudflare-online-v1.40`.
+Immutable source tag: `cloudflare-online-v1.41`.
 
 Dungeon (2.5D) melee uses shaded pixel ribbons for slashes, broad cleaves,
 narrow thrusts, overhead crushes and short unarmed strikes. Weapon families
@@ -1054,7 +1075,7 @@ Trail weight and contact sparks follow confirmed hit strength and damage
 type. Misses pass beside the defender without contact flashes or debris.
 Existing contact timing, recoil, visibility limits and Still mode remain.
 
-Integrated validation passed a forced TypeScript rebuild and 2,422 unit tests
+Integrated validation passed a forced TypeScript rebuild and 2,426 unit tests
 with two optional-engine skips. One unrelated geometry test timed out during
 concurrent validation; the full suite passed with four workers. Optional
 engine E2E reports 44 explicit skips because engine artifacts are absent.
