@@ -58,20 +58,23 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
-  it('retains every native path tile without interpolation, rotation or guessed endpoint impacts', () => {
+  it('interpolates one head along the native path without guessing another impact', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     for (const x of [1, 2, 3]) fx.observe({ ...scene, billboards: [spell(x)] }, 1, true)
     fx.observe(scene, 1.001, true)
-    expect(fx.projectiles(1.016).map(b => [b.x, b.y, b.rotation])).toEqual([[1, 0, undefined], [2, 0, undefined], [3, 0, undefined]])
-    expect(fx.projectiles(1.08)[0].alpha).toBeLessThan(fx.projectiles(1.016)[0].alpha!)
+    const travel = fx.projectiles(1.016)
+    expect(travel).toHaveLength(1)
+    expect(travel[0].x).toBeGreaterThan(0)
+    expect(travel[0].x).toBeLessThan(1)
+    expect(fx.projectiles(1.08)).toMatchObject([{ x: 3, y: 0 }])
     fx.tick(scene, 1.2)
     expect(fx.projectiles(1.2)).toEqual([])
     expect(fx.bursts).toEqual([])
     expect(fx.traces).toEqual([])
   })
 
-  it.each(['visibility', 'level', 'still', 'remote'])('clears native projectile art on %s', reset => {
+  it.each(['visibility', 'level', 'still', 'remote'])('clears hybrid projectile art on %s', reset => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, billboards: [spell(1), spell(2)] }, 1, true)
@@ -89,6 +92,47 @@ describe('bounded dungeon combat presentation', () => {
     fx.observe({ ...scene, billboards: [{ ...spell(), life: { projectile: false } }] }, 1, true)
     fx.observe(scene, 1.001, true)
     expect(fx.projectiles(1.016)).toEqual([])
+    expect(fx.bursts).toEqual([])
+  })
+
+  it('uses the native batch delay once, lands on the recipient, and shares one impact clock', () => {
+    const fx = new DungeonEffects(), scene = world()
+    const victim = { ...target, id: 7, x: 3 }
+    scene.billboards = [victim]; scene.projectileTime = 0
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [victim, spell(1), spell(2), spell(3)] }, 1, true)
+    fx.observe({ ...scene, projectileTime: 0.03 }, 1.001, true)
+    fx.spell(scene, { x: 3, y: 0, actorId: 'id:7', kind: 'cold', turn: 1 }, 1.002)
+    fx.spell(scene, { x: 3, y: 0, kind: 'physical' }, 1.003, 'generic')
+    expect(fx.projectiles(1.02)).toMatchObject([{ x: expect.closeTo(1.5), targetId: 'id:7' }])
+    expect(fx.visibleBursts(1.039)).toHaveLength(0)
+    expect(fx.projectiles(1.05)).toMatchObject([{ x: 3, targetId: 'id:7', contactBlend: 1 }])
+    expect(fx.visibleBursts(1.05)).toMatchObject([{ actorId: 'id:7', kind: 'cold', born: 1.04 }])
+    expect(fx.bursts).toHaveLength(1)
+    fx.tick(scene, 1.11)
+    expect(fx.projectiles(1.11)).toEqual([])
+  })
+
+  it('does not relaunch a displayed incoming projectile from its recipient', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    fx.observe({ ...scene, billboards: [spell(1)] }, 1, true)
+    expect(fx.projectiles(1.01)).toMatchObject([{ x: 1 }])
+    fx.observe({ ...scene, billboards: [spell(0)] }, 1.02, true)
+    const travel = fx.projectiles(1.025)
+    expect(travel).toHaveLength(1)
+    expect(travel[0].x).toBeLessThan(1)
+    expect(travel[0].x).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps separate casts and their native clear boundaries separate', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    for (const time of [1, 1.01]) {
+      fx.observe({ ...scene, billboards: [spell(1), spell(2)] }, time, true)
+      fx.observe(scene, time + 0.001, true)
+    }
+    expect(fx.projectiles(1.02)).toHaveLength(2)
     expect(fx.bursts).toEqual([])
   })
 

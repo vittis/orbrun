@@ -1,6 +1,6 @@
 import { loadGamedata, browserIo } from '@orbrun/gamedata'
 import { Render25d } from '@orbrun/render-2.5d'
-import { type SpellEffect } from '@orbrun/scene'
+import { type SpellEffect, type Billboard, type Scene } from '@orbrun/scene'
 import { type Connection, type ServerMessage } from '@orbrun/webtiles'
 import { Session } from '../src/session'
 import type { ServerInfo } from '../src/servers'
@@ -26,11 +26,14 @@ try {
     session.flushScene()
     const base = session.scene
     const canvas = document.createElement('canvas'), baseline = document.createElement('canvas')
+    const recipient: Billboard = { id: 7, kind: 'monster', name: 'goblin', x: dx * 2, y: dy * 2,
+      tile: gd.player.id('MONS_GOBLIN')!, height: 1, life: { motion: 'still' } }
+    const display = (scene: Scene): Scene => ({ ...scene, billboards: [...scene.billboards, recipient] })
     const renderer = new Render25d({ zoom: 1.6 }), plain = new Render25d({ zoom: 1.6 })
     for (const [r, surface] of [[renderer, canvas], [plain, baseline]] as const) {
-      r.mount(surface); r.resize(640, 320, 2); r.setTiles(gd); r.setScene(base, 0)
+      r.mount(surface); r.resize(640, 320, 2); r.setTiles(gd); r.setScene(display(base), 0)
     }
-    session.on(event => { if (event.type === 'scene') renderer.setScene(event.scene, 1) })
+    session.on(event => { if (event.type === 'scene') renderer.setScene(display(event.scene), 1) })
     const tile = gd.main.id(name)
     if (tile === undefined) throw new Error(`Missing server artwork: ${name}`)
     for (const step of [1, 2]) {
@@ -40,9 +43,9 @@ try {
     deliver({ msg: 'map', cells: [{ x: dx * 2, y: dy * 2, t: { ov: [] } }] })
     session.flushScene()
     const kind: SpellEffect['kind'] = /SANDBLAST|STONE/.test(name) ? 'earth' : /IRON|MI_/.test(name) ? 'physical' : /FROST/.test(name) ? 'cold' : 'magic'
-    renderer.spell({ x: dx * 2, y: dy * 2, kind }, 1.04)
+    renderer.spell({ x: dx * 2, y: dy * 2, actorId: 'id:7', kind }, 1.04)
     renderer.impact(dx * 2, dy * 2, 0.6, 1.04)
-    for (const [phase, time] of [['Projectile', 1.016], ['Impact', 1.16], ['Expired', 4]] as const) {
+    for (const [phase, time] of [['Travel', 1.016], ['Contact', 1.055], ['Impact', 1.16], ['Expired', 4]] as const) {
       renderer.render(time); plain.render(time)
       const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
       const before = baseline.getContext('2d')!.getImageData(0, 0, baseline.width, baseline.height).data

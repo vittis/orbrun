@@ -136,6 +136,53 @@ describe('picking and visibility', () => {
     } finally { art.mockRestore(); r.destroy() }
   })
 
+  it('lands the single projectile over an approaching recipient at full upright tile size', () => {
+    const { r } = renderer()
+    const order: string[] = []
+    const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => { order.push('impact') })
+    const projectile = vi.spyOn(TileCache.prototype, 'drawPlane').mockImplementation((_ctx, layers) => {
+      if (layers[0].tile === 9) order.push('projectile')
+      return true
+    })
+    const actor = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((_ctx, layers) => {
+      if (layers[0].tile === 2) order.push('recipient')
+      return true
+    })
+    try {
+      r.setOptions({ center: { x: 0, y: 0 }, movementDuration: 0.1, movementEasing: 'linear' })
+      const base = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0))
+      base.projectileTime = 0
+      const recipient = { id: 7, kind: 'monster' as const, name: 'goblin', x: 3, y: 0, tile: 2, height: 1, life: { motion: 'still' as const } }
+      base.billboards = [recipient]
+      r.setScene(base, 0)
+      const path = [1, 2, 3].map(x => ({ x, y: 0, kind: 'projectile' as const, tile: 9, height: 1,
+        life: { projectile: { kind: 'magic' as const, family: 'bolt', colour: [190, 170, 220] as [number, number, number], beam: false } } }))
+      r.setScene({ ...base, revision: 1, billboards: [recipient, ...path] }, 1)
+      const moved = { ...recipient, x: 2 }
+      r.setScene({ ...base, revision: 2, projectileTime: 0.03, billboards: [moved] }, 1.03)
+      r.spell({ x: 2, y: 0, actorId: 'id:7', kind: 'magic' }, 1.03)
+      r.impact(2, 0, 0.6, 1.03)
+      r.render(1.035)
+      expect(art).not.toHaveBeenCalled() // wait for the head to arrive
+      projectile.mockClear(); art.mockClear(); order.length = 0
+      r.render(1.05)
+      const heads = projectile.mock.calls.filter(c => c[1][0].tile === 9)
+      expect(heads).toHaveLength(1)
+      const rect = heads[0][2], body = r.projectBillboard(moved)
+      const scale = r.project(1, 0).x - r.project(0, 0).x
+      const footOffset = r.project(0, 0.3).y - r.project(0, 0).y
+      expect(rect.width).toBeCloseTo(scale)
+      expect(rect.height).toBeCloseTo(scale)
+      expect(rect.x + rect.width / 2).toBeCloseTo(body.x)
+      expect(rect.y + rect.height / 2).toBeCloseTo(body.y + footOffset - scale / 2)
+      expect(art.mock.calls.filter(c => c[10] !== true)).toHaveLength(1)
+      expect(art.mock.calls[0][5]).toBeCloseTo(rect.x + rect.width / 2)
+      expect(art.mock.calls[0][6]).toBeCloseTo(rect.y + rect.height / 2)
+      expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
+      expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('impact'))
+    } finally { actor.mockRestore(); projectile.mockRestore(); art.mockRestore(); r.destroy() }
+  })
+
   it('shares one contact stamp between melee, a flash, a wound and explicit elemental feedback', () => {
     const { r } = renderer()
     const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})

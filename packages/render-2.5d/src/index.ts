@@ -39,7 +39,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean; contactBlend?: number }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -256,9 +256,15 @@ export class Render25d implements MapRenderer {
       }
       if (this.deaths.active) this.active = true
       for (const billboard of this.effects.projectiles(now)) {
-        const cell = this.scene.cells.get(cellKey(Math.round(billboard.x), Math.round(billboard.y)))
-        if (!cell || !this.inFrame(p, billboard)) continue
-        standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
+        const actor = billboard.targetId && this.scene.billboards.find(b => combatActorId(b) === billboard.targetId)
+        const target = actor ? this.actorPosition(actor, now) : billboard.destination
+        const blend = billboard.targetId ? billboard.contactBlend : 0
+        const position = { x: billboard.x + (target.x - billboard.destination.x) * blend,
+          y: billboard.y + (target.y - billboard.destination.y) * blend }
+        const cell = this.scene.cells.get(cellKey(Math.round(position.x), Math.round(position.y)))
+        if (!cell || cell.visibility !== 'visible' || !this.inFrame(p, position)) continue
+        // Contact draws over the recipient, using the same upright footprint.
+        standing.push({ cell, billboard, ...position, contactBlend: blend, depth: position.y + (blend ? 0.64 : 0.3) })
         this.active = true
       }
       if (this.effects.bursts.some(b => now < b.born && this.inFrame(p, b))) this.active = true
@@ -664,13 +670,15 @@ export class Render25d implements MapRenderer {
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }
 
-  private actor(ctx: Context2d, p: Projection, cell: SceneCell, b: Billboard, time: number, position: { x: number; y: number; moving?: boolean } = b) {
+  private actor(ctx: Context2d, p: Projection, cell: SceneCell, b: Billboard, time: number, position: { x: number; y: number; moving?: boolean; contactBlend?: number } = b) {
     const s = p.scale, visible = cell.visibility === 'visible'
     if (b.kind === 'projectile') {
       if (!visible) return
-      // Repeat the native overlay artwork at each confirmed path cell.
-      // It has no creature shadow or hit box.
-      const rect = planeRect(p, position.x, position.y, 0.28, this.dpr)
+      const plane = planeRect(p, position.x, position.y, 0.28, this.dpr)
+      const body = project(p, position.x, position.y + 0.3), blend = position.contactBlend ?? 0
+      const rect = { x: plane.x + (body.x - s / 2 - plane.x) * blend,
+        y: plane.y + (body.y - s - plane.y) * blend,
+        width: plane.width + (s - plane.width) * blend, height: plane.height + (s - plane.height) * blend }
       const thin = false
       ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
       this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
