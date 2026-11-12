@@ -27,6 +27,7 @@
     "room:pack": "node tools/build/pack-room.mjs",
     "room:poster": "node tools/build/poster.mjs",
     "deploy": "wrangler deploy",
+    "deploy:guard": "node tools/build/deploy-guard.mjs",
     "deploy:check": "wrangler deploy --dry-run"
   },
   "devDependencies": {

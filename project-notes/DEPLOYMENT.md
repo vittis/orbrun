@@ -25,7 +25,7 @@ is shipped at `/licenses/acorn.txt`.
 - Root/path: `/` (the monorepo root).
 - Node: `24.11.1` via `NODE_VERSION`.
 - Build: `npm ci --include=dev && npm run typecheck && NODE_ENV=test npm test && npm run build`.
-- Deploy: `npx wrangler deploy`.
+- Deploy: `npm run deploy` (direct `npx wrangler deploy` also uses the guard).
 - Preview builds: disabled for the initial deployment.
 - No game credentials or application secrets are required.
 
@@ -35,6 +35,28 @@ explicitly approved creation of a dedicated token. Token contents must never
 be committed or copied into these notes.
 
 ## Local verification and rollback
+
+Every Wrangler deployment runs `tools/build/deploy-build.mjs` through the
+checked-in custom build command. It refuses uncommitted tracked or untracked
+files, fetches `origin/main` explicitly, and requires that fetched commit to be
+an ancestor of HEAD. Fetch/authentication failures stop the deployment rather
+than trusting an old tracking ref. Clean feature branches ahead of main and
+detached CI checkouts are supported; behind or diverged branches are rejected.
+
+The hook then rebuilds the production assets, fetches and checks main again,
+and refuses to continue if HEAD or source files changed during the build. This
+prevents a current branch from uploading an older `dist` and catches main
+advancing while the build runs. It does not merge, rebase or stash automatically.
+Run `npm run deploy:guard` for just the Git checks. To resolve a refusal, merge
+or rebase the latest main, commit the integrated source, then retry deployment.
+Commit before running the guarded `deploy:check` dry run, too.
+
+These checks run immediately before Wrangler packages/uploads the release;
+they do not lock main during the network upload. They protect commands using
+this configuration, not older checkouts predating the hook, alternate configs
+or dashboard rollbacks. Keep production releases integrated into main; strict
+account-wide enforcement requires allowing production writes only through CI.
+Local `wrangler dev` builds assets without requiring production Git cleanliness.
 
 Run `npm run typecheck`, `npm test`, `npm run e2e`, `npm run build`, and
 `WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=/private/tmp/dcss-wrangler.log npm run deploy:check`.

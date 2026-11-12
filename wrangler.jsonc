@@ -19,6 +19,11 @@
   "name": "dcss-client",
   "main": "apps/orbrun/worker/index.ts",
   "compatibility_date": "2025-04-01",
+  // Guard direct CLI deployments as well as npm run deploy; always rebuild the assets.
+  "build": {
+    "command": "node tools/build/deploy-build.mjs",
+    "watch_dir": ["apps/orbrun/src", "packages"]
+  },
   "assets": {
     "directory": "apps/orbrun/dist",
     "binding": "ASSETS",

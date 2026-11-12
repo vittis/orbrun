@@ -25,6 +25,12 @@ npm run dev         # dev server (Vite, with the gamedata proxy)
 
 Run `npm test` and `npm run typecheck` before calling a change done.
 
+Before deploying, commit your changes and integrate the latest `origin/main`.
+`npm run deploy` and direct `npx wrangler deploy` fetch main and reject stale,
+diverged or dirty source, rebuild assets, then recheck freshness before upload.
+`npm run deploy:guard` runs only the Git checks. Do not deploy from an older
+checkout that predates the guard. See [deployment notes](project-notes/DEPLOYMENT.md).
+
 ## Fixtures
 
 Prefer a recorded fixture over a hand-written one.
