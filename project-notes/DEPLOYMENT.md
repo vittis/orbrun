@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.37 point at the `cloudflare-online-v1.34` release tag in
+Source links for 0.3.38 point at the `cloudflare-online-v1.35` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -938,3 +938,20 @@ Optional engine E2E reports 44 skips because engine artifacts are absent.
 The guarded Worker dry-run precedes the atomic main/source-tag push, which
 triggers Cloudflare Workers Builds. Hosted source and bundle checks follow
 the deployment result.
+
+## 0.3.38 dungeon depth and atmosphere — prepared 2026-11-12
+
+User authorized committing to main and deploying. Integrated origin/main
+`d6589a4`, preserving 0.3.37's idle breathing and earlier combat, corridor and
+LOS fixes. Immutable source tag: `cloudflare-online-v1.35`.
+
+Dungeon (2.5D) keeps wall artwork on raised roofs and extends its bottom edge
+into a shaded vertical face. Ambient grading follows the drawn player, warming
+nearby stone and cooling distant terrain; the warm lift clips to known geometry.
+Semantic torch/magic light pools reach neighbouring cells and retain occlusion.
+Frontier fog feathers both floor edges and raised roofs into darker black.
+
+Before integration, all 2,338 unit tests and 3,866 Canvas pixel checks passed;
+typecheck and production build passed. Release checks repeat against integrated
+main and updated metadata, including the guarded Worker dry-run. Hosted source,
+bundle identity and CSP checks follow production rollout.

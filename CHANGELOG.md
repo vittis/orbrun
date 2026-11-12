@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.38 — 2026-11-12
+
+- Give Dungeon (2.5D) stone walls raised tops and dark vertical faces, with deeper fades into unexplored space.
+- Warm nearby terrain, cool distant stone, and let torches and magic illuminate a broader area.
+
 ## 0.3.37 — 2026-11-12
 
 - Make idle breathing more pronounced while keeping its slow rhythm and smooth edges.
