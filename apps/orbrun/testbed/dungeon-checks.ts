@@ -7,6 +7,7 @@ import { corridorChecks } from './corridor-checks'
 import { wallDepthChecks } from './wall-depth-checks'
 import { wallCoherenceChecks } from './wall-coherence-checks'
 import { visibilityChecks } from './visibility-checks'
+import { arrivalChecks } from './arrival-checks'
 
 const atlas = document.createElement('canvas')
 atlas.width = 160
@@ -176,6 +177,8 @@ const depth = wallDepthChecks(source)
 checks += depth.checks; failures.push(...depth.failures)
 const visibility = visibilityChecks(source)
 checks += visibility.checks; failures.push(...visibility.failures)
+const arrival = arrivalChecks()
+checks += arrival.checks; failures.push(...arrival.failures)
 const coherence = wallCoherenceChecks()
 checks += coherence.checks; failures.push(...coherence.failures)
 const corridors = corridorChecks(source)
