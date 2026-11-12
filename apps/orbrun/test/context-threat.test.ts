@@ -43,7 +43,7 @@ describe('plants are not hostiles worth fighting', () => {
     const st = playing()
     const scene = room()
     monster(scene, 4, 3, 'plant', true)
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     expect(ctx.ahead).toMatchObject({ kind: 'monster', hostile: false, label: 'plant' })
     expect(ctx.hostilesInView).toBe(0)
     expect(promptLabels(ctx).find((l) => l.button === 'RT')).toBeUndefined()
@@ -55,7 +55,7 @@ describe('plants are not hostiles worth fighting', () => {
     const scene = room()
     monster(scene, 4, 3, 'plant', true)
     monster(scene, 7, 7, 'rat')
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     expect(ctx.hostilesInView).toBe(1)
     expect(promptLabels(ctx).find((l) => l.button === 'LSTICK_UP')).toBeUndefined()
   })
@@ -64,22 +64,22 @@ describe('plants are not hostiles worth fighting', () => {
     const st = playing()
     reduce(st, { msg: 'player', hp: 5, hp_max: 20, mp: 3, mp_max: 3 })
     const scene = room()
-    const hurt = deriveContext(st, scene, cam, 'micro')
+    const hurt = deriveContext(st, scene, 0, 'micro')
     expect(hurt.injured).toBe(true)
     expect(promptLabels(hurt).find((l) => l.button === 'LB')).toMatchObject({ label: 'Wait', hold: 'Rest' })
     monster(scene, 7, 7, 'rat')
-    const threatened = deriveContext(st, scene, cam, 'micro')
+    const threatened = deriveContext(st, scene, 0, 'micro')
     expect(threatened.injured).toBe(true)
     expect(promptLabels(threatened).find((l) => l.button === 'LB')).toBeUndefined()
     reduce(st, { msg: 'player', hp: 20 })
-    expect(deriveContext(st, room(), cam, 'micro').injured).toBeUndefined()
+    expect(deriveContext(st, room(), 0, 'micro').injured).toBeUndefined()
   })
 
   it('a rat ahead is still the attack', () => {
     const st = playing()
     const scene = room()
     monster(scene, 4, 3, 'rat')
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     expect(ctx.ahead).toMatchObject({ kind: 'monster', hostile: true, label: 'rat' })
     expect(promptLabels(ctx).find((l) => l.button === 'LSTICK_UP')?.label).toBe('Attack rat')
     // autofight means the same thing every turn: the pad lessons teach RT, the corner does not hold it
@@ -93,7 +93,7 @@ describe('the primary attack (`v`): what reaches, and what its aim says', () => 
     st.player.inv[0] = { slot: 0, name }
     st.player.weapon_index = 0
     st.player.status = status
-    return deriveContext(st, room(), cam, 'micro')
+    return deriveContext(st, room(), 0, 'micro')
   }
   it('a polearm in hand reaches; a sword does not, unless the Reach+ light is on', () => {
     expect(wielding('a +0 spear').reaches).toBe(true)
@@ -107,7 +107,7 @@ describe('the primary attack (`v`): what reaches, and what its aim says', () => 
       const st = playing()
       st.inputMode = MouseMode.TARGET
       st.messages.lines.push({ text: top, turn: 100, channel: 0 }, { text: press, turn: 100, channel: 0 })
-      return deriveContext(st, room(), cam, 'micro')
+      return deriveContext(st, room(), 0, 'micro')
     }
     expect(aim('<lightgrey>Reach: a) +0 spear</lightgrey>', 'Press: ? - help, Shift-Dir - straight line').aimVerb).toBe('Reach')
     expect(aim('Hit: a) +0 long sword', 'Press: ? - help').aimVerb).toBe('Hit')

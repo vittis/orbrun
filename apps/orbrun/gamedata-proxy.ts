@@ -103,7 +103,7 @@ function corsHeaders(file: string): Record<string, string> {
   return {
     'Content-Type': contentType(file),
     'X-Content-Type-Options': 'nosniff',
-    // WebGL needs the atlases to be cross-origin clean; the app may also be
+    // Canvas rendering needs the atlases to be cross-origin clean; the app may also be
     // served from a different origin than the proxy in other shells.
     'Access-Control-Allow-Origin': '*',
     // versioned paths: a version's gamedata never changes

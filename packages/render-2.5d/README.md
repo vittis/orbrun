@@ -1,11 +1,11 @@
 # @orbrun/render-2.5d
 
-A north-up, slanted dungeon view using the existing DCSS tile art. Select
-**Settings → View → Projection → Dungeon (2.5D)**. Tilt, zoom and animation
-are in the same settings page, alongside movement, move duration and easing.
+The sole gameplay renderer: a north-up, slanted dungeon view using existing
+DCSS tile art. Tilt, zoom, animation, movement duration and easing remain
+available in View settings.
 Movement defaults to a snappy 100 ms ease-out; Smooth and Linear curves and
 60–250 ms presets are available. Movement can be disabled independently of
-atmosphere. The pause menu also cycles all three views.
+atmosphere.
 At 100% zoom the full 17-cell field of view fits, including sprite headroom.
 Higher zoom values deliberately trade coverage for larger tiles.
 
@@ -28,7 +28,7 @@ reuse the atlases and their alpha, render raised walls and upright sprites,
 and composite lighting without another WebGL context, shaders or a new
 dependency. It is a separate renderer, not a postprocessing filter over
 flattened tiles; floors, creatures and wall faces retain their own depth
-and picking regions. The existing first-person renderer remains independent.
+and picking regions.
 
 - `projection.ts` owns ground projection, its inverse, and viewport fitting.
   World coordinates are cell centres. Input and drawing use CSS pixels;
@@ -41,8 +41,7 @@ and picking regions. The existing first-person renderer remains independent.
   Sprites retain doll composition, atlas offsets, clipping, status badges and
   player minibars. Ground fog renders beneath raised terrain and upright art.
   Monsters and ordinary objects use the same atlas scale as the player;
-  the artwork defines their relative proportions, independently of the
-  first-person renderer's billboard heights. Only corpses lie flat.
+  the artwork defines their relative proportions. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
   Exposed wall bases have dense contact shadows and soft south/east cast
   shadows. Original wall artwork maps onto the raised horizontal roof. Its
@@ -158,13 +157,11 @@ tweens keep frames awake, and motion history is discarded on destroy.
 
 ## Input and integration
 
-The app keeps the active projection distinct from its first-person input
-flag. Overhead movement and targeting use compass directions regardless of
-the saved first-person heading. Left/right step instead of turning, and
-targeting moves across the grid instead of orbiting the player. Pointer
-clicks and touch taps select the visible cell. The full level map temporarily
-borrows `Render2d`, then returns to the saved projection. First-person parking
-and its WebGL lifecycle are preserved.
+Movement and targeting use compass directions. Pointer clicks and touch taps
+select the visible cell. Temporary flat level-map/overview states use
+`Render2d`, then restore `Render25d` on close. The minimap remains flat.
+Settings and resize apply safely across repeated transitions. The front menu
+uses this same 2.5D renderer with bundled scenery.
 
 ## Preview and validation
 

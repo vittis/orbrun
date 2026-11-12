@@ -1,20 +1,16 @@
-import { MapFeature, MenuFlag, MouseMode, UiState, mapKey, type CellTiles, type GameState, type InvItem, type MapCell, type Monster } from '@orbrun/webtiles'
+import { MapFeature, MenuFlag, MouseMode, UiState, mapKey, type CellTiles, type GameState, type MapCell, type Monster } from '@orbrun/webtiles'
 import { verifyEnums, type Gamedata, type FlagWord } from '@orbrun/gamedata'
 import { decorateLiving } from './living.js'
 import {
   cellKey,
-  cellLayoutEquals,
   type Billboard,
   type Dir8,
   type CellKey,
   type Feature,
-  type HandItem,
   type Scene,
   type SceneCell,
   type Visibility,
-  type Viewmodel,
   emptyScene,
-  sceneLayoutEquals,
 } from '@orbrun/scene'
 
 /**
@@ -258,17 +254,6 @@ export function standsFree(name: string | undefined, feature: Feature | undefine
   return !BUILT_IN.test(name || '')
 }
 
-/** Branch presentation from the place name. */
-export function levelPresentation(place: string): { sky: 'none' | 'open' | 'dark'; tint: { r: number; g: number; b: number } } {
-  const p = place.toLowerCase()
-  if (/shoal|swamp/.test(p)) return { sky: 'open', tint: /shoal/.test(p) ? { r: 0.8, g: 0.9, b: 1 } : { r: 0.85, g: 1, b: 0.85 } }
-  if (/abyss/.test(p)) return { sky: 'dark', tint: { r: 0.9, g: 0.8, b: 1 } }
-  if (/zot|pandemonium|hell|gehenna|cocytus|tartarus|dis\b/.test(p)) return { sky: 'dark', tint: /cocytus/.test(p) ? { r: 0.8, g: 0.9, b: 1 } : { r: 1, g: 0.85, b: 0.85 } }
-  if (/lair|snake|spider|slime|orc/.test(p)) return { sky: 'none', tint: { r: 0.9, g: 1, b: 0.9 } }
-  if (/vault|crypt|tomb|depths|elf/.test(p)) return { sky: 'none', tint: { r: 1, g: 0.9, b: 0.9 } }
-  return { sky: 'none', tint: { r: 1, g: 1, b: 1 } }
-}
-
 // monster_list.js attitude_classes and mthreat_classes, by server index
 const ATTITUDE = ['hostile', 'neutral', 'good_neutral', 'good_neutral', 'friendly'] as const
 const THREAT = ['trivial', 'easy', 'tough', 'nasty', 'invisible'] as const
@@ -280,8 +265,7 @@ export interface BuildOptions {
    * What the reducer touched since `previous` was built: its `dirtyCells`
    * and whether the map was cleared. With these, every cell and billboard the
    * messages left alone is carried over from `previous` as it is, and only
-   * the touched cells (and whatever depends on them: the lids near a changed
-   * wall, the cell the player left and the one they stand on) are built
+   * the touched cells (including the cell the player left and stands on) are built
    * again. Without them, or after a clear, the whole level is built.
    */
   dirty?: { cells: ReadonlySet<number>; mapCleared: boolean }
@@ -322,9 +306,6 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
   scene.playerOnLevel = map.playerOnLevel
   const b = map.bounds
   scene.bounds = b ? { ...b } : { left: 0, top: 0, right: -1, bottom: -1 }
-  const pres = levelPresentation(state.player.place || '')
-  scene.level.sky = pres.sky
-  scene.level.tint = pres.tint
   const record: BuildRecord = {
     state,
     gd,
@@ -351,13 +332,6 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
       rebuild.add(mapKey(scene.player.x, scene.player.y))
     }
   }
-  const prevWalls = prev && wallsOf.get(prev)
-  const wallBase = new Map<CellKey, number>(rebuild && prevWalls ? prevWalls : undefined)
-  /** Cells whose wall base changed this build: the lids within CEILING_REACH of them are voted on again. */
-  const wallsChanged: CellKey[] = []
-  /** Whether anything a level mesh is built from changed: the cells built afresh compared with what stood. */
-  let layoutChanged = !prev || !incremental
-  const wallOf = (key: CellKey, cell: SceneCell) => (cell.kind === 'wall' && cell.wallTile !== undefined ? safeBase(gd, cell.wallTile) : undefined)
   for (const mc of map.cells.values()) {
     const key = cellKey(mc.x, mc.y)
     const had = rebuild && was!.cells.get(key)
@@ -371,48 +345,12 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     const cell = buildCell(mc, gd)
     if (!cell) continue
     scene.cells.set(key, cell)
-    const base = wallOf(key, cell)
-    if (rebuild) {
-      const before = wallBase.get(key)
-      if (before !== base) {
-        wallsChanged.push(key)
-        if (base === undefined) wallBase.delete(key)
-        else wallBase.set(key, base)
-      }
-      if (!layoutChanged && (!had || !cellLayoutEquals(had.cell, cell))) layoutChanged = true
-    } else if (base !== undefined) wallBase.set(key, base)
     // billboards
     const from = scene.billboards.length
     addBillboards(scene, mc, cell, gd, state)
     decorateLiving(cell, scene.billboards.slice(from), mc, gd, state)
     record.cells.set(key, { mc, cell, billboards: scene.billboards.slice(from) })
   }
-  if (rebuild && was) {
-    // a cell the map no longer knows is a change of layout too
-    if (!layoutChanged) for (const key of was.cells.keys()) if (!record.cells.has(key)) { layoutChanged = true; break }
-    // walls gone with their cells
-    for (const key of was.cells.keys()) if (!record.cells.has(key) && wallBase.has(key)) { wallBase.delete(key); wallsChanged.push(key) }
-  }
-  // dominant wall tile as the ceiling: the commonest masonry, a fitting only on a level built of nothing else
-  const wallCounts = new Map<number, number>()
-  for (const base of wallBase.values()) wallCounts.set(base, (wallCounts.get(base) || 0) + 1)
-  const fittings = new Set<number>()
-  for (const t of wallCounts.keys()) if (!roofs(gd.dngn.name(t))) fittings.add(t)
-  let best = -1
-  let bestN = 0
-  for (const [t, n] of wallCounts) if (n > bestN && !fittings.has(t)) (best = t), (bestN = n)
-  if (best < 0) for (const [t, n] of wallCounts) if (n > bestN) (best = t), (bestN = n)
-  scene.level.ceilingTile = best >= 0 ? best : null
-  if (rebuild && prev) {
-    // the lids depend on the walls alone: cells carried over keep theirs unless a wall within reach changed,
-    // and a new dominant wall type is a new lid for every cell out of reach of any wall
-    if (prev.level.ceilingTile !== scene.level.ceilingTile) assignCeilings(scene, wallBase, fittings)
-    else assignCeilings(scene, wallBase, fittings, prev, near(wallsChanged, CEILING_REACH), rebuild, record)
-  } else {
-    const reuse = prev && prevWalls && prev.level.ceilingTile === scene.level.ceilingTile && sameWalls(prevWalls, wallBase) ? prev : undefined
-    assignCeilings(scene, wallBase, fittings, reuse)
-  }
-  wallsOf.set(scene, wallBase)
   builtFrom.set(scene, record)
   // keep monster ordering: threat then distance
   scene.billboards.sort((a, b2) => {
@@ -425,129 +363,13 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     }
     return 0
   })
-  // the level's geometry stands across builds that only moved monsters, light or cursors
-  if (rebuild && prev) {
-    const pb = prev.bounds, nb = scene.bounds
-    if (pb.left !== nb.left || pb.top !== nb.top || pb.right !== nb.right || pb.bottom !== nb.bottom) layoutChanged = true
-    if (prev.level.ceilingTile !== scene.level.ceilingTile || prev.level.sky !== scene.level.sky) layoutChanged = true
-    // a step is not a layout change: the light follows the player through the shade map, the lowered walls
-    // through the renderer's own cut key, and the feature underfoot through its occupied-feature key
-    if (prev.playerOnLevel !== scene.playerOnLevel) layoutChanged = true
-    if (prev.cells.size !== scene.cells.size) layoutChanged = true
-    scene.layoutRevision = layoutChanged ? scene.revision : prev.layoutRevision
-  } else scene.layoutRevision = prev && sceneLayoutEquals(prev, scene) ? prev.layoutRevision : scene.revision
   return scene
-}
-
-/** The cells within `reach` (Chebyshev) of any of `keys`, as a set. */
-function near(keys: CellKey[], reach: number): Set<CellKey> {
-  const out = new Set<CellKey>()
-  for (const k of keys) {
-    const x = (k & 1023) - 512, y = (k >> 10) - 512
-    for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) out.add(cellKey(x + dx, y + dy))
-  }
-  return out
-}
-
-/**
- * How far, in cells, a wall's masonry reaches out over the floor beside it.
- * A room this wide or narrower is roofed entirely in its own wall type.
- */
-export const CEILING_REACH = 3
-
-/**
- * Walls that are fittings rather than masonry: bookcases and shelves, a
- * torch in its sconce, a spout of water, and the walls you see through —
- * glass, clear rock, bars and grates. They stand where a wall would, but
- * nothing is built over them, so no lid is made of them: the masonry beyond
- * them roofs the floor beside them.
- */
-const FITTING = /BOOKCASE|^WALL_STUDIO$|MAGIC_SHELF|_TORCH$|_LEAK$|TRANSPARENT|CLEAR|^WALL_BARS|GRATE/
-
-/** Whether a wall of this base tile (by name) can be a ceiling. */
-export function roofs(name: string | undefined): boolean {
-  return !FITTING.test(name || '')
 }
 
 /** How tall a standing item is, in cells: under the smallest monsters' heads, so one behind it shows over it. */
 export const ITEM_HEIGHT = 0.3
 /** How long a corpse or skeleton lies on the floor, in cells. */
 export const LYING_LENGTH = 0.6
-
-/** The wall base tiles each built scene's lids were voted from, for the next build to reuse them (Part IV). */
-const wallsOf = new WeakMap<Scene, Map<CellKey, number>>()
-
-function sameWalls(a: Map<CellKey, number>, b: Map<CellKey, number>): boolean {
-  if (a.size !== b.size) return false
-  for (const [k, v] of a) if (b.get(k) !== v) return false
-  return true
-}
-
-/**
- * Roof each open cell in the wall type nearest it. Every wall within
- * `CEILING_REACH` (Chebyshev) votes for its base tile, nearer walls counting
- * more, so a vault of other masonry keeps its own lid up to its doorway and a
- * stray odd block does not recolour a whole corridor. `fittings` (`roofs`)
- * have no vote. Cells out of reach of any other wall, and ties, keep the
- * level ceiling and get no per-cell tile.
- *
- * `reuse` is a scene voted from the same walls under the same level lid: a
- * cell it has keeps the lid it had there, and only cells new since then are
- * voted on. The votes are most of a build's cost and the walls seldom change.
- */
-function assignCeilings(
-  scene: Scene,
-  wallBase: Map<CellKey, number>,
-  /** Base tiles that never roof a cell, whatever stands round it. */
-  fittings: Set<number>,
-  reuse?: Scene,
-  /** With `reuse`: the cells to vote on again although `reuse` has them (a wall within reach changed). */
-  revote?: Set<CellKey>,
-  /** With `reuse`: the cells built afresh this build (their objects are this scene's own to write). */
-  fresh?: Set<number>,
-  /** With `reuse`: the build's records, so a carried cell given a new lid is replaced there too. */
-  record?: BuildRecord,
-): void {
-  const level = scene.level.ceilingTile
-  if (level === null) return
-  const R = CEILING_REACH
-  for (const cell of scene.cells.values()) {
-    if (cell.kind === 'unknown' || cell.occluder) continue
-    const key = cellKey(cell.x, cell.y)
-    const carried = !!reuse && !!fresh && !fresh.has(mapKey(cell.x, cell.y))
-    if (reuse && !(revote && revote.has(key))) {
-      const had = reuse.cells.get(key)
-      if (had && !had.occluder && had.kind !== 'unknown') {
-        if (had.ceilingTile !== undefined && !carried) cell.ceilingTile = had.ceilingTile
-        continue
-      }
-    }
-    const votes = new Map<number, number>()
-    for (let dy = -R; dy <= R; dy++) {
-      for (let dx = -R; dx <= R; dx++) {
-        if (!dx && !dy) continue
-        const base = wallBase.get(cellKey(cell.x + dx, cell.y + dy))
-        if (base === undefined || fittings.has(base)) continue
-        const w = R + 1 - Math.max(Math.abs(dx), Math.abs(dy))
-        votes.set(base, (votes.get(base) || 0) + w)
-      }
-    }
-    let pick: number = level
-    let pickN = votes.get(level) || 0
-    for (const [t, n] of votes) if (n > pickN) (pick = t), (pickN = n)
-    const lid = votes.size && pick !== level ? pick : undefined
-    if (carried) {
-      // a carried cell is the previous scene's object: a new lid goes on a copy of it
-      if (cell.ceilingTile === lid) continue
-      const copy: SceneCell = { ...cell }
-      if (lid === undefined) delete copy.ceilingTile
-      else copy.ceilingTile = lid
-      scene.cells.set(key, copy)
-      const rec = record?.cells.get(key)
-      if (rec) record!.cells.set(key, { ...rec, cell: copy })
-    } else if (lid !== undefined) cell.ceilingTile = lid
-  }
-}
 
 const GATE_PIECE = /^DNGN_(V?)GATE_(.+)_(LEFT|MIDDLE|RIGHT|UP|DOWN)(_CRYPT)?$/
 
@@ -575,13 +397,7 @@ export function gateFaces(gd: Gamedata, name: string | undefined): SceneCell['fa
   return first ? { n: end } : { n: start }
 }
 
-function safeBase(gd: Gamedata, id: number): number {
-  try {
-    return gd.modules.wall.basetile(id)
-  } catch {
-    return id
-  }
-}
+
 
 /** Tutorial cursor first, then CURSOR1..3, as cell_renderer.js draws them. */
 function cursorKind(bgw: FlagWord): SceneCell['flags']['cursorKind'] {
@@ -856,8 +672,6 @@ interface Ids {
   m: Record<MainName, number | undefined>
   /** Wall shadow tiles (tilecell.cc `_pack_wall_shadows`): `DNGN_WALL_SHADOW` and `_DARK`, each with its variants. */
   isWallShadow: (id: number) => boolean
-  /** Shoreline tiles (tilecell.cc `_pack_default_waves` and `_pack_shoal_waves`): the `SHORE_*` and wave runs of dc-floor.txt. */
-  isShoreline: (id: number) => boolean
 }
 
 const idCache = new WeakMap<Gamedata, Ids>()
@@ -905,24 +719,7 @@ function idsFor(gd: Gamedata): Ids {
     if (first !== undefined) shadowRanges.push([first, first + gd.tileCount(first)])
   }
   const isWallShadow = (id: number) => shadowRanges.some(([a, b]) => id >= a && id < b)
-  // Shorelines come in runs of neighbouring tiles in dc-floor.txt: the five
-  // `SHORE_*`, then the shallow-water borders with their colour variations
-  // through the murky set, then the deep, shallow and ink waves. A run is
-  // taken from its first named tile to the end of its last, so the unnamed
-  // variations between them are covered too.
-  const shoreRanges: [number, number][] = []
-  for (const [first, last] of [
-    ['SHORE_N', 'SHORE_NE'],
-    ['DNGN_WAVE_N', 'MURKY_WAVE_NW'],
-    ['WAVE_DEEP_CORNER_NE', 'WAVE_INK_FULL'],
-  ] as const) {
-    const a = gd.dngn.id(first)
-    if (a === undefined) continue
-    const z = gd.dngn.id(last) ?? a
-    shoreRanges.push([a, Math.max(a, z) + gd.tileCount(Math.max(a, z))])
-  }
-  const isShoreline = (id: number) => shoreRanges.some(([a, b]) => id >= a && id < b)
-  ids = { d, i, m, isWallShadow, isShoreline }
+  ids = { d, i, m, isWallShadow }
   idCache.set(gd, ids)
   serverEnums(gd)
   const missing = missingTileNames(gd)
@@ -962,15 +759,11 @@ function decorate(cell: SceneCell, t: CellTiles, bgw: FlagWord, gd: Gamedata) {
   const wall: number[] = []
   const icons: number[] = []
   const shadows: number[] = []
-  const shores: number[] = []
-  const translucent: number[] = []
   // decals on the bg tile itself: on the wall face for walls, over the floor otherwise
   const push = (id: number | undefined) => {
     if (id !== undefined && id > 0) {
       ;(onWall ? wall : over).push(id)
       if (!onWall && ids.isWallShadow(id)) shadows.push(id)
-      if (!onWall && ids.isShoreline(id)) shores.push(id)
-      if (id === D.TRAVEL_EXCLUSION_BG || id === D.TRAVEL_EXCLUSION_CENTRE_BG || id === D.LANDING) translucent.push(id)
     }
   }
   const ov = t.ov || []
@@ -1085,9 +878,7 @@ function decorate(cell: SceneCell, t: CellTiles, bgw: FlagWord, gd: Gamedata) {
   if (under.length) cell.underlays = under
   if (over.length) cell.overlays = over
   if (shadows.length) cell.wallShadows = shadows
-  if (shores.length) cell.shorelines = shores
   if (wall.length) cell.wallOverlays = wall
-  if (translucent.length) cell.translucent = translucent
   if (icons.length) cell.icons = icons
 }
 
@@ -1495,52 +1286,4 @@ export function monsterGroups(scene: Scene): Billboard[][] {
     }
   }
   return groups
-}
-
-// ---------------------------------------------------------------------------
-// Viewmodel
-
-/**
- * The player's hands. `weapon_index` in the `player` message is the wielded
- * item's inventory slot, -1 when unarmed; `offhand_index` is an off-hand
- * *weapon* (a Coglin's second weapon), -1 otherwise. Neither the inventory
- * nor the player message says which armour is worn, so a shield or orb comes
- * from the paperdoll on the player's cell: the doll part whose player-tile
- * name is `HAND2_*` is what the off hand holds, drawn from the player
- * texture. With no gamedata, or no such part, the off hand is empty. The
- * item's own `tile` list is the icon, in either wire shape: plain main-range
- * ids (0.34 and earlier) or `{t, tex, ymax}` records naming the texture.
- */
-export function viewmodelFor(state: GameState, gd?: Gamedata): Viewmodel {
-  const p = state.player
-  return { weapon: handItem(p.inv[p.weapon_index]), offhand: handItem(p.inv[p.offhand_index]) ?? (gd ? dollOffhand(state, gd) : null) }
-}
-
-/** The paperdoll's off-hand part (`HAND2_*`: shields, orbs) on the player's cell, if any. */
-function dollOffhand(state: GameState, gd: Gamedata): HandItem | null {
-  if (!state.map.playerOnLevel) return null
-  const doll = state.map.cells.get(mapKey(state.player.pos.x, state.player.pos.y))?.t?.doll
-  if (!Array.isArray(doll)) return null
-  const tex = gd.enums.texture?.PLAYER
-  for (const d of doll) {
-    if (!Array.isArray(d) || typeof d[0] !== 'number') continue
-    const name = gd.player.name(d[0])
-    if (!name || !name.startsWith('HAND2_')) continue
-    return { layers: [{ tile: d[0], layer: tex !== undefined ? String(tex) : 'player', ymax: typeof d[1] === 'number' ? d[1] : undefined }], name }
-  }
-  return null
-}
-
-function handItem(item: InvItem | undefined): HandItem | null {
-  if (!item || !Array.isArray(item.tile)) return null
-  const layers: HandItem['layers'] = []
-  for (const t of item.tile as unknown[]) {
-    if (typeof t === 'number') layers.push({ tile: t })
-    else if (t && typeof t === 'object' && typeof (t as { t?: unknown }).t === 'number') {
-      const r = t as { t: number; tex?: number; ymax?: number }
-      layers.push({ tile: r.t, layer: typeof r.tex === 'number' ? String(r.tex) : undefined, ymax: typeof r.ymax === 'number' ? r.ymax : undefined })
-    }
-  }
-  if (!layers.length) return null
-  return { layers, name: item.name }
 }

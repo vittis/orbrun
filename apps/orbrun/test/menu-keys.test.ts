@@ -41,7 +41,7 @@ function setup(watching = false) {
   st.inputMode = MouseMode.COMMAND
   const frame = (): Context => {
     ov.update(st)
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     ov.updatePrompt(ctx.mode, ctx.prompt)
     ov.syncFocus(ctx)
     return ctx
@@ -61,7 +61,7 @@ function setup(watching = false) {
    * True when the key was taken.
    */
   const key = (name: string, over: Partial<KeyboardEvent> = {}): boolean => {
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     const plain = !over.shiftKey && !over.ctrlKey && !over.altKey
     const sk = plain ? screenKey(name, ctx) : null
     if (!sk) return ov.menuKey(st, k(name, over))

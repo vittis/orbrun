@@ -1,6 +1,6 @@
 import {
   cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
-  type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
+  type Billboard, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
@@ -135,8 +135,6 @@ export class Render25d implements MapRenderer {
     })
   }
 
-  // The server view centre owns this north-up camera; first-person look never rotates it.
-  setCamera(_camera: Camera) {}
   setCursor(cursor: SceneCursor | null) { this.cursor = cursor }
 
   resize(width: number, height: number, dpr: number) {
@@ -723,8 +721,8 @@ export class Render25d implements MapRenderer {
     }
     if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
     const q = project(p, position.x, position.y + 0.3)
-    // The atlas already encodes a rat's size relative to an ogre. First-person
-    // billboard heights shrink that art a second time and must not scale it here.
+    // The atlas already encodes a rat's size relative to an ogre.
+    // Preserve those authored proportions without scaling by billboard height.
     const size = s
     const snap = (v: number) => Math.round(v * this.dpr) / this.dpr
     // Snap only idle displacement: snapping the whole frame shifts the camera-

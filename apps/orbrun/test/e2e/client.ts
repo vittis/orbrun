@@ -58,7 +58,6 @@ const noRenderer = (): MapRenderer =>
     mount() {},
     setTiles() {},
     setScene() {},
-    setCamera() {},
     setCursor() {},
     render() {},
     pick: () => null,

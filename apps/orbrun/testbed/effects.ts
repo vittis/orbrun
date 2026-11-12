@@ -44,9 +44,9 @@ new ResizeObserver(() => renderer.resize(stage.clientWidth, stage.clientHeight, 
 function frame(now: number) {
   renderer.render(now / 1000)
   if (!fixed && now - born > 1450) add(now)
-  popups.render(fixed ? born + 150 : now, anchors, emptyScene(), popupView, false, fixed)
+  popups.render(fixed ? born + 150 : now, anchors, emptyScene(), popupView, fixed)
   requestAnimationFrame(frame)
 }
 add(performance.now()); requestAnimationFrame(frame)
 const result = document.createElement('pre'); result.id = 'result'; result.style.margin = '16px 24px'
-result.textContent = JSON.stringify(surfaceLightChecks(), null, 2); document.body.append(result)
+result.textContent = JSON.stringify(await surfaceLightChecks(), null, 2); document.body.append(result)

@@ -210,9 +210,9 @@ describe('the command menus', () => {
     const options = () => [...h.host.querySelectorAll('.sysrows .label')].map((r) => r.textContent)
     h.system()
     expect([...h.host.querySelectorAll('#command-panel-character .label')].map((r) => r.textContent)).toEqual(CHARACTER_COMMANDS.map((c) => c.label))
-    expect(options()).toEqual(['Resume', 'Repeat previous command', 'Game menu', 'Help', 'Chat', 'Change dungeon view', 'Gamepad controls', 'Settings', 'Save and exit'])
+    expect(options()).toEqual(['Resume', 'Repeat previous command', 'Game menu', 'Help', 'Chat', 'Gamepad controls', 'Settings', 'Save and exit'])
     // the game's key on the right, as the Character tab's commands carry theirs
-    expect([...h.host.querySelectorAll('.sysrows li')].map((r) => r.querySelector('.hotkey')?.textContent ?? '')).toEqual(['Esc', '`', 'F1', '?', 'F12', '', '', '', 'S'])
+    expect([...h.host.querySelectorAll('.sysrows li')].map((r) => r.querySelector('.hotkey')?.textContent ?? '')).toEqual(['Esc', '`', 'F1', '?', 'F12', '', '', 'S'])
     expect([...h.host.querySelectorAll('.sysrows li.sep .label')].map((r) => r.textContent)).toEqual(['Gamepad controls', 'Save and exit'])
     // the System tab, from its third row: the game's own menu
     h.ov.clientOverlayInput('right')
@@ -245,7 +245,7 @@ describe('the command menus', () => {
       reduce(st, m as never)
     }
     h.ov.update(st)
-    const ctx = deriveContext(st, emptyScene(), { facing: 0 } as never, 'micro')
+    const ctx = deriveContext(st, emptyScene(), 0, 'micro')
     const select = resolve({ type: 'press', button: 'A', t: 0 }, ctx)
     expect(select).toEqual({ kind: 'menu', op: 'select' })
     h.sent.length = 0
@@ -258,7 +258,7 @@ describe('the command menus', () => {
     const menu = st.menus[st.menus.length - 1]
     const row = menu.items.findIndex((it) => !!it?.hotkeys?.length)
     menu.items[row] = { ...menu.items[row]!, text: menu.items[row]!.text!.replace(/^(\s*\S) - /, '$1 + ') }
-    const marked = deriveContext(st, emptyScene(), { facing: 0 } as never, 'micro')
+    const marked = deriveContext(st, emptyScene(), 0, 'micro')
     expect(resolve({ type: 'press', button: 'START', t: 2 }, marked)).toMatchObject({ kind: 'keys', seq: [{ key: 13 }] })
   })
 })

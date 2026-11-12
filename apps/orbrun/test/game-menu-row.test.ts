@@ -36,7 +36,7 @@ function setup() {
   st.inputMode = MouseMode.COMMAND
   const frame = (): Context => {
     ov.update(st)
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     ov.updatePrompt(ctx.mode, ctx.prompt)
     ov.syncFocus(ctx)
     return ctx

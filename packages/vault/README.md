@@ -7,7 +7,7 @@ game's own tiles; useful for any static scene, test bed, or level preview.
 
 Accepted: `NAME`, `MAP … ENDMAP`, `TILE`, `FTILE`, `KFEAT`, `KITEM`,
 `KMONS`, comments, and two directives of Orbrun's own, `EYE` (where the
-camera stands and faces) and `LIGHT`. Every other directive of the vault
+view is centred) and `LIGHT`. Every other directive of the vault
 language (`SUBST`, `SHUFFLE`, `MARKER`, Lua, and so on) is refused with its
 line number rather than passed over, so a file that parses is a file that
 is fully honoured.
@@ -16,7 +16,7 @@ is fully honoured.
 - `vaultScene(vault, names)` → `Scene`, given a `TileNames` resolver: any
   `id(name)` lookup, such as a packed atlas or a `@orbrun/gamedata` name
   index.
-- `vaultCamera(vault)` → the `EYE` as a `Camera`.
+- `vaultCenter(vault)` → the `EYE` marker as a cell centre.
 - `vaultTileNames(vault)` lists every tile the file asks for, so a build can
   check its atlas has them.
 

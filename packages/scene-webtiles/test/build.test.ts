@@ -6,7 +6,7 @@ import { initialState, reduce, type Monster } from '@orbrun/webtiles'
 import type { Gamedata } from '@orbrun/gamedata'
 import { fixtureGamedata, fixtureMessages, fixtureState } from './recording'
 import { cellKey, emptyScene, monstersInView, type Scene } from '@orbrun/scene'
-import { buildScene, enumMismatches, missingTileNames, CEILING_REACH, classifyFeature, stanceFor, standsFree, levelPresentation, gateFaces, isScenery, isVegetation, isExcludedFromList, monsterGroups, monsterSort, viewmodelFor, itemTileName } from '../src/index.js'
+import { buildScene, enumMismatches, missingTileNames, classifyFeature, stanceFor, standsFree, gateFaces, isScenery, isVegetation, isExcludedFromList, monsterGroups, monsterSort, itemTileName } from '../src/index.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -154,11 +154,6 @@ describe('classification', () => {
     expect(isScenery('orc warrior')).toBe(false)
     expect(isScenery('orb of destruction')).toBe(false)
   })
-  it('picks level presentation by branch', () => {
-    expect(levelPresentation('Shoals').sky).toBe('open')
-    expect(levelPresentation('Abyss').sky).toBe('dark')
-    expect(levelPresentation('Dungeon').sky).toBe('none')
-  })
 })
 
 describe('buildScene on a recorded level', () => {
@@ -205,7 +200,7 @@ describe('buildScene on a recorded level', () => {
     expect(cell.featureTile).toBe(up)
     expect(cell.faceTiles).toEqual({ w: gd.dngn.id('DNGN_GATE_OPEN_LEFT'), e: gd.dngn.id('DNGN_GATE_OPEN_RIGHT') })
   })
-  it('names the water shorelines among the overlays, so 3D can leave the flat wave lines out', () => {
+  it('keeps shoreline overlays and identifies projected wall shadows', () => {
     const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     const water = gd.dngn.id('DNGN_SHALLOW_WATER')!
@@ -225,11 +220,9 @@ describe('buildScene on a recorded level', () => {
     st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, t: { ...floor.t, bg: water, ov } })
     const cell = buildScene(st, gd).cells.get(cellKey(floor.x, floor.y))!
     for (const o of ov) expect(cell.overlays).toContain(o)
-    expect(cell.shorelines).toEqual([shore, wave, green, murky, deep, ink])
-    expect(cell.shorelines).not.toContain(shoals)
     expect(cell.wallShadows).toEqual([shadow])
   })
-  it('names the travel-exclusion marks as translucent, on a floor and on a wall face, so 3D blends them instead of alpha-testing them to black', () => {
+  it('keeps travel exclusions on floors and wall faces', () => {
     const st = fixtureState()
     const excl = gd.dngn.id('TRAVEL_EXCLUSION_BG')!
     const centre = gd.dngn.id('TRAVEL_EXCLUSION_CENTRE_BG')!
@@ -241,19 +234,16 @@ describe('buildScene on a recorded level', () => {
     const scene = buildScene(st, gd)
     const f = scene.cells.get(cellKey(floor.x, floor.y))!
     expect(f.overlays).toContain(centre)
-    expect(f.translucent).toEqual([centre])
     const w = scene.cells.get(cellKey(wall.x, wall.y))!
     expect(w.wallOverlays).toContain(excl)
-    expect(w.translucent).toEqual([excl])
   })
-  it('names the targeter landing wash as translucent, so 3D blends it instead of alpha-testing it away', () => {
+  it('preserves the targeter landing overlay', () => {
     const st = fixtureState()
     const landing = gd.dngn.id('LANDING')!
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, t: { ...floor.t, ov: [...(floor.t!.ov ?? []), landing] } })
     const f = buildScene(st, gd).cells.get(cellKey(floor.x, floor.y))!
     expect(f.overlays).toContain(landing)
-    expect(f.translucent).toEqual([landing])
   })
   it('names a shop by its wares, the only thing the tile says about it (tilepick.cc tileidx_shop)', () => {
     const st = fixtureState()
@@ -294,113 +284,8 @@ describe('buildScene on a recorded level', () => {
     expect(mons.every((m) => scene.cells.get(cellKey(m.x, m.y))?.visibility === 'visible')).toBe(true)
     // the player's own doll is not a monster
     expect(mons.some((m) => m.x === scene.player.x && m.y === scene.player.y)).toBe(false)
-    expect(scene.level.ceilingTile).not.toBeNull()
-    // a per-cell ceiling always names a wall type standing within reach of that cell
-    let roofed = 0
-    for (const c of scene.cells.values()) {
-      if (c.ceilingTile === undefined) continue
-      roofed++
-      let near = false
-      for (let dy = -CEILING_REACH; dy <= CEILING_REACH && !near; dy++)
-        for (let dx = -CEILING_REACH; dx <= CEILING_REACH && !near; dx++) {
-          const w = scene.cells.get(cellKey(c.x + dx, c.y + dy))
-          if (w?.kind === 'wall' && w.wallTile !== undefined && gd.modules.wall.basetile(w.wallTile) === c.ceilingTile) near = true
-        }
-      expect(near).toBe(true)
-    }
-    // walls are never roofed
-    expect([...scene.cells.values()].some((c) => c.occluder && c.ceilingTile !== undefined)).toBe(false)
-    void roofed
   })
 
-  it('reuses the lids of the last build when the walls stood, and votes again when they moved', () => {
-    const st = initialState()
-    let scene: Scene = emptyScene()
-    for (const m of fixtureMessages()) {
-      reduce(st, m)
-      if (m.msg === 'map' || m.msg === 'player') scene = buildScene(st, gd, { previous: scene })
-      if (st.map.cells.size > 800) break
-    }
-    const lids = (s: Scene) => [...s.cells.values()].map((c) => [c.x, c.y, c.ceilingTile ?? -1].join(','))
-    const fresh = buildScene(st, gd)
-    const reused = buildScene(st, gd, { previous: scene })
-    expect(lids(reused)).toEqual(lids(fresh))
-    expect(fresh.cells.size).toBeGreaterThan(100)
-    // a new wall: the lids are voted again, and match a build from nothing
-    const wallCell = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value >= gd.ranges.floorMax && gd.bg(c.t.bg).value < gd.ranges.wallMax)!
-    const other = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax && Math.abs(c.x - wallCell.x) > 10)!
-    st.map.cells.set(cellKey(other.x, other.y), { ...other, t: { ...other.t, bg: wallCell.t!.bg } })
-    const changed = buildScene(st, gd, { previous: reused })
-    expect(lids(changed)).toEqual(lids(buildScene(st, gd)))
-  })
-
-  it('roofs no cell in bookcases, torches or windows while there is masonry to roof it with', () => {
-    const st = initialState()
-    for (const m of fixtureMessages()) {
-      reduce(st, m)
-      if (st.map.cells.size > 800) break
-    }
-    const isWall = (bg: unknown) => {
-      const v = gd.bg(bg as number).value
-      return v >= gd.ranges.floorMax && v < gd.ranges.wallMax
-    }
-    const walls = [...st.map.cells.values()].filter((c) => c.t?.bg && isWall(c.t.bg))
-    expect(walls.length).toBeGreaterThan(50)
-    for (const name of ['WALL_CRYSTAL_BOOKCASE', 'WALL_STUDIO', 'WALL_STONE_MAGIC_SHELF', 'WALL_BRICK_DARK_2_TORCH', 'DNGN_TRANSPARENT_STONE', 'WALL_BARS_RED']) {
-      const fitting = gd.dngn.id(name)!
-      expect(fitting, name).toBeDefined()
-      // two walls in three: more of the fitting than of the masonry, and whole runs of it
-      const dressed = walls.filter((_, i) => i % 3 !== 0)
-      for (const c of dressed) st.map.cells.set(cellKey(c.x, c.y), { ...c, t: { ...c.t, bg: fitting } })
-      const scene = buildScene(st, gd)
-      expect(scene.level.ceilingTile, name).not.toBe(fitting)
-      expect([...scene.cells.values()].some((c) => c.ceilingTile === fitting), name).toBe(false)
-      // a level built of nothing else is roofed in it all the same
-      for (const c of walls) st.map.cells.set(cellKey(c.x, c.y), { ...c, t: { ...c.t, bg: fitting } })
-      expect(buildScene(st, gd).level.ceilingTile, name).toBe(fitting)
-      for (const c of walls) st.map.cells.set(cellKey(c.x, c.y), c)
-    }
-  })
-
-  it('keeps the layout revision while only monsters, light and cursors change', () => {
-    const st = initialState()
-    let scene: Scene = emptyScene()
-    // play the recording until a monster is in view; every `map` or `player` is a build, as the session does it
-    for (const m of fixtureMessages()) {
-      reduce(st, m)
-      if (m.msg === 'map' || m.msg === 'player') scene = buildScene(st, gd, { previous: scene })
-      if (m.msg === 'map' && scene.playerOnLevel && monstersInView(scene).length > 0) break
-    }
-    expect(monstersInView(scene).length).toBeGreaterThan(0)
-    expect(scene.layoutRevision).toBeGreaterThan(0)
-    expect(scene.layoutRevision).toBeLessThanOrEqual(scene.revision)
-    // the same state again: a new revision, the same layout
-    const again = buildScene(st, gd, { previous: scene })
-    expect(again.revision).toBe(scene.revision + 1)
-    expect(again.layoutRevision).toBe(scene.layoutRevision)
-    // a monster stepping onto another floor cell moves nothing in the level
-    const mc = [...st.map.cells.values()].find((c) => c.mon && c.t?.fg)!
-    const mon = { x: mc.x, y: mc.y }
-    const spots = [...st.map.cells.values()].filter((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax && !c.mon && !(c.x === st.player.pos.x && c.y === st.player.pos.y))
-    const dest = spots[0]
-    st.map.cells.set(cellKey(dest.x, dest.y), { ...dest, mon: mc.mon, t: { ...dest.t, fg: mc.t!.fg, doll: mc.t!.doll, mcache: mc.t!.mcache } })
-    st.map.cells.set(cellKey(mon.x, mon.y), { ...mc, mon: undefined, t: { ...mc.t, fg: 0, doll: undefined, mcache: undefined } })
-    const moved = buildScene(st, gd, { previous: again })
-    expect(moved.revision).toBe(again.revision + 1)
-    expect(moved.layoutRevision).toBe(again.layoutRevision)
-    // a floor cell becoming a tree is the level changing
-    const tree = gd.dngn.id('DNGN_TREE_2')!
-    const floor = spots[1]
-    st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, g: '\u2663', t: { ...floor.t, bg: tree } })
-    const grown = buildScene(st, gd, { previous: moved })
-    expect(grown.layoutRevision).toBe(grown.revision)
-    // the player stepping moves nothing in the level either: the light, the lowered walls and the feature
-    // underfoot are the renderer's to follow, not the layout's
-    st.player.pos = { x: st.player.pos.x + 1, y: st.player.pos.y }
-    const stepped = buildScene(st, gd, { previous: grown })
-    expect(stepped.revision).toBe(grown.revision + 1)
-    expect(stepped.layoutRevision).toBe(grown.layoutRevision)
-  })
 
   it('carries what the official client paints on a cell', () => {
     const st = initialState()
@@ -443,7 +328,7 @@ describe('buildScene on a recorded level', () => {
         }
         if (mc.t?.ov?.length && cell.kind === 'floor') {
           // server overlays (wall shadows) survive on floor cells, and the
-          // shadows among them are named so 3D can leave them out
+          // shadows among them let 2.5D substitute projected wall shadows
           for (const o of mc.t.ov) {
             if (o <= 0 || o >= gd.ranges.featMax) continue
             expect(cell.overlays).toContain(o)
@@ -600,40 +485,6 @@ describe('monster list grouping (monster_list.js)', () => {
     expect(groups.map((g) => g.map((b) => b.name))).toEqual([['ogre'], ['kraken tentacle'], ['jackal', 'jackal']])
     expect(isExcludedFromList(mon('plant', 0, 1, 1, { typedata: { no_exp: true } }))).toBe(true)
     expect(isExcludedFromList(mon('active ballistomycete', 0, 1, 1, { typedata: { no_exp: true } }))).toBe(false)
-  })
-})
-
-describe('viewmodel', () => {
-  it('resolves the wielded weapon and the off-hand item from their inventory slots', () => {
-    const st = initialState()
-    st.player.weapon_index = 0
-    st.player.offhand_index = 3
-    st.player.inv[0] = { slot: 0, name: '+0 war axe', tile: [3672] }
-    st.player.inv[3] = { slot: 3, name: '+1 kite shield', tile: [{ t: 4000, tex: 4 }, { t: 4001, tex: 4, ymax: 20 }] }
-    const vm = viewmodelFor(st)
-    expect(vm.weapon).toEqual({ layers: [{ tile: 3672 }], name: '+0 war axe' })
-    expect(vm.offhand).toEqual({ layers: [{ tile: 4000, layer: '4' }, { tile: 4001, layer: '4', ymax: 20 }], name: '+1 kite shield' })
-  })
-  it('leaves a hand empty when unarmed, when the server publishes no off hand, or when the slot has no tile', () => {
-    const st = initialState()
-    expect(viewmodelFor(st)).toEqual({ weapon: null, offhand: null })
-    st.player.weapon_index = 2
-    st.player.inv[2] = { slot: 2, name: 'a stick' }
-    expect(viewmodelFor(st).weapon).toBeNull()
-  })
-  it('finds the watched player\'s weapon in the recorded session, and the shield from the paperdoll', async () => {
-    const gd = await fixtureGamedata()
-    const st = fixtureState()
-    const vm = viewmodelFor(st, gd)
-    expect(vm.weapon).not.toBeNull()
-    expect(vm.weapon!.layers.length).toBeGreaterThan(0)
-    expect(vm.weapon!.name).toBe(st.player.inv[st.player.weapon_index].name)
-    // 0.34 publishes no off-hand slot for armour; the doll's HAND2 part is the shield
-    expect(st.player.offhand_index).toBe(-1)
-    expect(vm.offhand?.name).toMatch(/^HAND2_/)
-    expect(vm.offhand?.layers[0].layer).toBe(String(gd.enums.texture.PLAYER))
-    // without gamedata nothing is guessed
-    expect(viewmodelFor(st).offhand).toBeNull()
   })
 })
 

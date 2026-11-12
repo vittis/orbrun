@@ -1,224 +1,84 @@
 # About Orbrun
 
-This is the DCSS Client fork, deployed for online play on the bundled public
-servers. Offline play and custom servers are unavailable in this deployment.
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.63) is available under
-AGPL-3.0-or-later. Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun);
-the upstream feature guide below also describes features outside this deployment.
+Orbrun is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.org/) WebTiles client. This fork presents the game in Dungeon (2.5D), with keyboard, gamepad and touch controls.
 
-Choose **Watch** to test without signing in. To play, choose **Play**, select the
-server where your account lives, and log in with that server’s existing account.
-Accounts and saved games are specific to each DCSS server.
+[Play or watch](https://dcss-client.vittis.workers.dev/). The hosted build supports online play on the bundled public servers. Offline play and custom servers are development capabilities and are unavailable in this deployment.
 
-Orbrun is an unofficial [DCSS](https://crawl.develz.org) client that puts you
-inside the dungeon. It plays on the public
-[WebTiles](https://crawl.develz.org/wordpress/howto) servers, or on your own
-device with no server at all. It draws the game in first person and is built
-to be played on a handheld: with a gamepad on the Steam Deck, or by touch on a
-phone or tablet.
-
-If you play on WebTiles, you keep your game, your account, your rc file and
-your keys. Orbrun adds a 3D view, controller support and touch on top, and
-asks you to relearn nothing.
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.64) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
 
 ## Getting started
 
-Open [DCSS Client](https://dcss-client.vittis.workers.dev) and pick a server. Log in with your
-WebTiles account, register a new one, or spectate without one. Then start a
-game. There is nothing to install and no Orbrun account: your browser talks
-to the DCSS server directly.
+Choose **Watch** to spectate without signing in. To play, choose **Play**, select the server where your account lives, then log in or register there. Accounts, saves, rc files and scoreboard entries belong to that DCSS server. There is no separate Orbrun account.
 
-To play from a Steam Deck's library, [Add to Steam](STEAM.md) has the five
-steps that put Orbrun there, artwork included. On a phone or
-tablet, [add it to your home screen](INSTALL.md) before you play: it then opens full
-screen from its own icon, even offline. A computer can do the same.
+[Add to Steam](STEAM.md) explains using the Steam Deck's browser and controller. [Add to Home Screen](INSTALL.md) explains installing the shell on phones, tablets and computers. Online gameplay needs a network connection.
 
-## Features
+## The dungeon and maps
 
-- **The real game on the real servers.** Orbrun is a WebTiles client, not a
-  port. You log in to CDI, CDO or any other public server with the account
-  you already have. Your saves, rc file, macros, morgues and scoreboard
-  entries live on the server, just as they do in the official client. New
-  releases and trunk work as soon as a server runs them.
-- **First person.** The same level, drawn around you instead of from above.
-  The map, the monster list, the stats and the message log are all still
-  there.
-- **Gamepad.** Autoexplore, autofight, rest, travel, your gear, casting,
-  firing and examining are each one button away, and a bar shows what each
-  button does right now. An on-screen keyboard covers prompts, inscriptions
-  and chat.
-- **Touch.** On a phone or tablet the whole game plays by touch, in portrait or
-  landscape. Tap to step, swipe to turn, and the buttons under your
-  thumbs explore, fight, cast and open your gear, each with crawl's own
-  picture.
-- **The keyboard you know, with one change.** Direction keys are relative to
-  the way you face: `k` steps forward, `h` and `l` turn. Every other key goes
-  to the server untouched.
-- **Offline.** Play with no server at all. The current release or trunk runs
-  in your browser, and your saves stay on your device. Offline games don't
-  reach a scoreboard.
-- **Spectating**, in first person, from a link you can share.
-- **Made for handhelds.** Orbrun stops drawing whenever nothing on screen
-  moves. Add it to Steam as a non-Steam game, or to a phone's or
-  tablet's home screen.
+Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, animation, movement presentation and accessibility controls. **Still** mode limits animation; reduced motion is respected.
 
-## The minimap
-
-The minimap in the corner is the WebTiles 2D game in miniature. It uses the
-same tiles, drawn the same way, as the official client's dungeon view, so
-everything on it looks exactly as it does there. If you know the 2D view,
-you already know how to read it.
-
-Only two things differ. It is round, centred on you, with north always up.
-And a wedge of light on it shows the way you face. Settings has how many
-tiles it shows and how big each one is drawn.
-Click it, or press `X`, for the full level map.
+The minimap and temporary level map remain flat. Press `X` for the level map; closing it restores the dungeon. `Ctrl+X` opens the separate **in view** list. Messages, menus, stats, targeting and the monster list remain available. The client never predicts authoritative moves, damage or hidden information.
 
 ## Controls
 
 ### Keyboard
 
-Every key works as it does in the official client, except that direction
-keys are relative to where you are facing.
+Movement and targeting use compass directions, independent of the camera tilt.
 
-| Key | Does |
-|-----|------|
-| `k` / `↑` | step forward |
-| `h` `l` / `←` `→` | turn |
-| `j` / `↓` and the diagonals | step back, strafe |
-| Shift + direction | run |
-| Ctrl + direction | attack |
-| F2 | level map (Select) |
-| F3 | actions menu (X) |
-| F4 | gear menu (Y) |
-| F5 | Orbrun menu (Start) |
-| F12 | chat |
+| Key | Action |
+|---|---|
+| `k` / `↑` | North |
+| `j` / `↓` | South |
+| `h` / `←` | West |
+| `l` / `→` | East |
+| `y`, `u`, `b`, `n` | Northwest, northeast, southwest, southeast |
+| Shift + direction | Run |
+| Ctrl + direction | Attack |
+| `X` / F2 | Level map |
+| `Ctrl+X` | In view list |
+| F3 | Actions menu |
+| F4 | Gear menu |
+| F5 | Orbrun menu |
+| F12 | Chat |
 
-All other keys go straight to the server. Menus, prompts, targeting and text
-input take the same keys, in the same modes, with the same results as on
-WebTiles. The F-keys open the gamepad's four menus, so a button remapped to
-one (on a Steam Deck, say) opens it too; press the key again to close it.
-Orbrun's own menu (character, settings, controls, save and exit) is F5;
-while spectating, Escape opens it too.
+Menus, prompts and text entry retain their contextual WebTiles keys. The F-keys open the gamepad's menus; press again to close. Escape opens the menu while spectating.
 
 ### Gamepad (standard mapping)
 
-- Left stick or d-pad: forward and back step, left and right turn, the
-  diagonals strafe; hold to run. The right stick looks around.
-- **A** does what the situation calls for: takes the stairs you're standing
-  on, opens or closes the door ahead, attacks, picks up, or steps.
-- **B** cancels or backs out; in play it sends Escape.
-- **X** opens your spells, abilities, evocables and quiver as tabs; the
-  bumpers switch between them. In a menu, X describes the row under the
-  cursor.
-- **Y** opens the gear menu, with your pack at the top; Y there swaps
-  weapons.
-- **LB** waits a turn; hold it to rest.
-- **RB** aims your quivered action; press it again to fire.
+- Left stick or d-pad: move and target in the eight compass directions. Held movement repeats steps.
+- **A** does what the situation calls for; consult the action bar for the current command.
+- **B** cancels or backs out.
+- **X** opens spells, abilities, evocables and quiver; bumpers switch tabs. In a menu, X describes the selected row.
+- **Y** opens gear; Y in that menu swaps weapons.
+- **LB** waits; hold to rest.
+- **RB** aims the quivered action; press again to fire.
 - **LT** autoexplores.
 - **RT** autofights.
-- **R3** or **L3** (click either stick) examines: the d-pad moves the cursor
-  and A describes what's under it.
-- **Select** opens the level map. There LB and RB find the stairs up and
-  down, A travels to the cursor, Y travels to another branch or floor, L3
-  searches for items and R3 shows the dungeon overview. Hold Select for
-  the rest of the map's commands. Every menu reopens on the row you last
-  chose.
-- **Start** opens the Orbrun menu, which has two tabs: Character (skills,
-  spells, status, religion, shouting to allies and the rest) and System
-  (resume, repeat, the game menu, help, chat, gamepad, settings, save and
-  exit).
+- **R3** or **L3** examines; use the d-pad to move the cursor and A to describe it.
+- **Select** opens the level map. Map actions include stairs, travel, search and dungeon overview; hold Select for more map commands.
+- **Start** opens the Orbrun menu for character commands, help, settings, chat and save/exit.
 
-The action bar at the bottom of the screen always shows what each button does
-in the current mode. It never guesses the mode: the server reports it.
+The action bar reflects the current server mode. Controller mappings and browser/device support can vary; automated input checks do not certify every physical controller.
 
 ### Touch
 
-On a phone or tablet, buttons stand under your thumbs (on a phone in
-landscape, under the minimap), named and drawn with crawl's own pictures. They
-change with the screen, but Esc is always in the bottom-left corner, the
-arrows beside it, and the do-it button in the bottom-right corner.
+Touch buttons provide compass movement, targeting, exploration, fighting, waiting, quivering, spells and gear. Their labels change with the current mode. Tap a dungeon cell to select or act on it according to the current command. Tap stats for the Orbrun menu and the minimap for the level map. On the flat map, tap to select, drag to pan and pinch to zoom.
 
-- Tap the view to step forward. Swipe across it to turn: a short swipe turns
-  45°, a long one 90°. Hold a finger still on it to examine what's ahead.
-- On the map the buttons explore, fight, wait (hold to rest), quiver, open
-  your spells and your gear, and list what is in view. Tap Quiver to aim and
-  again to fire.
-- Your spells stand under the message log. Tap one to ready it, and tap it
-  again to cast.
-- Tap your stats for the Orbrun menu, and the minimap for the level map.
-  There, tap to move the cursor, drag to move the map and pinch to zoom.
-- In a menu, tap a row to take it, and swipe sideways to change tabs. A row
-  that would spend a turn lights on the first tap and is taken on the
-  second.
-- Prompts that ask for a number bring up a number pad.
-
-## Add to Steam
-
-Orbrun goes into a Steam Deck's library as a non-Steam game that opens Chrome
-in kiosk mode on orbrun.app. It takes five steps and no script: see
-[STEAM.md](STEAM.md).
-
-## Add to Home Screen
-
-On a phone or tablet, add Orbrun to your home screen: it opens from its own icon, full
-screen, and starts with no connection. A computer can install it the same
-way, in a window of its own. [INSTALL.md](INSTALL.md) has the steps for
-Android, iPhone, iPad and computers.
+Tap a spell to ready it and again to cast. Menus support selecting rows and swiping between tabs. Actions that spend a turn can require a confirming second tap. Numeric prompts offer a number pad.
 
 ## Version support
 
-Orbrun reads each server's own game data when it connects, so it keeps up
-with stable and trunk without any work per release. A new tile or enum shows
-up as soon as the server publishes it. Anything the server doesn't publish is
-left undrawn rather than guessed at.
+The client loads each connected server's enums, tile tables and atlases. Its parser supports known generated forms without executing remote JavaScript. Changed upstream formats may require a compatibility update; unsupported content fails explicitly rather than being guessed.
 
 ## Security and privacy
 
-Orbrun has no accounts of its own. Your browser connects straight to the DCSS
-server you choose, over an encrypted WebSocket, just as the official WebTiles
-client does. Your password is sent only in the login message and is never
-stored. Saving a login keeps the server's login token, the same way the
-official client keeps a cookie. Settings and tokens stay in your browser's
-local storage and go nowhere else.
+The browser connects directly to the chosen DCSS server over WSS. Passwords are sent in login messages and are not stored. Saving a login stores the server's token in browser storage alongside preferences. Clear the site's data to remove these local records. Protect your browser profile as you would any saved login.
 
-Your rc options are read from the server for each account, server and game
-version. Orbrun never caches or overrides them.
+The host serves the app and bounded gamedata/morgue proxies for the bundled allowlisted servers. Game WebSocket traffic goes directly to DCSS. Custom proxy hosts and redirects are rejected. Executable scripts are served from the app's own origin under a restrictive Content Security Policy.
 
-The hosted site at orbrun.app counts page views anonymously (no cookies, no
-fingerprinting, no names: a game counts as its server and version, like
-/play/cdi/dcss-0.34) and relays the tile data your
-browser needs from the server you picked. Your game traffic never passes
-through it.
+The repository retains optional Cloudflare analytics support; it loads a beacon only when configured at build time. Do not put secrets in `VITE_` variables, fixtures or bug reports.
 
-## Support the people who run it
+## Credits and feedback
 
-Orbrun is only a client. The game is DCSS, made by a team of volunteers, and
-every online game is played on a server that someone pays for and looks
-after. Orbrun takes no money; if you want to give some, give it to them.
+DCSS is made by its volunteer contributors and runs on independently maintained public servers. Thanks to [PocketZot](https://pocketzot.app/about) and [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl) for the inspirations described in the attribution record.
 
-- **CDI** (crawl.dcss.io) is funded through its admin's
-  [Patreon](https://www.patreon.com/gammafunk).
-- **CBR2** is funded through its admin's
-  [Patreon](https://www.patreon.com/zureal).
-- **DCSS** itself has no donation page. Bug reports, playtesting and code on
-  [GitHub](https://github.com/crawl/crawl) are how its players give back.
-
-## How it was built
-
-Most of the code was written with Claude Code. The design, product decisions,
-testing and review were mine. Every change is held to the same three rules:
-match WebTiles, work with a controller, and never break the keyboard.
-
-Thanks to [PocketZot](https://pocketzot.app/about), the DCSS client for
-phones, for inspiring parts of Orbrun and for feedback.
-
-The source is at <https://github.com/Caeous/orbrun>, licensed under
-[AGPL-3.0-or-later](LICENSE). [ATTRIBUTION.md](ATTRIBUTION.md) explains how
-it relates to DCSS.
-
-## Feedback
-
-Comments, questions and bug reports are welcome on
-[GitHub issues](https://github.com/Caeous/orbrun/issues) or at
-<caeous@gmail.com>.
+Report fork issues at [vittis/orbrun](https://github.com/vittis/orbrun/issues). Upstream Orbrun is at [Caeous/orbrun](https://github.com/Caeous/orbrun); its author can be reached at <caeous@gmail.com>.

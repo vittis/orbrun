@@ -22,7 +22,6 @@ import { FocusNav, focusStep, tapLights, type Focusable, type FocusInfo, type Fo
 import { crtPlainText, scrapeCrt, stackSkills } from './crt-scrape'
 import { focusFallback, numberPrompt, promptButtons, submitOnStartOnly, typedInLog, type Action, type BindingLabel } from './bindings'
 import { CHARACTER_COMMANDS, GAMEPAD_COMMAND_KEYS, HELP_COMMAND, REPEAT_COMMAND, type CommandEntry, type CommandMenu } from './command-menu'
-import { VIEW_OPTIONS } from './servers'
 import { settingGroups, type SettingGroup } from './settings-rows'
 import { glyph, glyphName } from './glyphs'
 import { packRows, packStrip, turnKeys, type PackStrip } from './pack-tabs'
@@ -3454,10 +3453,8 @@ export class Overlays {
       add(HELP_COMMAND.label, HELP_COMMAND.key, 'the manual, and what every key does', 'CMD_DISPLAY_COMMANDS', () => this.hooks.send(cm.input(HELP_COMMAND.key)))
     }
     if (opts.inGame && opts.chat !== false) add('Chat', 'F12', 'talk to whoever is watching', 'CMD_REPLAY_MESSAGES', () => this.hooks.onSystemAction('chat'))
-    // Cycle the same projections offered in View settings.
-    if (playing && VIEW_OPTIONS) add('Change dungeon view', undefined, 'cycle first person, 2.5D and flat tiles', 'CMD_DISPLAY_MAP', () => this.hooks.onSystemAction('toggleRenderer'))
     add('Gamepad controls', undefined, 'what each button does, and how to change it', 'CMD_KEYBOARD', () => this.showBindings(this.hooks.padKind?.() ?? 'generic', again), true)
-    add('Settings', undefined, "Orbrun's own options: the camera, the controls, the HUD", 'CMD_EDIT_PLAYER_TILE', () => this.showSettings(again))
+    add('Settings', undefined, "Orbrun's own options: the dungeon, the controls, the HUD", 'CMD_EDIT_PLAYER_TILE', () => this.showSettings(again))
     // a player saves (crawl's S, which asks first, then go_lobby brings the front end back); a spectator has nothing to
     // save and goes back to the Watch screen (`/watch/<server>`) the game was picked from
     if (playing) add('Save and exit', 'S', 'the game keeps; come back to it whenever', 'CMD_SAVE_GAME_NOW', () => this.hooks.send(cm.input('S')), true)

@@ -13,7 +13,7 @@ const SPELLS: Action = { kind: 'keys', label: 'Spells', seq: [{ text: 'z' }] }
 /** An inventory with sections: X describes its rows and the bumpers jump between them. */
 const SECTIONED = { menu: { tag: 'inventory', items: [], flags: 0 } as never, hoverable: [], arrowsSelect: true, multiselect: false, wrap: false, filter: false, sections: true, anyMarked: false }
 
-/** Exercise the real input routing without constructing a WebGL renderer or connecting. */
+/** Exercise the real input routing without constructing a renderer or connecting. */
 function harness() {
   const held = new Set<Button>()
   const execute = vi.fn<(a: Action) => void>()
@@ -378,7 +378,7 @@ describe('direct game input', () => {
     expect(h.send).not.toHaveBeenCalled()
   })
 
-  it('a direction letter reaches a prompt raw, and is a facing-relative step only in command mode', () => {
+  it('a direction letter reaches a prompt raw, and is a compass step only in command mode', () => {
     // the faded altar reads `b` as "learn about the second god" (god-prayer.cc `_prompt_ecu_worship`)
     const h = harness()
     h.ctx.mode = 'prompt'
@@ -397,35 +397,6 @@ describe('direct game input', () => {
     expect(h.execute).not.toHaveBeenCalled()
     expect(h.overlays.showPalette).not.toHaveBeenCalled()
     expect(h.send).toHaveBeenCalledExactlyOnceWith(cm.key(-265))
-  })
-})
-
-describe('viewmodel sync', () => {
-  /** The hands rebuild on the player message, and again on the map that carries the paperdoll's shield. */
-  function vmHarness() {
-    const state = initialState()
-    const setViewmodel = vi.fn()
-    const screen = Object.assign(Object.create(GameScreen.prototype), {
-      is3d: true, viewmodelRev: '', renderer: { setViewmodel }, session: { state, gamedata: undefined },
-    }) as { syncViewmodel(st: typeof state): void }
-    return { state, screen, setViewmodel }
-  }
-
-  it('rebuilds the hands when the map changes, since the shield rides the paperdoll on the player cell', () => {
-    const h = vmHarness()
-    h.state.rev.player++
-    h.screen.syncViewmodel(h.state)
-    expect(h.setViewmodel).toHaveBeenCalledTimes(1)
-    h.state.rev.map++
-    h.screen.syncViewmodel(h.state)
-    expect(h.setViewmodel).toHaveBeenCalledTimes(2)
-  })
-
-  it('leaves the hands alone while neither message has changed', () => {
-    const h = vmHarness()
-    h.screen.syncViewmodel(h.state)
-    h.screen.syncViewmodel(h.state)
-    expect(h.setViewmodel).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -460,12 +431,41 @@ describe('mouse and the aim cursor', () => {
   })
 })
 
-describe('the right stick', () => {
-  it('is free look', () => {
+describe('Dungeon compass inputs', () => {
+  it.each(['command', 'targeting', 'levelmap'] as const)('keeps all eight keyboard directions in %s', mode => {
     const h = harness()
-    const cam = { look: vi.fn() }
-    Object.assign(h.screen, { cam, is3d: true, mapPan: { x: 0, y: 0 }, hooks: { ...(h.screen as unknown as { hooks: object }).hooks, settings: () => ({ lookSensitivity: 1, invertLook: false }) } })
-    h.event({ type: 'look', dx: 0.8, dy: 0.1 })
-    expect(cam.look).toHaveBeenLastCalledWith(0.8, 0.1, 1, false)
+    h.ctx.mode = mode
+    for (const key of ['k', 'u', 'l', 'n', 'j', 'b', 'h', 'y']) h.screen.onKeyDown(new KeyboardEvent('keydown', { key, cancelable: true }))
+    if (mode === 'levelmap') expect(h.send.mock.calls.map(([msg]) => msg)).toEqual(['k', 'u', 'l', 'n', 'j', 'b', 'h', 'y'].map(text => cm.input(text)))
+    else expect(h.step.mock.calls.map(([dir]) => dir)).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
+  })
+
+  it.each(['lstick', 'dpad', 'touch'] as const)('keeps %s compass movement and targeting', source => {
+    const h = harness()
+    for (const mode of ['command', 'targeting', 'levelmap'] as const) {
+      h.ctx.mode = mode
+      h.execute.mockClear()
+      for (let dir = 0; dir < 8; dir++) h.event({ type: 'dir', source: source === 'touch' ? 'dpad' : source, dir: dir as 0, ...(source === 'touch' ? { touch: true } : {}) })
+      expect(h.execute.mock.calls.map(([action]) => action)).toEqual(Array.from({ length: 8 }, (_, dir) => ({ kind: mode === 'command' ? 'step' : 'cursor', dir })))
+    }
+  })
+
+  it('keeps X as the level map and Ctrl+X as the in-view list', () => {
+    const h = harness()
+    h.screen.onKeyDown(new KeyboardEvent('keydown', { key: 'X', shiftKey: true, cancelable: true }))
+    h.screen.onKeyDown(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true, cancelable: true }))
+    expect(h.send.mock.calls.map(([msg]) => msg)).toEqual([cm.input('X'), cm.key(24)])
+  })
+
+  it('routes the right stick to map panning only', () => {
+    const h = harness(), panMap = vi.fn()
+    Object.assign(h.screen, { panMap, mapPan: { x: 0, y: 0 } })
+    h.event({ type: 'pan', dx: 0.8, dy: -0.2 })
+    expect(h.execute).not.toHaveBeenCalled()
+    expect(h.step).not.toHaveBeenCalled()
+    expect(panMap).not.toHaveBeenCalled()
+    h.ctx.mode = 'levelmap'
+    h.event({ type: 'pan', dx: 0.8, dy: -0.2 })
+    expect(panMap).toHaveBeenCalledExactlyOnceWith(0.8, -0.2)
   })
 })

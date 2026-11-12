@@ -1,129 +1,60 @@
 <p align="center"><img src="assets/logo.svg" alt="Orbrun" width="560"></p>
 
-# Orbrun
+# Orbrun — DCSS Client
 
-**Dungeon Crawl Stone Soup in first person, built for controllers and handhelds.**
+**Dungeon Crawl Stone Soup in a 2.5D dungeon, with keyboard, gamepad and touch controls.**
 
-**[Play now: orbrun.app](https://orbrun.app)**
+[Play or watch](https://dcss-client.vittis.workers.dev/) · [Controls and privacy](ABOUT.md) · [Engineering baseline](project-notes/README.md)
 
-Orbrun is an unofficial client for [Dungeon Crawl Stone
-Soup](https://crawl.develz.org/). It talks to the public DCSS servers over
-[WebTiles](https://crawl.develz.org/wordpress/howto), the same protocol the
-official client uses, but replaces everything you see and touch: the dungeon
-is drawn in first-person 3D, the HUD is sized for a small screen, and the
-controls are built around a gamepad, with the Steam Deck as the main target.
-It runs in the browser. There is nothing to install and no Orbrun account.
+This fork of [Caeous's Orbrun](https://github.com/Caeous/orbrun) connects to the public DCSS WebTiles servers. Accounts, saves, rc files and gameplay remain on the selected server. Anonymous spectating needs no account.
 
-If you already play on WebTiles, you keep your account, your rc file and your
-keys. Menus, prompts and messages work the way you're used to.
+Dungeon (2.5D) is the gameplay view: slanted floors, raised walls, upright creatures, lighting, spell effects and confirmed combat feedback. Tilt, zoom, animation and movement presentation remain configurable. Still mode and reduced motion limit animation. Traditional flat tiles remain for the minimap and temporary level-map/overview displays; closing a map returns to the dungeon. Movement and targeting use compass directions.
 
-<p align="center">
-  <img src="https://orbrun.app/room/poster.jpg" alt="The Antechamber: a stone hall in DCSS's tiles with a down staircase between two statues" width="720">
-</p>
+<p align="center"><img src="apps/orbrun/public/room/poster.jpg" alt="The bundled front room rendered in Dungeon 2.5D" width="720"></p>
 
-## Status
+The hosted build supports online play on the bundled HTTPS/WSS servers. Offline engines and custom-server development remain in the repository, but are disabled in production. Installing the site saves its shell; hosted gameplay still needs a connection.
 
-Playable. Log in to a public server (or register, or just spectate), start a
-game, and play it in first person with a keyboard or a gamepad. You can also
-play offline, with no server, on the engine built into the browser.
+## Play
 
-Not yet: sound, and the feel layer (camera sway, hit shake).
+Use **Watch** to spectate, or **Play** to choose your account's server. The HUD includes server menus, prompts, messages, stats, chat, targeting and the monster list. The action bar describes the current gamepad or touch controls.
 
-## Features
+- [Keyboard, controller and touch guide](ABOUT.md#controls)
+- [Add to Steam](STEAM.md)
+- [Add to Home Screen](INSTALL.md)
+- [Release notes](CHANGELOG.md)
 
-- **First-person 3D dungeon.** Walls, doors, stairs, altars, shops, water and
-  lava; items and monsters as billboards; remembered squares dimmed; a
-  minimap.
-- **2.5D dungeon view.** A slanted overhead camera, raised walls, upright
-  creatures, contact shadows, lantern and environmental lighting, animated
-  water, lava and clouds. Choose **Settings → View → Projection → Dungeon
-  (2.5D)**. Overhead views use compass movement and targeting; tilt, zoom
-  and animation are adjustable. The full level map stays flat.
-- **Full gamepad support.** A contextual A button, tap-or-hold buttons,
-  command menus, an on-screen keyboard, and an action bar that shows what
-  every button does right now. The bar is never guessing: the server says
-  which mode you're in.
-- **The keyboard you know.** Every key does what it does in the official
-  client, with one exception: direction keys are relative to the way you
-  face.
-- **Everything WebTiles shows.** Menus, popups, prompts, `--more--`, the
-  monster list, the stats pane, the message log, chat, the level map and
-  targeting.
-- **Your rc file, live.** Orbrun reads your options from the server and never
-  caches or overrides them.
-- **Any DCSS version.** Enums, tile tables and atlases come from the connected
-  server at runtime, so stable and trunk both work without an Orbrun update.
-- **Offline play.** The current release or trunk, built for WebAssembly, runs
-  in your browser with saves kept on your device.
-- **Many accounts, many servers**, including any server you add by URL.
-- **Steam Deck.** Add it to your library; see [Add to Steam](#add-to-steam).
+## Develop
 
-[ABOUT.md](ABOUT.md) has the full tour, the controls, and the security and
-privacy notes. [CHANGELOG.md](CHANGELOG.md) has what's new.
-
-## Add to Steam
-
-Orbrun goes onto a Steam Deck as a non-Steam game that opens Chrome in kiosk
-mode on orbrun.app. It takes five steps and needs no script.
-[STEAM.md](STEAM.md) walks through them.
-
-## Add to Home Screen
-
-On a phone or tablet, Orbrun goes on the home screen as an app that opens full screen
-and works offline; a computer can install it the same way. [INSTALL.md](INSTALL.md) has the steps.
-
-## DCSS as a library
-
-Orbrun is an npm workspace. The game lives in `apps/orbrun`. What it knows
-about DCSS lives in small packages under `packages/`. Each does one job and
-depends on neither the app nor the DOM, so a different client, a bot, a
-recorder or a viewer can use it on its own. Each has a README.
-
-| Package | What it does | Depends on |
-|---------|--------------|------------|
-| [`@orbrun/webtiles`](packages/webtiles) | The WebTiles protocol: keycodes and client messages, a WebSocket connection, a tolerant reducer from server messages to a `GameState`, and formatted-string rendering | nothing |
-| [`@orbrun/gamedata`](packages/gamedata) | Loads a server's own `enums.js`, `tileinfo-*.js` and atlases at runtime; tile lookup, flag decoding, name indices | nothing |
-| [`@orbrun/scene`](packages/scene) | The world model a renderer draws: cells, billboards, camera, directions, minibars, and the `MapRenderer` and `TileSource` contracts | nothing |
-| [`@orbrun/scene-webtiles`](packages/scene-webtiles) | `GameState` + gamedata → `Scene`. All the DCSS knowledge: tile ranges, feature classification, monster list rules, the viewmodel | webtiles, gamedata, scene |
-| [`@orbrun/render-2d`](packages/render-2d) | Top-down Canvas 2D renderer of a `Scene`; also draws the minimap | scene |
-| [`@orbrun/render-2.5d`](packages/render-2.5d) | Slanted Canvas dungeon renderer with raised walls, upright sprites and environmental effects | scene |
-| [`@orbrun/render-3d`](packages/render-3d) | First-person three.js renderer of a `Scene` | scene, three |
-| [`@orbrun/vault`](packages/vault) | A subset of DCSS's `.des` vault format, compiled to a `Scene` | scene, scene-webtiles |
-| [`@orbrun/offline`](packages/offline) | Runs the WebAssembly engine in a Web Worker behind a WebTiles connection, and stands in for the server's lobby | webtiles |
-
-`apps/orbrun` is the game itself: the server picker, lobby, login, HUD, menus
-and popups, on-screen keyboard, gamepad layers, command menus, settings and
-the front room. `engine/` builds upstream crawl for WebAssembly for offline
-play.
-
-## Run it
+Use Node 24.11.1 and npm 11.6.2, the verified web toolchain.
 
 ```sh
-npm install
-npm run dev        # http://localhost:5173
-npm test           # vitest
-npm run typecheck  # tsc -b
-npm run build      # apps/orbrun/dist
+npm ci --include=dev
+npm run dev -w apps/orbrun -- --host 127.0.0.1
+npm run typecheck -- --force
+npm test
+npm run e2e
+npm run build
 ```
 
-Public servers don't send CORS headers, so the dev and preview servers include
-a small proxy that fetches gamedata (tile tables and atlases) from the
-connected server. WebSockets connect directly.
+Development and preview include the bounded gamedata proxy; WebSockets connect directly to the selected DCSS server. Optional engine tests report explicit skips when their artifacts are missing. [CONTRIBUTING.md](CONTRIBUTING.md) and the [runbook](project-notes/RUNBOOK.md) explain fixtures, browser checks and release validation.
 
-[CONTRIBUTING.md](CONTRIBUTING.md) covers fixtures, the recorder and the build
-tools.
+## Packages
 
-## License
+| Package | Responsibility |
+|---|---|
+| [webtiles](packages/webtiles) | Connection, protocol, formatting and mutable server-state reducer |
+| [gamedata](packages/gamedata) | Bounded non-executing parsing of server enums/tile tables and atlas loading |
+| [scene](packages/scene) | Render-facing cells, sprites, directions and presentation contracts |
+| [scene-webtiles](packages/scene-webtiles) | DCSS state and gamedata to scene composition |
+| [render-2.5d](packages/render-2.5d) | Canvas dungeon renderer and confirmed visual effects |
+| [render-2d](packages/render-2d) | Flat supporting views and minimap |
+| [vault](packages/vault) | Restricted DCSS `.des` parser and scene compiler for bundled scenery |
+| [offline](packages/offline) | Development/offline WebAssembly engine integration |
 
-[AGPL-3.0-or-later](LICENSE). Copyright © 2026 the Orbrun developer. Orbrun is
-an independent project, not affiliated with or endorsed by the DCSS
-development team. [ATTRIBUTION.md](ATTRIBUTION.md) explains how it relates to
-DCSS and what it takes from the official client. Thanks to
-[PocketZot](https://pocketzot.app/about) for inspiring parts of the game and
-for feedback.
+`apps/orbrun` owns the app, controls, sessions, menus, settings, HUD and Worker. `engine/` builds optional offline artifacts. No UI-framework or protocol replacement is part of this baseline.
 
-## Feedback
+## License and credits
 
-Comments, questions and bug reports are welcome on
-[GitHub issues](https://github.com/Caeous/orbrun/issues) or at
-<caeous@gmail.com>.
+[AGPL-3.0-or-later](LICENSE). Copyright © 2026 the Orbrun developer. This is an independent, unofficial DCSS client. Upstream authorship, DCSS-derived code, artwork, fonts, PocketZot and Super Dungeon Crawl credits are recorded in [ATTRIBUTION.md](ATTRIBUTION.md). The hosted About page links the exact corresponding source for its release.
+
+Report fork issues at [vittis/orbrun](https://github.com/vittis/orbrun/issues).

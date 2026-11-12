@@ -1,6 +1,6 @@
 import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { cellKey, emptyScene, makeCamera, type TileSource, type MeleeAttack, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
+import { cellKey, emptyScene, type TileSource, type MeleeAttack, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
@@ -60,12 +60,10 @@ const renderer = new Render25d({ center: { x: 9, y: 4 }, animate: !matchMedia('(
 renderer.mount(canvas)
 renderer.setTiles(roomSource)
 renderer.setScene(scene)
-renderer.setCamera(makeCamera(11, 5))
 const original = new Render2d({ center: { x: 9, y: 4 } })
 original.mount(canvas)
 original.setTiles(roomSource)
 original.setScene(scene)
-original.setCamera(makeCamera(11, 5))
 const flat = document.querySelector<HTMLInputElement>('#original')!
 const animate = document.querySelector<HTMLInputElement>('#animate')!
 animate.checked = !matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -146,7 +144,6 @@ document.getElementById('scene')!.addEventListener('change', async () => {
   original.setTiles(source)
   original.setScene(scene)
   original.setOptions({ center })
-  original.setCamera(makeCamera(scene.player.x, scene.player.y))
   fit()
 })
 canvas.addEventListener('pointermove', event => {
@@ -169,7 +166,6 @@ canvas.addEventListener('click', event => {
   scene.player = { x: cell.x, y: cell.y }
   renderer.setScene({ ...scene, revision: ++scene.revision })
   original.setScene(scene)
-  original.setCamera(makeCamera(scene.player.x, scene.player.y))
   wake()
 })
 let moveDirection = 1

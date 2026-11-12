@@ -4,7 +4,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadGamedata, type Gamedata } from '@orbrun/gamedata'
 import { cellKey, getCell, isWalkable } from '@orbrun/scene'
-import { DesError, DIRECTIVES, parseDes, vaultCamera, vaultScene, vaultTileNames, variantAt, type TileNames } from '../src/index.js'
+import { DesError, DIRECTIVES, parseDes, vaultCenter, vaultScene, vaultTileNames, variantAt, type TileNames } from '../src/index.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(here, '..', '..', '..')
@@ -45,7 +45,7 @@ KFEAT: > = dngn_stone_stairs_down
 KFEAT: + = dngn_closed_door
 KITEM: $ = gold05
 KMONS: P = mons_plant
-EYE: @ S
+EYE: @
 MAP
 #######
 #..>..#
@@ -58,12 +58,12 @@ ENDMAP
 `
 
 describe('parseDes: the supported subset', () => {
-  it('reads the map, the legend, the eye and its heading', () => {
+  it('reads the map, the legend, the view centre', () => {
     const v = parseDes(SMALL)
     expect(v.name).toBe('small')
     expect(v.width).toBe(7)
     expect(v.height).toBe(7)
-    expect(v.eye).toEqual({ x: 2, y: 2, facing: 4 })
+    expect(v.eye).toEqual({ x: 2, y: 2 })
     expect(v.light).toEqual({ x: 2, y: 2 })
     expect(vaultTileNames(v)).toEqual(['WALL_BRICK_DARK', 'FLOOR_GREY_DIRT', 'DNGN_STONE_STAIRS_DOWN', 'DNGN_CLOSED_DOOR', 'GOLD05', 'MONS_PLANT'])
   })
@@ -95,7 +95,7 @@ describe('parseDes: the supported subset', () => {
     expect(() => parseDes(base + 'TILE: # = wall_stone_dark\nMAP\n#@#\nENDMAP\n')).toThrow(/line 4: "#" is already defined on line 1/)
     expect(() => parseDes(base + 'KFEAT: @ = dngn_stone_stairs_down\nMAP\n###\n#@#\n###\nENDMAP\n')).toThrow(/"@" is the eye and cannot also be a feat/)
     expect(() => parseDes(base + 'EYE: x\n')).toThrow(/line 4: a second EYE/)
-    expect(() => parseDes('EYE: @ UP\n')).toThrow(/heading UP is not one of/)
+    expect(() => parseDes('EYE: @ UP\n')).toThrow(/EYE takes one centre glyph/)
     expect(() => parseDes('KFEAT: > dngn_stone_stairs_down\n')).toThrow(/KFEAT reads "KFEAT: <glyph> = <tile>"/)
     expect(() => parseDes('KFEAT: > = not a name\n')).toThrow(/KFEAT reads/)
   })
@@ -146,11 +146,8 @@ describe('vaultScene: the vault as a Scene', () => {
     expect(gold).toMatchObject({ x: 3, y: 3, height: 0.4, tile: gd.main.id('GOLD05') })
     expect(s.player).toEqual({ x: 2, y: 2 })
     expect(s.playerOnLevel).toBe(true)
-    expect(s.level.sky).toBe('none')
-    expect(gd.dngn.baseName(s.level.ceilingTile!)).toMatch(/^WALL_BRICK_DARK/)
     expect(s.revision).toBe(1)
-    expect(s.layoutRevision).toBe(1)
-    expect(vaultCamera(v)).toMatchObject({ x: 2, y: 2, facing: 4, yaw: Math.PI })
+    expect(vaultCenter(v)).toMatchObject({ x: 2, y: 2 })
   })
 
   it('gives floors and walls their variants by position, the same every build', () => {
@@ -179,12 +176,11 @@ describe('vaultScene: the vault as a Scene', () => {
 })
 
 describe('the antechamber', () => {
-  it('compiles against the pinned tile set, closed, with the eye in the middle facing the stairs', async () => {
+  it('compiles against the pinned tile set, closed, with the view centred near the stairs', async () => {
     const gd = await fixtureGamedata()
     const v = parseDes(ROOM)
     expect(v.name).toBe('orbrun_antechamber')
     const s = vaultScene(v, namesOf(gd))
-    expect(v.eye.facing).toBe(0)
     // the stairs straight ahead of the eye, in the recess of the north wall
     const stairs = [...s.cells.values()].find((c) => c.feature?.type === 'stairs')!
     expect(stairs.x).toBe(v.eye.x)
@@ -220,7 +216,6 @@ describe('the antechamber', () => {
       if (c.wallTile !== undefined) used.add(c.wallTile)
       if (c.featureTile !== undefined) used.add(c.featureTile)
     }
-    if (s.level.ceilingTile !== null) used.add(s.level.ceilingTile)
     for (const b of s.billboards) used.add(b.tile)
     for (const id of used) expect(atlas.tiles[String(id)], `tile ${id}`).toBeDefined()
   })

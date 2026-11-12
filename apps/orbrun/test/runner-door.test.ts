@@ -3,7 +3,6 @@ import { emptyScene } from '@orbrun/scene'
 import { MouseMode } from '@orbrun/webtiles'
 import { Runner, type RunnerHooks } from '../src/runner'
 import type { Session, SessionEvent } from '../src/session'
-import type { CameraController } from '../src/camera'
 
 /**
  * A: close the open door ahead. Crawl (movement.cc close_door_action) closes a
@@ -23,10 +22,9 @@ function harness(facing = 0) {
     send: (m: { msg: string; text?: string }) => sent.push(m),
     on: (fn: (e: SessionEvent) => void) => (listeners.push(fn), () => listeners.splice(listeners.indexOf(fn), 1)),
   } as unknown as Session
-  const cam = { facing } as unknown as CameraController
   const ctx = { mode: 'command', under: { kind: 'none' }, ahead: { kind: 'feature', feature: { type: 'door', state: 'open' }, label: 'open door' }, hostilesInView: 0 }
-  const hooks = { context: () => ctx, now: () => 1000, status: () => {}, confirmDangerous: () => false } as unknown as RunnerHooks
-  const r = new Runner(session, cam, hooks)
+  const hooks = { facing: () => facing, context: () => ctx, now: () => 1000, status: () => {}, confirmDangerous: () => false } as unknown as RunnerHooks
+  const r = new Runner(session, hooks)
   const emit = (e: SessionEvent) => listeners.slice().forEach((fn) => fn(e))
   const mode = (m: number) => {
     state.inputMode = m

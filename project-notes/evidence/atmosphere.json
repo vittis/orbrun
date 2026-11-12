@@ -1,0 +1,54 @@
+{
+  "checks": 12,
+  "failures": [],
+  "results": [
+    {
+      "name": "Dungeon 960 DPR1 animated",
+      "passed": true
+    },
+    {
+      "name": "Dungeon 960 DPR1 still",
+      "passed": true
+    },
+    {
+      "name": "Dungeon 960 DPR1 impact",
+      "passed": true
+    },
+    {
+      "name": "Dungeon 390 DPR2 animated",
+      "passed": true
+    },
+    {
+      "name": "Dungeon 390 DPR2 still",
+      "passed": true
+    },
+    {
+      "name": "Dungeon 390 DPR2 impact",
+      "passed": true
+    },
+    {
+      "name": "Flat 960 DPR1 animated",
+      "passed": true
+    },
+    {
+      "name": "Flat 960 DPR1 still",
+      "passed": true
+    },
+    {
+      "name": "Flat 960 DPR1 impact",
+      "passed": true
+    },
+    {
+      "name": "Flat 390 DPR2 animated",
+      "passed": true
+    },
+    {
+      "name": "Flat 390 DPR2 still",
+      "passed": true
+    },
+    {
+      "name": "Flat 390 DPR2 impact",
+      "passed": true
+    }
+  ]
+}

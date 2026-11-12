@@ -1,5 +1,5 @@
 import { MouseMode, UiState, floorItemsLabel, formattedStringToSpans, formattedStringToText, isStationaryItemName, topMenu, topPopup, type GameState, type InvItem, type MenuState, type Monster, type PlayerState } from '@orbrun/webtiles'
-import { cellAhead, cellUnder, billboardsAt, getCell, isThreat, monstersInView, type Camera, type Feature, type Scene, type SceneCell } from '@orbrun/scene'
+import { cellAhead, cellUnder, billboardsAt, getCell, isThreat, monstersInView, type Dir8, type Feature, type Scene, type SceneCell } from '@orbrun/scene'
 import type { FocusInfo } from './focus'
 import { quiverLine } from './grid/stats'
 import { neighbour, packStrip } from './pack-tabs'
@@ -290,7 +290,7 @@ export function deriveMode(state: GameState): Mode {
  * are `MOUSE_MODE_PROMPT` (macro.cc). What tells it apart from a command
  * still running: its prompt-channel line is the last thing printed, and
  * nothing else has changed the mode since. The letters must reach it raw
- * (the official client sends every key raw; Orbrun's facing-relative
+ * (the official client sends every key raw; Orbrun's compass
  * rewrite of `b` would hand it another compass letter, `n` cancelling and
  * `y` converting), so it is a prompt, not command mode. A prompt line
  * printed before the last mode that read a key (`readTo`) was that mode's,
@@ -788,9 +788,9 @@ export function autofightRefused(p: { hp: number; hp_max: number; status: { ligh
   return p.status.some((s) => s.light === 'Conf' || s.light === 'Held')
 }
 
-export function deriveContext(state: GameState, scene: Scene, cam: Camera, layer: Layer): Context {
+export function deriveContext(state: GameState, scene: Scene, facing: Dir8, layer: Layer): Context {
   const mode = deriveMode(state)
-  const ahead = targetFor(scene, cellAhead(scene, cam.facing), false)
+  const ahead = targetFor(scene, cellAhead(scene, facing), false)
   const under = targetFor(scene, cellUnder(scene), true, floorItemsLabel(state))
   // what autofight would attack: a plant is hostile-attitude firewood and counts for nothing (scene `isThreat`)
   const inView = monstersInView(scene)

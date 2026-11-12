@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { CHAMFER, defaultSettings, getSavedView, getSettings, leftRightTurns, saveSettings, saveView, VIEW_OPTIONS, WALL_INSET, type DirSource } from '../src/servers'
-import { REST_PITCH } from '@orbrun/scene'
+import { defaultSettings, getSettings, saveSettings } from '../src/servers'
 import { settingsPanel } from '../src/settings-panel'
-import { adjustSetting, ALL_SETTING_ROWS, groupAtDefaults, resetGroup, settingGroups, CAM_ANGLES, EYE_HEIGHTS, MESSAGE_LINES, MESSAGE_LINES_AUTO, MINIMAP_AUTO, MINIMAP_CELLS, MINIMAP_TILES, rowHint, rowOff, SETTING_ROWS, settingValue, FOV_AUTO, FOVS, fovOf, messageLinesOf, setAutoMessageLines, setAutoMinimap, exploreOptions, setExploreGame } from '../src/settings-rows'
+import { adjustSetting, ALL_SETTING_ROWS, groupAtDefaults, resetGroup, settingGroups, MESSAGE_LINES, MESSAGE_LINES_AUTO, MINIMAP_AUTO, MINIMAP_CELLS, MINIMAP_TILES, rowHint, rowOff, SETTING_ROWS, settingValue, messageLinesOf, setAutoMessageLines, setAutoMinimap, exploreOptions, setExploreGame } from '../src/settings-rows'
 
 // happy-dom's localStorage has no working methods; give servers.ts a plain one
 const store = new Map<string, string>()
@@ -33,28 +32,17 @@ describe('what is written down', () => {
     expect(getSettings().combatPopups).toBe(true)
   })
 
-  it('keeps predictive movement opt-in, persists it and restores the Controls default', () => {
-    const prediction = row('Predictive movement')
-    expect(getSettings().predictiveMovement).toBe(false)
-    expect(prediction.group).toBe('Controls')
-    adjustSetting(prediction, 1)
-    expect(getSettings().predictiveMovement).toBe(true)
-    expect(settingValue(prediction)).toBe('On')
-    resetGroup('Controls')
-    expect(getSettings().predictiveMovement).toBe(false)
-    store.set('orbrun.settings', JSON.stringify({ predictiveMovement: 'true' }))
-    expect(getSettings().predictiveMovement).toBe(false)
-  })
+
 
   it('is only what the player changed, so a later default reaches everyone who never touched the row', () => {
     saveSettings({ ...defaultSettings })
     expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
-    saveSettings({ ...defaultSettings, fov: 95 })
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ fov: 95 })
+    saveSettings({ ...defaultSettings, depthTilt: 65 })
+    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ depthTilt: 65 })
     // the row goes back to its default: the override is dropped, not pinned at today's value
     saveSettings({ ...defaultSettings })
     expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
-    expect(getSettings().fov).toBe(defaultSettings.fov)
+    expect(getSettings().depthTilt).toBe(defaultSettings.depthTilt)
   })
 
   it('drops the old split hint fields once hints are saved once', () => {
@@ -65,53 +53,16 @@ describe('what is written down', () => {
     expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ hints: 'contextual' })
   })
 
-  it('keeps only the yaw of the view: a look up or down does not carry over', () => {
-    saveView({ yaw: 1.5, pitch: 0.4 } as never)
-    expect(JSON.parse(store.get('orbrun.view')!)).toEqual({ yaw: 1.5 })
-    expect(getSavedView()).toEqual({ yaw: 1.5 })
-    // an older session that wrote a pitch too: the yaw is still read, the pitch ignored
-    store.set('orbrun.view', JSON.stringify({ yaw: 2, pitch: 0.3 }))
-    expect(getSavedView()).toEqual({ yaw: 2 })
-  })
 
-  it('keeps a view the build has taken away rather than erasing it on the next save', () => {
-    if (VIEW_OPTIONS) return
-    store.set('orbrun.settings', JSON.stringify({ renderer: '2d' }))
-    saveSettings(getSettings())
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ renderer: '2d' })
-  })
+
+
 })
 
-describe('camera rows', () => {
-  beforeEach(() => saveSettings({ ...defaultSettings }))
-
-  it('Camera height sets the eye', () => {
-    const height = row('Camera height')
-    expect(height.key).toBe('eyeHeight')
-    expect(settingValue(height)).toBe('0.60 cells')
-    expect(rowHint(height)).toMatch(/eyes/)
-  })
-
-  it('the default eye is a stop and steps a twentieth either way', () => {
-    const height = row('Camera height')
-    expect(EYE_HEIGHTS).toContain(defaultSettings.eyeHeight)
-    adjustSetting(height, -1)
-    expect(getSettings().eyeHeight).toBe(0.55)
-    saveSettings({ ...defaultSettings })
-    adjustSetting(height, 1)
-    expect(getSettings().eyeHeight).toBe(0.65)
-  })
-
-  it('dungeon options are only enabled in 2.5D', () => {
-    for (const r of ALL_SETTING_ROWS) expect(rowOff(r)).toBe(r.label.startsWith('Dungeon '))
-  })
-})
-
-describe('dungeon projections', () => {
+describe('Dungeon presentation', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
   it('persists movement options, gates them in still mode, and resets the View defaults', () => {
-    saveSettings({ ...defaultSettings, renderer: '2.5d' })
+    saveSettings({ ...defaultSettings })
     expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')
     expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
     adjustSetting(row('Dungeon move duration'), 1)
@@ -135,87 +86,9 @@ describe('dungeon projections', () => {
     }
   })
 
-  it('offers all three projections and persists the selected one', () => {
-    expect(VIEW_OPTIONS).toBe(true)
-    expect(SETTING_ROWS).toContain(row('Projection'))
-    expect(adjustSetting(row('Projection'), 1)).toBe('Dungeon (2.5D)')
-    expect(getSettings().renderer).toBe('2.5d')
-    expect(rowOff(row('Dungeon tilt'))).toBe(false)
-    expect(adjustSetting(row('Projection'), 1)).toBe('Top down (2D)')
-    expect(getSettings().renderer).toBe('2d')
-    expect(adjustSetting(row('Projection'), 1)).toBe('First person (3D)')
-  })
 
-  it('keeps an existing flat view preference and rejects an unknown renderer', () => {
-    saveSettings({ ...defaultSettings, renderer: '2d' })
-    expect(getSettings().renderer).toBe('2d')
-    store.set('orbrun.settings', JSON.stringify({ renderer: 'invalid' }))
-    expect(getSettings().renderer).toBe('3d')
-  })
-})
 
-describe('Camera angle', () => {
-  beforeEach(() => saveSettings({ ...defaultSettings }))
 
-  it('looks five degrees down by default, the rest pitch every camera starts on', () => {
-    const angle = row('Camera angle')
-    expect(defaultSettings.restPitch).toBe(-5)
-    expect((Math.PI / 180) * defaultSettings.restPitch).toBeCloseTo(REST_PITCH, 12)
-    expect(SETTING_ROWS).toContain(angle)
-    expect(settingValue(angle)).toBe('5° down')
-    expect(rowOff(angle)).toBe(false)
-  })
-
-  it('runs from 30 down to 10 up, five degrees a step, and reads level at the horizon', () => {
-    const angle = row('Camera angle')
-    expect(CAM_ANGLES[0]).toBe(-30)
-    expect(CAM_ANGLES[CAM_ANGLES.length - 1]).toBe(10)
-    for (let i = 1; i < CAM_ANGLES.length; i++) expect(CAM_ANGLES[i] - CAM_ANGLES[i - 1]).toBe(5)
-    expect(adjustSetting(angle, -1)).toBe('10° down')
-    expect(getSettings().restPitch).toBe(-10)
-    expect(adjustSetting(angle, 1)).toBe('5° down')
-    expect(adjustSetting(angle, 1)).toBe('Level')
-    expect(adjustSetting(angle, 1)).toBe('5° up')
-    expect(adjustSetting(angle, -1)).toBe('Level')
-    expect(getSettings().restPitch).toBe(0)
-  })
-})
-
-describe('removed settings', () => {
-  it('are gone, Corners among them: every wall corner is cut back the same 1/32 (CHAMFER)', () => {
-    expect(CHAMFER).toBe(1 / 32)
-    for (const label of ['Corners', 'Wall thickness', 'Purist look', 'Render scale', 'Auto-facing', 'Edge pips', 'Key hints', 'Gamepad hints', 'Menu room turn', 'Right stick', 'Minimap rotation']) expect(ALL_SETTING_ROWS.find((r) => r.label === label)).toBeUndefined()
-  })
-
-  it('include Wall thickness: every wall face stands the same 12/32 back (WALL_INSET), whatever a saved session says', () => {
-    expect(WALL_INSET).toBe(12 / 32)
-    expect('wallInset' in defaultSettings).toBe(false)
-    saveSettings({ ...defaultSettings, wallInset: 0 } as never)
-    expect(ALL_SETTING_ROWS.some((r) => r.key === 'wallInset')).toBe(false)
-  })
-})
-
-describe('Nearby', () => {
-  beforeEach(() => saveSettings({ ...defaultSettings }))
-
-  it('is the edge pips by default in 3D, or the WebTiles monster list: one or the other', () => {
-    const nearby = row('Nearby')
-    expect(defaultSettings.nearby).toBe('pips')
-    expect(settingValue(nearby)).toBe('Edge pips')
-    expect(adjustSetting(nearby, 1)).toBe('Monster list')
-    expect(getSettings().nearby).toBe('list')
-    expect(adjustSetting(nearby, 1)).toBe('Edge pips')
-    expect(nearby.values).toEqual(['list', 'pips'])
-  })
-
-  it('is off in 2D, where the list always shows', () => {
-    const nearby = row('Nearby')
-    expect(rowOff(nearby)).toBe(false)
-    // 2D is out for now (VIEW_OPTIONS), so ask the row directly rather than through storage
-    const flat = { ...defaultSettings, renderer: '2d' as const }
-    expect(rowOff(nearby, flat)).toBe(true)
-    expect(rowHint(nearby, flat)).toMatch(/3D only/)
-  })
 })
 
 describe('Hints', () => {
@@ -346,7 +219,7 @@ describe('Message lines', () => {
   })
 })
 
-describe('Field of view', () => {
+describe('Responsive supporting views', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
   afterEach(() => vi.unstubAllGlobals())
 
@@ -358,29 +231,9 @@ describe('Field of view', () => {
     vi.stubGlobal('innerHeight', held === 'upright' ? 844 : 390)
   }
 
-  it('is Auto by default: 85° on a computer and a phone on its side, 100° upright, and the row says which', () => {
-    const fov = row('Field of view')
-    expect(defaultSettings.fov).toBe(FOV_AUTO)
-    expect(FOVS[0]).toBe(FOV_AUTO)
-    expect(fovOf(defaultSettings, false, false)).toBe(85)
-    expect(fovOf(defaultSettings, false, true)).toBe(85)
-    expect(fovOf(defaultSettings, true, false)).toBe(85)
-    expect(fovOf(defaultSettings, true, true)).toBe(100)
-    expect(settingValue(fov)).toBe('Auto (85°)')
-    phone('sideways')
-    expect(settingValue(fov)).toBe('Auto (85°)')
-    phone('upright')
-    expect(settingValue(fov)).toBe('Auto (100°)')
-  })
 
-  it('takes a chosen angle on any device', () => {
-    const s = { ...defaultSettings, fov: 95 }
-    expect(fovOf(s, false)).toBe(95)
-    expect(fovOf(s, true, false)).toBe(95)
-    expect(fovOf(s, true, true)).toBe(95)
-    saveSettings(s)
-    expect(settingValue(row('Field of view'))).toBe('95°')
-  })
+
+
 
   it('the minimap\'s Auto reads what a game drew it as, and where Auto starts again once the game is gone', () => {
     setAutoMinimap({ tiles: 17, cell: 16 })
@@ -414,58 +267,6 @@ describe('what left and right do', () => {
     saveSettings({ ...defaultSettings })
   })
 
-  const families: [string, DirSource][] = [
-    ['Keyboard left/right', 'arrows'],
-    ['Keyboard left/right', 'vim'],
-    ['Keyboard left/right', 'numpad'],
-    ['Gamepad left/right', 'dpad'],
-    ['Gamepad left/right', 'lstick'],
-  ]
-
-  it('is a Controls row per hand, turning by default', () => {
-    for (const [label, source] of families) {
-      const r = row(label)
-      expect(SETTING_ROWS).toContain(r)
-      expect(r.group).toBe('Controls')
-      expect(settingValue(r)).toBe('Turn')
-      expect(rowOff(r)).toBe(false)
-      expect(leftRightTurns(source)).toBe(true)
-    }
-    // two rows, not the five it was: one per hand, whatever key set or stick the direction came from
-    expect(SETTING_ROWS.filter((r) => r.label.endsWith('left/right'))).toHaveLength(2)
-  })
-
-  it('is chosen per hand: the keyboard can strafe while the pad still turns', () => {
-    expect(adjustSetting(row('Keyboard left/right'), 1)).toBe('Strafe')
-    for (const source of ['arrows', 'vim', 'numpad'] as const) expect(leftRightTurns(source)).toBe(false)
-    for (const source of ['dpad', 'lstick'] as const) expect(leftRightTurns(source)).toBe(true)
-    expect(adjustSetting(row('Gamepad left/right'), 1)).toBe('Strafe')
-    expect(leftRightTurns('lstick')).toBe(false)
-    expect(leftRightTurns('dpad')).toBe(false)
-  })
-
-  it('cycles back to turning, and only what was changed is written down', () => {
-    const keys = row('Keyboard left/right')
-    adjustSetting(keys, 1)
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ leftRightKeys: 'strafe' })
-    expect(adjustSetting(keys, 1)).toBe('Turn')
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
-  })
-
-  /**
-   * The five rows this replaced (2026-09-15, one per input family) are read
-   * back by hand: a session that strafed on any keyboard set strafes on all
-   * three, and the same for the pad's two sources.
-   */
-  it('reads a session saved with the old row per family back by hand', () => {
-    store.set('orbrun.settings', JSON.stringify({ leftRightNumpad: 'strafe' }))
-    expect(getSettings().leftRightKeys).toBe('strafe')
-    expect(getSettings().leftRightPad).toBe('turn')
-    store.set('orbrun.settings', JSON.stringify({ leftRightStick: 'strafe', leftRightArrows: 'turn' }))
-    expect(getSettings().leftRightKeys).toBe('turn')
-    expect(getSettings().leftRightPad).toBe('strafe')
-  })
-
   /**
    * One group to a page (settings-panel.ts): the settings screen and the pause
    * menu both list the groups as rows, so every offered row has to sit in one
@@ -486,12 +287,12 @@ describe('settings: reset a page to its defaults', () => {
   beforeEach(() => store.clear())
 
   it("puts back only the page's own settings, and leaves the rest as they were", () => {
-    saveSettings({ ...defaultSettings, fov: 60, eyeHeight: 0.3, uiScale: 1.3, messageLines: 8 })
+    saveSettings({ ...defaultSettings, depthTilt: 35, depthZoom: 1.4, uiScale: 1.3, messageLines: 8 })
     expect(groupAtDefaults('View')).toBe(false)
     resetGroup('View')
     const s = getSettings()
-    expect(s.fov).toBe(defaultSettings.fov)
-    expect(s.eyeHeight).toBe(defaultSettings.eyeHeight)
+    expect(s.depthTilt).toBe(defaultSettings.depthTilt)
+    expect(s.depthZoom).toBe(defaultSettings.depthZoom)
     expect(groupAtDefaults('View')).toBe(true)
     expect(s.uiScale).toBe(1.3)
     expect(s.messageLines).toBe(8)
@@ -512,12 +313,12 @@ describe('settings: reset a page to its defaults', () => {
       reset.click()
       expect(changes).toBe(0)
     }
-    saveSettings({ ...defaultSettings, invertLook: true })
+    saveSettings({ ...defaultSettings, hints: 'off' })
     const panel = settingsPanel('Controls', { onchange })
     const reset = panel.rows.find((r) => r.dataset.focus === 'settings-reset')!
     expect(reset.classList.contains('off')).toBe(false)
     reset.click()
-    expect(getSettings().invertLook).toBe(false)
+    expect(getSettings().hints).toBe('adaptive')
     expect(changes).toBe(1)
     expect(reset.classList.contains('off')).toBe(true)
   })
@@ -550,5 +351,28 @@ describe('Explore delay', () => {
     setExploreGame({ online: true })
     expect(rowOff(r)).toBe(true)
     expect(rowHint(r)).toContain('Online')
+  })
+})
+
+
+describe('Dungeon-only settings migration', () => {
+  beforeEach(() => store.clear())
+  it.each(['3d', '2d', '2.5d', 'invalid', undefined])('ignores saved projection %s and preserves unrelated data', renderer => {
+    const account = JSON.stringify([{ username: 'fixture', serverId: 'cdi' }])
+    store.set('orbrun.accounts', account)
+    store.set('orbrun.games', 'saved-game-fixture')
+    store.set('orbrun.settings', JSON.stringify({ renderer, fov: 95, viewmodel: true, predictiveMovement: true, leftRightKeys: 'turn', depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true }))
+    const settings = getSettings()
+    expect(settings).toMatchObject({ depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true })
+    for (const obsolete of ['renderer', 'fov', 'viewmodel', 'predictiveMovement', 'leftRightKeys']) expect(settings).not.toHaveProperty(obsolete)
+    saveSettings(settings)
+    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true })
+    expect(store.get('orbrun.accounts')).toBe(account)
+    expect(store.get('orbrun.games')).toBe('saved-game-fixture')
+  })
+  it('offers Dungeon settings immediately with no projection or first-person controls', () => {
+    expect(getSettings()).toEqual(defaultSettings)
+    for (const label of ['Projection', 'Hands', 'Field of view', 'Camera height', 'Camera angle', 'Nearby', 'Predictive movement', 'Keyboard left/right', 'Gamepad left/right', 'Swipe to turn', 'Look sensitivity', 'Invert look']) expect(SETTING_ROWS.some(r => r.label === label)).toBe(false)
+    for (const label of ['Dungeon tilt', 'Dungeon zoom', 'Dungeon animation']) expect(rowOff(row(label))).toBe(false)
   })
 })

@@ -15,7 +15,7 @@ import { buildScene } from '../src/index.js'
 /** Everything a scene says, with the bookkeeping revisions left out and the cells in key order. */
 function semantics(s: Scene) {
   const cells = [...s.cells.entries()].sort((a, b) => a[0] - b[0]).map(([k, c]) => [k, c] as const)
-  return { bounds: s.bounds, player: s.player, playerOnLevel: s.playerOnLevel, level: s.level, cells, billboards: s.billboards }
+  return { bounds: s.bounds, player: s.player, playerOnLevel: s.playerOnLevel, cells, billboards: s.billboards }
 }
 
 describe('incremental scene building', () => {
@@ -44,7 +44,6 @@ describe('incremental scene building', () => {
         state.mapCleared = false
         expect(semantics(incremental)).toEqual(semantics(full))
         // the layout revisions move as the plain chain's do: same on the same flushes, new on the same flushes
-        expect(incremental.layoutRevision === incremental.revision).toBe(chained.layoutRevision === chained.revision)
         expect(incremental.revision).toBe(chained.revision)
         if (before) {
           reused++
@@ -72,7 +71,6 @@ describe('incremental scene building', () => {
     const b = buildScene(state, gd, { previous: a, dirty: { cells: state.dirtyCells, mapCleared: false } })
     for (const [k, c] of a.cells) expect(b.cells.get(k)).toBe(c)
     expect(b.billboards.map((x) => a.billboards.indexOf(x))).not.toContain(-1)
-    expect(b.layoutRevision).toBe(a.layoutRevision)
     // one cell touched: that cell is new, the rest stand
     const some = [...state.map.cells.values()].find((mc) => mc.t?.fg)!
     const key = ((some.y + 512) << 10) | (some.x + 512)
@@ -81,7 +79,6 @@ describe('incremental scene building', () => {
     let same = 0
     for (const [k, cell] of c.cells) if (b.cells.get(k) === cell) same++
     expect(same).toBe(c.cells.size - 1)
-    expect(c.layoutRevision).toBe(b.layoutRevision)
     // a clear builds everything afresh
     const d = buildScene(state, gd, { previous: c, dirty: { cells: new Set(), mapCleared: true } })
     for (const [k, cell] of d.cells) expect(c.cells.get(k)).not.toBe(cell)
@@ -151,25 +148,4 @@ describe('incremental scene building', () => {
     expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion: 'breath', flying: false })
   })
 
-  it('moves the lid of a cell whose wall neighbourhood changed', () => {
-    const state = fixtureState()
-    const a = buildScene(state, gd, { dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
-    state.dirtyCells.clear()
-    state.mapCleared = false
-    // find a wall cell of a non-dominant type: if the walls are all one type there is nothing to test here
-    const wallCells = [...a.cells.values()].filter((c) => c.kind === 'wall' && c.wallTile !== undefined)
-    const dominant = a.level.ceilingTile
-    const odd = wallCells.find((c) => gd.modules.wall.basetile(c.wallTile!) !== dominant)
-    if (!odd) return
-    // turn a dominant wall next to a floor into the odd type, the way a `map` message would
-    const floor = [...a.cells.values()].find((c) => c.kind === 'floor')
-    const target = wallCells.find((c) => gd.modules.wall.basetile(c.wallTile!) === dominant && Math.max(Math.abs(c.x - floor!.x), Math.abs(c.y - floor!.y)) <= 1)
-    if (!target) return
-    const mc = state.map.cells.get(((target.y + 512) << 10) | (target.x + 512))!
-    const oddMc = state.map.cells.get(((odd.y + 512) << 10) | (odd.x + 512))!
-    mc.t = { ...mc.t, bg: oddMc.t!.bg }
-    state.dirtyCells.add(((target.y + 512) << 10) | (target.x + 512))
-    const b = buildScene(state, gd, { previous: a, dirty: { cells: state.dirtyCells, mapCleared: false } })
-    expect(semantics(b)).toEqual(semantics(buildScene(state, gd)))
-  })
 })

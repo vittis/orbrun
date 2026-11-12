@@ -21,19 +21,19 @@ export type PadEvent =
   | { type: 'dir'; source: DirSource; dir: Dir8 | null; touch?: boolean }
   | { type: 'dirRepeat'; source: DirSource; dir: Dir8; n: number; touch?: boolean }
   /** `start`: true on the first frame of a deflection; false on the frames that follow and on the settle to 0,0 */
-  | { type: 'look'; dx: number; dy: number; start?: boolean }
+  | { type: 'pan'; dx: number; dy: number; start?: boolean }
 
 /**
  * Whether an event is the player choosing the controller: a button going
  * down, or a stick or the d-pad being pushed. A connection, a release or a
  * centred stick is not, and neither is the continuation of something already
  * counted (a held button's repeats, a held direction's repeats, the frames of
- * a look after its first): a stick that rests off centre, or a key typed
+ * a pan after its first): a stick that rests off centre, or a key typed
  * while the stick is still pushed, must not keep the prompts in pad glyphs
  * against a keyboard that spoke since (game.ts `inputFrom`).
  */
 export function isPadActivity(ev: PadEvent): boolean {
-  return (ev.type === 'press' && !ev.touch) || (ev.type === 'dir' && ev.dir !== null && !ev.touch) || (ev.type === 'look' && ev.start === true)
+  return (ev.type === 'press' && !ev.touch) || (ev.type === 'dir' && ev.dir !== null && !ev.touch) || (ev.type === 'pan' && ev.start === true)
 }
 
 export interface GamepadOptions {
@@ -41,7 +41,7 @@ export interface GamepadOptions {
   enterL?: number
   leaveL?: number
   deadzoneR?: number
-  /** Right stick starts a look only past this; it keeps looking down to deadzoneR. */
+  /** Right stick starts a pan only past this; it keeps panning down to deadzoneR. */
   enterR?: number
   repeatDelay?: number
   repeatInterval?: number
@@ -88,13 +88,7 @@ export class GamepadInput {
   private rest = new Map<string, readonly number[]>()
   kind: PadKind = 'generic'
   connected = false
-  /**
-   * The left stick reads only the four straight ways, so a forward push
-   * pulled a little off true never steps diagonally (game.ts sets it while
-   * walking the 3D view; the level map, an aim and the menus keep all eight).
-   */
-  fourWay = false
-  private looking = false
+  private panning = false
 
   constructor(opts: GamepadOptions = {}) {
     this.opts = {
@@ -162,9 +156,9 @@ export class GamepadInput {
     for (const b of [...this.virtual.keys()]) this.virtualUp(b)
   }
 
-  /** Whether the right stick is deflected (camera is being steered). */
-  get isLooking(): boolean {
-    return this.looking
+  /** Whether the right stick is deflected (map panning is active). */
+  get isPanning(): boolean {
+    return this.panning
   }
 
   /** Call every animation frame. */
@@ -197,7 +191,7 @@ export class GamepadInput {
     this.connected = !!pad
     if (!pad) {
       // unplugged, or its link dropped: what it held is let go and its sticks come to
-      // rest, or a held button would stay held and a pushed right stick turn the camera for good
+      // rest, or a held button would stay held and a pushed right stick pan the map indefinitely
       this.read(now, [], [])
       return
     }
@@ -233,24 +227,24 @@ export class GamepadInput {
     }
     this.readDpad(now)
     // left stick 8-way (or four-way) with hysteresis
-    const stick = this.sector(this.stickDir, axes[0] || 0, axes[1] || 0, this.fourWay)
+    const stick = this.sector(this.stickDir, axes[0] || 0, axes[1] || 0)
     this.dirFrom('lstick', this.stickDir, stick, now)
     this.stickDir = stick
-    // right stick look, with hysteresis like the left stick: a worn stick
-    // resting a little off centre must not steer the camera, nor count as the
+    // right stick pan, with hysteresis like the left stick: a worn stick
+    // resting a little off centre must not pan the map, nor count as the
     // pad speaking every frame (game.ts `pad`), which would keep the prompts
     // in pad glyphs while the player is on the keyboard
     const rx = axes[2] || 0
     const ry = axes[3] || 0
     const rm = Math.hypot(rx, ry)
-    if (rm > (this.looking ? this.opts.deadzoneR : this.opts.enterR)) {
+    if (rm > (this.panning ? this.opts.deadzoneR : this.opts.enterR)) {
       const k = ((rm - this.opts.deadzoneR) / (1 - this.opts.deadzoneR)) ** 2
-      const start = !this.looking
-      this.looking = true
-      this.emit({ type: 'look', dx: (rx / rm) * k, dy: (ry / rm) * k, start })
-    } else if (this.looking) {
-      this.looking = false
-      this.emit({ type: 'look', dx: 0, dy: 0 })
+      const start = !this.panning
+      this.panning = true
+      this.emit({ type: 'pan', dx: (rx / rm) * k, dy: (ry / rm) * k, start })
+    } else if (this.panning) {
+      this.panning = false
+      this.emit({ type: 'pan', dx: 0, dy: 0 })
     }
   }
 
@@ -273,14 +267,14 @@ export class GamepadInput {
    * A stick's next direction from `was`, with hysteresis in reach (enterL
    * to start, down to leaveL to keep) and in angle (SECTOR_MARGIN).
    */
-  private sector(was: Dir8 | null, x: number, y: number, fourWay: boolean): Dir8 | null {
+  private sector(was: Dir8 | null, x: number, y: number): Dir8 | null {
     const mag = Math.hypot(x, y)
-    if (was === null) return mag >= this.opts.enterL ? sectorOf(x, y, 0, fourWay) : null
+    if (was === null) return mag >= this.opts.enterL ? sectorOf(x, y, 0) : null
     if (mag < this.opts.leaveL) return null
     // switch sector only when the stick is clearly inside the new one: a
     // forward push that wobbles across the edge must not turn into a
     // diagonal, then back, restarting the repeat delay each time
-    const s = sectorOf(x, y, SECTOR_MARGIN, fourWay)
+    const s = sectorOf(x, y, SECTOR_MARGIN)
     return s !== null && s !== was && mag >= this.opts.enterL ? s : was
   }
 
@@ -357,22 +351,16 @@ function dirFromDelta(dx: number, dy: number): Dir8 {
 /**
  * Angular hysteresis, in sectors (1 = 45°): a held stick changes sector only
  * once it is this far past the boundary. 0.2 is 9°, so a sector is entered
- * from within ±13.5° of its centre and kept up to ±22.5°; on four ways
- * (sectors of 90°) it is 18°, entered within ±27° and kept up to ±45°.
+ * from within ±13.5° of its centre and kept up to ±22.5°.
  */
 const SECTOR_MARGIN = 0.2
 
-/**
- * The 8-way sector of a deflection, angle 0 = up (north), clockwise, or with
- * `fourWay` the nearest straight way, its sector 90° wide. With a `margin`,
- * null when the stick sits within that many sectors of a boundary.
- */
-function sectorOf(x: number, y: number, margin = 0, fourWay = false): Dir8 | null {
-  const per = fourWay ? 2 : 1
-  const a = Math.atan2(x, -y) / (per * Math.PI / 4)
+/** Eight compass sectors, with a boundary dead band while held. */
+function sectorOf(x: number, y: number, margin = 0): Dir8 | null {
+  const a = Math.atan2(x, -y) / (Math.PI / 4)
   const q = Math.round(a)
   if (Math.abs(a - q) > 0.5 - margin) return null
-  return ((((q * per) % 8) + 8) % 8) as Dir8
+  return (((q % 8) + 8) % 8) as Dir8
 }
 
 /** Optional keyboard stand-ins for testing controller menus. Native Crawl punctuation stays untouched. */

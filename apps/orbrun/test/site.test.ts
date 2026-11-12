@@ -38,7 +38,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.63/issues')
+        expect(html).not.toContain('cloudflare-online-v1.64/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")
@@ -144,44 +144,25 @@ describe('the site’s pages', () => {
     void window.happyDOM.close()
   })
 
-  it('shows About rather than describing it: acts that each open on a label, stills of real games, the pad, the questions', () => {
+  it('presents the current 2.5D product with accessible document navigation and shipped scenery', () => {
     const window = new Window()
     const doc = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about')!, window as never), 'text/html')
-    expect(doc.querySelector('.hero h1')?.textContent).toBe('Orbrun')
-    expect(Array.from(doc.querySelectorAll('.label h2'), (h) => h.textContent)).toEqual([
-      '@The real game',
-      '@Every branch',
-      '@A 2D minimap',
-      '@Made for a controller',
-      '@On the Steam Deck',
-      '@On your phone',
-      '@The keyboard you know',
-      '@And more',
-      '@Your account stays yours',
-      '@Support the servers',
-      '@Questions',
-    ])
-    // every still the page names is one the site ships
-    const srcs = Array.from(doc.querySelectorAll('img, source'), (el) => el.getAttribute('src') ?? el.getAttribute('srcset')!).filter((s) => s.startsWith('/about/'))
-    expect(srcs.length).toBeGreaterThan(8)
-    for (const src of srcs) expect(fs.existsSync(path.join(here, '..', 'public', src)), src).toBe(true)
-    // WebTiles and Orbrun, the same moment, one over the other
-    expect(doc.querySelectorAll('.compare img')).toHaveLength(2)
-    expect(doc.querySelectorAll('.branches figure')).toHaveLength(4)
-    // the pad board names each button as the standard mapping does, drawn as the game draws it
-    const pads = Array.from(doc.querySelectorAll('.padboard li'), (li) => li.getAttribute('data-pad'))
-    expect(pads).toContain('A')
-    expect(pads).toContain('LSTICK DPAD')
-    expect(doc.querySelectorAll('.padboard li .glyph svg').length).toBeGreaterThanOrEqual(pads.length)
-    // the Deck, with the game on its screen
-    expect(Array.from(doc.querySelectorAll('.deck img'), (i) => i.getAttribute('src'))).toEqual(['/about/deck.webp', '/about/deck-screen.webp'])
-    // the questions, for a search engine too
-    const faq = Array.from(doc.querySelectorAll('script[type="application/ld+json"]'), (s) => JSON.parse(s.textContent!)).find((d) => d['@type'] === 'FAQPage')
-    expect(faq.mainEntity).toHaveLength(doc.querySelectorAll('.faq details').length)
-    // no manual, and the card is the hero
-    expect(doc.querySelector('.doc')).toBeNull()
-    expect(doc.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(`${SITE_URL}/about/card.jpg`)
+    expect(doc.querySelector('.hero h1')?.textContent).toBe('@About')
+    expect(doc.querySelector('.doc')?.textContent).toContain('Dungeon (2.5D)')
+    expect(doc.querySelector('.doc')?.textContent).toContain('Ctrl+X')
+    expect(doc.querySelector('.doc')?.textContent).toContain('unavailable in this deployment')
+    expect(doc.querySelector('.doc')?.textContent).not.toMatch(/swipe to turn|first-person 3D|right stick looks/)
+    expect(doc.querySelector('.skip')?.getAttribute('href')).toBe('#main')
+    const jumps = Array.from(doc.querySelectorAll('.contents a'), (a) => a.getAttribute('href'))
+    expect(jumps).toContain('#controls')
+    for (const id of jumps) expect(doc.querySelector(`.doc h2${id}`), id!).not.toBeNull()
+    expect(doc.querySelector('ul.pad-list .keys svg')).not.toBeNull()
+    const poster = doc.querySelector('.hero img')!
+    expect(poster.getAttribute('src')).toBe('/room/poster.jpg')
+    expect(fs.existsSync(path.join(here, '..', 'public', poster.getAttribute('src')!))).toBe(true)
+    expect(doc.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(`${SITE_URL}/room/card.jpg`)
     expect(Array.from(doc.querySelectorAll('.bar nav a:not([target])'), (a) => a.getAttribute('href'))).toEqual(['/about', '/about/new', '/about/steam', '/about/install'])
+    expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.64"]')).not.toBeNull()
     void window.happyDOM.close()
   })
 

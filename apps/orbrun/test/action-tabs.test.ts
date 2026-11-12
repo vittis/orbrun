@@ -19,7 +19,7 @@ function up(m: MenuState) {
   const st = initialState()
   st.phase = 'playing' as GameState['phase']
   st.menus.push(m)
-  return deriveContext(st, emptyScene(), { facing: 0 } as never, 'micro')
+  return deriveContext(st, emptyScene(), 0, 'micro')
 }
 
 afterEach(() => { document.body.replaceChildren() })

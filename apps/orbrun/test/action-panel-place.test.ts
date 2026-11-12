@@ -4,7 +4,7 @@ import { Hud } from '../src/hud'
 import { GridHost } from '../src/grid/host'
 import { gameSplit } from '../src/grid/console'
 import { initialState, reduce } from '@orbrun/webtiles'
-import { emptyScene, makeCamera } from '@orbrun/scene'
+import { emptyScene } from '@orbrun/scene'
 
 /** the HUD on a 1600×900 screen, and where it put the action panel: its left edge is the strip's own left edge */
 function place(opts: { minimapTiles?: number; hideStats?: boolean; hideSidebar?: boolean; mapView?: boolean; phone?: boolean; dungeon?: boolean } = {}) {
@@ -44,8 +44,8 @@ function place(opts: { minimapTiles?: number; hideStats?: boolean; hideSidebar?:
 describe('the action panel stands in the strip between the stats pane and the minimap', () => {
   it('keeps the right column below wrapped character statuses and restores its position when they clear', () => {
     const { hud, host, grid, cells } = place({ dungeon: true })
-    const st = initialState(), scene = emptyScene(), cam = makeCamera(0, 0, 0)
-    const update = () => hud.update(st, scene, cam, { mode: 'command', layer: 'macro', hostilesInView: 0 } as never, 'xbox', null, false, 'keyboard', 'list', false)
+    const st = initialState(), scene = emptyScene()
+    const update = () => hud.update(st, scene, { mode: 'command', layer: 'macro', hostilesInView: 0 } as never, 'xbox', null, false, 'keyboard', false)
     update()
     const sidebar = host.querySelector<HTMLElement>('.sidebar')!
     const originalTop = parseFloat(sidebar.style.top)

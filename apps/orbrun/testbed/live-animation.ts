@@ -31,7 +31,7 @@ const session = {
     return true
   }, send: () => {}, deviceRc: () => null,
 } as unknown as Session
-let settings: Settings = { ...defaultSettings, renderer: '2.5d', depthAnimate: true, hints: 'off' }
+let settings: Settings = { ...defaultSettings, depthAnimate: true, hints: 'off' }
 const deviceMotion = new EventTarget() as EventTarget & { matches: boolean; media: string }
 deviceMotion.matches = false; deviceMotion.media = '(prefers-reduced-motion: reduce)'
 const nativeMatch = window.matchMedia.bind(window)

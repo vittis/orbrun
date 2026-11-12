@@ -2,6 +2,16 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.67 — 2026-11-12
+
+- Make Dungeon (2.5D) the only gameplay presentation and migrate old projection preferences safely.
+- Keep flat level maps, overview and minimap with restoration to the dungeon on close.
+- Render menu scenery with the existing 2.5D renderer.
+- Remove the first-person renderer, exclusive controls/settings/assets/tools and Three.js dependencies.
+- Refresh documentation and public presentation around the current product; preserve online-only hosting and corresponding-source safeguards.
+
+Earlier entries below describe historical releases and may mention features removed in 0.3.67.
+
 ## 0.3.66 — 2026-11-12
 
 - Add three varied gestures per melee style, with smoother paths and follow-through in Dungeon (2.5D).

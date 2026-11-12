@@ -34,18 +34,12 @@ export type View = 'home' | 'watch' | 'settings' | 'settings-group' | 'controls'
 
 const SECTIONS: View[] = ['home', 'watch', 'settings']
 
-/**
- * A place of the dungeon a screen stands in, in place of the room: a still of
- * a real game (public/about, the site's own), tinted as the site's page or act
- * that stands on it is. What's new stands where the site's /about/new does;
- * the account screens stand where About's "Your account stays yours" does,
- * Settings where "Made for a controller" does, Watch where "Every branch" does.
- */
-type Backdrop = { still: string; tint: 'depths' | 'abyss' | 'lair' | 'dungeon' }
-const NEWS_BACKDROP: Backdrop = { still: 'keys-bg', tint: 'depths' }
-const ACCOUNT_BACKDROP: Backdrop = { still: 'account-bg', tint: 'abyss' }
-const SETTINGS_BACKDROP: Backdrop = { still: 'pad-bg', tint: 'lair' }
-const WATCH_BACKDROP: Backdrop = { still: 'branch-bg', tint: 'dungeon' }
+/** Static Dungeon scenery behind secondary menu pages. */
+type Backdrop = { tint: 'depths' | 'abyss' | 'lair' | 'dungeon' }
+const NEWS_BACKDROP: Backdrop = { tint: 'depths' }
+const ACCOUNT_BACKDROP: Backdrop = { tint: 'abyss' }
+const SETTINGS_BACKDROP: Backdrop = { tint: 'lair' }
+const WATCH_BACKDROP: Backdrop = { tint: 'dungeon' }
 
 /** about as long as a browser's smooth scroll takes: until then a scroll under way is taken to be where it is going */
 const GLIDE_MS = 500
@@ -327,7 +321,6 @@ export class FrontEnd {
   /** the rows whose details are opened (narrow screens: the extra columns as a second line) */
   private detailsOpen = new Set<number>()
   private legend: HTMLElement | null = null
-  private legendShape = ''
   /** the document on show (a morgue file): its scroll region, which up and down move */
   private docScroller: HTMLElement | null = null
   /** what the document goes back to: the screen it was opened from */
@@ -419,11 +412,10 @@ export class FrontEnd {
    * Start confirms like Enter.
    */
   pad(ev: PadEvent) {
-    if (ev.type === 'look') {
-      // a document takes the right stick as its scroll; the room is looked around from every other screen
+    if (ev.type === 'pan') {
+      // a document takes the right stick as its scroll; other screens leave the scenery fixed
       if (this.docScroller) this.scrollDoc(ev.dy * 12)
       else if (this._view === 'rc' && this.rc) this.rc.text.scrollTop += ev.dy * 12
-      else this.roomView.look(ev.dx, ev.dy)
       return
     }
     if (this.osk.visible) {
@@ -921,7 +913,7 @@ export class FrontEnd {
     this.root.classList.toggle('covered', !!b)
     this.roomView.cover(!!b)
     if (!b) return el.classList.remove('up')
-    const src = `/about/${b.still}.webp`
+    const src = '/room/poster.jpg'
     if (img.getAttribute('src') !== src) img.src = src
     el.dataset.tint = b.tint
     el.classList.add('up')
@@ -1038,7 +1030,6 @@ export class FrontEnd {
     this.error = null
     this.msg = h('div', { class: 'menu-msg', 'aria-live': 'polite' })
     this.legend = h('div', { class: 'legend', 'aria-label': 'Menu controls' })
-    this.legendShape = ''
     this.updateInputHints()
     // Size bottom-aligned home help for every hint, not just the focused row.
     // Overlapping hidden copies wrap naturally at the current viewport width.
@@ -1108,21 +1099,9 @@ export class FrontEnd {
     return brand
   }
 
-  /** Refresh just the prompts when a controller connects, disconnects or changes kind. */
+  /** Menu hints are refreshed by the same lifecycle as gameplay hints. */
   updateInputHints() {
-    if (!this.legend) return
-    const connected = !!this.hooks.padConnected?.()
-    const kind = this.hooks.padKind?.() ?? 'generic'
-    const mouse = !connected && !!window.matchMedia?.('(pointer: fine)').matches
-    const shape = `${connected}/${mouse}/${kind}/${this._view}`
-    if (shape === this.legendShape) return
-    this.legendShape = shape
-    const prompt = (key: GlyphName, text: string) => h('span', { class: 'menu-prompt', 'aria-label': `${glyphName(key, kind)} ${text}` }, glyph(key, kind), text)
-    // the legend is only on the title screen, where it says how to look around the room: the right stick
-    // on a pad, a drag with a mouse, nothing on touch; Move, Choose and Back go without saying, and X
-    // still opens Settings, unadvertised
-    const look: GlyphName | null = connected ? 'RSTICK' : mouse ? 'DRAG' : null
-    replace(this.legend, ...(look && this._view === 'home' ? [prompt(look, 'Look around')] : []))
+    if (this.legend) replace(this.legend)
   }
 
   /** The cursor landed on a row: say what it is, unless the row says it already, and give a field the caret. */
@@ -1373,7 +1352,7 @@ export class FrontEnd {
     // the About pages are the site's, not a screen of the app: web pages of their own, for a reader who has never played
     utilities.push({ id: 'about', label: 'About & credits', marker: '?', hint: 'About Orbrun, and the people behind the game.', fn: () => (this.hooks.page ?? openPage)('/about') })
     const onPad = !!this.hooks.padConnected?.()
-    rows.push({ id: 'settings', label: 'Settings', marker: '?', hint: 'Camera, controls, the HUD: kept on this device.' + (onPad ? ' (X)' : ''), fn: () => this.showSettings(() => this.showHome()) })
+    rows.push({ id: 'settings', label: 'Settings', marker: '?', hint: 'Dungeon, controls, the HUD: kept on this device.' + (onPad ? ' (X)' : ''), fn: () => this.showSettings(() => this.showHome()) })
     // straight under Settings, and only where the browser left no way out of its own: a kiosk window on a
     // Deck, or an installed app (quit.ts). `<` is the way out, as it is out of the dungeon.
     if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', hint: 'Close Orbrun. A game in progress is kept on the server.', fn: () => this.quit() })
@@ -1388,7 +1367,7 @@ export class FrontEnd {
     this.at({ kind: 'home' })
     this.shape.set('home', shape)
     const first = rows.find((r) => r.main)?.id ?? rows[0]?.id
-    this.list({ cls: 'home-list' + (redraw ? ' still' : ''), title: 'Orbrun', lede: 'An unofficial first\u2011person client for Dungeon\u00a0Crawl\u00a0Stone\u00a0Soup.', splash: this.splash, rows, utilities, notices, extra, focus: keep ?? this.marks.get('home') ?? first })
+    this.list({ cls: 'home-list' + (redraw ? ' still' : ''), title: 'Orbrun', lede: 'An unofficial 2.5D client for Dungeon\u00a0Crawl\u00a0Stone\u00a0Soup.', splash: this.splash, rows, utilities, notices, extra, focus: keep ?? this.marks.get('home') ?? first })
     this.homeFrame = this.root.querySelector<HTMLElement>('.frame.home-list')
     this.fitHome()
     if (report) this.showExit(report.s, report.exit, report.why, report.words)
@@ -1716,7 +1695,7 @@ export class FrontEnd {
     this.settingsGroup = group
     this.setView('settings-group', 'settings')
     this.at({ kind: 'menu', path: 'settings/' + group.toLowerCase() })
-    // a change shows on the room behind the panel at once: the camera rows are the room's camera too
+    // a change shows on the room behind the panel at once: Dungeon settings apply to the scenery too
     const panel = settingsPanel(group, { onchange: () => this.roomView.applySettings(), controls: () => this.showControls() })
     // Only the front-end instance gets the title-screen treatment; the pause
     // menu keeps its compact in-game rows and hotkeys.

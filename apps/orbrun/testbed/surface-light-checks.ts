@@ -2,7 +2,9 @@ import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 
 /** Actual Canvas regressions for continuous light, exposure and thin beams. */
-export function surfaceLightChecks() {
+export async function surfaceLightChecks() {
+  // Leave the browser responsive between readback-heavy frames; sample times remain deterministic.
+  const yieldFrame = () => new Promise<void>(resolve => setTimeout(resolve, 0))
   const failures: unknown[] = []; let checks = 0
   const assert = (name: string, passed: boolean, detail: unknown) => { checks++; if (!passed) failures.push({ name, detail }) }
   const atlas = document.createElement('canvas'); atlas.width = 96; atlas.height = 32
@@ -15,6 +17,7 @@ export function surfaceLightChecks() {
     atlas: () => atlas, atlasNames: () => ['test'],
   }
   for (const dpr of [1, 2]) {
+    await yieldFrame()
     const canvas = document.createElement('canvas'), r = new Render25d({ animate: false })
     r.mount(canvas); r.resize(640, 480, dpr); r.setTiles(source)
     const scene = emptyScene(); scene.playerOnLevel = true
@@ -54,7 +57,10 @@ export function surfaceLightChecks() {
     assert('sprite lighting preserves transparent art', JSON.stringify(sample(-0.55, 0.4)) === JSON.stringify(outsideBefore), { dpr, before: outsideBefore, after: sample(-0.55, 0.4) })
     r.setOptions({ animate: true })
     const lightFrames: number[] = []
-    for (let frame = 0; frame < 60; frame++) { r.render(10 + frame / 60); lightFrames.push(sample(-1, 0.2)[0]) }
+    for (let frame = 0; frame < 60; frame++) {
+      r.render(10 + frame / 60); lightFrames.push(sample(-1, 0.2)[0])
+      await yieldFrame()
+    }
     assert('torch flicker changes smoothly each frame', Math.max(...lightFrames.slice(1).map((v, i) => Math.abs(v - lightFrames[i]))) <= 2 && new Set(lightFrames).size > 1, { dpr, lightFrames })
     scene.cells.get(cellKey(-1, 0))!.life = undefined
     scene.revision++; r.setScene(scene); r.render(19)
@@ -64,7 +70,10 @@ export function surfaceLightChecks() {
     scene.cells.get(cellKey(-1, 0))!.life = undefined
     scene.revision++; r.setScene(scene, 20.01)
     const fade: number[] = []
-    for (let frame = 0; frame <= 22; frame++) { r.render(20.01 + frame / 60); fade.push(sample(-1, 0.2)[0]) }
+    for (let frame = 0; frame <= 22; frame++) {
+      r.render(20.01 + frame / 60); fade.push(sample(-1, 0.2)[0])
+      await yieldFrame()
+    }
     assert('spell afterglow fades without stepped updates', new Set(fade).size > 12 && Math.max(...fade.slice(1).map((v, i) => Math.abs(v - fade[i]))) <= 5 && Math.abs(fade.at(-1)! - fadeAmbient) <= 1, { dpr, fade, fadeAmbient })
     // No lights: isolate beam pixels from the terrain and compare with the
     // projected cell. Its width stays cell-long while its thickness shrinks.
@@ -95,6 +104,7 @@ export function surfaceLightChecks() {
     const remote = sample(0, 0.2)
     assert('remote maps retain ungraded atlas colours', remote[0] === 64 && remote[1] === 64 && remote[2] === 64, { dpr, remote })
     r.destroy()
+    canvas.width = 0; canvas.height = 0
   }
   return { checks, failures }
 }

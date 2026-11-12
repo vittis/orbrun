@@ -1,4 +1,4 @@
-import { defaultSettings, getSettings, saveSettings, VIEW_OPTIONS, type LeftRight, type Settings } from './servers'
+import { defaultSettings, getSettings, saveSettings, type Settings } from './servers'
 import { isPhone } from './grid/host'
 import { rcOption } from '@orbrun/offline'
 import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from './hud'
@@ -11,7 +11,7 @@ import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from
  * never disagree.
  *
  * A row may depend on the other settings: its hint can read differently
- * under them and it can be off under them (Nearby means nothing in 2D).
+ * under them and it can be off when a related setting disables it.
  * `rowHint` and `rowOff` resolve those; consumers redraw every row after any
  * change, since one row's change can move another's.
  */
@@ -22,7 +22,7 @@ import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from
  * has a tab per kind of setting, so no group is ever a scroll long.
  */
 const SETTING_GROUPS = [
-  ['View', 'Where the view stands, how wide it opens, what it draws and how it moves.'],
+  ['View', 'Dungeon tilt, zoom, animation and movement.'],
   ['Controls', 'What the keys, the d-pad and the sticks do.'],
   ['Interface', 'What the HUD shows around the view, and how big it is.'],
 ] as const
@@ -61,25 +61,6 @@ export function rowOff(r: SettingRow, s: Settings = getSettings()): boolean {
 }
 
 /**
- * Eye height, in cells, lowest first (rendering-3d.md II.11): 0 is the
- * floor and 1 the lid, and the stops keep clear of both. It is the eye, 0.65
- * by default; the low end is a kobold's view of the corridor and the high end
- * brushes the lid. The stops are a twentieth of a cell apart: the height sets
- * the pitch of the whole view, so it is worth aiming finely.
- */
-export const EYE_HEIGHTS = [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9] as const
-
-/**
- * Camera angle (rendering-3d.md II.11), in degrees off the horizon, most
- * down first: where the view points at rest, before any glance with the
- * stick or the mouse. The default -5 tips the floor a few cells ahead
- * into frame without losing the wall tops; the range runs from -30, a look
- * down at the ground the @ stands on, to +10, a glance up at the lid. The
- * stops are five degrees apart, fine enough that no step jars.
- */
-export const CAM_ANGLES: readonly number[] = [-30, -25, -20, -15, -10, -5, 0, 5, 10]
-
-/**
  * The minimap rows' first stop and default: the screen picks, the map
  * reading as hud.ts MINIMAP_TILES_DEFAULT tiles of MINIMAP_CELL_DEFAULT in
  * proportion to it, fewer where that would take more than MINIMAP_SHARE of
@@ -103,21 +84,6 @@ const upright = () => isPhone() && window.innerHeight > window.innerWidth
 let autoMinimap: { tiles: number; cell: number } | null = null
 export function setAutoMinimap(shown: { tiles: number; cell: number } | null): void {
   autoMinimap = shown
-}
-
-/**
- * The field of view row's first stop and default: FOV_DESKTOP, on a phone on
- * its side too, or FOV_UPRIGHT on a phone held upright (grid/host.ts
- * `isPhone`), whose tall narrow view would see little across at the same
- * angle (the setting is the up-and-down angle, render-3d `fov`). Saved as 0.
- */
-export const FOV_AUTO = 0
-const FOV_DESKTOP = 85
-const FOV_UPRIGHT = 100
-export const FOVS: readonly number[] = [FOV_AUTO, ...Array.from({ length: 15 }, (_, i) => 50 + 5 * i)]
-/** The field of view `s` asks for, in degrees: its own, or Auto's for this device held this way. */
-export function fovOf(s: Settings, phone = isPhone(), tall = upright()): number {
-  return s.fov || (phone && tall ? FOV_UPRIGHT : FOV_DESKTOP)
 }
 
 /**
@@ -213,64 +179,21 @@ const MESSAGE_LINES_MIN = 2
 export const MESSAGE_LINES_MAX = 20
 export const MESSAGE_LINES: readonly number[] = [MESSAGE_LINES_AUTO, ...Array.from({ length: MESSAGE_LINES_MAX - MESSAGE_LINES_MIN + 1 }, (_, i) => MESSAGE_LINES_MIN + i)]
 
-/**
- * The rows that only make sense while 2D is offered (`VIEW_OPTIONS` in
- * servers.ts): the one that chooses it. It stays written here so bringing the
- * mode back is one flag.
- */
-const VIEW_MODE_ROWS = ['Projection']
-
-
-/**
- * What left and right do, one row per hand: the keyboard (arrows, h/l and the
- * numpad alike) and the pad (d-pad and left stick alike). Both turn by
- * default, which is what Orbrun has always done. Forward, back and the
- * diagonals are untouched: they step, and only forward turns the view onto
- * the way it went.
- */
-const LEFT_RIGHT_VALUES: readonly LeftRight[] = ['turn', 'strafe']
-const leftRightRows: SettingRow[] = ([
-  // a key always steps under Shift (a run) or Ctrl (an attack), whatever it does plain; the pad has no such modifier
-  ['Keyboard left/right', 'leftRightKeys', 'Left and right on the arrow keys, h and l, and 4 and 6 on the numpad', true],
-  ['Gamepad left/right', 'leftRightPad', 'Left and right on the d-pad and the left stick', false],
-] as const).map(([label, key, what, keys]) =>
-  row<typeof key>('Controls', label, key, LEFT_RIGHT_VALUES, `${what}: turn the camera on the spot, or strafe one step sideways keeping the heading.${keys ? ' Shift (run) and Ctrl (attack) always step.' : ''}`, (v) => (v === 'turn' ? 'Turn' : 'Strafe')),
-)
-
 /** Every row, whatever is offered; `SETTING_ROWS` is what the player sees. */
 export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   // View
-  row('View', 'Projection', 'renderer', ['3d', '2.5d', '2d'], 'First-person, a slanted dungeon with raised walls and upright creatures, or traditional flat tiles. Overhead views use compass directions.', (v) => ({ '3d': 'First person (3D)', '2.5d': 'Dungeon (2.5D)', '2d': 'Top down (2D)' })[v]),
-  row('View', 'Dungeon tilt', 'depthTilt', [35, 50, 65], 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°', s => s.renderer !== '2.5d'),
-  row('View', 'Dungeon zoom', 'depthZoom', [0.8, 1, 1.2, 1.4], 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%', s => s.renderer !== '2.5d'),
-  row('View', 'Dungeon animation', 'depthAnimate', ['auto', true, false], 'Auto follows your device’s reduced motion preference. On enables movement, breathing, swaying, clouds and light flicker; Still freezes them.', v => v === 'auto' ? 'Auto (device)' : v ? 'On' : 'Still', s => s.renderer !== '2.5d'),
-  row('View', 'Dungeon movement', 'depthMovement', [true, false], 'Smooth confirmed movement for entities and the following camera. Still mode also disables movement.', v => v ? 'Tween' : 'Instant', s => s.renderer !== '2.5d' || s.depthAnimate === false),
-  row('View', 'Dungeon move duration', 'depthMovementDuration', [0.06, 0.08, 0.1, 0.14, 0.18, 0.25], 'Time per move. Shorter feels snappier; longer makes each step easier to follow. Fast travel retargets immediately without queuing moves.', v => Math.round(v * 1000) + ' ms', s => s.renderer !== '2.5d' || s.depthAnimate === false || !s.depthMovement),
-  row('View', 'Dungeon move easing', 'depthMovementEasing', ['ease-out', 'smooth', 'linear'], 'Snappy starts immediately and settles gently. Smooth eases in and out. Linear keeps a constant speed. All land exactly on the grid.', v => ({ 'ease-out': 'Snappy', smooth: 'Smooth', linear: 'Linear' })[v], s => s.renderer !== '2.5d' || s.depthAnimate === false || !s.depthMovement),
+  row('View', 'Dungeon tilt', 'depthTilt', [35, 50, 65], 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°'),
+  row('View', 'Dungeon zoom', 'depthZoom', [0.8, 1, 1.2, 1.4], 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%'),
+  row('View', 'Dungeon animation', 'depthAnimate', ['auto', true, false], 'Auto follows your device’s reduced motion preference. On enables movement, breathing, swaying, clouds and light flicker; Still freezes them.', v => v === 'auto' ? 'Auto (device)' : v ? 'On' : 'Still'),
+  row('View', 'Dungeon movement', 'depthMovement', [true, false], 'Smooth confirmed movement for entities and the following camera. Still mode also disables movement.', v => v ? 'Tween' : 'Instant', s => s.depthAnimate === false),
+  row('View', 'Dungeon move duration', 'depthMovementDuration', [0.06, 0.08, 0.1, 0.14, 0.18, 0.25], 'Time per move. Shorter feels snappier; longer makes each step easier to follow. Fast travel retargets immediately without queuing moves.', v => Math.round(v * 1000) + ' ms', s => s.depthAnimate === false || !s.depthMovement),
+  row('View', 'Dungeon move easing', 'depthMovementEasing', ['ease-out', 'smooth', 'linear'], 'Snappy starts immediately and settles gently. Smooth eases in and out. Linear keeps a constant speed. All land exactly on the grid.', v => ({ 'ease-out': 'Snappy', smooth: 'Smooth', linear: 'Linear' })[v], s => s.depthAnimate === false || !s.depthMovement),
   row('View', 'Combat popups', 'combatPopups', [true, false], 'Confirmed damage numbers, player HP changes, hit strength and damage type, misses, blocks, healing and status changes. Unknown enemy damage uses visual cues. Respects reduced motion.', v => v ? 'On' : 'Off'),
-  row('View', 'Camera height', 'eyeHeight', EYE_HEIGHTS, 'How high your eyes stand, from the floor to the ceiling.', (v) => (v as number).toFixed(2) + ' cells', s => s.renderer !== '3d'),
-  row('View', 'Camera angle', 'restPitch', CAM_ANGLES, 'Where the view points at rest: level with the horizon, or tipped down toward the floor ahead.', (v) => ((v as number) === 0 ? 'Level' : Math.abs(v as number) + '° ' + ((v as number) < 0 ? 'down' : 'up')), s => s.renderer !== '3d'),
-  row('View', 'Field of view', 'fov', FOVS, `How wide the first-person view opens. Auto is ${FOV_DESKTOP}°, or ${FOV_UPRIGHT}° on a phone held upright.`, autoOr((v) => v + '°', () => fovOf(defaultSettings)), s => s.renderer !== '3d'),
-  row('View', 'Hands', 'viewmodel', [true, false], 'The wielded weapon and off-hand item, drawn in view.', (v) => (v ? 'Weapon and shield shown' : 'Hidden'), s => s.renderer !== '3d'),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
   // Controls
-  row('Controls', 'Predictive movement', 'predictiveMovement', [false, true], 'Online 3D play: start a step into clear, visible floor immediately. A refused step eases back. Predicts one step at a time; combat and uncertain terrain wait for the server.', (v) => (v ? 'On' : 'Off'), (s) => s.renderer !== '3d'),
-  ...leftRightRows,
-  row('Controls', 'Swipe to turn', 'swipeTurn', ['step', 'drag'], 'A finger swiped across the view: the view turns with it and goes on to the next heading as it lifts, so a short swipe turns 45° and a long drag turns about; or the earlier turn, which springs on with the speed it lifts at.', (v) => (v === 'step' ? 'On to the next heading' : 'Earlier turn')),
-  row('Controls', 'Look sensitivity', 'lookSensitivity', [1, 1.3, 1.6, 0.7], 'How far the right stick turns you.', (v) => Math.round(v * 100) + '%'),
-  row('Controls', 'Invert look', 'invertLook', [false, true], 'Push the right stick up to look down.', (v) => (v ? 'On' : 'Off')),
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface
   row('Interface', 'UI scale', 'uiScale', [1, 1.15, 1.3, 1.5, 0.85], 'The size of the HUD, menus and messages.', (v) => Math.round(v * 100) + '%'),
-  row(
-    'Interface',
-    'Nearby',
-    'nearby',
-    ['list', 'pips'],
-    (s) => (s.renderer === '3d' ? 'What says what is around you: the monster list on the sidebar, or markers on the edge of the view for what is out of frame.' : '3D only: in 2D the monster list always shows, as in WebTiles.'),
-    (v) => (v === 'list' ? 'Monster list' : 'Edge pips'),
-    (s) => s.renderer !== '3d',
-  ),
   row('Interface', 'Minimap size', 'minimapTiles', MINIMAP_TILES, 'How many tiles across the minimap shows: it grows out of its corner over the view, at the same cell size. Auto fits it to the screen.', autoOr((v) => v + ' tiles', () => autoMinimap?.tiles ?? (upright() ? MINIMAP_TILES_LEAST : MINIMAP_TILES_DEFAULT))),
   row('Interface', 'Minimap tile size', 'minimapCell', MINIMAP_CELLS, 'How big each minimap tile is drawn on a 1080p screen, larger in step on a bigger one: the same tiles, larger, until the map runs out of room over the view. Auto fits it to the screen.', autoOr((v) => v + 'px', () => autoMinimap?.cell ?? MINIMAP_CELL_DEFAULT)),
   row('Interface', 'Message lines', 'messageLines', MESSAGE_LINES, 'How many lines of messages the log along the bottom shows: fewer leave more of the view, more keep more of the story in sight. Auto is 4 lines on a phone, elsewhere what the game asks for, msg_webtiles_height in your rc or 6 lines.', autoOr((v) => v + ' lines', () => messageLinesOf(defaultSettings, serverMessageLines))),
@@ -281,7 +204,7 @@ export function settingGroups(rows: readonly SettingRow[] = SETTING_ROWS): { gro
   return SETTING_GROUPS.map(([group, hint]) => ({ group, hint, rows: rows.filter((r) => r.group === group) })).filter((g) => g.rows.length)
 }
 
-export const SETTING_ROWS: readonly SettingRow[] = VIEW_OPTIONS ? ALL_SETTING_ROWS : ALL_SETTING_ROWS.filter((r) => !VIEW_MODE_ROWS.includes(r.label))
+export const SETTING_ROWS: readonly SettingRow[] = ALL_SETTING_ROWS
 
 /** How `r` reads right now. */
 export function settingValue(r: SettingRow, s: Settings = getSettings()): string {
@@ -318,8 +241,7 @@ export function groupAtDefaults(group: SettingGroup, s: Settings = getSettings()
 
 /**
  * Put every row `group` offers back to its default, save, and apply what
- * applies at once (the UI scale), as `adjustSetting` does. A row the build
- * does not offer (`VIEW_OPTIONS`) keeps what it was.
+ * applies at once (the UI scale), as `adjustSetting` does.
  */
 export function resetGroup(group: SettingGroup, onchange?: () => void) {
   const s = getSettings()
@@ -331,7 +253,7 @@ export function resetGroup(group: SettingGroup, onchange?: () => void) {
 
 /**
  * The stop `d` steps from `cur`, which is not itself a stop. On an ascending
- * scale (the camera heights) one step right is the first stop above and one
+ * scale (the movement durations) one step right is the first stop above and one
  * step left the first stop below, so 0.62 goes to 0.65 or 0.6 and no stop is
  * skipped; on any other scale it is the nearest stop, then the step.
  */

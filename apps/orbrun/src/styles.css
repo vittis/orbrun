@@ -2340,7 +2340,7 @@ a.item.beside {
 }
 
 /* the right column (game.html #right_column less the stats pane): the minimap, then the monster list. The column itself takes
-   no pointer events: the view runs under it and the edge pips ride the view's edge below the panes. Clipped at its foot only:
+   no pointer events: the view runs under it. Clipped at its foot only:
    a minimap grown by the "Minimap size" setting hangs off the column's right edge and reaches left over the view */
 .sidebar {
   display: flex;
@@ -2489,19 +2489,6 @@ canvas.minimap.hidden,
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
 }
 
-/* the trapped mark (hud.ts renderTrapped): the net or web over the player blown up in the middle of the view, see-through
-   so what stands behind it still reads, and taking no clicks, since the view under it does */
-.hud > .trapped {
-  display: block;
-  pointer-events: none;
-  opacity: 0.6;
-}
-.trapped canvas.trapped-canvas {
-  display: block;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
-}
-
 .monsters {
   display: flex;
   flex-direction: column;
@@ -2511,7 +2498,7 @@ canvas.minimap.hidden,
   font-size: var(--font-lbl-size, inherit);
 }
 
-/* the Nearby setting hides the list when the edge pips say the same thing (hud.ts update); the display above would otherwise beat the [hidden] default */
+/* Preserve the hidden attribute when the HUD omits the list. */
 .monsters[hidden] {
   display: none;
 }
@@ -2547,40 +2534,6 @@ canvas.minimap.hidden,
 .monsters .health.heavily_damaged { background-color: #aa5500; }
 .monsters .health.severely_damaged { background-color: #ff5555; }
 .monsters .health.almost_dead { background-color: #aa0000; }
-
-/*
- * Edge pips (hud.md "What is around you", pips.ts): a marker on the free
- * view's edge for each monster or item in sight but out of the 3D frame. The
- * layer takes no pointer events; each pip does (a tap faces it). The sprite
- * is the thing itself and nothing else — no floor under it, no glow, no
- * ring, no fading, just the sprite with its status icons and damage bar on a
- * clear canvas: what the 3D view would have drawn, at the size it would have
- * drawn it (--pip, set per pip by renderPips), so the ring round the view is
- * to scale and looks like the frame it stands outside of.
- */
-.hud .pips {
-  inset: 0;
-  pointer-events: none;
-  /* over the message pane, which comes later in the HUD: the pane is bare, and the pips ride the view's bottom edge through its rows */
-  z-index: 1;
-}
-.hud .pips .pip {
-  --pip: 24px;
-  position: absolute;
-  width: var(--pip);
-  height: var(--pip);
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: pointer;
-  overflow: visible;
-}
-.hud .pips .pip canvas.picture {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-  image-rendering: pixelated;
-}
 
 /* monster_list.js attitude_classes and mthreat_classes, coloured as the official style.css */
 .monsters .name.hostile { color: #ff8a8a; }
@@ -2675,7 +2628,7 @@ canvas.minimap.hidden,
  * word, along the view's foot for a player with only a finger. Big enough to
  * hit without looking (44px, the platforms' least touch target), five
  * across, the arrows nearest the thumb; the dungeon shows between the
- * buttons, each on a backing of its own dark enough that the hands and the
+ * buttons, each on a backing of its own dark enough that the dungeon and the
  * level behind never show through a word.
  */
 .touchbar {
@@ -2981,9 +2934,9 @@ canvas.minimap.hidden,
   align-items: flex-end;
   justify-content: flex-start;
   gap: 0.2em;
-  /* a cell in from the edge, and left of the first-person weapon when one is drawn there (hud.ts keepClear); the foot
+  /* a cell in from the edge; the foot
      lifts over the pad's menu row while it is up (hud.ts renderMenus) */
-  padding: 0 calc(var(--cw, 10px) + var(--hands-inset, 0px)) calc(0.15em + var(--foot, 0px)) 0;
+  padding: 0 var(--cw, 10px) calc(0.15em + var(--foot, 0px)) 0;
   transition: padding-right 200ms ease;
   pointer-events: none;
 }
@@ -3009,13 +2962,7 @@ canvas.minimap.hidden,
   pointer-events: none;
   cursor: default;
 }
-/*
- * The pad's menu buttons (hud.ts renderMenus), stacked in the bottom
- * corners of the view, the left hand's reading from its glyph, the right
- * hand's hard against the right edge with its glyphs at the edge, the same
- * shadowed text as the contextual stack. They keep the corners whatever the
- * first-person weapon does: the stack steps left of it, the menu buttons do not.
- */
+/* Keep touch controls aligned with the gameplay area. */
 .menubar {
   display: flex;
   justify-content: space-between;
@@ -4319,7 +4266,7 @@ canvas.minimap.hidden,
 /* consumables action panel (action_panel.js). The official client floats it over the top-left corner of #dungeon, where
    Orbrun's stats pane already is; here it stands in the strip along the top of the view between the stats pane and the
    minimap (grid/panel.ts), centred in it — hud.ts puts its left edge on the middle of the strip and this pulls it back by
-   half its own width, so the box is exactly what it draws and the edge pips step round the panel, not the strip. */
+   half its own width, so the box is exactly what it draws. */
 /* left aligned in its strip, where action_panel.js stands the panel in the dungeon's top-left corner */
 .action-panel {
   display: flex;

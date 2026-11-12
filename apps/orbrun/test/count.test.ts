@@ -23,10 +23,10 @@ describe('counts: what the Worker keeps', () => {
     expect(parseCount(q('e=boot&w=1280&h=800'))).toEqual({ event: 'boot', text: { event: 'boot', server: '', version: '' }, numbers: { pad: 0, touch: 0, width: 1280, height: 800 } })
     expect(parseCount(q('e=spectate&s=other&pad=1'))).toEqual({ event: 'spectate', text: { event: 'spectate', server: 'other', version: '' }, numbers: { pad: 1, touch: 0 } })
     expect(parseCount(q('e=boot&touch=1&w=390&h=840'))).toEqual({ event: 'boot', text: { event: 'boot', server: '', version: '' }, numbers: { pad: 0, touch: 1, width: 390, height: 840 } })
-    expect(parseCount(q('e=play&s=cdi&v=trunk&fov=95&hints=off&uiScale=1.15&viewmodel=0&eyeHeight=0.62&nearby=other'))).toEqual({
+    expect(parseCount(q('e=play&s=cdi&v=trunk&hints=off&uiScale=1.15'))).toEqual({
       event: 'play',
-      text: { event: 'play', server: 'cdi', version: 'trunk', hints: 'off', nearby: 'other' },
-      numbers: { pad: 0, touch: 0, fov: 95, uiScale: 1.15, viewmodel: 0, eyeHeight: 0.62 },
+      text: { event: 'play', server: 'cdi', version: 'trunk', hints: 'off' },
+      numbers: { pad: 0, touch: 0, uiScale: 1.15 },
     })
   })
 
@@ -74,7 +74,7 @@ describe('counts: what the Worker keeps', () => {
     })
     expect(countEvent(req, new URL(req.url), { EVENTS }).status).toBe(204)
     expect(points).toEqual([{
-      blobs: ['play-offline', 'offline', 'stable', ...WORD_SETTINGS.map((k) => defaultText[k])],
+      blobs: ['play-offline', 'offline', 'stable', '', '', defaultText.hints, ''],
       // a retired setting's column (minimapTurns) keeps its place, written 0
       doubles: [1, 1280, 800, ...DOUBLE_COLUMNS.slice(3, -2).map((k) => defaultNumbers[k] ?? 0), 1, defaultNumbers.exploreDelay],
       indexes: ['play-offline'],
@@ -83,8 +83,8 @@ describe('counts: what the Worker keeps', () => {
   })
 
   it('names its columns in the order they are written, within what Analytics Engine keeps (20 of each)', () => {
-    expect(BLOB_COLUMNS).toEqual(['event', 'server', 'version', 'leftRightKeys', 'leftRightPad', 'hints', 'nearby'])
-    expect(DOUBLE_COLUMNS).toEqual(['pad', 'width', 'height', 'eyeHeight', 'restPitch', 'fov', 'viewmodel', 'lookSensitivity', 'invertLook', 'uiScale', 'minimapTiles', 'minimapCell', 'minimapTurns', 'messageLines', 'touch', 'exploreDelay'])
+    expect(BLOB_COLUMNS).toEqual(['event', 'server', 'version', 'retiredLeftRightKeys', 'retiredLeftRightPad', 'hints', 'retiredNearby'])
+    expect(DOUBLE_COLUMNS).toEqual(['pad', 'width', 'height', 'retiredEyeHeight', 'retiredRestPitch', 'retiredFov', 'retiredViewmodel', 'retiredLookSensitivity', 'retiredInvertLook', 'uiScale', 'minimapTiles', 'minimapCell', 'minimapTurns', 'messageLines', 'touch', 'exploreDelay'])
     // the numbers are written out: a number setting added later needs a column of its own, after touch
     for (const k of NUMBER_SETTINGS) expect(DOUBLE_COLUMNS, k).toContain(k)
     expect(BLOB_COLUMNS.length).toBeLessThanOrEqual(20)
@@ -158,15 +158,15 @@ describe('counts: stable or trunk, and the window size', () => {
 
 describe('counts: the settings a game starts on', () => {
   it('keeps counted settings in sync with the offered stops', () => {
-    // Projection, combat effects, prediction and experimental swipe preferences remain local.
-    const offered = ALL_SETTING_ROWS.filter((r) => r.key !== 'renderer' && !r.key.startsWith('depth') && r.key !== 'combatPopups' && r.key !== 'swipeTurn' && r.key !== 'predictiveMovement')
+    // Dungeon and combat effects preferences remain local.
+    const offered = ALL_SETTING_ROWS.filter((r) => !r.key.startsWith('depth') && r.key !== 'combatPopups')
     expect(SETTING_KEYS.slice().sort()).toEqual(offered.map((r) => r.key).sort())
     for (const r of offered) expect([...COUNTED_SETTINGS[r.key as keyof typeof COUNTED_SETTINGS]], r.key).toEqual([...r.values])
   })
 
   it('keeps words as text and numbers and yes-or-no as numbers', () => {
-    expect(WORD_SETTINGS).toEqual(['leftRightKeys', 'leftRightPad', 'hints', 'nearby'])
-    expect(NUMBER_SETTINGS).toEqual(['eyeHeight', 'restPitch', 'fov', 'viewmodel', 'lookSensitivity', 'invertLook', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'])
+    expect(WORD_SETTINGS).toEqual(['hints'])
+    expect(NUMBER_SETTINGS).toEqual(['uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'])
   })
 
   it("counts every default as one of its row's stops", () => {
@@ -174,11 +174,10 @@ describe('counts: the settings a game starts on', () => {
   })
 
   it('keeps a number between two stops as it is, and leaves one out of range out', () => {
-    const s: Settings = { ...defaultSettings, eyeHeight: 0.62, fov: 130, invertLook: true }
+    const s: Settings = { ...defaultSettings, uiScale: 1.12, minimapTiles: 130 }
     const row = parseCount(new URL(countUrl('play', { settings: s }), 'https://orbrun.app').searchParams)!
-    expect(row.numbers.eyeHeight).toBe(0.62)
-    expect(row.numbers.invertLook).toBe(1)
-    expect(row.numbers).not.toHaveProperty('fov')
+    expect(row.numbers.uiScale).toBe(1.12)
+    expect(row.numbers).not.toHaveProperty('minimapTiles')
   })
 
   it('sends a word off every stop as other', () => {

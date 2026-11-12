@@ -4,11 +4,7 @@ import { Hud } from '../src/hud'
 import { GridHost } from '../src/grid/host'
 import { gameSplit } from '../src/grid/console'
 
-/**
- * A turn of the view draws nothing on the minimap (hud.ts renderMinimap): the
- * map stands north up, and the facing cone is an element of its own, turned
- * by css. The map is drawn again when what it shows moves.
- */
+/** The supporting minimap redraws only when its scene or player position changes. */
 function minimap() {
   const host = document.createElement('div')
   Object.defineProperty(host, 'clientWidth', { value: 1280 })
@@ -19,15 +15,15 @@ function minimap() {
   const cells = gameSplit(grid.grid, 5)
   hud.layout(grid, cells, cells.clear, { stats: false, sidebar: false, messages: false })
   const inner = hud as unknown as {
-    renderMinimap(scene: unknown, cam: unknown, state: unknown, gd: null): void
+    renderMinimap(scene: unknown, state: unknown, gd: null): void
     drawMinimap(): void
-    minimapCone: HTMLCanvasElement
   }
   const draw = vi.spyOn(inner, 'drawMinimap').mockImplementation(() => {})
   const scene = { revision: 1, cells: new Map([['5,5', {}]]), playerOnLevel: true, player: { x: 5, y: 5 }, billboards: [] }
   const state = { options: {}, rev: { player: 1 } }
-  const frame = (cam: { x: number; y: number; yaw: number }) => {
-    inner.renderMinimap(scene, { facing: 0, ...cam }, state, null)
+  const frame = (position: { x: number; y: number }) => {
+    scene.player = { x: position.x, y: position.y }
+    inner.renderMinimap(scene, state, null)
   }
   return { hud, inner, draw, frame }
 }
@@ -37,37 +33,32 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-describe('the minimap through a turn of the view', () => {
+describe('the supporting minimap', () => {
   it('keeps the corner view hidden through a level-map round trip when disabled by the projection', () => {
     const m = minimap()
     const canvas = m.hud.root.querySelector('canvas.minimap')!
     m.hud.setMinimapEnabled(false)
     m.hud.hideMinimap()
     m.hud.showMinimap()
-    m.frame({ x: 5, y: 5, yaw: 0 })
+    m.frame({ x: 5, y: 5 })
     expect(canvas.classList.contains('hidden')).toBe(true)
     expect(m.draw).not.toHaveBeenCalled()
-    expect(m.inner.minimapCone.hidden).toBe(true)
     m.hud.setMinimapEnabled(true)
-    m.frame({ x: 5, y: 5, yaw: 0 })
+    m.frame({ x: 5, y: 5 })
     expect(canvas.classList.contains('hidden')).toBe(false)
     expect(m.draw).toHaveBeenCalledOnce()
   })
 
-  it('north up: the map is drawn once and the cone turns with the view', () => {
+  it('unchanged scene: the map is drawn once across repeated frames', () => {
     const m = minimap()
-    m.hud.minimapFov = 1.2
-    for (let i = 0; i <= 20; i++) m.frame({ x: 5, y: 5, yaw: i * 0.05 })
+    for (let i = 0; i <= 20; i++) m.frame({ x: 5, y: 5 })
     expect(m.draw).toHaveBeenCalledTimes(1)
-    expect(m.inner.minimapCone.hidden).toBe(false)
-    expect(m.inner.minimapCone.style.rotate).toBe('1.0000rad')
   })
 
   it('a step draws the map again', () => {
     const m = minimap()
-    m.hud.minimapFov = 1.2
-    m.frame({ x: 5, y: 5, yaw: 0 })
-    m.frame({ x: 5, y: 6, yaw: 0 })
+    m.frame({ x: 5, y: 5 })
+    m.frame({ x: 5, y: 6 })
     expect(m.draw).toHaveBeenCalledTimes(2)
   })
 })

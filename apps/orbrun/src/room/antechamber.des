@@ -1,6 +1,6 @@
 # The Antechamber: the front end's room, a quiet hall before the descent.
 # A supported subset of DCSS .des (packages/vault); tile names are the
-# server's own (tileinfo). The eye stands at @ in the middle facing north,
+# server's own (tileinfo). The view centres on @ in the middle,
 # across the hall to the down staircase in a recess of the north wall, a
 # granite statue either side of its mouth. The light stands between the
 # statues, so the stairs are the brightest thing in the room. To the east a
@@ -46,7 +46,7 @@ KITEM: ! = potion_offset
 KITEM: ? = scroll
 KITEM: $ = gold05
 KITEM: n = misc_lantern_of_shadows
-EYE:   @ N
+EYE:   @
 LIGHT: l
 MAP
       #############

@@ -10,7 +10,7 @@ function preview() {
   Object.assign(view.style, { left: '20px', top: '10px', width: '640px', height: '400px' })
   let anchor: { x: number; y: number } | null = { x: 200, y: 180 }
   const renderer = { project: () => anchor } as unknown as MapRenderer
-  const render = (now: number, firstPerson = false, reduced = false) => popups.render(now, renderer, scene, view, firstPerson, reduced)
+  const render = (now: number, reduced = false) => popups.render(now, renderer, scene, view, reduced)
   return { popups, renderer, render, move: (p: typeof anchor) => { anchor = p } }
 }
 
@@ -29,7 +29,7 @@ describe('popup presentation', () => {
     for (const selector of ['.hit:not(.visual-hit):not(.no-damage)', '.no-damage', '.miss']) {
       expect(popups.root.querySelector<HTMLElement>(selector)!.hidden).toBe(false)
     }
-    render(100, false, true)
+    render(100, true)
     expect(popups.root.querySelector<HTMLElement>('.visual-hit')!.hidden).toBe(false)
     Object.assign(renderer, { materialHitEffects: false })
     render(100)
@@ -113,12 +113,12 @@ describe('popup presentation', () => {
   it('suppresses level confetti and movement in Still mode while keeping the announcement', () => {
     const { popups, render } = preview()
     popups.add([{ kind: 'level', text: 'LEVEL 4', player: true }], 0)
-    render(100, true, true)
+    render(100, true)
     const level = popups.root.querySelector<HTMLElement>('.level')!
     const transform = level.style.transform
     expect(level.textContent).toBe('LEVEL UP · 4')
     expect(level.querySelector<HTMLElement>('.combat-celebration')!.hidden).toBe(true)
-    render(1000, true, true)
+    render(1000, true)
     expect(level.style.transform).toBe(transform)
   })
 
@@ -128,7 +128,7 @@ describe('popup presentation', () => {
     scene.billboards = [{ kind: 'player', tile: 1, x: 1, y: 0, height: 1 }, { kind: 'monster', id: 7, tile: 2, x: 2, y: 0, height: 1 }]
     const renderer = { project: () => ({ x: 999, y: 999 }), projectBillboard: (b: typeof scene.billboards[number]) => ({ x: b.kind === 'player' ? 320 : 400, y: 180 }) } as unknown as MapRenderer
     popups.add([{ kind: 'hurt', text: '-3', player: true }, { kind: 'hit', text: '7', actorId: 'id:7', x: 1, y: 0 }], 0)
-    popups.render(100, renderer, scene, view, false, false)
+    popups.render(100, renderer, scene, view, false)
     const nodes = [...popups.root.children] as HTMLElement[]
     expect(nodes.map(n => n.hidden)).toEqual([false, false])
     expect(nodes.map(n => n.style.left)).toEqual(['320px', '400px'])
@@ -182,15 +182,15 @@ describe('popup presentation', () => {
     expect(popups.active).toBe(false)
     expect(popups.root.childElementCount).toBe(0)
   })
-  it('keeps first-person player feedback in view and fades without movement when requested', () => {
+  it('anchors player feedback to the dungeon and fades without movement when requested', () => {
     const { popups, render, move } = preview()
     popups.add([{ kind: 'hurt', text: '-7', player: true }], 0)
-    move(null); render(10, true, true)
+    render(10, true)
     const node = popups.root.querySelector<HTMLElement>('span')!
     const transform = node.style.transform
     expect(node.hidden).toBe(false)
-    expect(node.style.left).toBe('320px')
-    render(1000, true, true)
+    expect(node.style.left).toBe('200px')
+    render(1000, true)
     expect(node.style.transform).toBe(transform)
     expect(Number(node.style.opacity)).toBeLessThan(1)
   })

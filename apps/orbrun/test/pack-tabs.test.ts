@@ -101,7 +101,7 @@ describe('the bumpers in the pack', () => {
   function packCtx(title: string, st = carrying(5)) {
     st.phase = 'playing' as GameState['phase']
     reduce(st, { msg: 'menu', tag: 'inventory', flags: PACK_FLAGS, title: { text: title }, items: [], total_items: 0, more: '', alt_more: '' } as never)
-    return deriveContext(st, { player: { x: 0, y: 0 }, cells: new Map(), billboards: [], playerOnLevel: false } as never, { facing: 0 } as never, 'micro')
+    return deriveContext(st, { player: { x: 0, y: 0 }, cells: new Map(), billboards: [], playerOnLevel: false } as never, 0, 'micro')
   }
 
   it('turn its pages, named for the page they turn to', () => {

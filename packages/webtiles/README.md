@@ -17,7 +17,7 @@ so could a bot, a recorder, a stats scraper, or another client.
   asks for the `no-compression` subprotocol; compressed frames are not
   decoded. Works in the browser and in Node.
 - `state.ts`: `initialState()` and `reduce(state, message)`: a tolerant,
-  immutable reducer over every message type the official client handles:
+  mutable reducer over the message types the official client handles:
   the map, the player, items, menus and popups, the UI-state stack, prompts,
   text input, `--more--`, the lobby roster and game links, chat, and the
   message log. Plus helpers over the state: `topMenu`, `topPopup`,

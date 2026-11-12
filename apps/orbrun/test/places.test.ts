@@ -5,22 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, type Scene } from '@orbrun/scene'
 import { readScene, sceneTileIds, writeScene, type PlaceFile, type PlaceScene } from '../src/room/place-data'
-import { nextHomePlace, placeCamera, PLACES } from '../src/room/places'
+import { nextHomePlace, placeCenter, PLACES } from '../src/room/places'
 import { RoomTiles } from '../src/room/tiles'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const dir = path.join(here, '../public/room/places')
 const read = (id: string) => JSON.parse(fs.readFileSync(path.join(dir, `${id}.json`), 'utf8')) as PlaceFile
-
-/** Whether a sight line from x, y along `yaw` (0 north, clockwise) reaches the unknown before a wall stops it. */
-function seesVoid(scene: Scene, x: number, y: number, yaw: number): boolean {
-  for (let t = 0.25; t < 48; t += 0.25) {
-    const c = scene.cells.get(cellKey(Math.round(x + Math.sin(yaw) * t), Math.round(y - Math.cos(yaw) * t)))
-    if (!c || c.kind === 'unknown') return true
-    if (c.occluder && c.wallStyle !== 'transparent') return false
-  }
-  return false
-}
 
 /** The places the menus stand in are build assets: each one listed is there, whole, and drawable from its own atlas. */
 describe('the places', () => {
@@ -32,14 +22,14 @@ describe('the places', () => {
   it('each hold every tile their level names', () => {
     for (const p of PLACES) {
       const file = read(p.id)
-      expect(file.format).toBe(1)
+      expect(file.format).toBe(2)
       expect(file.id).toBe(p.id)
       const tiles = RoomTiles.fromPlace(file, undefined)
       const scene = readScene(file.scene)
       const missing = [...sceneTileIds(scene)].filter((id) => !tiles.tile(id))
       expect(missing, p.id).toEqual([])
-      // the eye stands on the level, on a cell the player stood on
-      expect(scene.cells.get(cellKey(file.eye.x, file.eye.y))?.occluder, p.id).toBe(false)
+      // The saved view centre is an explored floor cell.
+      expect(scene.cells.get(cellKey(file.center.x, file.center.y))?.occluder, p.id).toBe(false)
     }
   })
 
@@ -48,22 +38,6 @@ describe('the places', () => {
       const file = read(p.id)
       expect(file.scene.billboards.every((b) => b.scenery && !('ref' in b)), p.id).toBe(true)
       expect(file.scene.cells.some((c) => c.icons || c.trail || c.cloud !== undefined), p.id).toBe(false)
-    }
-  })
-
-  it('stand the eye clear of the walls, where it sees no void (an open level known only in part excepted)', () => {
-    for (const p of PLACES) {
-      const file = read(p.id)
-      const scene = readScene(file.scene)
-      const { x, y } = file.eye
-      for (let oy = -1; oy <= 1; oy++)
-        for (let ox = -1; ox <= 1; ox++) {
-          const c = scene.cells.get(cellKey(x + ox, y + oy))
-          expect(c && c.kind !== 'unknown' && !c.occluder, `${p.id}: ${x + ox},${y + oy} beside the eye`).toBe(true)
-        }
-      const voids = Array.from({ length: 180 }, (_, i) => seesVoid(scene, x, y, (i / 180) * Math.PI * 2)).filter(Boolean).length
-      if (p.openLevel) expect(voids / 180, p.id).toBeLessThan(0.1)
-      else expect(voids, `${p.id}: rays into the void`).toBe(0)
     }
   })
 
@@ -96,9 +70,9 @@ describe('a place file', () => {
     expect([0, 1, 2, 3].map((x) => back.cells.get(cellKey(x, 0))?.stance)).toEqual(['lying', 'upright', 'lying', 'upright'])
   })
 
-  it('opens its eye where the place file stands it', () => {
-    const c = placeCamera({ eye: { x: 4, y: -2, yaw: Math.PI / 2 } })
-    expect(c).toMatchObject({ x: 4, y: -2, yaw: Math.PI / 2 })
+  it('centres on the saved place cell', () => {
+    const c = placeCenter({ center: { x: 4, y: -2 } })
+    expect(c).toMatchObject({ x: 4, y: -2 })
   })
 })
 

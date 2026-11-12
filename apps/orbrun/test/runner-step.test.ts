@@ -1,173 +1,74 @@
-import { describe, it, expect, vi } from 'vitest'
-import { emptyScene } from '@orbrun/scene'
-import { OWN_STEP_WINDOW_MS, Runner, stepIsOurs, type LastStep, type RunnerHooks } from '../src/runner'
+import { describe, expect, it, vi } from 'vitest'
+import { emptyScene, type Dir8 } from '@orbrun/scene'
+import { initialState } from '@orbrun/webtiles'
+import { Runner, type RunnerHooks } from '../src/runner'
 import type { Session } from '../src/session'
-import type { CameraController } from '../src/camera'
+import type { Mode } from '../src/context'
 
-const step = (over: Partial<LastStep> = {}): LastStep => ({ dir: 2, turned: true, steeringRevision: 0, t: 1000, ...over })
+function harness(mode: Mode = 'command', watching = false) {
+  const send = vi.fn()
+  const state = initialState(), scene = emptyScene()
+  const session = { state, scene, watching, send } as unknown as Session
+  const runner = new Runner(session, { context: () => ({ mode }), facing: () => 3, now: () => 1000 } as RunnerHooks)
+  return { runner, send, scene }
+}
 
-describe('stepIsOurs', () => {
-  it('claims a one-cell move in the direction the step was sent', () => {
-    expect(stepIsOurs(step(), 1, 0, 1200)).toBe(true)
+describe('compass movement and targeting', () => {
+  it.each(['command', 'targeting', 'prompt', 'levelmap'] as const)('sends all eight compass directions in %s independent of heading', mode => {
+    const { runner, send } = harness(mode)
+    for (let d = 0; d < 8; d++) runner.step(d as Dir8)
+    expect(send.mock.calls.map(([m]) => m)).toEqual(['k', 'u', 'l', 'n', 'j', 'b', 'h', 'y'].map(text => ({ msg: 'input', text })))
   })
 
-  it('does not claim a move that went another way: a one-cell explore after a keyed step', () => {
-    // stepped east, then `o` walked north-east and a monster came into view
-    expect(stepIsOurs(step(), 1, -1, 1200)).toBe(false)
-    // a pad step has the same rule
-    expect(stepIsOurs(step({ dir: 0 }), 1, -1, 1200)).toBe(false)
+  it('preserves run and attack modifiers without local turning', () => {
+    const { runner, send } = harness()
+    runner.step(2, { run: true })
+    runner.step(6, { attack: true })
+    expect(send.mock.calls.map(([m]) => m)).toEqual([{ msg: 'input', text: 'L' }, { msg: 'key', keycode: 8 }])
   })
 
-  it('forgets a step once the window has passed', () => {
-    expect(stepIsOurs(step(), 1, 0, 1000 + OWN_STEP_WINDOW_MS)).toBe(false)
-    expect(stepIsOurs(step(), 1, 0, 1000 + OWN_STEP_WINDOW_MS - 1)).toBe(true)
+  it('sends repeated input immediately and never predicts player positions', () => {
+    const { runner, send, scene } = harness()
+    runner.step(2)
+    runner.step(2)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(scene.player).toEqual({ x: 0, y: 0 })
+    expect(runner.lastStep).toEqual({ dir: 2, t: 1000 })
   })
 
-  it('claims several echoed hops that all went the way the step was sent: a held stick, batched in one frame', () => {
-    // strafing east on the stick, two echoes landed in the same scene update
-    expect(stepIsOurs(step(), 2, 0, 1200, [{ dx: 1, dy: 0 }, { dx: 1, dy: 0 }])).toBe(true)
-    // one of the hops went another way: a walk, not ours
-    expect(stepIsOurs(step(), 2, -1, 1200, [{ dx: 1, dy: 0 }, { dx: 1, dy: -1 }])).toBe(false)
-    // a multi-cell displacement without hops is still a jump
-    expect(stepIsOurs(step(), 2, 0, 1200)).toBe(false)
-  })
-
-  it('never claims a jump or no step at all', () => {
-    expect(stepIsOurs(step(), 5, -6, 1200)).toBe(false)
-    expect(stepIsOurs(null, 1, 0, 1200)).toBe(false)
-  })
-})
-
-describe('explore and the last step', () => {
-  function runner() {
-    const sent: unknown[] = []
-    const faced: number[] = []
-    const session = { watching: false, scene: emptyScene(), send: (m: unknown) => sent.push(m) } as unknown as Session
-    const stopClosing = vi.fn()
-    const cam = { faceBlocker: () => (faced.push(1), false), stopClosing } as unknown as CameraController
-    const hooks = { context: () => ({ mode: 'command' }), now: () => 1000 } as unknown as RunnerHooks
-    return { r: new Runner(session, cam, hooks), sent, faced, stopClosing }
-  }
-
-  it('sending `o` forgets the last step, so the explore’s first cell is path-driven', () => {
-    const { r, sent, faced, stopClosing } = runner()
-    r.lastStep = step()
-    r.send({ msg: 'key', keycode: 'o'.charCodeAt(0) })
-    expect(stopClosing).toHaveBeenCalledOnce()
-    expect(r.lastStep).toBeNull()
-    expect(sent).toHaveLength(1)
-    // with an unsafe monster in view the refusal is the event: the camera was asked to face the nearest blocker
-    expect(faced).toHaveLength(1)
-  })
-
-  it('other keys keep the last step', () => {
-    const { r } = runner()
-    r.lastStep = step()
-    r.send({ msg: 'key', keycode: 'i'.charCodeAt(0) })
-    expect(r.lastStep).not.toBeNull()
+  it('sends no gameplay input while spectating or in a menu', () => {
+    for (const h of [harness('command', true), harness('menu')]) {
+      h.runner.step(2)
+      expect(h.send).not.toHaveBeenCalled()
+      expect(h.runner.lastStep).toBeNull()
+    }
   })
 })
 
-describe('autofight and the camera', () => {
-  function runner(inReach: boolean) {
-    const sent: unknown[] = []
-    let swings = 0
-    let asked = 0
-    const session = { watching: false, scene: emptyScene(), send: (m: unknown) => sent.push(m) } as unknown as Session
-    const cam = { autofight: () => (asked++, inReach) } as unknown as CameraController
-    const hooks = { context: () => ({ mode: 'command' }), now: () => 1000, swing: () => swings++ } as unknown as RunnerHooks
-    return { r: new Runner(session, cam, hooks), sent, swing: () => swings, asked: () => asked }
-  }
-
-  it('Tab hands the camera the autofight, and swings only when the threat is in reach', () => {
-    const near = runner(true)
-    near.r.send({ msg: 'key', keycode: 9 })
-    expect(near.asked()).toBe(1)
-    expect(near.swing()).toBe(1)
-    expect(near.sent).toHaveLength(1)
-    // out of reach: autofight walks, the camera closes on the threat, nothing is swung
-    const far = runner(false)
-    far.r.send({ msg: 'key', keycode: 9 })
-    expect(far.asked()).toBe(1)
-    expect(far.swing()).toBe(0)
-    expect(far.sent).toHaveLength(1)
-  })
-})
-
-describe('left and right in command mode', () => {
-  function runner(watching = false) {
-    const sent: { text: string }[] = []
-    const turns: number[] = []
-    const scene = emptyScene()
-    scene.player = { ...scene.player, x: 5, y: 5 }
-    const session = { watching, scene, send: (m: unknown) => sent.push(m as { text: string }) } as unknown as Session
-    const faced: number[] = []
-    let swung = 0
-    const cam = { facing: 0, turn: (by: number) => turns.push(by), setFacing: (d: number) => faced.push(d), stopClosing: () => {} } as unknown as CameraController
-    const hooks = { context: () => ({ mode: 'command' }), now: () => 1000, swing: () => swung++ } as unknown as RunnerHooks
-    return { r: new Runner(session, cam, hooks), sent, turns, faced, swings: () => swung, scene }
-  }
-
-  it('an input set to strafe steps sideways: the camera keeps its heading', () => {
-    const { r, sent, turns } = runner()
-    r.step(2)
-    r.step(6)
-    expect(turns).toEqual([])
-    // facing north: right is east (l), left is west (h)
-    expect(sent.map((m) => m.text)).toEqual(['l', 'h'])
-    expect(r.lastStep).toMatchObject({ dir: 6, turned: false })
+describe('interaction heading', () => {
+  it.each(['closed door', 'blocked step', 'attack'] as const)('retains the requested compass direction after a %s without predicting movement', kind => {
+    const send = vi.fn(), scene = emptyScene()
+    const ctx = { mode: 'command', under: { kind: 'none' }, ahead: { kind: 'door-closed' }, hostilesInView: 0 }
+    let facing: Dir8 = 0
+    const runner = new Runner({ state: initialState(), scene, watching: false, send } as unknown as Session, {
+      context: () => ctx, facing: () => facing, direction: dir => { facing = dir }, now: () => 1000,
+    } as RunnerHooks)
+    runner.step(2, { attack: kind === 'attack' })
+    expect(scene.player).toEqual({ x: 0, y: 0 })
+    expect(facing).toBe(2)
+    runner.contextual()
+    expect(send).toHaveBeenLastCalledWith({ msg: 'input', text: 'l' })
   })
 
-  it('a step back into a friendly is a swap, not a swing: the heading stays', () => {
-    const { r, sent, faced, swings, scene } = runner()
-    // facing north at 5,5: back is south, 5,6
-    scene.billboards.push({ kind: 'monster', x: 5, y: 6, attitude: 'friendly', tile: 0 } as never)
-    r.step(4)
-    expect(sent.map((m) => m.text)).toEqual(['j'])
-    expect(r.lastStep).toMatchObject({ dir: 4, turned: false })
-    expect(faced).toEqual([])
-    expect(swings()).toBe(0)
-    // a hostile there is a swing, and the camera turns onto it
-    scene.billboards[0] = { kind: 'monster', x: 5, y: 6, attitude: 'hostile', tile: 0 } as never
-    r.step(4)
-    expect(r.lastStep).toMatchObject({ dir: 4, turned: true })
-    expect(faced).toEqual([4])
-    expect(swings()).toBe(1)
-  })
-
-  it('an input set to turn turns: nothing is sent and no time passes', () => {
-    const { r, sent, turns } = runner()
-    r.step(2, { turns: true })
-    r.step(6, { turns: true })
-    expect(sent).toEqual([])
-    expect(turns).toEqual([1, -1])
-  })
-
-  it('only left and right answer to the setting: forward, back and the diagonals always step', () => {
-    const { r, sent, turns } = runner()
-    for (const dir of [0, 1, 3, 4, 5, 7] as const) r.step(dir, { turns: true })
-    expect(turns).toEqual([])
-    expect(sent).toHaveLength(6)
-  })
-
-  it('spectating: a turn still turns the view, and no step is ever ours', () => {
-    const { r, sent, turns } = runner(true)
-    r.step(2, { turns: true })
-    r.step(6, { turns: true })
-    expect(turns).toEqual([1, -1])
-    // a direction that is not a turn does nothing: the camera follows the
-    // watched player's own movement instead of a step we never took
-    r.step(0, { turns: true })
-    r.step(4, { turns: true })
-    expect(sent).toEqual([])
-    expect(r.lastStep).toBe(null)
-  })
-
-  it('Shift and Ctrl with left / right step even on an input that turns', () => {
-    const { r, sent, turns } = runner()
-    r.step(2, { turns: true, run: true })
-    r.step(6, { turns: true, attack: true })
-    expect(turns).toEqual([])
-    expect(sent).toHaveLength(2)
+  it('remembers an adjacent left-click direction without changing scene state', () => {
+    let facing: Dir8 = 0
+    const scene = emptyScene(), send = vi.fn()
+    const runner = new Runner({ scene, watching: false, send } as unknown as Session, {
+      context: () => ({ mode: 'command' }), direction: dir => { facing = dir }, now: () => 1000,
+    } as RunnerHooks)
+    runner.clickCell(-1, 0, 1)
+    expect(facing).toBe(6)
+    expect(scene.player).toEqual({ x: 0, y: 0 })
+    expect(send).toHaveBeenCalledExactlyOnceWith({ msg: 'click_cell', x: -1, y: 0, button: 1 })
   })
 })

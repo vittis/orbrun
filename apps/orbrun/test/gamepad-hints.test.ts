@@ -15,7 +15,7 @@ const evidence = (over: Partial<PadHintEvidence> = {}): PadHintEvidence => ({
 })
 const keys = (text: string): Action => ({ kind: 'keys', label: text, seq: [{ text }] })
 const teaching = (h: GamepadHints, c = ctx()) => h.prompts(c, 'adaptive').filter((l) => l.teaching)
-const basics = (h: GamepadHints) => { h.moved(3); h.lookedBy(0.4) }
+const basics = (h: GamepadHints) => { h.moved(3) }
 
 beforeEach(() => {
   const store = new Map<string, string>()
@@ -28,17 +28,13 @@ beforeEach(() => {
 })
 
 describe('adaptive gamepad teaching', () => {
-  it('starts with two basic actions, not the entire binding table', () => {
+  it('teaches compass movement before discovery actions', () => {
     const h = new GamepadHints()
-    expect(teaching(h).map((l) => [l.button, l.label])).toEqual([['LSTICK', 'Move'], ['RSTICK', 'Look around']])
+    expect(teaching(h).map((l) => [l.button, l.label])).toEqual([['LSTICK', 'Move']])
     h.moved()
     h.moved()
     expect(h.knows('move')).toBe(false)
     h.moved() // three successful steps, with no direction checklist
-    expect(teaching(h).map((l) => l.button)).toEqual(['RSTICK'])
-    h.lookedBy(0.01)
-    expect(h.knows('look')).toBe(false)
-    h.lookedBy(0.3)
     expect(teaching(h).map((l) => l.button)).toEqual(['R3'])
   })
 
@@ -59,10 +55,9 @@ describe('adaptive gamepad teaching', () => {
     basics(h)
     const nextRun = new GamepadHints()
     expect(nextRun.knows('move')).toBe(true)
-    expect(nextRun.knows('look')).toBe(true)
     expect(teaching(nextRun).map((l) => l.button)).toEqual(['R3'])
     nextRun.reset()
-    expect(teaching(new GamepadHints()).map((l) => l.button)).toEqual(['LSTICK', 'RSTICK'])
+    expect(teaching(new GamepadHints()).map((l) => l.button)).toEqual(['LSTICK'])
   })
 
   it('never retires contextual interactions and teaches only autofight during combat', () => {
@@ -270,9 +265,8 @@ describe('successful outcomes, not button presses', () => {
   it('ignores malformed storage and tolerates blocked writes', () => {
     localStorage.setItem('orbrun.gamepad-learning.v1', '{broken')
     expect(new GamepadHints().knows('move')).toBe(false)
-    localStorage.setItem('orbrun.gamepad-learning.v1', '["look","not-a-lesson",4]')
+    localStorage.setItem('orbrun.gamepad-learning.v1', '["move","look","not-a-lesson",4]')
     const h = new GamepadHints()
-    expect(h.knows('look')).toBe(true)
     const fail = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw Error('blocked') })
     expect(() => h.moved(3)).not.toThrow()
     expect(h.knows('move')).toBe(true)
@@ -312,14 +306,14 @@ describe('the one Hints preference, and activation', () => {
   })
 
   it('only deliberate pad events activate hints, not releases or centred sticks', () => {
-    expect(isPadActivity({ type: 'look', dx: 0, dy: 0 })).toBe(false)
+    expect(isPadActivity({ type: 'pan', dx: 0, dy: 0 })).toBe(false)
     expect(isPadActivity({ type: 'dir', source: 'lstick', dir: null })).toBe(false)
     expect(isPadActivity({ type: 'release', button: 'A', t: 100, held: 100 })).toBe(false)
     expect(isPadActivity({ type: 'press', button: 'A', t: 0 })).toBe(true)
     expect(isPadActivity({ type: 'dir', source: 'lstick', dir: 6 })).toBe(true)
     // the continuation of something already counted is not a fresh choice of the pad
-    expect(isPadActivity({ type: 'look', dx: 0.5, dy: 0, start: true })).toBe(true)
-    expect(isPadActivity({ type: 'look', dx: 0.5, dy: 0 })).toBe(false)
+    expect(isPadActivity({ type: 'pan', dx: 0.5, dy: 0, start: true })).toBe(true)
+    expect(isPadActivity({ type: 'pan', dx: 0.5, dy: 0 })).toBe(false)
     expect(isPadActivity({ type: 'dirRepeat', source: 'lstick', dir: 6, n: 1 })).toBe(false)
     expect(isPadActivity({ type: 'repeat', button: 'A', n: 1 })).toBe(false)
   })

@@ -29,16 +29,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
 /** where the markdown reader points a link to another file of the repository (markdown.ts REPO_BLOB) */
-const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.63/'
-const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.63'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.64/'
+const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.64'
 const ISSUES = 'https://github.com/vittis/orbrun/issues'
 const SITE_SCRIPT_PATH = '/site-controls.js'
 
 /** the poster's words, as index.html's card has them */
-const POSTER_ALT = 'A stone hall in Dungeon Crawl Stone Soup’s tiles: a down staircase between two granite statues, plants, an altar and a fountain'
+const POSTER_ALT = 'The bundled front room rendered in Dungeon 2.5D'
 
-/** what a social card sets over its still (tools/build/cards.mjs), as index.html's card has it */
-const CARD_WORDS = ', under the Orbrun name, “Dungeon Crawl Stone Soup in first person” and “Play free at orbrun.app”'
 
 /** the pad's buttons as the documents name them in bold, and the app's glyph for each (glyphs.ts) */
 const PAD_BUTTONS: Record<string, GlyphName> = { A: 'A', B: 'B', X: 'X', Y: 'Y', LB: 'LB', RB: 'RB', LT: 'LT', RT: 'RT', L3: 'L3', R3: 'R3', Select: 'SELECT', Start: 'START' }
@@ -232,8 +230,7 @@ function structuredData(page: Page): string {
 }
 
 function head(page: Page, css: string, beacon: string): string {
-  // About's card is its hero, a still of a real game; the documents' is the room they stand in (both 1200×630, tools/build/cards.mjs)
-  const card = page.path === '/about' ? { src: '/about/card.jpg', alt: CARD_ALT + CARD_WORDS } : { src: '/room/card.jpg', alt: POSTER_ALT + CARD_WORDS }
+  const card = { src: '/room/card.jpg', alt: POSTER_ALT }
   const title = esc(page.title)
   const description = esc(page.description)
   return `<head>
@@ -252,8 +249,8 @@ function head(page: Page, css: string, beacon: string): string {
 <meta property="og:url" content="${url(page)}" />
 <meta property="og:image" content="${SITE_URL}${card.src}" />
 <meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:width" content="1280" />
+<meta property="og:image:height" content="720" />
 <meta property="og:image:alt" content="${esc(card.alt)}" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="${title}" />
@@ -285,259 +282,12 @@ function bar(page: Page): string {
 </header>`
 }
 
-/** About's hero, a still of Depths:1 */
-const HERO_ALT = 'First person on Depths:1: an open door in a stone wall, a monster in the room beyond it, a shield and a sword held in the lower corners'
-
-/** About's social card, a still of Lair:3 under the name */
-const CARD_ALT = 'First person on Lair:3: a cane toad on the left and a catoblepas on the right, blood on the grass between them, a polearm held in the lower corner'
-
-/** where the About page's stills are (public/about, taken in testbed/film.html from recorded games, the HUD left out; the Deck's screen is the one with it, deckHtml) */
-const STILLS = '/about'
-
-/** a still, lazily: none of them is needed for the first screen but the hero */
-const still = (name: string, alt: string, w: number, h: number) =>
-  `<img src="${STILLS}/${name}.webp" alt="${esc(alt)}" width="${w}" height="${h}" loading="lazy" decoding="async" />`
-
-/**
- * A section's label, as the app's menu marks the row the cursor is on: the
- * gold wash and the @, over a line of small capitals. Every section of the
- * About page opens on one.
- */
-const label = (id: string, name: string, sub: string) =>
-  `<header class="label"><h2 id="${id}"><span aria-hidden="true">@</span>${esc(name)}</h2><p>${esc(sub)}</p></header>`
-
-/** the pad's buttons and what each does, as the About page draws the pad (ABOUT.md "Gamepad" has the whole of it) */
-const PAD_BOARD: { buttons: GlyphName[]; name: string; does: string }[] = [
-  { buttons: ['A'], name: 'A', does: 'Does what the moment calls for: stairs, doors, attack, pick up, step' },
-  { buttons: ['B'], name: 'B', does: 'Back out' },
-  { buttons: ['X'], name: 'X', does: 'Spells, abilities, evocables and quiver' },
-  { buttons: ['Y'], name: 'Y', does: 'Your gear, pack first' },
-  { buttons: ['LB'], name: 'LB', does: 'Wait a turn; hold to rest' },
-  { buttons: ['RB'], name: 'RB', does: 'Aim your quivered action, then fire' },
-  { buttons: ['LT'], name: 'LT', does: 'Autoexplore' },
-  { buttons: ['RT'], name: 'RT', does: 'Autofight' },
-  { buttons: ['L3', 'R3'], name: 'L3 or R3', does: 'Examine' },
-  { buttons: ['SELECT'], name: 'Select', does: 'Level map' },
-  { buttons: ['START'], name: 'Start', does: 'Character and system' },
-  { buttons: ['LSTICK', 'DPAD'], name: 'Left stick or d-pad', does: 'Step, turn and strafe; hold to run' },
-]
-
-/**
- * The phones are drawn, not photographed: a plain handset around a still of
- * the app at 390 × 844 in portrait (`phone-screen`) and 844 × 390 in landscape
- * (`phone-wide`), both twice over, the HUD and the touch bar on, as it plays
- * from the home screen.
- */
-const PHONE_WIDE_ALT = 'The same fight a turn later on a phone in landscape: the goblin in reach and a bat swooping in across the wide view, the stats at the top left, the minimap and the touch buttons at the right'
-const PHONE_ALT = 'Orbrun on a phone in portrait: first person on Dungeon:1, a goblin with a club in reach, a gnoll, a kobold and a bat around it, the stats and the minimap along the top, the message log and Foxfire on the spell bar above the touch buttons'
-
-/**
- * A Steam Deck, face on (`deck.webp`, Valve's picture, cut to the
- * device), and the game on its screen: a still at the panel's
- * own 1280 × 800, the HUD on (`deck-screen`), stood over the lit part of the
- * glass, which is where these pixels of the picture say it is.
- */
-const DECK = { w: 1395, h: 571, panel: { x: 342, y: 65, w: 712, h: 446 } }
-
-function deckHtml(): string {
-  const { w, h, panel: p } = DECK
-  const pct = (v: number, of: number) => `${+((v / of) * 100).toFixed(3)}%`
-  return `<div class="deck">
-    <img class="device" src="${STILLS}/deck.webp" alt="" width="${w}" height="${h}" loading="lazy" decoding="async" />
-    <img class="screen" src="${STILLS}/deck-screen.webp" alt="${esc(DECK_ALT)}" width="1280" height="800" loading="lazy" decoding="async" style="left: ${pct(p.x, w)}; top: ${pct(p.y, h)}; width: ${pct(p.w, w)}; height: ${pct(p.h, h)}" />
-  </div>`
-}
-
-const DECK_ALT = 'Orbrun on a Steam Deck: first person on Dungeon:1, a wounded hobgoblin within reach of a spear, the stats, map and message log around the view, and the pad’s prompts along the foot of the screen'
-
-/** the questions a player of WebTiles asks first, answered as ABOUT.md answers them */
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: 'Does it change the game?',
-    a: 'No. The server runs the game exactly as it does for WebTiles; Orbrun draws it and sends your keys. Every key but the direction keys goes to the server untouched.',
-  },
-  {
-    q: 'Do my saves and rc file carry over?',
-    a: 'Yes. They live on the server, with your macros, morgues and scoreboard entries. Orbrun reads your rc options from the server each time and never overrides them.',
-  },
-  {
-    q: 'Is the minimap the same as in WebTiles?',
-    a: 'Yes. It is the WebTiles 2D view in miniature, with the same tiles drawn the same way. It turns with you so the way you face is up, with an N on its rim for north.',
-  },
-  {
-    q: 'Can I switch back to WebTiles?',
-    a: 'Any time. Save and exit from the Orbrun menu and continue in WebTiles: it is the same game on the same server.',
-  },
-  {
-    q: 'Which versions does it play?',
-    a: 'Whatever the server runs, stable or trunk. Orbrun reads each server’s own game data when it connects, so a new release works the day a server has it.',
-  },
-  {
-    q: 'Do offline games count?',
-    a: 'They are real games of the current release or trunk, run in your browser, but they never reach a scoreboard. Your saves stay on your device.',
-  },
-  {
-    q: 'Can I play on my phone or tablet?',
-    a: 'Yes, by touch, in portrait or landscape. Add it to your home screen first so it has the whole screen. On an iPhone or iPad it plays on the public servers, but not offline.',
-  },
-  {
-    q: 'What does it cost?',
-    a: 'Nothing. Orbrun is free and open source under the AGPL-3.0, and it is not affiliated with the DCSS team.',
-  },
-]
-
-/** the FAQ as a search engine reads one */
-const faqData = () =>
-  JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
-  }).replace(/</g, '\\u003c')
-
-/**
- * About: Orbrun shown rather than described, for a reader who has never
- * played. Each section opens on the same label and stands in a place of the
- * dungeon (a still from a real game, the HUD left out) or on the Deck.
- */
-function aboutMain(dom: Dom): string {
-  const g = (name: GlyphName, label: string) => glyphHtml(dom, name, label)
-  return `<section class="hero stage">
-  <picture>
-    <img src="${STILLS}/pad-bg.webp" alt="${esc(HERO_ALT)}" width="1920" height="1080" fetchpriority="high" />
-  </picture>
-  <div class="title">
-    <h1><img src="/orb.png" alt="" width="32" height="32" />Orbrun</h1>
-    <p class="tag">An unofficial first-person client for<br />Dungeon&nbsp;Crawl&nbsp;Stone&nbsp;Soup.</p>
-    <div class="actions">
-      <a class="btn play" href="/">▶ Play in your browser</a>
-      <a class="btn ghost" href="/about/steam">Add to Steam</a>
-      <a class="btn ghost" href="/about/install">Add to Home Screen</a>
-    </div>
-    <span class="small-print">DCSS Client fork · Online play on bundled servers · <a href="${SOURCE}" target="_blank" rel="noopener">Source for this release</a></span>
-  </div>
-</section>
-
-<section class="act">
-  ${label('the-real-game', 'The real game', 'Same servers · same account · same rc file')}
-  <figure class="compare" style="--x: 50%">
-    <img src="${STILLS}/compare-3d.webp" alt="Orbrun: abominations and chaos spawn coming down a stone corridor, seen in first person" width="1600" height="900" loading="lazy" decoding="async" />
-    <div class="flat"><img src="${STILLS}/compare-2d.webp" alt="WebTiles: the same moment from above, the player at the foot of the corridor with the crowd above, badges and all" width="1600" height="900" loading="lazy" decoding="async" /></div>
-    <span class="tag-l">WebTiles</span><span class="tag-r">Orbrun</span>
-    <input type="range" min="0" max="100" value="50" aria-label="Slide between WebTiles and Orbrun" />
-    <figcaption>The same moment on Depths:1, drawn by WebTiles and by Orbrun. Drag to compare.</figcaption>
-  </figure>
-  <p class="say">Orbrun is a WebTiles client, not a port. Log in to CDI, CDO or any public server with the account you already have. Your saves, macros, morgues and scoreboard entries stay on the server, and a new release works the day a server runs it.</p>
-</section>
-
-<section class="act field dungeon">
-  ${still('branch-bg', '', 1920, 1080).replace('alt=""', 'alt="" class="ground"')}
-  ${label('every-branch', 'Every branch', 'Drawn from the server’s own tiles')}
-  <div class="branches">
-    <figure>${still('branch-dungeon', 'A centaur with a bow in a dark stone hall', 900, 1200)}<figcaption><b>D:14</b>The Dungeon</figcaption></figure>
-    <figure>${still('branch-lair', 'A naga with a short sword on bloodied grass', 900, 1200)}<figcaption><b>Lair:3</b>The Lair of Beasts</figcaption></figure>
-    <figure>${still('branch-depths', 'An iron troll and a deep troll in a stone corridor', 900, 1200)}<figcaption><b>Depths:1</b>The Depths</figcaption></figure>
-    <figure>${still('branch-abyss', 'The Abyss: crystal walls on a blue floor under a violet sky', 900, 1200)}<figcaption><b>Abyss:3</b>The Abyss</figcaption></figure>
-  </div>
-  <p class="say">Every level is built around you from the tiles the server sends: the walls, the floor, the monsters and the items you would see from above. The map, the monster list, the stats and the message log are all still there. Anything the server does not publish is left undrawn, never guessed.</p>
-</section>
-
-<section class="act">
-  ${label('a-2d-minimap', 'A 2D minimap', 'In the tiles you know')}
-  <figure class="minimap-shot">
-    ${still('minimap', 'First person on Dungeon:14: a cave hall with a crowd of allies and a demon ahead, and in the top-right corner the minimap, the level drawn in the 2D tiles of WebTiles, the same crowd on it', 960, 720)}
-    <figcaption>Dungeon:14, with the minimap in the corner: the level in WebTiles’ own 2D tiles.</figcaption>
-  </figure>
-  <p class="say">The minimap in the corner is drawn in the same 2D tiles as WebTiles, so the level reads at a glance the way it always has. It turns with you, with an N on its rim for north. Click it, or press <kbd>X</kbd>, for the full level map.</p>
-</section>
-
-<section class="act field lair">
-  ${still('pad-bg', '', 1920, 1080).replace('alt=""', 'alt="" class="ground"')}
-  ${label('made-for-a-controller', 'Made for a controller', 'Everything one button away')}
-  <ul class="padboard">
-    ${PAD_BOARD.map((b) => `<li data-pad="${b.buttons.join(' ')}"><span class="keys">${b.buttons.map((n) => g(n, n === 'LSTICK' ? 'Left stick' : n === 'DPAD' ? 'D-pad' : n)).join('')}</span><span class="does">${esc(b.does)}</span></li>`).join('\n    ')}
-  </ul>
-  <p class="say">A bar at the foot of the screen shows what each button does right now, and an on-screen keyboard covers prompts, inscriptions and chat. <span class="padnote">Your pad is connected: press a button to see it here.</span></p>
-</section>
-
-<section class="act deck-act">
-  ${label('on-the-steam-deck', 'On the Steam Deck', 'Where it was built to be played')}
-  <figure>
-    ${deckHtml()}
-    <figcaption>Dungeon:1 at the Deck’s own 1280 × 800, a hobgoblin in reach. The prompt beneath it says what the stick does now.</figcaption>
-  </figure>
-  <p class="say">The Deck came first: the whole game on its buttons, and nothing drawn while nothing on screen moves, to spare the battery. <a href="/about/steam">Add Orbrun to Steam</a> in five steps, artwork included, and it opens from your library like any other game.</p>
-</section>
-
-<section class="act field dungeon">
-  ${still('branch-bg', '', 1920, 1080).replace('alt=""', 'alt="" class="ground"')}
-  ${label('on-your-phone', 'On your phone', 'Or tablet · portrait or landscape')}
-  <figure class="handset">
-    <div class="phone"><img class="screen" src="${STILLS}/phone-screen.webp" alt="${esc(PHONE_ALT)}" width="780" height="1688" loading="lazy" decoding="async" /></div>
-    <div class="phone wide"><img class="screen" src="${STILLS}/phone-wide.webp" alt="${esc(PHONE_WIDE_ALT)}" width="1688" height="780" loading="lazy" decoding="async" /></div>
-    <figcaption>One fight on Dungeon:1, in portrait and landscape: a goblin in reach, a bat swooping in.</figcaption>
-  </figure>
-  <p class="say">Take the dungeon with you. The whole game plays on your phone or tablet, every command a tap away, in portrait or landscape. <a href="/about/install">Add it to your home screen</a> and it opens full screen from its own icon, like any other app.</p>
-</section>
-
-<section class="act field depths">
-  ${still('keys-bg', '', 1920, 1080).replace('alt=""', 'alt="" class="ground"')}
-  ${label('the-keyboard-you-know', 'The keyboard you know', 'With one change')}
-  <div class="keycaps" aria-label="h turns left, j steps back, k steps forward, l turns right">
-    <span class="cap"><kbd>h</kbd><small>turn left</small></span>
-    <span class="cap"><kbd>j</kbd><small>back</small></span>
-    <span class="cap"><kbd>k</kbd><small>forward</small></span>
-    <span class="cap"><kbd>l</kbd><small>turn right</small></span>
-  </div>
-  <p class="say">Direction keys follow the way you face. Every other key goes to the server untouched, in the same modes, with the same results as on WebTiles.</p>
-</section>
-
-<section class="act">
-  ${label('and-more', 'And more', 'Wherever you play')}
-  <div class="pair trio">
-    <figure>${still('grid-offline', 'A bullfrog between yellow rock walls in the Lair, a polearm in hand', 1200, 750)}<figcaption><h3>Offline</h3>The current release or trunk runs in your browser with no server at all, and your saves stay on your device.</figcaption></figure>
-    <figure>${still('grid-spectate', 'A red one-eyed imp and another imp in a corridor, more monsters behind', 1200, 750)}<figcaption><h3>Spectate</h3>Watch any game on the server in first person, from a link you can share.</figcaption></figure>
-    <figure>${still('grid-hands', 'A demon close ahead on Dungeon:14, seen over a shield in the left hand and a staff in the right, allies behind it', 1200, 750)}<figcaption><h3>In hand</h3>What you wield is in your hands: your weapon on the right, your shield or orb on the left, each drawn from its own tile.</figcaption></figure>
-  </div>
-</section>
-
-<section class="act field abyss">
-  ${still('account-bg', '', 1920, 1080).replace('alt=""', 'alt="" class="ground"')}
-  ${label('your-account', 'Your account stays yours', 'No Orbrun account · nothing stored')}
-  <ul class="promises">
-    <li>Your browser talks to the DCSS server you pick, over an encrypted WebSocket, as the official client does.</li>
-    <li>Your password goes only in the login message and is never stored. A saved login keeps the server’s token, as WebTiles keeps a cookie.</li>
-    <li>orbrun.app counts page views anonymously: no cookies, no fingerprinting, no names. A game counts as its server and version, nothing more.</li>
-  </ul>
-</section>
-
-<section class="act">
-  ${label('support-the-servers', 'Support the servers', 'Free to play · not free to run')}
-  <p class="say">Every online game is played on a server a volunteer pays for and looks after, and DCSS itself is made by volunteers. If you want to give something back, <a href="https://www.patreon.com/gammafunk">support CDI</a> or <a href="https://www.patreon.com/zureal">support CBR2</a> on Patreon, and report bugs or contribute to <a href="https://github.com/crawl/crawl">DCSS on GitHub</a>.</p>
-</section>
-
-<section class="act">
-  ${label('questions', 'Questions', 'Asked by WebTiles players')}
-  <div class="faq">
-    ${FAQ.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('\n    ')}
-  </div>
-  <script type="application/ld+json">${faqData()}</script>
-</section>
-
-<section class="cta">
-  <p>The dungeon is waiting.</p>
-  <a class="btn play" href="/">▶ Play Orbrun</a>
-</section>`
-}
-
-/**
- * How each document's page stands, as About's acts do: a still of a real
- * game under its name, tinted as the act that stands on it is, and a line
- * of small capitals where there is one worth saying.
- */
-const DOC_LOOK: Record<string, { still: string; tint: string; sub?: () => string }> = {
-  '/about/new': { still: 'keys-bg', tint: 'depths', sub: () => latestRelease() },
-  '/about/steam': { still: 'account-bg', tint: 'abyss' },
-  '/about/install': { still: 'pad-bg', tint: 'lair' },
+/** Current documents share the 2.5D room poster; no obsolete gameplay screenshots ship. */
+const DOC_LOOK: Record<string, { tint: string; sub?: () => string }> = {
+  '/about': { tint: 'dungeon' },
+  '/about/new': { tint: 'depths', sub: () => latestRelease() },
+  '/about/steam': { tint: 'abyss' },
+  '/about/install': { tint: 'lair' },
 }
 
 /** the changelog's newest release, as its heading names it: "Version 0.2.1 · 2026-09-25" */
@@ -561,7 +311,7 @@ function docMain(page: Page, dom: Dom): string {
 </nav>`
       : ''
   return `<section class="hero band ${look.tint}">
-  <img src="${STILLS}/${look.still}.webp" alt="" width="1920" height="1080" fetchpriority="high" />
+  <img src="/room/poster.jpg" alt="" width="1280" height="720" fetchpriority="high" />
   <div class="title">
     <header class="label"><h1><span aria-hidden="true">@</span>${esc(page.name)}</h1>${look.sub ? `<p>${esc(look.sub())}</p>` : ''}</header>
     <p class="lede">${esc(page.description)}</p>
@@ -587,11 +337,11 @@ ${head(page, css, beacon)}
 <a class="skip" href="#main">Skip to the words</a>
 ${bar(page)}
 <main id="main">
-${page.path === '/about' ? aboutMain(dom) : `${docMain(page, dom)}
+${docMain(page, dom)}
 <section class="cta">
   <p>The dungeon is waiting.</p>
   <a class="btn play" href="/">▶ Play Orbrun</a>
-</section>`}
+</section>
 </main>
 <footer>
   <div class="links">

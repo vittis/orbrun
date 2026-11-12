@@ -9,10 +9,9 @@ import type { Context } from './context'
  */
 export type HintMode = 'adaptive' | 'contextual' | 'off'
 const STORAGE_KEY = 'orbrun.gamepad-learning.v1'
-const LESSONS = ['move', 'look', 'commands', 'equipment', 'explore', 'examine', 'travel', 'wait', 'rest', 'navigate', 'target-cursor', 'map-cursor', 'fight'] as const
+const LESSONS = ['move', 'commands', 'equipment', 'explore', 'examine', 'travel', 'wait', 'rest', 'navigate', 'target-cursor', 'map-cursor', 'fight'] as const
 export type PadLesson = (typeof LESSONS)[number]
 const STEPS_TO_LEARN = 3
-const LOOK_TO_LEARN = 0.3 // radians of actual camera movement, not stick polling ticks
 const RESPONSE_WINDOW = 1500
 const KEY_LESSONS: Readonly<Record<string, PadLesson>> = { o: 'explore', '.': 'wait', '5': 'rest' }
 
@@ -48,7 +47,6 @@ export function padLesson(a: Action, ctx: Context): PadLesson | null {
 export class GamepadHints {
   private learned = new Set<PadLesson>()
   private steps = 0
-  private looked = 0
   private pending: { lesson: PadLesson; before: PadHintEvidence; at: number } | null = null
 
   constructor() {
@@ -72,7 +70,7 @@ export class GamepadHints {
 
   reset() {
     this.learned.clear()
-    this.steps = this.looked = 0
+    this.steps = 0
     this.cancel()
     this.save()
   }
@@ -85,12 +83,6 @@ export class GamepadHints {
   moved(steps = 1) {
     this.steps += steps
     if (this.steps >= STEPS_TO_LEARN) this.learn('move')
-  }
-
-  /** Called while the right stick actually steers the game camera. */
-  lookedBy(radians: number) {
-    this.looked += Math.abs(radians)
-    if (this.looked >= LOOK_TO_LEARN) this.learn('look')
   }
 
   attempt(a: Action, ctx: Context, before: PadHintEvidence, now: number) {
@@ -156,7 +148,6 @@ export class GamepadHints {
       }
     } else if (ctx.mode === 'command' && ctx.hostilesInView === 0) {
       if (!this.knows('move')) teaching.push(tip('LSTICK', 'Move', { kind: 'step', dir: 0 }))
-      if (!this.knows('look')) teaching.push(tip('RSTICK', 'Look around', { kind: 'look', dx: 0, dy: 0 }))
       if (!teaching.length) {
         // the level map (Select) and the other menu buttons stand along the view's foot (hud.ts renderMenus), so they need no lesson
         const table = bindingTable(ctx)

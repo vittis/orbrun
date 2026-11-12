@@ -222,7 +222,7 @@ function homeRoom(): RoomSpec {
       row('>', 7, 'p', 'Play        crawl.dcss.io as orbruntest', 'There is a stone staircase down here.', enterGame),
       row('\\', 5, 'w', 'Watch       14 games running', 'There is a gateway to the gallery here.', () => say('The gallery is not built in this test bed.')),
       row('+', 6, 's', 'Servers     crawl.dcss.io, cbro, cue', 'There is a closed door here.', () => say('The servers screen is not built in this test bed.')),
-      row('?', 7, 'o', 'Settings    text size, first person, haptics', 'You see here a scroll labelled SETTINGS.', () => say('The settings scroll is not built in this test bed.')),
+      row('?', 7, 'o', 'Settings    text size, Dungeon tilt and zoom', 'You see here a scroll labelled SETTINGS.', () => say('The settings scroll is not built in this test bed.')),
       row('<', 2, 'q', 'Quit', 'There is a stone staircase up here.', () => say('You cannot leave a test bed.')),
     ],
     footer: [],

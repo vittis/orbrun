@@ -3,7 +3,6 @@ import { initialState, MouseMode } from '@orbrun/webtiles'
 import { emptyScene } from '@orbrun/scene'
 import { Runner, type RunnerHooks } from '../src/runner'
 import type { Session } from '../src/session'
-import type { CameraController } from '../src/camera'
 import type { Context } from '../src/context'
 
 function setup() {
@@ -17,9 +16,8 @@ function setup() {
     under: { kind: 'none', label: '' },
   }
   const session = { watching: false, send, state, scene: emptyScene() } as unknown as Session
-  const cam = { autofight: () => false } as unknown as CameraController
   const hooks = { context: () => ctx, ui, confirmDangerous: () => false, now: () => 0 } as unknown as RunnerHooks
-  return { runner: new Runner(session, cam, hooks), ctx, send, ui }
+  return { runner: new Runner(session, hooks), ctx, send, ui }
 }
 
 describe('controller combat and interaction', () => {

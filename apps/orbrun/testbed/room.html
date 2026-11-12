@@ -35,7 +35,7 @@
         <div class="screen home" id="overlay">
           <div class="frame home-frame">
             <div class="brand">
-              <div class="head"><h1 class="place">Orbrun</h1><div class="lede">Dungeon Crawl Stone Soup in first person.</div></div>
+              <div class="head"><h1 class="place">Orbrun</h1><div class="lede">Dungeon Crawl Stone Soup in 2.5D.</div></div>
               <div class="dungeon"></div>
             </div>
           </div>
@@ -44,22 +44,16 @@
       <div id="side">
         <div class="row">
           <label><input id="menu" type="checkbox" checked /> Menu over the room</label>
-          <button id="faceN">Face north</button>
-          <button id="faceS">Face south</button>
         </div>
-        <label>FOV <input id="fov" type="range" min="55" max="100" step="1" value="80" /><span class="v" id="fovV"></span></label>
-        <label>Eye height <input id="eye" type="range" min="0.3" max="0.9" step="0.02" value="0.6" /><span class="v" id="eyeV"></span></label>
-        <label>Pitch <input id="pitch" type="range" min="-25" max="15" step="1" value="-10" /><span class="v" id="pitchV"></span></label>
-        <label>Yaw <input id="yaw" type="range" min="0" max="360" step="1" value="0" /><span class="v" id="yawV"></span></label>
-        <label>Light x <input id="lx" type="range" min="0" max="30" step="1" value="0" /><span class="v" id="lxV"></span></label>
-        <label>Light y <input id="ly" type="range" min="0" max="30" step="1" value="0" /><span class="v" id="lyV"></span></label>
-        <div id="map"><canvas id="map2d"></canvas><canvas id="marks"></canvas></div>
-        <div class="hint">Top down, as the 2D renderer draws it: ◎ the eye and its heading, ☀ the light. Click a floor cell to put the light there.</div>
+        <label>Dungeon tilt <input id="tilt" type="range" min="35" max="65" step="1" value="50" /></label>
+        <label>Dungeon zoom <input id="zoom" type="range" min="0.8" max="1.4" step="0.1" value="1.2" /></label>
+        <div id="map"><canvas id="map2d"></canvas></div>
+        <div class="hint">The flat overview preserves the authored vault's layout.</div>
         <textarea id="des" spellcheck="false"></textarea>
-        <div class="row"><button id="apply">Apply vault</button><span class="hint">the .des subset (packages/vault); Apply also reads the light back from the file</span></div>
+        <div class="row"><button id="apply">Apply vault</button><span class="hint">the .des subset (packages/vault); Apply reloads the scenery</span></div>
         <div class="err" id="err"></div>
         <div class="hint" id="stats"></div>
-        <div class="hint">Drag the room to look. The tiles are the packed room atlas (public/room), so a name outside it fails here as it would in the app.</div>
+        <div class="hint">The tiles are the packed room atlas (public/room), so a name outside it fails here as it would in the app.</div>
       </div>
     </div>
     <script type="module" src="./room.ts"></script>

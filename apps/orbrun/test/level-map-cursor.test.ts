@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { initialState, reduce, UiState } from '@orbrun/webtiles'
 import { emptyScene, type SceneCursor } from '@orbrun/scene'
 import { GameScreen } from '../src/game'
-import { RendererPark } from '../src/park'
 import { deriveContext, deriveMode } from '../src/context'
 
 /**
@@ -13,41 +12,39 @@ import { deriveContext, deriveMode } from '../src/context'
  * frame hands the cursor to the renderer it has, then swaps that renderer
  * for the map's: the one that draws the map must be told the cursor too.
  */
-function harness(is3d: boolean) {
+function harness() {
   const canvas = document.createElement('canvas')
   document.body.append(canvas)
   const old = { setCursor: vi.fn(), destroy: vi.fn() }
   const fresh = { setCursor: vi.fn(), destroy: vi.fn() }
   const revived = { setCursor: vi.fn(), destroy: vi.fn() }
-  const park = new RendererPark()
   const screen = Object.assign(Object.create(GameScreen.prototype), {
-    canvas, is3d, renderer: old, park, hud: undefined, lastCursor: null, lastOptKey: 'x', needsRender: false,
+    canvas, renderer: old, hud: undefined, lastCursor: null, lastOptKey: 'x', needsRender: false,
     session: { state: initialState(), scene: emptyScene(), gamedata: undefined },
     attachPointer: vi.fn(), cancelDrag: vi.fn(), wake: vi.fn(), makeRenderer: () => fresh, revive: () => revived,
   }) as { toggleRenderer(): unknown; lastCursor: SceneCursor | null; renderer: unknown }
-  return { screen, old, fresh, revived, park }
+  return { screen, old, fresh, revived }
 }
 
 describe('the renderer swap carries the cursor over', () => {
   it('the map view opened in the frame that placed the map cursor is shown that cursor', () => {
-    const h = harness(true)
+    const h = harness()
     const cursor: SceneCursor = { x: 12, y: 7, mode: 'map', tile: 3 }
     // the frame already gave the cursor to the 3D view it was about to put aside
     h.old.setCursor(cursor)
     h.screen.lastCursor = cursor
-    h.screen.toggleRenderer()
+    h.screen.toggleRenderer('2d')
     expect(h.screen.renderer).toBe(h.fresh)
     expect(h.fresh.setCursor).toHaveBeenCalledExactlyOnceWith(cursor)
   })
 
-  it('the 3D view back from the park is told the cursor is gone', () => {
-    const h = harness(false)
-    h.park.keep({ canvas: document.createElement('canvas'), renderer: h.revived as never, tiles: null, optionsKey: '' })
+  it('the restored dungeon view is told the cursor is gone', () => {
+    const h = harness()
     // the map's close cleared its cursor (viewmap.cc `place_cursor(CURSOR_MAP, NO_CURSOR)`) in the same frame
     h.screen.lastCursor = null
-    h.screen.toggleRenderer()
-    expect(h.screen.renderer).toBe(h.revived)
-    expect(h.revived.setCursor).toHaveBeenCalledExactlyOnceWith(null)
+    h.screen.toggleRenderer('2.5d')
+    expect(h.screen.renderer).toBe(h.fresh)
+    expect(h.fresh.setCursor).toHaveBeenCalledExactlyOnceWith(null)
     expect(h.old.destroy).toHaveBeenCalledOnce()
   })
 })
@@ -89,8 +86,8 @@ describe('the level map cursor away from the player', () => {
     const scene = { player: { x: 0, y: 0 }, cells: new Map(), billboards: [], playerOnLevel: true } as never
     const cam = { facing: 0 } as never
     reduce(st, { msg: 'cursor', id: 2, loc: { x: 0, y: 0 } })
-    expect(deriveContext(st, scene, cam, 'micro').mapCursorHome).toBe(true)
+    expect(deriveContext(st, scene, 0, 'micro').mapCursorHome).toBe(true)
     reduce(st, { msg: 'cursor', id: 2, loc: { x: 2, y: 1 } })
-    expect(deriveContext(st, scene, cam, 'micro').mapCursorHome).toBe(false)
+    expect(deriveContext(st, scene, 0, 'micro').mapCursorHome).toBe(false)
   })
 })

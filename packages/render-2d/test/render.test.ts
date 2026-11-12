@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { emptyScene, cellKey, makeCamera, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
+import { emptyScene, cellKey, type Scene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { Render2d } from '../src/index.js'
 
 /** A canvas whose 2D context records every image draw, so draw order can be asserted. */
@@ -210,104 +210,16 @@ describe('Render2d draw order', () => {
     r.setTiles(tiles)
     r.resize(96, 96, 1)
     r.setScene(sceneWith([floor(0, 0), floor(1, 1)]))
-    r.setCamera(makeCamera(1, 1, 0))
+    r.setOptions({ center: { x: 1, y: 1 } })
     r.setCursor({ x: 1, y: 1, mode: 'target', grid: false })
     r.render()
     expect(arcs).toEqual([])
     // only the cursor's own outline, no grid over the known cells
     expect(rects.filter((k) => k === 'stroke')).toHaveLength(1)
   })
-  it('turns the map so `up` is at the top, about the player, and keeps sprites, glyphs and the cursor upright', () => {
-    const { canvas, rotates, images, draws } = fakeCanvas()
-    // facing east: the map turns a quarter turn anticlockwise
-    const r = new Render2d({ cellSize: 10, follow: true, up: 2 })
-    r.mount(canvas)
-    r.setTiles(tiles)
-    r.resize(30, 30, 1)
-    // a fountain stands on the cell east of the player
-    const scene = sceneWith([floor(1, 1), floor(2, 1, { featureTile: 300 })])
-    scene.billboards.push({ x: 2, y: 1, tile: 500, kind: 'monster', height: 0.8 })
-    r.setScene(scene)
-    r.setCamera(makeCamera(1, 1, Math.PI / 2))
-    r.setCursor({ x: 2, y: 1, mode: 'target', tile: 950, grid: false })
-    r.render()
-    // the map's turn, then the fountain, the sprite and the cursor icon each turned back
-    expect(rotates).toEqual([-Math.PI / 2, Math.PI / 2, Math.PI / 2, Math.PI / 2])
-    // the cell east of the player is still drawn at its map position; the turn is the canvas's
-    expect(draws).toEqual([100, 100, 300, 500, 950])
-    expect(images[1]).toMatchObject({ dx: 20, dy: 10 })
-    // north up: nothing turns
-    rotates.length = 0
-    r.setOptions({ up: 0 })
-    r.render()
-    expect(rotates).toEqual([])
-    // an easing heading stands in for `up`, at any angle; null hands the top back
-    r.setOptions({ upYaw: 0.3 })
-    r.render()
-    expect(rotates).toEqual([-0.3, 0.3, 0.3, 0.3])
-    rotates.length = 0
-    r.setOptions({ upYaw: null })
-    r.render()
-    expect(rotates).toEqual([])
-    // a closed door is a feature standing on its cell like any other: upright, over its turned wall edging
-    const doorway = fakeCanvas()
-    const d = new Render2d({ cellSize: 10, follow: true, up: 2 })
-    d.mount(doorway.canvas)
-    d.setTiles(tiles)
-    d.resize(30, 30, 1)
-    d.setScene(sceneWith([floor(1, 1), floor(2, 1, { kind: 'door', featureTile: 310, wallOverlays: [320] })]))
-    d.setCamera(makeCamera(1, 1, Math.PI / 2))
-    d.render()
-    expect(doorway.rotates).toEqual([-Math.PI / 2, Math.PI / 2])
-    expect(doorway.draws).toEqual([100, 100, 310, 320])
-    // a wide canvas turned a quarter turn shows cells above and below the player that lie
-    // past its rows but within its columns
-    const wide = fakeCanvas()
-    const w = new Render2d({ cellSize: 10, follow: true, up: 2 })
-    w.mount(wide.canvas)
-    w.setTiles(tiles)
-    w.resize(70, 30, 1)
-    const tall = sceneWith([floor(1, 1)])
-    tall.cells.set(cellKey(1, 4), floor(1, 4))
-    tall.cells.set(cellKey(4, 1), floor(4, 1))
-    w.setScene(tall)
-    w.setCamera(makeCamera(1, 1, Math.PI / 2))
-    w.render()
-    // the player stands in the middle column; (1,4) is three cells south: turned, it lands
-    // three cells right of the player, in view; (4,1) is three cells east: turned, three
-    // cells up, off a 3-row canvas
-    expect(wide.images.map((i) => `${i.dx},${i.dy}`)).toEqual(['30,10', '30,40'])
-  })
-  it('overlaps the ground a device pixel on a map turned off the quarters, so no seam shows between cells', () => {
-    const { canvas, images, fills } = fakeCanvas()
-    const r = new Render2d({ cellSize: 10, follow: true })
-    r.mount(canvas)
-    r.setTiles(tiles)
-    r.resize(30, 30, 2)
-    r.setScene(sceneWith([floor(1, 1, { overlays: [400] }), floor(2, 1, { kind: 'wall', wallTile: 110 })]))
-    r.setCamera(makeCamera(1, 1, 0))
-    const ground = () => images.filter((i) => i.sx === 100 || i.sx === 110).map((i) => [i.dx, i.dh])
-    // on a diagonal the floor and the wall reach half a css px (a device pixel at dpr 2) past their squares; the overlay does not
-    r.setOptions({ upYaw: Math.PI / 4 })
-    r.render()
-    expect(ground()).toEqual([[9.5, 11], [19.5, 11]])
-    expect(images.find((i) => i.sx === 400)).toMatchObject({ dx: 10, dh: 10 })
-    // on a quarter turn the grid is square to the pixels and the cells stay exact
-    images.length = 0
-    r.setOptions({ upYaw: Math.PI / 2 })
-    r.render()
-    expect(ground()).toEqual([[10, 10], [20, 10]])
-    // the minimap's colour blocks the same
-    r.setOptions({ mode: 'minimap', upYaw: Math.PI / 4 })
-    fills.length = 0
-    r.render()
-    expect(fills).toContainEqual({ x: 9.5, y: 9.5, w: 11, h: 11 })
-    expect(fills).toContainEqual({ x: 19.5, y: 9.5, w: 11, h: 11 })
-  })
-
   it('looks the minimap’s cells up by position instead of walking the whole level, and shows the same cells', () => {
     const { canvas, fills } = fakeCanvas()
-    const r = new Render2d({ cellSize: 4, follow: true, mode: 'minimap', up: 2 })
+    const r = new Render2d({ cellSize: 4, follow: true, mode: 'minimap' })
     r.mount(canvas)
     r.resize(20, 20, 1)
     // a level far larger than the map's disc, the player in its middle
@@ -315,58 +227,33 @@ describe('Render2d draw order', () => {
     for (let y = 0; y < 60; y++) for (let x = 0; x < 60; x++) scene.cells.set(cellKey(x, y), floor(x, y))
     const values = vi.spyOn(scene.cells, 'values')
     r.setScene(scene)
-    r.setCamera(makeCamera(30, 30, Math.PI / 4))
+    r.setOptions({ center: { x: 30, y: 30 } })
     r.render()
     expect(values).not.toHaveBeenCalled()
-    // a quarter of the level's cells at most were fetched: the range is the turned canvas, not the level
+    // a quarter of the level's cells at most were fetched: the range is the canvas, not the level
     const looked = fills.length
     expect(looked).toBeGreaterThan(25)
     expect(looked).toBeLessThan(200)
     // the walk over every cell draws the same squares in the same places
     const whole = fakeCanvas()
-    const w = new Render2d({ cellSize: 4, follow: true, mode: 'minimap', up: 2 })
+    const w = new Render2d({ cellSize: 4, follow: true, mode: 'minimap' })
     w.mount(whole.canvas)
     w.resize(20, 20, 1)
     const small = sceneWith([])
     // fewer cells than the range holds: walked whole, in the level's order
     for (let y = 25; y < 35; y++) for (let x = 25; x < 35; x++) small.cells.set(cellKey(x, y), floor(x, y))
     const ranged = fakeCanvas()
-    const g = new Render2d({ cellSize: 4, follow: true, mode: 'minimap', up: 2 })
+    const g = new Render2d({ cellSize: 4, follow: true, mode: 'minimap' })
     g.mount(ranged.canvas)
     g.resize(20, 20, 1)
     for (const [view, sc] of [[w, small], [g, scene]] as const) {
       view.setScene(sc)
-      view.setCamera(makeCamera(30, 30, Math.PI / 4))
+      view.setOptions({ center: { x: 30, y: 30 } })
       view.render()
     }
     const at = (f: { x: number; y: number }[]) => f.map((p) => `${p.x},${p.y}`).sort()
     const inner = at(whole.fills)
     expect(at(ranged.fills).filter((p) => inner.includes(p))).toEqual(inner)
-  })
-  it('stands a feature upright over the turned ground, where a door lies with it', () => {
-    // `uprightYaw` 0 leaves what is built into the ground lying with it. A
-    // statue, a fountain, a tree stands in its cell, so it is turned back the
-    // whole way, like the monsters and items standing in cells; a door — or a
-    // staircase — is built into the dungeon and turns with it.
-    const { canvas, rotates, draws } = fakeCanvas()
-    const r = new Render2d({ cellSize: 10, follow: true, up: 2, uprightYaw: 0 })
-    r.mount(canvas)
-    r.setTiles(tiles)
-    r.resize(30, 30, 1)
-    r.setScene(sceneWith([floor(1, 1), floor(2, 1, { kind: 'feature', featureTile: 330, stance: 'upright', freestanding: true })]))
-    r.setCamera(makeCamera(1, 1, Math.PI / 2))
-    r.render()
-    expect(draws).toEqual([100, 100, 330])
-    expect(rotates).toEqual([-Math.PI / 2, Math.PI / 2])
-    // a closed door, and an open one: both lie with the ground
-    rotates.length = 0
-    r.setScene(sceneWith([floor(1, 1), floor(2, 1, { kind: 'door', featureTile: 310, stance: 'upright' })]))
-    r.render()
-    expect(rotates).toEqual([-Math.PI / 2])
-    rotates.length = 0
-    r.setScene(sceneWith([floor(1, 1), floor(2, 1, { kind: 'feature', featureTile: 311, stance: 'upright' })]))
-    r.render()
-    expect(rotates).toEqual([-Math.PI / 2])
   })
   it('renderCell bare drops the terrain and the cell marks, keeping the sprite and its badges', () => {
     const { canvas, draws, rects } = fakeCanvas()
@@ -404,14 +291,13 @@ describe('Render2d view centre', () => {
     return s
   }
 
-  it('centres on the camera with no centre set', () => {
+  it('centres on the player with no centre set', () => {
     const { canvas } = fakeCanvas()
     const r = new Render2d({ cellSize: 10, follow: true })
     r.mount(canvas)
     r.setTiles(tiles)
     r.resize(100, 100, 1)
     r.setScene(farScene())
-    r.setCamera(makeCamera(1, 1, 0))
     r.render()
     // 10 x 10 cells around the player: the top left is (1 - 5, 1 - 5)
     expect(r.pick(55, 55)).toBe(cellKey(1, 1))
@@ -425,7 +311,7 @@ describe('Render2d view centre', () => {
     r.setTiles(tiles)
     r.resize(100, 100, 1)
     r.setScene(farScene())
-    r.setCamera(makeCamera(1, 1, 0))
+    r.setOptions({ center: { x: 1, y: 1 } })
     // the level map's cursor has walked off to (20, 30); the view goes with it
     r.setOptions({ center: { x: 20, y: 30 } })
     r.render()
@@ -445,7 +331,7 @@ describe('Render2d view centre', () => {
     const scene = sceneWith([])
     for (let y = 0; y < 40; y++) for (let x = 0; x < 40; x++) scene.cells.set(cellKey(x, y), floor(x, y))
     r.setScene(scene)
-    r.setCamera(makeCamera(20, 20, 0))
+    r.setOptions({ center: { x: 20, y: 20 } })
     // the square at the right is 24 px, its middle at 88: the player's cell spans 83..93
     r.setOptions({ anchor: { x: 88, y: 20 } })
     r.render()
@@ -473,7 +359,7 @@ describe('Render2d view centre', () => {
     r.setTiles(tiles)
     r.resize(100, 100, 1)
     r.setScene(farScene())
-    r.setCamera(makeCamera(1, 1, 0))
+    r.setOptions({ center: { x: 1, y: 1 } })
     // six rows above the foot, the centre the fourth of them, where it would be the sixth of ten without it
     r.setOptions({ center: { x: 15, y: 25 } })
     r.render()

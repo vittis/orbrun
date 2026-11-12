@@ -13,9 +13,6 @@ const BUILT = [
   'index.html',
   'about.html',
   'about/new.html',
-  'about/hero-1280.webp',
-  'about/keys-bg.webp',
-  'about/account-bg.webp',
   'assets/index-AbC123.js',
   'assets/index-AbC123.js.map',
   'assets/index-DeF456.css',
@@ -44,8 +41,6 @@ describe('the app kept on the device', () => {
   it('keeps the page, the bundles, the fonts, the places the front screen stands in, the stills the menus stand in and the icons', () => {
     expect(shellFiles(BUILT)).toEqual([
       '/',
-      '/about/account-bg.webp',
-      '/about/keys-bg.webp',
       '/assets/index-AbC123.js',
       '/assets/index-DeF456.css',
       '/assets/worker-GhI789.js',
@@ -56,6 +51,7 @@ describe('the app kept on the device', () => {
       '/orb.png',
       '/room/places/lair.json',
       '/room/places/lair.png',
+      '/room/poster.jpg',
     ])
   })
 
@@ -64,7 +60,7 @@ describe('the app kept on the device', () => {
     for (const p of PAGES.filter((p) => p.path !== '/')) expect(network).toContain(p.path)
     expect(network).toContain('/about/orbrun')
     expect(network).toContain('/robots.txt')
-    expect(network).toContain('/about/hero-1280.webp')
+    expect(network).toContain('/room/card.jpg')
     expect(network).not.toContain('/')
     expect(network).not.toContain('/assets/index-AbC123.js.map')
     for (const f of shellFiles(BUILT)) expect(network).not.toContain(f)

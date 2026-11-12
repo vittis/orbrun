@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { initialState, MouseMode, reduce, type GameMessage, type ServerMessage } from '@orbrun/webtiles'
-import { linesSince, namedInWarnings } from '../src/warnings'
+import { initialState, MouseMode, MSGCH, formattedStringToText, reduce, type GameMessage, type ServerMessage } from '@orbrun/webtiles'
+import { linesSince } from '../src/warnings'
 
 /**
  * A walk stopped while a --more-- is up: the server ends the interrupt's
- * batch in `input_mode 5`, so a rule that reads the warning only in command
- * mode never sees it (fixtures/explore-more.json, from a CDI session).
+ * batch in `input_mode 5`; the message stays visible while input is paused (fixtures/explore-more.json, from a CDI session).
  */
 describe('an encounter under a --more--', () => {
   const fx = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'explore-more.json'), 'utf8')) as { frames: { msgs: ServerMessage[] }[] }
@@ -17,7 +16,7 @@ describe('an encounter under a --more--', () => {
     const lines = st.messages.lines
     const fresh = linesSince(lines, last, st.player.turn)
     last = lines[lines.length - 1]
-    return namedInWarnings(fresh)
+    return fresh.filter(line => line.channel === MSGCH.MONSTER_WARNING).map(line => formattedStringToText(line.text))
   }
   const play = (i: number) => {
     for (const m of fx.frames[i].msgs) reduce(st, m)
@@ -31,12 +30,12 @@ describe('an encounter under a --more--', () => {
     play(1)
     // player, msgs (more: true), map, input_mode 5
     expect(fx.frames[2].msgs.map((m) => m.msg + (m.mode ?? ''))).toEqual(['player', 'msgs', 'map', 'input_mode5'])
-    expect(play(2)).toEqual(['Josephine the Decaying Necromancer', 'a wraith'])
+    expect(play(2)).toEqual(['You encounter Josephine the Decaying Necromancer and a wraith.\nJosephine is wearing a +2 robe of fire resistance.'])
     expect(st.inputMode).toBe(MouseMode.MORE)
     expect(st.messages.more).toBe(true)
   })
 
-  it('names nobody once the prompt is dismissed, so the turn must be carried over', () => {
+  it('does not replay encounter warnings once the prompt is dismissed', () => {
     // input_mode 0, input_mode 1, player, msgs "Josephine shouts!", map
     expect(play(3)).toEqual([])
     expect(st.inputMode).toBe(MouseMode.COMMAND)

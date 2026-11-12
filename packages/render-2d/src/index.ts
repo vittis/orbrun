@@ -2,14 +2,11 @@ import {
   cellKey,
   combatActorId, HitEffects, type HitEffect,
   DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
-  dirToYaw,
   flashOf,
   minibarRects,
   MINIBAR_CELL,
   type Minibars,
-  type Camera,
   type CellKey,
-  type Dir8,
   type MapRenderer,
   type Scene,
   type SceneCursor,
@@ -77,40 +74,6 @@ export interface Render2dOptions {
    */
   minibars?: Minibars | null
   /**
-   * The compass heading drawn at the top: north (0) by default, the map as
-   * WebTiles lays it out. A minimap that turns with the player passes the
-   * heading they face; the map turns about the cell the view is centred on
-   * (the player), in whole quarter turns, so cells stay square. The monsters,
-   * items and the player stay upright over the turned ground; the features
-   * built into cells (doors, fountains, altars, stairs), the highlights and
-   * the cursor lie with it as far as `uprightYaw` says.
-   */
-  up?: Dir8
-  /**
-   * The heading at the top in radians (north 0, clockwise), for a map that
-   * eases between headings as the view turns: while set it stands in for
-   * `up`. Null hands the top back to `up`.
-   */
-  upYaw?: number | null
-  /**
-   * The heading the things painted on the ground are turned back to, in
-   * radians: the cell features, the highlights over them and the cursor.
-   * Null (the default) stands them upright on screen however the ground
-   * turns. A map whose ground turns on diagonals passes the quarter heading
-   * the ground used to stand on, so they lie with the floor over those 45
-   * degrees. What stands *in* a cell — a monster, an item, the player, and
-   * the badges and bars that ride on them — is upright either way.
-   */
-  uprightYaw?: number | null
-  /**
-   * Orbrun: the heading the player faces (`yaw`, radians, north 0,
-   * clockwise) and how wide the view opens across (`fov`, radians), drawn as
-   * a soft cone of light on the floor from the player's cell, so a map
-   * borrowed from the 3D view still says what that view takes in. Null
-   * draws none.
-   */
-  facing?: { yaw: number; fov: number } | null
-  /**
    * Orbrun: css px along the canvas's foot that something stands over (a
    * phone's touch bar). The map runs on under them but is centred on what
    * is above, so the cell the view is centred on is never under the bar.
@@ -124,32 +87,6 @@ export interface Render2dOptions {
    * px. Null (the default) centres the view.
    */
   anchor?: { x: number; y: number } | null
-}
-
-/** How far the facing cone reaches, in cells. */
-export const FACING_REACH = 3.5
-
-/**
- * The facing cone about the player's cell centre `mx`, `my`: a wedge of
- * light as wide as the view that fades out over FACING_REACH cells, on
- * the ground's axes so it keeps its heading on a turned map. The HUD's
- * minimap stands it on a canvas of its own, turned by css (hud.ts `placeCone`).
- */
-export function drawFacing(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, mx: number, my: number, cs: number, { yaw, fov }: { yaw: number; fov: number }) {
-  const r = cs * FACING_REACH
-  // canvas angles start east and run clockwise; yaw starts north
-  const a = yaw - Math.PI / 2
-  const g = ctx.createRadialGradient(mx, my, cs * 0.3, mx, my, r)
-  g.addColorStop(0, 'rgba(255,240,200,0.25)')
-  g.addColorStop(1, 'rgba(255,240,200,0)')
-  ctx.save()
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.moveTo(mx, my)
-  ctx.arc(mx, my, r, a - fov / 2, a + fov / 2)
-  ctx.closePath()
-  ctx.fill()
-  ctx.restore()
 }
 
 /** Default terminal palette, as the official stylesheet. */
@@ -223,7 +160,6 @@ export class Render2d implements MapRenderer {
   private ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
   private tiles: TileSource | null = null
   private scene: Scene | null = null
-  private camera: Camera | null = null
   private cursor: SceneCursor | null = null
   private width = 0
   private height = 0
@@ -232,13 +168,6 @@ export class Render2d implements MapRenderer {
   private origin = { x: 0, y: 0 }
   /** the whole css px the cells are drawn right and down of the origin's own place, under an `anchor` */
   private shift = { x: 0, y: 0 }
-  /**
-   * How far past its square, in css px, a cell's opaque ground is drawn this
-   * frame: nothing on a grid-aligned map, one device pixel on a map turned
-   * off the quarters, where every cell's edge is antialiased on its own and
-   * two half-covered edges leave a seam of what lies behind the canvas.
-   */
-  private seam = 0
   private life = new DungeonLife()
   private hits = new HitEffects()
   private active = false
@@ -263,10 +192,6 @@ export class Render2d implements MapRenderer {
       glyphFont: opts.glyphFont ?? 'monospace',
       glyphColours: opts.glyphColours ?? TERM_COLOURS,
       minibars: opts.minibars ?? null,
-      up: opts.up ?? 0,
-      upYaw: opts.upYaw ?? null,
-      uprightYaw: opts.uprightYaw ?? null,
-      facing: opts.facing ?? null,
       foot: opts.foot ?? 0,
       anchor: opts.anchor ?? null,
     }
@@ -293,10 +218,6 @@ export class Render2d implements MapRenderer {
     if (opts.glyphFont !== undefined) this.opts.glyphFont = opts.glyphFont
     if (opts.glyphColours !== undefined) this.opts.glyphColours = opts.glyphColours
     if (opts.minibars !== undefined) this.opts.minibars = opts.minibars
-    if (opts.up !== undefined) this.opts.up = opts.up
-    if (opts.upYaw !== undefined) this.opts.upYaw = opts.upYaw
-    if (opts.uprightYaw !== undefined) this.opts.uprightYaw = opts.uprightYaw
-    if (opts.facing !== undefined) this.opts.facing = opts.facing
     if (opts.foot !== undefined) this.opts.foot = opts.foot
     if (opts.anchor !== undefined) this.opts.anchor = opts.anchor
   }
@@ -313,9 +234,6 @@ export class Render2d implements MapRenderer {
     if (this.opts.living && (scene !== this.scene || scene.revision !== this.sceneRevision)) { this.life.observe(scene, now); this.lightTime = -Infinity }
     this.scene = scene
     this.sceneRevision = scene.revision
-  }
-  setCamera(cam: Camera): void {
-    this.camera = cam
   }
   setCursor(cursor: SceneCursor | null): void {
     this.cursor = cursor
@@ -452,12 +370,7 @@ export class Render2d implements MapRenderer {
   }
 
   project(x: number, y: number, _height = 0) {
-    const q = this.cellCentre(x, y)
-    const pivot = this.opts.center ?? (this.opts.follow ? this.camera : null)
-    const p = pivot ? this.cellCentre(pivot.x, pivot.y) : { x: this.width / 2 + this.shift.x, y: this.height / 2 + this.shift.y }
-    const angle = -(this.opts.upYaw ?? dirToYaw(this.opts.up))
-    const c = Math.cos(angle), s = Math.sin(angle)
-    return { x: p.x + (q.x - p.x) * c - (q.y - p.y) * s, y: p.y + (q.x - p.x) * s + (q.y - p.y) * c }
+    return this.cellCentre(x, y)
   }
 
   pick(px: number, py: number): CellKey | null {
@@ -508,7 +421,7 @@ export class Render2d implements MapRenderer {
     const cols = Math.ceil(this.width / cs)
     // the rows the view is centred in: those above the foot (`foot`)
     const rows = Math.ceil(Math.max(cs, this.height - this.opts.foot) / cs)
-    const cam = this.camera
+    const cam = scene.player
     let ox: number
     let oy: number
     const centre = this.opts.center
@@ -542,77 +455,17 @@ export class Render2d implements MapRenderer {
     this.origin = { x: ox, y: oy }
     this.shift = { x: shiftX, y: shiftY }
     if (shiftX || shiftY) ctx.translate(shiftX, shiftY)
-    // the map turned so `up` (or the easing `upYaw`) is at the top: about the
-    // cell the view is centred on, which is where the player stands when following
-    const rot = -(this.opts.upYaw ?? dirToYaw(this.opts.up))
-    const pivot = centre ?? (this.opts.follow && cam ? cam : null)
-    const pvx = pivot ? (pivot.x - ox + 0.5) * cs : this.width / 2
-    const pvy = pivot ? (pivot.y - oy + 0.5) * cs : this.height / 2
-    if (rot) {
-      ctx.translate(pvx, pvy)
-      ctx.rotate(rot)
-      ctx.translate(-pvx, -pvy)
-    }
-    const cosR = Math.cos(rot)
-    const sinR = Math.sin(rot)
-    this.seam = Math.abs(Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) - rot) > 1e-6 ? 1 / dpr : 0
-    /** turn the cell's own axes by `by` about its centre, and draw in them */
-    const turned = (by: number, sx: number, sy: number, draw: () => void) => {
-      if (!by) return draw()
-      const mx = sx + cs / 2
-      const my = sy + cs / 2
-      ctx.save()
-      ctx.translate(mx, my)
-      ctx.rotate(by)
-      ctx.translate(-mx, -my)
-      draw()
-      ctx.restore()
-    }
-    // what is painted on the ground — the features standing on cells, the
-    // highlights over them, the cursor — goes with it as far as `uprightYaw`
-    // says: turning back to the heading it stood on leaves it lying with a
-    // ground that has turned past that heading (a diagonal, 45 degrees).
-    const leanBack = this.opts.uprightYaw == null ? -rot : this.opts.uprightYaw
-    const lean = (sx: number, sy: number, draw: () => void) => turned(leanBack, sx, sy, draw)
-    /** what stands in a cell — a monster, an item, the player — never lies over: it is upright on screen however the ground turns */
-    const upright = (sx: number, sy: number, draw: () => void) => turned(-rot, sx, sy, draw)
     const minimap = this.opts.mode === 'minimap' || !this.tiles
     const glyphs = this.opts.mode === 'glyphs' && !minimap
     const hybrid = this.opts.mode === 'hybrid' && !minimap
     const inView = (sx: number, sy: number) => {
-      if (rot) {
-        // where the cell's centre lands on the turned canvas
-        const dx = sx + cs / 2 - pvx
-        const dy = sy + cs / 2 - pvy
-        sx = pvx + dx * cosR - dy * sinR - cs / 2
-        sy = pvy + dx * sinR + dy * cosR - cs / 2
-      }
       return !(sx + shiftX < -cs || sy + shiftY < -cs || sx + shiftX > this.width || sy + shiftY > this.height)
     }
     if (glyphs || hybrid) ctx.font = `${Math.floor(cs * 0.8)}px ${this.opts.glyphFont}`
-    /**
-     * The cells a minimap can show, looked up by position instead of found by
-     * walking every cell of the level: the map turns with the view, so it is
-     * drawn again at every step of a turn, and a whole explored level is far
-     * more cells than the disc holds. The canvas (with `inView`'s margin)
-     * turned back onto the map is the range; a range wider than the level
-     * (the level map, an empty level) walks the cells as before. Only for
-     * the minimap: its blocks stay in their squares, so the order the cells
-     * come in changes no pixel, where a tile view's tall features spill over
-     * their neighbours and must keep the level's own order.
-     */
+    /** Fetch only the minimap's visible cells, preserving tile-view drawing order. */
     const minimapCells = (): Iterable<SceneCell> => {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      for (const [cx, cy] of [[-cs / 2 - shiftX, -cs / 2 - shiftY], [this.width + cs / 2 - shiftX, -cs / 2 - shiftY], [this.width + cs / 2 - shiftX, this.height + cs / 2 - shiftY], [-cs / 2 - shiftX, this.height + cs / 2 - shiftY]]) {
-        const dx = cx - pvx
-        const dy = cy - pvy
-        const x = pvx + dx * cosR + dy * sinR
-        const y = pvy - dx * sinR + dy * cosR
-        if (x < minX) minX = x
-        if (x > maxX) maxX = x
-        if (y < minY) minY = y
-        if (y > maxY) maxY = y
-      }
+      const minX = -cs / 2 - shiftX, minY = -cs / 2 - shiftY
+      const maxX = this.width + cs / 2 - shiftX, maxY = this.height + cs / 2 - shiftY
       const x0 = Math.floor(minX / cs - 0.5) - 1 + ox
       const x1 = Math.ceil(maxX / cs - 0.5) + 1 + ox
       const y0 = Math.floor(minY / cs - 0.5) - 1 + oy
@@ -632,14 +485,10 @@ export class Render2d implements MapRenderer {
       const sy = (cell.y - oy) * cs
       if (!inView(sx, sy)) continue
       if (minimap) this.drawMinimapCell(ctx, cell, sx, sy, cs)
-      else if (glyphs) upright(sx, sy, () => this.drawGlyphCell(ctx, cell, sx, sy, cs, 'fill'))
-      // a feature standing on the dungeon (a statue, a fountain, a tree) is a
-      // thing in the cell, turned back the whole way like the monsters and
-      // items; a door or a staircase is built in and lies with the ground
-      else this.drawTileCell(ctx, cell, sx, sy, cs, cell.freestanding ? upright : lean)
+      else if (glyphs) this.drawGlyphCell(ctx, cell, sx, sy, cs, 'fill')
+      else this.drawTileCell(ctx, cell, sx, sy, cs)
     }
     // on the floor, under what stands on it
-    if (scene.playerOnLevel && this.opts.facing != null) drawFacing(ctx, (scene.player.x - ox + 0.5) * cs, (scene.player.y - oy + 0.5) * cs, cs, this.opts.facing)
     if (!minimap && !glyphs) {
       // things standing in cells, in scene order, then their badges
       for (const b of scene.billboards) {
@@ -649,7 +498,7 @@ export class Render2d implements MapRenderer {
         if (hybrid && b.kind !== 'cloud' && b.kind !== 'projectile') continue
         const alpha = b.alpha ?? (b.kind === 'cloud' ? 0.75 : 1)
         if (alpha !== 1) ctx.globalAlpha = alpha
-        upright(sx, sy, () => {
+        {
           const visible = scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible'
           const pose = livingPose(b.life, b.x, b.y, now, living && this.opts.animate && visible)
           if (living && visible && b.life?.motion && b.life.motion !== 'still' && !b.life.held) this.active = true
@@ -674,7 +523,7 @@ export class Render2d implements MapRenderer {
             ctx.fillRect(sx + cs * 0.5, sy + cs * 0.7 - size * 2, size, size * 5)
           }
           ctx.restore()
-        })
+        }
         if (alpha !== 1) ctx.globalAlpha = 1
       }
       if (hybrid) {
@@ -684,7 +533,7 @@ export class Render2d implements MapRenderer {
           const sx = (cell.x - ox) * cs
           const sy = (cell.y - oy) * cs
           if (!inView(sx, sy)) continue
-          if (on.get(cellKey(cell.x, cell.y))?.some((b) => b.kind !== 'cloud' && b.kind !== 'projectile')) upright(sx, sy, () => this.drawGlyphCell(ctx, cell, sx, sy, cs, 'shade'))
+          if (on.get(cellKey(cell.x, cell.y))?.some((b) => b.kind !== 'cloud' && b.kind !== 'projectile')) this.drawGlyphCell(ctx, cell, sx, sy, cs, 'shade')
         }
       }
       // status badges over the sprite (or over the glyph standing in for it)
@@ -693,14 +542,12 @@ export class Render2d implements MapRenderer {
         const sx = (b.x - ox) * cs
         const sy = (b.y - oy) * cs
         if (!inView(sx, sy)) continue
-        upright(sx, sy, () => {
+        {
           for (const i of b.statusIcons!) this.drawTile(ctx, i.tile, sx, sy, cs, i.ox, i.oy, undefined, i.at)
-        })
+        }
       }
     } else if (minimap) {
-      // the colour blocks standing in for sprites are upright like the
-      // sprites (and the player's mark below): square on screen over a
-      // turned ground, not diamonds among the ground's cells
+      // Colour blocks mark actors and items on the minimap.
       for (const b of scene.billboards) {
         const sx = (b.x - ox) * cs
         const sy = (b.y - oy) * cs
@@ -708,7 +555,7 @@ export class Render2d implements MapRenderer {
         const c = this.opts.minimapColours
         if (b.kind === 'monster' || b.kind === 'item') {
           ctx.fillStyle = b.kind === 'monster' ? (b.attitude === 'friendly' ? c.friendly : c.monster) : c.item
-          upright(sx, sy, () => ctx.fillRect(sx, sy, cs, cs))
+          ctx.fillRect(sx, sy, cs, cs)
         }
       }
     }
@@ -743,8 +590,7 @@ export class Render2d implements MapRenderer {
         }
         if (living) this.livingCell(ctx, cell, sx, sy, cs, now)
         // the flash covers the whole cell, over everything drawn in it
-        // (cell_renderer.js `render_flash`); the 3D view carries the same
-        // wash through the cell's air
+        // (cell_renderer.js `render_flash`).
         const flash = flashOf(cell)
         if (flash.a > 0) {
           const c = (v: number) => Math.round(v * 255)
@@ -753,20 +599,19 @@ export class Render2d implements MapRenderer {
         }
       }
     }
-    // the player's own cell on a minimap: the player stands upright like any
-    // other thing in a cell, so the mark stays square over a turned ground
+    // The player's own cell on the minimap.
     if (scene.playerOnLevel && minimap) {
       const px = (scene.player.x - ox) * cs
       const py = (scene.player.y - oy) * cs
-      upright(px, py, () => {
+      {
         ctx.fillStyle = this.opts.minimapColours.player
         ctx.fillRect(px, py, cs, cs)
-      })
+      }
     }
     if (scene.playerOnLevel && !minimap && minibarRects(this.opts.minibars).length) {
       const px = (scene.player.x - ox) * cs
       const py = (scene.player.y - oy) * cs
-      upright(px, py, () => this.drawMinibars(ctx, px, py, cs))
+      this.drawMinibars(ctx, px, py, cs)
     }
     const cursor = this.cursor
     if (cursor) {
@@ -786,26 +631,24 @@ export class Render2d implements MapRenderer {
       const cy = (cursor.y - oy) * cs
       // the same icon WebTiles paints over the cell; an outline when the gamedata has none
       const icon = cursor.tile
-      if (icon !== undefined && this.tiles && this.tiles.tile(icon)) lean(cx, cy, () => this.drawTile(ctx, icon, cx, cy, cs))
+      if (icon !== undefined && this.tiles && this.tiles.tile(icon)) this.drawTile(ctx, icon, cx, cy, cs)
       else
-        lean(cx, cy, () => {
+        {
           ctx.strokeStyle = cursor.mode === 'map' ? '#ffffff' : '#ff8800'
           ctx.lineWidth = 2
           ctx.strokeRect(cx + 1, cy + 1, cs - 2, cs - 2)
-        })
+        }
     }
     ctx.restore()
-    this.seam = 0
   }
 
   private drawMinimapCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number) {
     const c = this.opts.minimapColours
-    const e = this.seam
     // minimap.js `update`: the server's map feature indexes the rc palette directly
     const mfc = this.opts.mfColours
     if (mfc && cell.mf !== undefined && mfc[cell.mf]) {
       ctx.fillStyle = mfc[cell.mf] as string
-      ctx.fillRect(sx - e, sy - e, cs + 2 * e, cs + 2 * e)
+      ctx.fillRect(sx, sy, cs, cs)
       return
     }
     let colour = c.unknown
@@ -825,19 +668,10 @@ export class Render2d implements MapRenderer {
     else if (cell.kind === 'wall') colour = cell.visibility === 'visible' ? c.wall : c.mappedWall
     else colour = cell.visibility === 'visible' ? c.floor : c.remembered
     ctx.fillStyle = colour
-    ctx.fillRect(sx - e, sy - e, cs + 2 * e, cs + 2 * e)
+    ctx.fillRect(sx, sy, cs, cs)
   }
 
-  /**
-   * The ground (floor, walls, their overlays) turns with the map, and the
-   * feature built into a cell (a door, a fountain, an altar, stairs) is part
-   * of it: `upright` turns it back only as far as the ground's own rule says
-   * (renderer `uprightYaw`), which is all the way on a quarter-turned map.
-   * The monsters, items and the player standing in cells are turned back the
-   * whole way instead, wherever the ground has got to — and so is a feature
-   * that stands on the dungeon (`SceneCell.freestanding`): a statue, a tree
-   * stands in its cell like them, where a door or a staircase is built in.
-   */
+  /** Shared atmospheric decoration for tile-based supporting views. */
   private livingCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number, now: number) {
     if (cell.visibility !== 'visible' || !this.scene) return
     const time = this.opts.animate ? now : 0
@@ -878,26 +712,23 @@ export class Render2d implements MapRenderer {
     ctx.restore()
   }
 
-  private drawTileCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number, upright?: (sx: number, sy: number, draw: () => void) => void) {
+  private drawTileCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number) {
     if (cell.kind === 'unknown') return
-    // the base tile fills the square, so it alone takes the seam margin
-    const e = this.seam
     if (cell.kind === 'wall') {
-      this.drawTile(ctx, cell.wallTile ?? cell.floorTile, sx - e, sy - e, cs + 2 * e)
+      this.drawTile(ctx, cell.wallTile ?? cell.floorTile, sx, sy, cs)
       if (cell.wallOverlays) for (const o of cell.wallOverlays) this.drawTile(ctx, o, sx, sy, cs)
       return
     }
-    this.drawTile(ctx, cell.floorTile, sx - e, sy - e, cs + 2 * e)
+    this.drawTile(ctx, cell.floorTile, sx, sy, cs)
     if (cell.underlays) for (const o of cell.underlays) this.drawTile(ctx, o, sx, sy, cs)
     if (cell.featureTile !== undefined) {
       const feature = cell.featureTile
-      if (upright) upright(sx, sy, () => {
-        if (this.time === null || cell.visibility !== 'visible' || !cell.life) return this.drawTile(ctx, feature, sx, sy, cs)
+      if (this.time === null || cell.visibility !== 'visible' || !cell.life) this.drawTile(ctx, feature, sx, sy, cs)
+      else {
         const pose = livingPose(cell.life, cell.x, cell.y, this.time)
         ctx.save(); ctx.translate(sx + cs / 2, sy + cs); ctx.rotate(pose.angle); ctx.scale(pose.sx, pose.sy)
         ctx.translate(-sx - cs / 2, -sy - cs); this.drawTile(ctx, feature, sx, sy, cs); ctx.restore()
-      })
-      else this.drawTile(ctx, feature, sx, sy, cs)
+      }
     }
     if (cell.kind === 'door' && cell.wallOverlays) for (const o of cell.wallOverlays) this.drawTile(ctx, o, sx, sy, cs)
     if (cell.overlays) for (const o of cell.overlays) this.drawTile(ctx, o, sx, sy, cs)

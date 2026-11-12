@@ -34,7 +34,7 @@ function setup() {
   const frame = (device: 'pad' | 'keyboard' | 'pointer' | 'touch' = 'pad'): Context => {
     ov.setDevice(device)
     ov.update(st)
-    const ctx = deriveContext(st, scene, cam, 'micro')
+    const ctx = deriveContext(st, scene, 0, 'micro')
     if (ctx.mode === 'popup') ctx.popupActions = ov.popupActions()
     ov.updatePrompt(ctx.mode, ctx.prompt, device)
     ov.syncFocus(ctx)

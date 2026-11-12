@@ -1,19 +1,15 @@
 import { cm, mapKey, MouseMode, MSGCH, UiState, formattedStringToText, keyMessage, topMenu, type ClientMessage, type GameMessage, type GameState } from '@orbrun/webtiles'
-import { autofightTarget, cellKey, dirFromDelta, isThreat, type Billboard, type CellKey, type MapRenderer, type Scene, type SceneCursor } from '@orbrun/scene'
-import { ExploreDone, linesSince, namedInWarnings, namedMonster } from './warnings'
-import { Render3d } from '@orbrun/render-3d'
-import { viewmodelFor } from '@orbrun/scene-webtiles'
+import { cellKey, dirFromDelta, type CellKey, type MapRenderer, type Scene, type SceneCursor } from '@orbrun/scene'
+import { ExploreDone } from './warnings'
 import { Render25d } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { RendererPark } from './park'
 import { escapeHtml, h, onDprChange } from './dom'
 import type { Session } from './session'
-import { CameraController } from './camera'
 import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
 import { dungeonAnimation } from './effects-motion'
-import { ORBIT_WINDOW_MS, Runner, type LastStep } from './runner'
+import { Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
 import { GridHost, isPhone } from './grid/host'
 import { gameSplit, isPortrait, levelMapCanvas, levelMapSplit, touchBeside, touchColumn } from './grid/console'
@@ -25,25 +21,21 @@ import { gamepadHints, type HintMode, type PadHintEvidence } from './gamepad-hin
 import { touchHints, type TouchHintEvidence, type TouchLesson } from './touch-hints'
 import { isPack, openPackKeys } from './pack-tabs'
 import { OKAY_THEN, actionNeighbour, actionTab, actionTabOf, type ActionTabId } from './action-tabs'
-import { CHAMFER, getSavedView, leftRightTurns, saveSettings, saveView, WALL_INSET, type Settings } from './servers'
-import { fovOf, messageLinesOf, rcPacesExplore, setAutoMessageLines, setAutoMinimap, setExploreGame, type SettingGroup } from './settings-rows'
+import { type Settings } from './servers'
+import { messageLinesOf, rcPacesExplore, setAutoMessageLines, setAutoMinimap, setExploreGame, type SettingGroup } from './settings-rows'
 import { PerfOverlay, type LogContext } from './perf'
 import { FpsCounter } from './fps'
 import { MapHold } from './map-hold'
 import { swipeLean, swipeStep } from './swipe'
-import { FLICK_TURN_RATE, SWIPE_FIRST_PX, SWIPE_HEADING_PX, swipeRest, swipeView } from './swipe-turn'
-import { HEADING } from './fling'
-import { LookDrag } from './look-drag'
-import type { DragRelease } from './camera'
+import { PointerDrag } from './pointer-drag'
 import { requestRenderFrame, cancelFrame } from './frames'
-import { PredictiveMovement } from './predictive-movement'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { CombatPopups } from './combat-popups'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
 
-/** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
+/** Cap dungeon pixels per CSS pixel to keep the pixel art crisp. */
 const VIEW_MAX_DPR = 1
 /** at rest the frame loop sleeps, waking to run its body this often, so nothing that changed without waking it waits longer */
 const IDLE_TICK_MS = 250
@@ -54,20 +46,9 @@ const SPELL_ROW_PX = 32 + 6
 /** how long after the last thing that wanted a frame the loop keeps the display's rate before it parks (`awake`) */
 const ACTIVE_MS = 500
 
-/** css pixels a touch must travel before a press becomes a look drag */
-/**
- * How long the renderer's one-off warm-up (`warmRenderer`) may wait for an
- * idle moment before it is run anyway: long enough to keep off the frames the
- * player is waiting for, short enough to be done before a level is drawn.
- */
-const WARM_DELAY_MS = 2000
-/** css pixels a finger turning the view has to go one way before letting go means the next heading that way (fling.ts) */
-const TURN_COMMIT = 14
-/** a finger's tilt of the view, against holding the dungeon under it (`lookPerPx`) */
-const TOUCH_LOOK = 0.5
-/** css pixels a finger drags the view across to turn it one heading, 45°: a short swipe; two take a long one (`lookPerPx`) */
-const TOUCH_HEADING_PX = 120
-/** level-map cells per unit of right-stick look while the map is open */
+/** Expire unechoed map cursor steps after one second. */
+const MAP_CURSOR_WINDOW_MS = 1000
+/** level-map cells per unit of right-stick pan while the map is open */
 const MAP_PAN_RATE = 0.12
 /** tileweb.cc `zoom_dungeon`: `tile_map_scale` in percent, a step a zoom key, clamped to 20..300 */
 const MAP_SCALE_STEP = 10
@@ -87,21 +68,17 @@ function withBack(labels: BindingLabel[]): BindingLabel[] {
   return labels.some((l) => l.button === 'B') ? labels : [...labels, { button: 'B', label: 'Back', action: { kind: 'keys', label: 'Back', seq: [] }, contextual: false }]
 }
 
-/** A press on the view, from down to up: a tap, a look drag, or a finger held still (`hold` its timer, `held` once it fired). */
+/** A pointer press: a cell tap, a map drag, or a held map overview gesture. */
 interface Drag {
   id: number
-  /** the press as a look drag: where it is, whether it has moved, its axis and speed (look-drag.ts) */
-  g: LookDrag
+  /** Pointer position and click slop. */
+  g: PointerDrag
   button: number
   touch: boolean
   hold?: number
   held?: boolean
   /** a finger dragging the level map: css px moved and not yet a whole cell (`panMapBy`) */
   pan?: { x: number; y: number }
-  /** radians a css pixel of this drag turns and tilts the view, read as it starts (`lookPerPx`) */
-  k?: { yaw: number; pitch: number }
-  /** a finger's swipe across turning the view a heading at a time (`swipeTurn` step, swipe-turn.ts): css px a heading, read as it starts */
-  stepping?: number
 }
 
 /** The device the player touched last; the prompt strip is drawn for it. A finger is `touch`, a mouse or a pen `pointer`. */
@@ -114,7 +91,7 @@ export interface GameHooks {
   onSystem(op: 'disconnect'): void
   gamepad: GamepadInput
   initialInput?: InputDevice
-  /** the map view to draw with, in place of the settings' 2D or 3D one (the e2e harness has no WebGL) */
+  /** Optional renderer override for the offline protocol test harness. */
   renderer?(): MapRenderer
 }
 
@@ -125,7 +102,6 @@ export class GameScreen {
   private feedback: CombatFeedback
   private combatPopups = new CombatPopups()
   private nearDeath: NearDeath
-  private prediction: PredictiveMovement
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
   private renderer: MapRenderer
@@ -133,18 +109,17 @@ export class GameScreen {
   private grid: GridHost
   /** what the last layout was made from; the split is redone only when it changes */
   private layoutKey = ''
-  private is3d = true
-  private renderMode: Settings['renderer'] = '3d'
+  private renderMode: '2.5d' | '2d' = '2.5d'
   /** The level map (X) borrowed flat tiles while a depth view is selected. */
   private mapBorrowed2d = false
-  /** The 3D view kept aside while the level map is open, to come back with its level and crowd standing (park.ts). */
-  private park = new RendererPark()
   private lastMapView = false
   /** The level map is on screen: crawl's own, or held across a key that left it (map-hold.ts). Set once a frame, before the layout reads it. */
   private mapShown = false
   private mapHold = new MapHold()
   private session: Session
-  private cam = new CameraController()
+
+  private reducedMotion = false
+  private heading: import("@orbrun/scene").Dir8 = 0
   private runner: Runner
   private hud: Hud
   private chat: Chat
@@ -204,8 +179,6 @@ export class GameScreen {
       this.raf = requestRenderFrame(this.loop)
     }
   }
-  /** `rev.player|rev.map` the viewmodel was last built from */
-  private viewmodelRev = ''
   /** Scene callbacks start both animations at the confirmed update's arrival time. */
   private sceneTime: number | undefined
   private lastFrame = performance.now()
@@ -219,21 +192,12 @@ export class GameScreen {
    * made since the scene was last rebuilt. The scene is rebuilt once per
    * frame, so a fast explore or travel (a busy frame, or `travel_delay -1`)
    * arrives as several cells at once: the hops keep the path the feet took,
-   * and the camera can face the way the last step went instead of mistaking
-   * the batch for a teleport. `jumped` marks a hop that was not one cell.
+   * so movement lessons can count confirmed cells across a batched update.
    */
   private hopPos = { x: NaN, y: NaN }
   private hops: { dx: number; dy: number }[] = []
-  private jumped = false
   /** place and depth the player was last seen on, so a level change is known even when the coordinates barely move */
   private lastLevel = ''
-  /** arrived somewhere new before its cells came through: face again once they do */
-  private arrivalPending = false
-  private lastMonsters = new Set<number>()
-  /** the newest message line the warning rule has read (warnings.ts), so each line is judged once */
-  private lastWarningLine: GameMessage | undefined
-  /** a turn a warning or newcomer earned while the server was not taking commands (a --more--), paid when it does */
-  private owedTurn: { names: string[]; newcomer: boolean } | null = null
   private loading = h('div', { class: 'loading' })
   private pressTimes = new Map<string, number>()
   /** A tap-or-hold button down and short of HOLD_MS: its corner prompt fills its hold ring (hud.ts showHold). */
@@ -259,7 +223,7 @@ export class GameScreen {
   private cancelDrag: () => void = () => {}
   /** One per screen, however many canvases it goes through: a renderer swap must not leave the old canvas's listener behind. */
   private onWindowBlur?: () => void
-  /** Wheel scrolled since the last camera step, in css pixels; a trackpad arrives in crumbs. */
+  /** Wheel scrolled since the last map scale change, in css pixels; a trackpad arrives in crumbs. */
   private wheel = 0
   /** Shift was down for the wheel crumbs counted so far: distance and height do not pool each other's scroll. */
   private wheelShift = false
@@ -270,8 +234,6 @@ export class GameScreen {
   /** the pointer moved since the last target sent: keyboard cursor moves and turns never fight the mouse */
   private hoverMoved = false
   private lastTargetSent = -1
-  /** a fire's aim holds the view on its default target until the cursor is first stepped (runner `holdingView`) */
-  private viewHeld = false
   /** the cursor shown is the pointer's own selection, not one the server placed: never face it */
   private cursorIsOurs = false
   /**
@@ -281,7 +243,7 @@ export class GameScreen {
    * happens to rest on after a turn or a step.
    */
   private pointerLive = false
-  /** the last pick; a frame that draws nothing new (no pointer, camera or level change) casts no ray */
+  /** Last picked cell; unchanged frames reuse it. */
   private pickMemo: CellKey | null | undefined
   /** the canvas's place on the screen, from the last relayout, in css px */
   private viewPx: { left: number; top: number; width: number; height: number } | null = null
@@ -327,7 +289,6 @@ export class GameScreen {
   private lastHeard = 0
   /** the touch bar's last buttons, held through the spell bar's cast prompt */
   private lastTouch: TouchLabel[] | null = null
-  private padLooking = false
   /** right-stick travel accumulated toward the next level-map cursor step */
   private mapPan = { x: 0, y: 0 }
 
@@ -343,8 +304,6 @@ export class GameScreen {
     this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.nearDeath.root, this.combatPopups.root)
     const st = hooks.settings()
-    this.renderMode = st.renderer
-    this.is3d = st.renderer === '3d'
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
     setExploreGame(rc === null ? { online: true } : { online: false, rc })
@@ -360,25 +319,18 @@ export class GameScreen {
       this.relayout(true)
     }
     const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    this.cam.reducedMotion = motionPreference?.matches ?? false
+    this.reducedMotion = motionPreference?.matches ?? false
     this.renderer = this.makeRenderer()
     const motionChanged = () => {
-      this.cam.reducedMotion = motionPreference?.matches ?? false
+      this.reducedMotion = motionPreference?.matches ?? false
       if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
-      else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.cam.reducedMotion })
-      else if (this.renderer instanceof Render3d) this.renderer.setOptions(this.render3dOptions(this.settings()))
+      else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.reducedMotion })
       this.needsRender = true
       this.wake()
     }
     motionPreference?.addEventListener('change', motionChanged)
     this.unsub.push(() => motionPreference?.removeEventListener('change', motionChanged))
-    this.cam.setRestPitch(radians(st.restPitch))
-    // face the camera the way the last session left it (the pitch starts at rest)
-    const view = getSavedView()
-    if (view) this.cam.restore(view)
-    window.addEventListener('pagehide', this.saveView)
     this.hud = new Hud(this.root, {
-      onSelectMonster: (b) => this.faceBillboard(b),
       onBarAction: (a) => this.runner.execute(a),
       onMinimapClick: () => this.minimapTap(),
       // on the map with nothing of ours up, as the pad's Start opens it there
@@ -435,10 +387,14 @@ export class GameScreen {
       swipe: (step) => this.touchPress(step > 0 ? 'DR' : 'DL'),
       typed: () => this.wake(),
     })
-    this.prediction = new PredictiveMovement(session, this.cam, () => this.is3d && this.settings().predictiveMovement && !this.overlays.hasClientOverlay)
-    this.runner = new Runner(session, this.cam, {
+    this.runner = new Runner(session, {
       context: () => this.ctx,
-      northUp: () => !this.is3d,
+      facing: () => this.heading,
+      direction: dir => {
+        this.heading = dir
+        this.ctxKey = ''
+        this.ctx.ahead = deriveContext(this.session.state, this.session.scene, dir, 'micro').ahead
+      },
       ui: (op, arg, category, section) => this.uiOp(op, arg, category, section),
       osk: (op, dir) => this.overlays.oskOp(op, dir),
       menu: (op) => this.overlays.menuOp(this.session.state, op),
@@ -446,14 +402,13 @@ export class GameScreen {
       status: (t) => this.hud.status(t),
       confirmDangerous: () => this.hooks.settings().confirmStairs,
       now: () => performance.now(),
-      swing: () => this.swing(),
       keepMap: () => {
         this.mapHold.begin(performance.now())
         // a frame after the wait, so a hold nothing came for is let go even on a still screen
         setTimeout(() => this.wake(), 1600)
       },
     })
-    this.ctx = deriveContext(session.state, session.scene, this.cam.camera, 'micro')
+    this.ctx = deriveContext(session.state, session.scene, this.heading, 'micro')
     this.spellBook = new SpellBook({
       send: (m) => this.session.send(m, true),
       changed: () => {
@@ -489,12 +444,10 @@ export class GameScreen {
           this.feedback.observe(session.state, e.msg)
           this.nearDeath.observe(session.state, e.msg, performance.now())
           if (resets !== this.feedback.resets) this.combatPopups.clear()
-          this.prediction.state(e.msg, performance.now())
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
           this.trackActions(performance.now(), false)
-          if (e.msg.msg === 'input_mode') this.payOwedTurn()
           // a new game on the same version reuses the loaded gamedata, so no
           // `gamedata` event follows: only wait when the session is fetching
           if (e.msg.msg === 'game_client' || e.msg.msg === 'go_lobby') {
@@ -503,18 +456,15 @@ export class GameScreen {
           }
         } else if (e.type === 'sent') {
           this.lastSent = performance.now()
-          this.prediction.sent(e.msg, this.runner.sendingStep, this.lastSent)
         } else if (e.type === 'closed') {
           this.combatPopups.clear()
           this.nearDeath.clear()
-          this.prediction.reset(performance.now())
           this.wake()
         } else if (e.type === 'gamedata') {
           if (e.status === 'ready') {
             this.hideLoading()
             if (this.session.gamedata) {
               this.renderer.setTiles(this.session.gamedata)
-              this.warmRenderer(this.renderer)
             }
             this.needsRender = true
           } else if (e.status === 'error') this.showLoading('Could not load game data: ' + (e.detail || ''))
@@ -524,7 +474,6 @@ export class GameScreen {
     )
     if (this.session.gamedata) {
       this.renderer.setTiles(this.session.gamedata)
-      this.warmRenderer(this.renderer)
       this.hideLoading()
     } else this.showLoading('Loading game data…')
     this.onKeyDown = this.onKeyDown.bind(this)
@@ -567,13 +516,9 @@ export class GameScreen {
     setAutoMinimap(null)
     setExploreGame(null)
     this.destroyed = true
-    this.prediction.reset(performance.now())
     // a finger on the touch bar as it goes (a reconnect, the screen torn down under it) never lifts where the page
     // can hear it: let go here, or a held arrow walks on into the next game. The releases land on nothing (`pad`)
     this.hooks.gamepad.virtualRelease()
-    this.hooks.gamepad.fourWay = false
-    this.saveView()
-    window.removeEventListener('pagehide', this.saveView)
     cancelFrame(this.raf)
     clearTimeout(this.idleTimer)
     window.removeEventListener('keydown', this.onKeyDown, true)
@@ -597,7 +542,6 @@ export class GameScreen {
     this.renderer.destroy()
     this.combatPopups.clear()
     this.nearDeath.clear()
-    this.park.clear()
     this.root.remove()
   }
 
@@ -629,9 +573,8 @@ export class GameScreen {
    */
   private relayout(force = false) {
     if (!this.hud) return
-    const dungeon = this.settings().renderer === '2.5d'
+    const dungeon = true
     this.hud.setMinimapEnabled(!dungeon)
-    this.hud.setTrappedOverlayEnabled(this.is3d)
     const st = this.session.state
     const o = st.options
     const g = this.grid.grid
@@ -673,18 +616,11 @@ export class GameScreen {
     this.grid.place(this.canvas, view)
     const px = this.grid.px(view)
     // upright, the view runs across the whole screen, the grid's margins too, from under the minimap's band down to the
-    // screen's foot, under the touch bar (gameSplit); the 3D view runs on up under the band too, to the screen's top,
-    // its lens still fitted to the part below the band (render-3d `setLensTop`)
-    let lensTop = 0
+    // screen's foot, under the touch bar (gameSplit).
     if (!map && isPortrait(g)) {
       px.left = 0
       px.width = this.root.clientWidth || px.width
       px.height = Math.max(px.height, this.root.clientHeight - px.top)
-      if (this.renderer instanceof Render3d) {
-        lensTop = px.top
-        px.height += px.top
-        px.top = 0
-      }
       this.canvas.style.left = px.left + 'px'
       this.canvas.style.top = px.top + 'px'
       this.canvas.style.width = px.width.toFixed(2) + 'px'
@@ -712,23 +648,6 @@ export class GameScreen {
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
     this.renderer.resize(px.width, px.height, this.viewDpr())
-    // the view runs on under the touch bar along the foot, where the panes stop (gameSplit): the hands stand where they stop;
-    // upright they stand on the screen's bottom edge, behind the log and the bar, which would lift them halfway up the screen
-    const msgPx = this.grid.px(cells.messages)
-    if (this.renderer instanceof Render3d) {
-      this.renderer.setFoot(mapView || isPortrait(g) ? 0 : px.top + px.height - msgPx.top - msgPx.height)
-      this.renderer.setUpright(this.upright)
-      this.renderer.setLensTop(lensTop)
-      // upright the log and the bar hide the view's foot, so the lens looks ahead into what is left above them
-      this.renderer.setLensFoot(this.upright && !mapView ? px.top + px.height - msgPx.top : 0)
-      // Auto's field of view is a computer's or a phone's on its side or upright, and turning the phone (or a browser's
-      // device toolbar) changes which
-      const lens = this.lensHeld()
-      if (lens !== this.lensKey) {
-        this.lensKey = lens
-        if (!this.settings().fov) this.renderer.setOptions(this.render3dOptions(this.settings()))
-      }
-    }
     // what rides the view's edges keeps clear of the panes
     const free = map ?? cells.clear
     this.hud.spellRow = spells
@@ -741,33 +660,15 @@ export class GameScreen {
     this.overlays.root.style.setProperty('--touch-right', inset.right + 'px')
     this.overlays.root.style.setProperty('--touch-bottom', inset.bottom + 'px')
     // the chat box (client.html #chat) sits at the foot of the right column, as wide as the sidebar; on a phone over the log
+    const msgPx = this.grid.px(cells.messages)
     const log = hideMessages || !msgPx.width ? null : msgPx
     this.chat.place(this.grid.px(cells.sidebar), this.root.clientHeight, this.root.clientWidth, !!this.grid.phone, log)
     this.needsRender = true
   }
 
   /**
-   * The left edge, in screen px, of whatever hand is drawn in the right half
-   * of the view (rendering-3d.md II.7), so the HUD's corner keeps clear of
-   * the weapon; null with no hand there (2D, hands off, unarmed).
-   */
-  private handsLeft(): number | null {
-    if (!this.is3d || !this.viewPx) return null
-    let left: number | null = null
-    for (const r of (this.renderer as Render3d).handsFootprint()) {
-      if (r.x1 <= 0.5) continue
-      const x = this.viewPx.left + r.x0 * this.viewPx.width
-      if (left === null || x < left) left = x
-    }
-    return left
-  }
-
-  /** Remember the way the camera faces so the next session starts facing the same way (yaw only). */
-  private saveView = () => saveView(this.cam.view)
-
-  /**
    * The view's pixel ratio: one drawn pixel per CSS pixel, whatever the
-   * display's density (rendering-3d.md Part IV). The view is 32-texel pixel
+   * display's density. The view is 32-texel pixel
    * art drawn unfiltered, so a HiDPI display's extra pixels buy it almost
    * nothing and cost a weak GPU most of its fill; the HUD's own canvases and
    * text keep the full density.
@@ -776,82 +677,33 @@ export class GameScreen {
     return Math.min(window.devicePixelRatio || 1, VIEW_MAX_DPR)
   }
 
-  /**
-   * The 3D view's one-off work, taken off the frame that would otherwise pay
-   * for it: the atlases' ink peeled in a worker, and the shaders compiled.
-   * Both are what the loading screen is for — in a frame they are the stall
-   * on entering a level (docs/front-end-perf.md) — and both are optional, so
-   * nothing here waits or fails.
-   */
-  private warmRenderer(r: MapRenderer) {
-    if (!(r instanceof Render3d)) return
-    // In a task of its own, never this one: compiling the shaders blocks the
-    // thread for as long as the driver takes, and doing it here would hold up
-    // the view the player is waiting for to save a stall later on.
-    const run = () => {
-      void r.warmAtlases()
-      void r.warmShaders()
-    }
-    const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback
-    if (idle) idle.call(window, run, { timeout: WARM_DELAY_MS })
-    else setTimeout(run, 0)
-  }
-
   private render25dOptions(st: Settings) {
     return {
-      tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.cam.reducedMotion),
+      tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.reducedMotion),
       movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
     }
   }
 
   private makeRenderer(): MapRenderer {
     const st = this.hooks.settings()
-    const r: MapRenderer = this.hooks.renderer?.() ?? (this.is3d ? new Render3d(this.render3dOptions(st)) : this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.cam.reducedMotion }))
+    const r: MapRenderer = this.hooks.renderer?.() ?? (this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.reducedMotion }))
     r.mount(this.canvas)
-    this.viewmodelRev = ''
     if (this.session.gamedata) {
       r.setTiles(this.session.gamedata)
-      this.warmRenderer(r)
     }
     this.syncRendererScene(this.session.scene, undefined, r)
-    r.setCamera(this.cam.camera)
-    return r
-  }
-
-  /**
-   * The parked 3D view back on duty (park.ts): its level and crowd stand as
-   * they were; it is handed only what may have changed while the map was
-   * open — a new tileset, changed settings — and the scene to sync against.
-   */
-  private revive(kept: { renderer: Render3d; tiles: unknown; optionsKey: string }): MapRenderer {
-    const r = kept.renderer
-    const st = this.hooks.settings()
-    this.viewmodelRev = ''
-    if (this.session.gamedata && this.session.gamedata !== kept.tiles) {
-      r.setTiles(this.session.gamedata)
-      this.warmRenderer(r)
-    }
-    const opts = this.render3dOptions(st)
-    if (JSON.stringify(opts) !== kept.optionsKey) r.setOptions(opts)
-    r.resetMotion() // the map may have hidden intermediate steps; never replay an old walk on return
-    r.setScene(this.session.scene)
-    r.setCamera(this.cam.camera)
     return r
   }
 
   applySettings() {
     this.settingsCache = null
     const st = this.settings()
-    this.cam.setRestPitch(radians(st.restPitch))
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()
-    const wanted = this.mapShown ? '2d' : st.renderer
-    this.mapBorrowed2d = this.mapShown && st.renderer !== '2d'
-    // a 3D view parked for the map's close has no close to return to once the setting is 2D
-    if (st.renderer !== '3d') this.park.clear()
+    const wanted = this.mapShown ? '2d' : '2.5d'
+    this.mapBorrowed2d = this.mapShown
     if (wanted !== this.renderMode) this.toggleRenderer(wanted)
-    else if (this.is3d) (this.renderer as Render3d).setOptions(this.render3dOptions(st))
     else if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(st))
     // the minimap's size is the layout's to set
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
@@ -869,85 +721,25 @@ export class GameScreen {
     return (this.settingsCache ??= this.hooks.settings())
   }
 
-  /** A phone held upright: the hands shrink with the view's width (render-3d `setUpright`). */
+  /** Whether the phone is held upright. */
   private get upright(): boolean {
     return this.grid.phone && isPortrait(this.grid.grid)
   }
 
-  /**
-   * How wide the 3D view opens across, in radians: the Field of view setting
-   * is the vertical angle, so the across one follows the view's shape. The
-   * parked view's own lens while the level map has it put away.
-   */
-  private viewFov(): number {
-    const lens = (this.renderer instanceof Render3d ? this.renderer : this.park.kept)?.projector()
-    const aspect = lens ? lens.aspect : this.viewPx && this.viewPx.height ? this.viewPx.width / this.viewPx.height : 16 / 9
-    const tanHalfY = lens ? lens.tanHalfY : Math.tan((fovOf(this.settings(), this.grid.phone, this.upright) * Math.PI) / 360)
-    return 2 * Math.atan(tanHalfY * aspect)
-  }
-
-  /** how the device was held when the 3D view's Auto field of view was last set (`relayout`) */
-  private lensKey: 'desktop' | 'sideways' | 'upright' = 'desktop'
-  private lensHeld() {
-    return !this.grid.phone ? 'desktop' : this.upright ? 'upright' : 'sideways'
-  }
-
-  private render3dOptions(st: Settings) {
-    return { eyeHeight: st.eyeHeight, fov: fovOf(st, this.grid.phone, this.upright), viewmodel: st.viewmodel, wallInset: WALL_INSET, chamfer: CHAMFER, motion: !this.cam.reducedMotion }
-  }
-
-  /** A melee attack lifts the weapon a touch (rendering-3d.md II.7); frames follow until it settles. */
-  private swing() {
-    if (!this.is3d) return
-    ;(this.renderer as Render3d).attack()
-    this.needsRender = true
-  }
-
-  /**
-   * The hands hold what the `player` message says is wielded, and what the
-   * paperdoll on the player's cell says the off hand carries (a shield
-   * arrives by `map`, not `player`, and on a new level the cell lands after
-   * the first `player`). Rebuilt when either message changes; the renderer
-   * ignores a rebuild that holds the same items.
-   */
-  private syncViewmodel(st: GameState) {
-    const rev = `${st.rev.player}|${st.rev.map}`
-    if (!this.is3d || rev === this.viewmodelRev) return
-    this.viewmodelRev = rev
-    ;(this.renderer as Render3d).setViewmodel(viewmodelFor(st, this.session.gamedata ?? undefined))
-  }
-
-  /**
-   * Swap projections. The outgoing view is destroyed, except a 3D view the level
-   * map puts aside, which is parked, canvas and all, for the map's close
-   * (park.ts).
-   */
-  private toggleRenderer(mode: Settings['renderer'] = this.is3d ? '2d' : '3d') {
-    // a press on the outgoing canvas would never hear its release once the canvas leaves the page: the view
-    // stayed tipped where the finger left it, and every press after was ignored as a second finger
+  /** Switch between the dungeon and its temporary flat level map. */
+  private toggleRenderer(mode: '2.5d' | '2d') {
     this.cancelDrag()
     const old = { canvas: this.canvas, renderer: this.renderer }
     this.renderMode = mode
-    this.is3d = mode === '3d'
-    // the 3D view parked while the map was open comes back with its own canvas (park.ts); otherwise a fresh
-    // canvas, since WebGL and 2D contexts cannot share one
-    const kept = this.is3d ? this.park.take() : null
-    const c = kept ? kept.canvas : h('canvas', { class: 'view' })
+    const c = h('canvas', { class: 'view' })
     old.canvas.replaceWith(c)
     this.canvas = c
-    if (!kept) this.attachPointer(c)
-    this.renderer = kept ? this.revive(kept) : this.makeRenderer()
-    // the cursor the frame just placed went to the outgoing renderer: a level map opened by X or from the
-    // ctrl-f results lands its `ui_state` and its map cursor (tileweb.cc `load_dungeon`) in one frame, so the
-    // map view made here never saw the cursor; and a 3D view back from the park still wore the map's
+    this.attachPointer(c)
+    this.renderer = this.makeRenderer()
     this.renderer.setCursor(this.lastCursor)
     this.lastOptKey = ''
     this.relayout(true)
     this.needsRender = true
-    if (old.renderer instanceof Render3d && this.mapBorrowed2d && !this.is3d) {
-      this.park.keep({ canvas: old.canvas, renderer: old.renderer, tiles: this.session.gamedata, optionsKey: JSON.stringify(this.render3dOptions(this.hooks.settings())) })
-      return
-    }
     old.renderer.destroy()
   }
 
@@ -970,7 +762,6 @@ export class GameScreen {
   private loop(now: number) {
     this.raf = requestRenderFrame(this.loop)
     const previousFrame = this.lastFrame
-    const dt = Math.max(0, Math.min(0.1, (now - previousFrame) / 1000))
     this.lastFrame = now
     // The reply already spent time waiting for this frame. Starting its glide
     // at `now` would draw no motion until the NEXT frame. Clamp to the last
@@ -987,9 +778,7 @@ export class GameScreen {
       this.sceneTime = undefined
     }
     perf?.mark('scene')
-    this.prediction.update(now)
-    const beforeLook = { yaw: this.cam.camera.yaw, pitch: this.cam.camera.pitch }
-    if (this.advancePresentation(dt, now / 1000)) this.needsRender = true
+    this.advancePresentation(now / 1000)
     perf?.mark('present')
     if (!this.awake(now)) {
       this.fps.update(now, false)
@@ -1008,11 +797,6 @@ export class GameScreen {
       this.drawnRev = { map: rev.map, player: rev.player, ui: rev.ui }
       this.needsRender = true
     }
-    if (this.padLooking && this.lastInput === 'pad' && this.ctx.mode === 'command' && !this.overlays.hasClientOverlay && !this.session.watching) {
-      const after = this.cam.camera
-      const yaw = Math.atan2(Math.sin(after.yaw - beforeLook.yaw), Math.cos(after.yaw - beforeLook.yaw))
-      this.padHints.lookedBy(Math.hypot(yaw, after.pitch - beforeLook.pitch))
-    }
     if (this.renderer.animating) this.needsRender = true
     const st = this.session.state
     // overlays first: the popup's parsed actions and the focus cursor feed the context and the action bar
@@ -1025,12 +809,9 @@ export class GameScreen {
     // so while anything of the server's is up it stands behind the overlays.
     this.loading.classList.toggle('behind', !!(st.dialog || st.menus.length || st.ui.length || st.textInput))
     this.ctx = this.deriveContext(st)
-    const walking = this.is3d && this.ctx.mode === 'command'
-    this.hooks.gamepad.fourWay = walking
     this.fireHolds(now)
     // the server reports targeting alone; the runner knows whether its `x` opened it
     if (this.runner.examining(this.ctx.mode)) this.ctx.examining = true
-    this.viewHeld = this.runner.holdingView(this.ctx.mode)
     if (this.ctx.mode === 'popup') this.ctx.popupActions = this.overlays.popupActions()
     if (this.ctx.mode === 'menu') this.ctx.switches = this.overlays.menuSwitches()
     if (this.ctx.mode === 'popup') this.ctx.switches = this.overlays.popupSwitches()
@@ -1047,20 +828,16 @@ export class GameScreen {
     const cursor = this.cursorFor()
     const lc = this.lastCursor
     if ((cursor?.x !== lc?.x || cursor?.y !== lc?.y || cursor?.mode !== lc?.mode || cursor?.tile !== lc?.tile) && !(cursor === null && lc === null)) {
-      const movedTo = cursor && (cursor.x !== lc?.x || cursor.y !== lc?.y)
       this.lastCursor = cursor
       this.renderer.setCursor(cursor)
       // the pointer's own hover cell stays out of the minimap; only a cursor the server placed shows there
       this.hud.setCursor(this.cursorIsOurs ? null : cursor)
       this.needsRender = true
-      if (movedTo && !this.cursorIsOurs) this.faceCursor(cursor)
     }
     this.mapShown = this.mapHold.shown(st.uiState === UiState.VIEW_MAP, this.ctx.mode, now)
     this.relayout()
     this.syncMapRenderer()
     this.applyServerOptions()
-    this.hud.keepClear(this.handsLeft())
-    // the monster list or the edge pips, one or the other; in 2D the top-down view frames everything in sight, so the list stands in
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
     const incomingMelee = this.feedback.takeMelee()
@@ -1068,7 +845,6 @@ export class GameScreen {
     if (spells.length || incomingMelee.length || popups.length) this.needsRender = true
     const showCombat = settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')
     if (!showCombat) this.combatPopups.clear()
-    const nearby = this.is3d ? settings.nearby : 'list'
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
     let padLabels = this.chat.capturing ? [] : ours ?? this.padHints.prompts(this.ctx, settings.hints)
@@ -1084,8 +860,6 @@ export class GameScreen {
         padLabels.splice(at < 0 ? padLabels.length : at, 0, l)
       }
     }
-    // the minimap stands north up, and marks the way the 3D view faces, as the level map does
-    this.hud.minimapFov = this.renderer instanceof Render3d ? this.viewFov() : null
     // a finger gets every button the screen has, by its word (bindings.ts touchLabels); a panel of ours names its own.
     // A spectator's too: B and Start open the Orbrun menu, where Stop watching is, the one way out on a phone
     // the bar's cast passes through crawl's "Cast which spell?" on its way to the aim: the buttons hold still through it,
@@ -1093,7 +867,7 @@ export class GameScreen {
     const passing = this.castPrompt()
     const touch = passing ? this.lastTouch : this.lastInput === 'touch' && !this.chat.capturing ? touchLabels(ours ? withBack(ours) : barLabels(this.ctx), this.ctx, !!ours) : null
     this.lastTouch = touch
-    this.hud.update(st, this.session.scene, this.cam.camera, this.ctx, this.hooks.gamepad.kind, this.session.gamedata, this.session.watching, this.lastInput, nearby, settings.hints !== 'off', padLabels, held, !this.overlays.hasClientOverlay && !this.chat.capturing, !!ours, touch)
+    this.hud.update(st, this.session.scene, this.ctx, this.hooks.gamepad.kind, this.session.gamedata, this.session.watching, this.lastInput, settings.hints !== 'off', padLabels, held, !this.overlays.hasClientOverlay && !this.chat.capturing, !!ours, touch)
     // a line typed in the log (bindings.ts typedInLog) stands on the phone's keyboard, and what Chrome lays over its top
     const field = typedInLog(st.textInput) ? this.overlays.activeInput() : null
     this.hud.liftLog(field && document.activeElement === field ? keyboardCover(this.root) : 0)
@@ -1107,37 +881,27 @@ export class GameScreen {
     let rendered = false
     if (this.needsRender) {
       this.needsRender = false
-      this.syncViewmodel(st)
-      perf?.mark('viewmodel')
       // dungeon_renderer.js set_view_center: the 2D view sits on the server's view
       // centre (`vgrdc`), the player in normal play and the map cursor while the
-      // level map is open, so the map scrolls under the cursor as WebTiles' does. A map borrowed from the
-      // 3D view marks the way that view faces, which a north-up map otherwise loses.
-      if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter, facing: this.mapBorrowed2d && this.settings().renderer === '3d' ? { yaw: this.cam.camera.yaw, fov: this.viewFov() } : null })
+      // level map is open, so the map scrolls under the cursor as WebTiles' does.
+      if (this.renderer instanceof Render2d) this.renderer.setOptions({ center: st.map.viewCenter })
       this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
-        const animate = this.renderMode === '2.5d' ? dungeonAnimation(settings, this.cam.reducedMotion) : !this.cam.reducedMotion
+        const animate = this.renderMode === '2.5d' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
         const timed = presentCombat(this.renderer, this.session.scene, popups, incomingMelee, spells, weapon, now, animate)
         if (showCombat) this.combatPopups.add(timed, now, this.renderMode === '2.5d')
       }
-      this.renderer.setCamera(this.cam.camera)
-      const r3d = this.renderer instanceof Render3d ? this.renderer : null
-      // the 3D renderer marks its own stretches (level, bake, fields, crowd, place, draw) when measured
-      if (r3d) r3d.mark = perf ? (n) => perf.mark(n) : null
       this.renderer.render(now / 1000)
       rendered = true
       perf?.mark('render')
       // a frame that drew: the key whose answer it put on the screen stops waiting (perf.ts `drew`)
       if (perf) this.perf.net.drew()
-      // edge pips follow the frame just drawn: only a 3D frame has a lens to be out of
-      this.hud.renderPips(this.session.scene, st, this.session.gamedata, r3d ? r3d.projector() : null, nearby === 'pips' ? 'all' : 'off')
-      perf?.mark('pips')
     }
-    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d,
-      this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.cam.reducedMotion) : this.cam.reducedMotion)
+    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas,
+      this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.reducedMotion) : this.reducedMotion)
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
-      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.cam.reducedMotion)
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
     this.fps.update(now, rendered)
     perf?.end()
   }
@@ -1154,21 +918,18 @@ export class GameScreen {
     // the log's header is written while this screen is still being built, before the first frame
     // derived either of them: nothing here may assume the loop has run
     const ctx = this.ctx as Context | undefined
-    const r3d = this.renderer instanceof Render3d ? this.renderer : null
     return {
       mode: ctx?.mode,
       place: this.session.state.player.place ? `${this.session.state.player.place}:${this.session.state.player.depth}` : undefined,
       cells: this.session.scene.cells.size,
       crowd: this.session.scene.billboards.length,
-      counters: r3d ? { ...r3d.stats } : undefined,
       loading: this.session.loading,
     }
   }
 
-  /** One timestamp for the camera's movement and the sprites rendered this frame. */
-  private advancePresentation(dt: number, now: number): boolean {
+  /** Deliver the frame timestamp before the renderer samples entity and view movement. */
+  private advancePresentation(now: number) {
     this.syncRendererScene(this.session.scene, now)
-    return this.cam.update(dt, now)
   }
 
   /** Deliver the view centre with the scene, including receipt-time observations before drawing. */
@@ -1186,10 +947,10 @@ export class GameScreen {
    * the frame fills in afterwards (`examining`, `popupActions`, `focus`).
    */
   private deriveContext(st: GameState): Context {
-    const key = `${st.rev.any}|${this.session.scene.revision}|${this.cam.camera.facing}`
+    const key = `${st.rev.any}|${this.session.scene.revision}|${this.heading}`
     if (!this.ctxBase || key !== this.ctxKey) {
       this.ctxKey = key
-      this.ctxBase = deriveContext(st, this.session.scene, this.cam.camera, 'micro')
+      this.ctxBase = deriveContext(st, this.session.scene, this.heading, 'micro')
       if (this.exploreDone.update(st, this.session.scene)) this.ctxBase.exploreDone = true
     }
     return { ...this.ctxBase }
@@ -1233,7 +994,6 @@ export class GameScreen {
   /** Something wants this frame: a message, an input, an easing, an animation, a hold. */
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
-    if (this.cam.steering || this.padLooking) return true
     if (this.renderer.animating || this.combatPopups.active || this.nearDeath.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
@@ -1249,7 +1009,7 @@ export class GameScreen {
     if (mapView === this.lastMapView) return
     this.lastMapView = mapView
     if (mapView) {
-      if (this.is3d || this.renderer instanceof Render25d) {
+      if (this.renderMode === '2.5d') {
         this.mapBorrowed2d = true
         this.toggleRenderer('2d')
       }
@@ -1257,18 +1017,10 @@ export class GameScreen {
     } else {
       if (this.mapBorrowed2d) {
         this.mapBorrowed2d = false
-        this.toggleRenderer(this.settings().renderer)
+        this.toggleRenderer('2.5d')
       }
       this.hud.showMinimap()
     }
-  }
-
-  /** A deliberate view switch by the player sticks, even inside the level map. */
-  private userToggleRenderer() {
-    const st = this.settings()
-    const modes: Settings['renderer'][] = ['3d', '2.5d', '2d']
-    saveSettings({ ...st, renderer: modes[(modes.indexOf(st.renderer) + 1) % modes.length] })
-    this.applySettings()
   }
 
   /**
@@ -1347,7 +1099,7 @@ export class GameScreen {
         cellSize: this.cellPixels(Math.max(8, Math.round((px * scale) / 100)), mode),
         mode,
         living: !mapView,
-        animate: !this.cam.reducedMotion,
+        animate: !this.reducedMotion,
         foot: mapView ? this.mapFoot : 0,
         filterScaling: o.tile_filter_scaling === true,
         glyphFont: rcFont(o.glyph_mode_font),
@@ -1372,32 +1124,6 @@ export class GameScreen {
     const span = SHOW_DIAMETER * cell
     if (span <= w && span <= h) return cell
     return Math.max(1, Math.floor(cell * Math.min(w / span, h / span)))
-  }
-
-  /**
-   * Any aimed action (a spell, a throw, a wand, examine, a travel target)
-   * puts the server's cursor on the cell being aimed at: face it. This is the
-   * one signal common to our own play and a spectated one. The level map is
-   * north-up and gets no facing. A cursor our own pointer placed is skipped:
-   * facing it would turn the view under the mouse and chase itself. In our
-   * own aims, look mode (`x`) and fire (`f`) alike, the view turns to a
-   * heading as soon as the cursor steps onto its line from the player, and
-   * otherwise holds while the cursor walks in front of the player, turning
-   * to the nearest heading only when the cursor goes beside or behind
-   * (camera `faceCursorBehind`); the keys read against whatever grid is in
-   * view (camera `gridFacing`). A fire that locked onto a target behind the
-   * player turns nothing at all until the cursor is first stepped
-   * (`viewHeld`): the lock is crawl's, not a move of the player's. Firing
-   * turns the view to the shot (runner `faceAim`), as a swing does. A
-   * spectated player's aim faces the cell itself.
-   */
-  private faceCursor(c: SceneCursor) {
-    if (!this.is3d || c.mode === 'map' || this.cam.steering || this.viewHeld) return
-    if (cellKey(c.x, c.y) === this.lastTargetSent) return
-    const scene = this.session.scene
-    if (!scene.playerOnLevel) return
-    if (this.ctx.examining || !this.session.watching) this.cam.faceCursorBehind(scene, c.x, c.y)
-    else this.cam.faceCell(scene, c.x, c.y)
   }
 
   private cursorFor(): SceneCursor | null {
@@ -1476,116 +1202,30 @@ export class GameScreen {
     const dx = pos.x - x
     const dy = pos.y - y
     if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) this.hops.push({ dx, dy })
-    else this.jumped = true
     this.hopPos = { x: pos.x, y: pos.y }
   }
 
   private onScene() {
     const now = this.sceneTime ?? performance.now() / 1000
     const scene = this.session.scene
-    const st = this.session.state
     const p = scene.player
     const hops = this.hops
-    const jumped = this.jumped
     this.hops = []
-    this.jumped = false
-    const predicted = this.prediction.reconcile(now * 1000, hops, jumped)
     if (scene.playerOnLevel) {
-      const level = `${st.player.place}:${st.player.depth}`
-      const newLevel = level !== this.lastLevel
-      if (newLevel && this.renderer instanceof Render3d) this.renderer.resetMotion()
-      this.lastLevel = level
-      const moved = p.x !== this.lastPos.x || p.y !== this.lastPos.y
-      if (moved || newLevel) {
-        // the feet moved on: whatever turn was owed is about the old spot
-        this.owedTurn = null
+      const level = `${this.session.state.player.place}:${this.session.state.player.depth}`
+      const sameLevel = level === this.lastLevel
+      if (p.x !== this.lastPos.x || p.y !== this.lastPos.y || !sameLevel) {
         this.forgetTabs()
-        const dx = p.x - this.lastPos.x
-        const dy = p.y - this.lastPos.y
-        // Attribute all hops, including replies to older commands still in
-        // flight after the player turned and sent a new direction.
-        const ownStep = this.runner.stepForMove(dx, dy, performance.now(), jumped ? [] : hops)
-        const wasOurs = ownStep !== null
-        const sameLevel = !newLevel && !Number.isNaN(this.lastPos.x) && !(dx === 0 && dy === 0)
-        const single = Math.abs(dx) <= 1 && Math.abs(dy) <= 1
-        if (sameLevel && ownStep && this.padStep === ownStep && !this.session.watching) {
+        const dx = p.x - this.lastPos.x, dy = p.y - this.lastPos.y
+        const direction = dirFromDelta(Math.sign(dx), Math.sign(dy))
+        if (sameLevel && direction !== null) this.heading = direction
+        if (sameLevel && this.padStep && this.runner.lastStep === this.padStep && !this.session.watching) {
           this.padHints.moved(Math.max(1, hops.length))
           this.padStep = null
         }
-        // Several cells in one frame is still a walk when every hop the server
-        // sent was one cell: travel, explore, a spectated player. The last hop
-        // is the way the feet went. A single position update spanning several
-        // cells (`travel_delay -1`, a blink, a teleport) has no hops: the
-        // travel trail tells the last step, else the displacement stands in.
-        const walk = sameLevel && hops.length > 0 && !jumped
-        // Glide all confirmed movement on this level, including rampage and
-        // arrivals spanning several cells. Use the route when it is known.
-        if (!predicted) {
-          if (sameLevel) this.cam.walkTo(p.x, p.y, walk ? hops : [{ dx, dy }], now)
-          else this.cam.snapTo(p.x, p.y)
-        }
-        if (!sameLevel) {
-          // level change: never nose-to-wall
-          if (!this.cam.steering) this.arrivalPending = !this.cam.faceAfterArrival(scene)
-        } else if (this.cam.steering) {
-          // the player is looking around: leave the view alone
-        } else if (wasOurs) {
-          // Align our forward step only if no newer turn or look superseded
-          // it. The reply confirms the feet, not a heading the player has
-          // since changed (even if the drag/stick has already been released).
-          if (ownStep === this.runner.lastStep && ownStep.turned && ownStep.steeringRevision === this.cam.steeringRevision) {
-            const h = hops.at(-1) ?? { dx, dy }
-            this.cam.faceStep(h.dx, h.dy)
-          }
-        } else if (walk || single) {
-          // path-driven movement: face the way the last step went
-          const h = walk ? hops[hops.length - 1] : { dx, dy }
-          this.cam.faceAfterMove(scene, h.dx, h.dy)
-        } else {
-          this.cam.faceAfterJump(scene, dx, dy)
-        }
         this.lastPos = { x: p.x, y: p.y }
-      } else if (this.arrivalPending) {
-        // the new level's cells have arrived: now the heading can be judged
-        if (this.cam.steering) this.arrivalPending = false
-        else this.arrivalPending = !this.cam.faceAfterArrival(scene)
-      } else if (this.session.watching && !this.cam.steering) {
-        // the spectated player stood their ground with a hostile beside them: a fight, face it
-        this.cam.faceAdjacentHostile(scene)
       }
-      // discovery: a monster newly in view turns the camera
-      const ids = new Set<number>()
-      let newest: Billboard | null = null
-      for (const b of scene.billboards) {
-        if (b.kind !== 'monster' || !b.ref) continue
-        const id = (b.ref as { id?: number }).id
-        if (id === undefined) continue
-        ids.add(id)
-        // a plant coming into view is no discovery: it is firewood, not a threat (scene `isThreat`)
-        if (!this.lastMonsters.has(id) && isThreat(b)) newest = newest ?? b
-      }
-      // a step or a wait of the player's own: the turn they chose is not taken from them
-      const keyedAt = Math.max(this.runner.lastStep?.t ?? -Infinity, this.runner.lastWaitAt)
-      const keyedJustNow = performance.now() - keyedAt < 400
-      this.lastMonsters = ids
-      // the server's own word wins: a walk it refused ("X is nearby!") or
-      // stopped ("You encounter X.", "X comes into view.") names the monster,
-      // and that one is faced, or failing a match the nearest blocker, hostile
-      // or neutral (warnings.ts). Read once the batch's cells are in, so the
-      // named monster is on the scene to be found.
-      const lines = st.messages.lines
-      const fresh = linesSince(lines, this.lastWarningLine, st.player.turn)
-      this.lastWarningLine = lines[lines.length - 1]
-      const names = namedInWarnings(fresh)
-      if ((newest || names.length) && !this.cam.steering && !keyedJustNow) {
-        // A newcomer or a warning turns the camera, but only once the server
-        // takes commands: a walk stopped under a --more-- ends its batch in
-        // `input_mode 5` (fixtures/explore-more.json), and the line, read
-        // once, would otherwise be spent before the prompt is dismissed. The
-        // turn is owed instead and paid when input_mode returns to command.
-        if (st.inputMode === MouseMode.COMMAND) this.faceEvent(scene, names, newest !== null)
-        else this.owedTurn = { names: [...(this.owedTurn?.names ?? []), ...names], newcomer: (this.owedTurn?.newcomer ?? false) || newest !== null }
-      }
+      this.lastLevel = level
     }
     this.syncRendererScene(scene, now)
     this.needsRender = true
@@ -1662,18 +1302,13 @@ export class GameScreen {
       }
       return
     }
-    const st = this.settings()
-    if (ev.type === 'look') {
-      this.padLooking = this.is3d && (ev.dx !== 0 || ev.dy !== 0)
+    if (ev.type === 'pan') {
       if (this.ctx.mode === 'levelmap') {
-        // the level map is north-up: the right stick pans it instead of the camera
+        // the right stick pans the level map
         this.panMap(ev.dx, ev.dy)
         return
       }
       this.mapPan = { x: 0, y: 0 }
-      if (!this.is3d) return
-      this.cam.look(ev.dx, ev.dy, st.lookSensitivity, st.invertLook)
-      this.needsRender = true
       return
     }
     if (ev.type === 'press') {
@@ -1698,7 +1333,7 @@ export class GameScreen {
       if ((ev.type === 'dir' || ev.type === 'dirRepeat') && ev.dir !== null) this.hud.scrollLog(ev.dir === 0 ? -1 : ev.dir === 4 ? 1 : 0)
       return
     }
-    const a = resolve(ev, this.ctx, (source) => leftRightTurns(source, this.settings()))
+    const a = resolve(ev, this.ctx)
     if (!a) return
     this.inputActed()
     const overlayWasUp = this.overlays.hasClientOverlay
@@ -1761,7 +1396,6 @@ export class GameScreen {
     if (device !== 'pad') {
       this.padHints.cancel()
       this.padStep = null
-      this.padLooking = false
     }
     if (device === this.lastInput) return
     this.lastInput = device
@@ -1941,11 +1575,11 @@ export class GameScreen {
       const d = directionKey(ev)
       if (d) {
         ev.preventDefault()
-        // the key's compass meaning is taken as relative to facing; the runner rotates it back
+        // direction keys keep their compass meaning for movement and targeting
         // (plain: step / cursor move, Shift: run / fire that way, Ctrl: attack).
         // Left and right turn or strafe as this key set's setting says
         this.inputActed()
-        this.runner.step(d.abs as RelDir, { run: d.mod === 'shift', attack: d.mod === 'ctrl', turns: leftRightTurns(d.source, this.settings()) })
+        this.runner.step(d.abs as RelDir, { run: d.mod === 'shift', attack: d.mod === 'ctrl' })
         this.needsRender = true
         return
       }
@@ -1955,62 +1589,6 @@ export class GameScreen {
     ev.preventDefault()
     this.inputActed()
     this.runner.send(msg)
-  }
-
-  /**
-   * Mouse and touch alike: the pointer stays visible and free (the browser
-   * never takes it). Press and release without moving acts on the cell under
-   * the pointer, right click describes it; dragging past a small slop orbits
-   * the camera instead, and no click follows the drag. Pointer capture keeps
-   * the drag alive off the canvas. A hovering mouse still selects the cell it
-   * rests on, and while targeting it moves the server's cursor. The gamepad's
-   * right stick turns the camera whenever it is pushed, drag or no drag.
-   */
-  /**
-   * Radians a css pixel of drag turns and tilts the view. A finger on the 3D
-   * view turns it a heading every TOUCH_HEADING_PX, so the finger takes the
-   * view all the way to the heading it means, 45° or 90°, and the release
-   * has little left to do; it tilts it by a fraction (`TOUCH_LOOK`) of the
-   * lens's own angle at the view's middle, whatever the field of view. The
-   * Look sensitivity (the stick's) leaves a finger be. A mouse, or the 2D
-   * view, turns about a half turn a drag across the view.
-   */
-  private lookPerPx(touch: boolean): { yaw: number; pitch: number } {
-    if (touch && this.renderer instanceof Render3d) {
-      const lens = this.renderer.projector()
-      return { yaw: Math.PI / 4 / TOUCH_HEADING_PX, pitch: ((2 * lens.tanHalfY) / lens.height) * TOUCH_LOOK }
-    }
-    const k = (Math.PI / Math.max(300, this.canvas.clientWidth)) * this.hooks.settings().lookSensitivity
-    return { yaw: k, pitch: k }
-  }
-
-  /**
-   * Css px a finger's swipe takes the 3D view one heading: what the lens
-   * shows 45° across at the view's middle, so the dungeon stays under the
-   * finger (swipe-turn.ts). The 2D view keeps swipe-turn's own pace.
-   */
-  private swipeHeadingPx(): number {
-    if (!(this.renderer instanceof Render3d)) return SWIPE_HEADING_PX
-    const lens = this.renderer.projector()
-    return (HEADING * lens.height) / (2 * lens.tanHalfY)
-  }
-
-  /**
-   * How a finger lifts off a look drag at `now`: its speeds turned into the
-   * view's (a mouse leaves the view where it points). A touch the system took
-   * away (`cancelled`: pointercancel, the page losing focus) was no swipe, so
-   * it settles on the nearest heading, as Android drops a fling on cancel.
-   */
-  private release(d: Drag, now: number, cancelled = false): DragRelease | undefined {
-    if (!d.touch) return undefined
-    if (cancelled) return { yawSpeed: 0, pitchSpeed: 0, commit: Infinity }
-    const k = d.k ?? this.lookPerPx(true)
-    const { vx, vy } = d.g.speed(now)
-    return {
-      yawSpeed: -vx * k.yaw * 1000,
-      pitchSpeed: (this.hooks.settings().invertLook ? -1 : 1) * vy * k.pitch * 1000,
-      commit: TURN_COMMIT * k.yaw,
-    }
   }
 
   private attachPointer(c: HTMLCanvasElement) {
@@ -2027,10 +1605,10 @@ export class GameScreen {
         return
       }
       const touch = ev.pointerType === 'touch'
-      const d: Drag = (this.drag = { id: ev.pointerId, g: new LookDrag(touch, { t: ev.timeStamp, x: ev.clientX, y: ev.clientY }), button: ev.button, touch })
+      const d: Drag = (this.drag = { id: ev.pointerId, g: new PointerDrag(touch, { t: ev.timeStamp, x: ev.clientX, y: ev.clientY }), button: ev.button, touch })
       // a finger held still on the view is R3, the stick click the touch bar has no cell for (bindings.ts TOUCH_CELLS):
       // what is ahead examined on the map, the overview on the level map; the lift then does nothing more
-      if (d.touch && (this.is3d || this.ctx.mode === 'levelmap')) {
+      if (d.touch && this.ctx.mode === 'levelmap') {
         d.hold = window.setTimeout(() => {
           if (this.drag !== d || d.g.moved) return
           d.held = true
@@ -2063,21 +1641,6 @@ export class GameScreen {
       if (!step || d.held) return
       clearTimeout(d.hold)
       if (d.touch && this.panMapBy(d, step.dx, step.dy)) return
-      if (!this.is3d) return
-      const { dx, dy } = d.g.look(step.dx, step.dy)
-      // a finger's swipe across turns the view with it, and onto whole headings as it lifts (swipe-turn.ts);
-      // the dungeon goes the finger's way, so a swipe to the right turns left
-      if (d.touch && d.g.axis === 'x' && this.hooks.settings().swipeTurn === 'step') {
-        d.stepping ??= this.swipeHeadingPx()
-        this.cam.lean(-swipeView(d.g.x - d.g.x0, d.stepping) * HEADING)
-        this.needsRender = true
-        return
-      }
-      const k = (d.k ??= this.lookPerPx(d.touch))
-      // the drag grabs the world, the way a Mac scrolls: the dungeon follows the
-      // pointer, so dragging right swings the view left and dragging down looks up
-      this.cam.lookBy(-dx * k.yaw, (this.hooks.settings().invertLook ? -dy : dy) * k.pitch, d.touch)
-      this.needsRender = true
     })
     const end = (ev: PointerEvent) => {
       if (this.pinch?.pts.has(ev.pointerId)) {
@@ -2093,23 +1656,9 @@ export class GameScreen {
       clearTimeout(d.hold)
       if (c.hasPointerCapture(ev.pointerId)) c.releasePointerCapture(ev.pointerId)
       if (d.held || d.pan) return
-      if (d.stepping !== undefined) {
-        // lifted, it goes on to its heading, a second swipe turning on from where that one is going;
-        // the speed it lifts at makes a short flick count, and takes it there as fast as the finger went
-        if (ev.type === 'pointercancel') this.cam.endLean()
-        else {
-          const { vx } = d.g.speed(ev.timeStamp)
-          const dx = d.g.x - d.g.x0
-          this.cam.endLean(-swipeRest(dx, d.stepping, vx), (-vx * 1000 * HEADING) / d.stepping, Math.abs(dx) < SWIPE_FIRST_PX ? FLICK_TURN_RATE : undefined)
-        }
-        this.needsRender = true
-      } else if (d.g.moved && this.is3d) {
-        this.cam.endDrag(this.release(d, ev.timeStamp, ev.type === 'pointercancel'))
-        this.needsRender = true
-      } else if (ev.type === 'pointerup' && !d.g.moved) {
+      if (ev.type === 'pointerup' && !d.g.moved) {
         // the message pane lets the press through to here (hud.ts dismissesMoreAt): on a pending --more-- it is space
         if (this.hud.dismissesMoreAt(ev.clientX, ev.clientY)) return this.runner.execute(CONTINUE)
-        if (d.touch && this.tapSteps()) return this.stepForward()
         const rect = this.canvas.getBoundingClientRect()
         if (d.touch && this.tapMapCursor(ev.clientX - rect.left, ev.clientY - rect.top)) return
         this.onPointer(ev.clientX - rect.left, ev.clientY - rect.top, d.button)
@@ -2132,10 +1681,6 @@ export class GameScreen {
       this.drag = null
       clearTimeout(d.hold)
       if (c.hasPointerCapture(d.id)) c.releasePointerCapture(d.id)
-      if (!d.g.moved || d.pan || !this.is3d) return
-      if (d.stepping !== undefined) this.cam.endLean()
-      else this.cam.endDrag(this.release(d, performance.now(), true))
-      this.needsRender = true
     }
     c.addEventListener('pointerup', end)
     c.addEventListener('pointercancel', end)
@@ -2344,8 +1889,7 @@ export class GameScreen {
    * A click at canvas coordinates (px, py): the official client's
    * `click_cell` on the cell the pointer selects, with the button numbered as
    * `ev.which` (1 left, 2 middle, 3 right), and the server decides what it
-   * means (see Runner.clickCell). The camera is never turned: the player's
-   * view is where the drag left it.
+   * means (see Runner.clickCell). The server remains authoritative.
    */
   private onPointer(px: number, py: number, button: number) {
     if (this.session.watching) return
@@ -2354,16 +1898,6 @@ export class GameScreen {
     const key = this.renderer.pick(px, py)
     if (key === null) return
     this.runner.clickCell((key & 1023) - 512, (key >> 10) - 512, button + 1)
-  }
-
-  /**
-   * A finger's tap on the view walks: on the map with nothing up, a tap is a
-   * step the way the view faces, the pad's forward (bindings.ts `resolve`),
-   * a bump attack on whatever stands there. Elsewhere (aiming, the level
-   * map, a popup) it stays crawl's click on the cell, as a mouse's is.
-   */
-  private tapSteps(): boolean {
-    return this.is3d && this.ctx.mode === 'command' && !this.session.watching && !this.overlays.hasClientOverlay
   }
 
   /**
@@ -2378,7 +1912,7 @@ export class GameScreen {
     this.inputActed()
     // taps quicker than the server's echo walk on from the last one's cell
     const t = this.mapTap
-    const from = t && t.from.x === c.x && t.from.y === c.y && performance.now() - t.t < ORBIT_WINDOW_MS ? t.to : c
+    const from = t && t.from.x === c.x && t.from.y === c.y && performance.now() - t.t < MAP_CURSOR_WINDOW_MS ? t.to : c
     const to = { x: (key & 1023) - 512, y: (key >> 10) - 512 }
     this.mapTap = { from: { x: c.x, y: c.y }, to, t: performance.now() }
     this.runner.mapCursorBy(to.x - from.x, to.y - from.y)
@@ -2386,7 +1920,7 @@ export class GameScreen {
   }
 
   /**
-   * A finger dragging the level map grabs it, as a drag grabs the 3D view:
+   * A finger dragging the level map grabs it:
    * the map follows the finger, so its cursor, which the map is centred on,
    * walks the other way a cell for each cell's width dragged.
    */
@@ -2446,12 +1980,6 @@ export class GameScreen {
     }
   }
 
-  private stepForward() {
-    this.inputActed()
-    this.runner.execute({ kind: 'step', dir: 0, turns: true })
-    this.needsRender = true
-  }
-
   /**
    * Right stick over the level map: accumulate deflection and step the map
    * cursor (north-up, absolute) each time a whole cell's worth builds up.
@@ -2471,32 +1999,6 @@ export class GameScreen {
     p.y -= sy
     const d = dirFromDelta(sx, sy)
     if (d !== null) this.runner.execute({ kind: 'cursor', dir: d })
-  }
-
-  /**
-   * Face what a scene update announced: the monster a warning named, or
-   * failing a name the nearest blocker; with no warning, the threat a
-   * newcomer points at (the closest hostile, which may be one already in
-   * view). rendering-3d.md III.2.
-   */
-  private faceEvent(scene: Scene, names: readonly string[], newcomer: boolean) {
-    if (names.length) this.cam.faceBlocker(scene, namedMonster(scene, names))
-    else if (newcomer) this.cam.faceHostile(scene)
-  }
-
-  /** The server takes commands again: pay the turn owed from under a --more--. */
-  private payOwedTurn() {
-    const owed = this.owedTurn
-    if (!owed || this.session.state.inputMode !== MouseMode.COMMAND) return
-    this.owedTurn = null
-    if (this.cam.steering) return
-    this.faceEvent(this.session.scene, owed.names, owed.newcomer)
-    this.needsRender = true
-  }
-
-  private faceBillboard(b: Billboard) {
-    this.cam.faceCell(this.session.scene, b.x, b.y)
-    this.needsRender = true
   }
 
   private uiOp(op: string, arg?: number, category?: CommandCategory, section?: string) {
@@ -2533,16 +2035,6 @@ export class GameScreen {
         break
       case 'bindings':
         this.overlays.showBindings(this.hooks.gamepad.kind)
-        break
-      case 'faceHostile': {
-        const scene = this.session.scene
-        const m = autofightTarget(scene)
-        if (m) this.faceBillboard(m)
-        else this.hud.status('No hostiles in view')
-        break
-      }
-      case 'toggleRenderer':
-        this.userToggleRenderer()
         break
       case 'levelmap':
         this.runner.execute(LEVEL_MAP)
@@ -2696,8 +2188,7 @@ export class GameScreen {
   }
 
   private systemAction(op: string) {
-    if (op === 'toggleRenderer') this.userToggleRenderer()
-    else if (op === 'chat' && this.chatOn) this.chat.padFocus()
+    if (op === 'chat' && this.chatOn) this.chat.padFocus()
     else if (op === 'disconnect') this.hooks.onSystem('disconnect')
   }
 }
@@ -2708,10 +2199,6 @@ const ACTION_TURN_MS = 1500
 /** The keys for the pad's four menus: F2 Select's level map, F3 X's actions, F4 Y's gear, F5 Start's Orbrun menu. */
 const MENU_KEYS: Record<string, CommandMenu | 'levelmap' | 'equipment' | 'system'> = { F2: 'levelmap', F3: 'battle', F4: 'equipment', F5: 'system' }
 
-/** Degrees to radians: the Camera angle setting is degrees, every camera is radians. */
-function radians(deg: number): number {
-  return (Math.PI / 180) * deg
-}
 
 export { keyMessage }
 

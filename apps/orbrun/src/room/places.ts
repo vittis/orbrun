@@ -1,5 +1,4 @@
-import type { Camera, Scene } from '@orbrun/scene'
-import { makeCamera, REST_PITCH, yawToDir } from '@orbrun/scene'
+import type { Scene } from '@orbrun/scene'
 import list from './places.json'
 import { readScene, type PlaceFile } from './place-data'
 import { RoomTiles } from './tiles'
@@ -23,12 +22,7 @@ export interface PlaceEntry {
   tint: Tint
   /** the front screen stands in it, in its turn */
   cycle?: boolean
-  /**
-   * An open level (the Shoals: sky and no walls round it) known only in part:
-   * no spot on it sees no void, so the eye stands where it sees least and
-   * opens facing away from it
-   */
-  openLevel?: boolean
+
 }
 
 export const PLACES: readonly PlaceEntry[] = list as PlaceEntry[]
@@ -63,12 +57,12 @@ export function nextHomePlace(): PlaceEntry {
   return next
 }
 
-/** A place loaded: the renderer's tiles, the level, and the eye it opens with. */
+/** A place loaded: the renderer's tiles, the level, and view centre. */
 export interface LoadedPlace {
   id: string
   tiles: RoomTiles
   scene: Scene
-  camera: Camera
+  center: { x: number; y: number }
 }
 
 const loads = new Map<string, Promise<LoadedPlace>>()
@@ -85,8 +79,8 @@ export function loadPlace(id: string): Promise<LoadedPlace> {
         }),
         loadImage(`/room/places/${id}.png`),
       ])
-      if (file.format !== 1) throw new Error(`place ${id}: format ${String(file.format)} is not one this build reads`)
-      return { id, tiles: RoomTiles.fromPlace(file, image), scene: readScene(file.scene), camera: placeCamera(file) }
+      if (file.format !== 2) throw new Error(`place ${id}: format ${String(file.format)} is not one this build reads`)
+      return { id, tiles: RoomTiles.fromPlace(file, image), scene: readScene(file.scene), center: placeCenter(file) }
     })()
     loads.set(id, p)
     p.catch(() => loads.delete(id))
@@ -94,13 +88,9 @@ export function loadPlace(id: string): Promise<LoadedPlace> {
   return p
 }
 
-/** where the place's eye stands and looks, at the resting pitch */
-export function placeCamera(file: Pick<PlaceFile, 'eye'>): Camera {
-  const c = makeCamera(file.eye.x, file.eye.y)
-  c.yaw = file.eye.yaw
-  c.facing = yawToDir(c.yaw)
-  c.pitch = REST_PITCH
-  return c
+/** The saved view centre, independent of gameplay input. */
+export function placeCenter(file: Pick<PlaceFile, 'center'>): { x: number; y: number } {
+  return { ...file.center }
 }
 
 function loadImage(url: string): Promise<TexImageSource> {

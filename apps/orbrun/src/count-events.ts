@@ -45,17 +45,8 @@ export function countedHost(hostname: string): boolean {
  * stay local and are not counted.
  */
 export const COUNTED_SETTINGS = {
-  eyeHeight: [0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9],
-  restPitch: [-30, -25, -20, -15, -10, -5, 0, 5, 10],
-  fov: [0, ...Array.from({ length: 15 }, (_, i) => 50 + 5 * i)],
-  viewmodel: [true, false],
-  leftRightKeys: ['turn', 'strafe'],
-  leftRightPad: ['turn', 'strafe'],
-  lookSensitivity: [1, 1.3, 1.6, 0.7],
-  invertLook: [false, true],
   hints: ['adaptive', 'contextual', 'off'],
   uiScale: [1, 1.15, 1.3, 1.5, 0.85],
-  nearby: ['list', 'pips'],
   minimapTiles: [0, ...Array.from({ length: 24 }, (_, i) => 15 + 2 * i)],
   minimapCell: [0, 8, 10, 12, 14, 16, 20, 24, 28, 32],
   messageLines: [0, ...Array.from({ length: 19 }, (_, i) => 2 + i)],
@@ -124,11 +115,11 @@ export function sideParam(px: number): string | null {
  * written out, since `touch` came after the settings of its day: a number
  * setting added since goes after it (a test holds every one to a column).
  */
-export const BLOB_COLUMNS: readonly string[] = ['event', 'server', 'version', ...WORD_SETTINGS]
+export const BLOB_COLUMNS: readonly string[] = ['event', 'server', 'version', 'retiredLeftRightKeys', 'retiredLeftRightPad', 'hints', 'retiredNearby']
 export const DOUBLE_COLUMNS: readonly string[] = [
   'pad', 'width', 'height',
   // minimapTurns: retired with its setting (the minimap is north up), kept so the columns after it stay where they were
-  'eyeHeight', 'restPitch', 'fov', 'viewmodel', 'lookSensitivity', 'invertLook', 'uiScale', 'minimapTiles', 'minimapCell', 'minimapTurns', 'messageLines',
+  'retiredEyeHeight', 'retiredRestPitch', 'retiredFov', 'retiredViewmodel', 'retiredLookSensitivity', 'retiredInvertLook', 'uiScale', 'minimapTiles', 'minimapCell', 'minimapTurns', 'messageLines',
   'touch', 'exploreDelay',
 ]
 

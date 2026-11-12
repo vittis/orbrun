@@ -27,14 +27,12 @@ export const HOLD_MS = 400
  * (Shift+dir) keeps going until the server decides to stop, so a stick held a
  * moment too long would carry the player across the level. Every repeat tick
  * offers one `held` step at the gamepad's repeat cadence. The runner sends
- * it immediately, without waiting for an echo or a camera animation; only
+ * it immediately, without waiting for an echo or an animation; only
  * confirmed position updates move the displayed eye.
  */
 
 export type Action =
-  | { kind: 'step'; dir: RelDir; run?: boolean; attack?: boolean; turns?: boolean; held?: boolean } // turns: left / right rotate the camera instead of strafing, as this input's setting says; held: a repeat tick of a held direction
-  | { kind: 'turn'; dir: 'left' | 'right' }
-  | { kind: 'look'; dx: number; dy: number }
+  | { kind: 'step'; dir: RelDir; run?: boolean; attack?: boolean; held?: boolean } // held: a repeat tick of a held direction
   /** A: act underfoot, then ahead. Overlapping interactions open a chooser. */
   | { kind: 'contextual'; alt?: boolean }
   /** RT: one normal DCSS autofight step, including the server's safety checks. */
@@ -59,7 +57,7 @@ export type Action =
   | { kind: 'prompt'; hotkey: string }
   /** the focus layer's cursor over the top overlay (popup, prompt, CRT screen, dialog) */
   | { kind: 'focus'; op: FocusOp }
-  | { kind: 'ui'; op: 'commands' | 'actionTab' | 'equipment' | 'palette' | 'system' | 'keyboard' | 'faceHostile' | 'toggleRenderer' | 'levelmap' | 'bindings' | 'scrollLog' | 'popupAction'; arg?: number; category?: CommandCategory; section?: string }
+  | { kind: 'ui'; op: 'commands' | 'actionTab' | 'equipment' | 'palette' | 'system' | 'keyboard' | 'levelmap' | 'bindings' | 'scrollLog' | 'popupAction'; arg?: number; category?: CommandCategory; section?: string }
   | { kind: 'osk'; op: 'move' | 'type' | 'backspace' | 'space' | 'submit' | 'cancel' | 'shift'; dir?: Dir8 }
 
 /** Which section of the command palette applies: the cmd-keys.h key table for the mode. */
@@ -493,7 +491,6 @@ export function typedInLog(ti: { type?: string; tag?: string; prompt?: string } 
 const SPECTATING: Partial<Record<Button, Action>> = {
   B: SYSTEM,
   START: SYSTEM,
-  R3: { kind: 'ui', op: 'faceHostile' },
 }
 
 /**
@@ -1330,7 +1327,6 @@ const UI_ICONS: Partial<Record<Extract<Action, { kind: 'ui' }>['op'], TouchIcon>
   system: { icon: 'CMD_GAME_MENU' },
   levelmap: { icon: 'CMD_DISPLAY_MAP' },
   scrollLog: LIST,
-  faceHostile: ours('target'),
 }
 
 /** a popup's verb, by its key: a describe screen's panes, the overview's travel, a feature's stairs */
@@ -1569,7 +1565,7 @@ function staticLabel(a: Action): string {
     case 'keys':
       return a.label
     case 'ui':
-      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Orbrun menu', keyboard: 'Keyboard', faceHostile: 'Face threat', toggleRenderer: 'View', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
+      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Orbrun menu', keyboard: 'Keyboard', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
     default:
       return actionLabel(a, EMPTY_CTX)
   }
@@ -1644,15 +1640,11 @@ export function actionLabel(a: Action, ctx: Context, button?: Button): string {
       // the bumpers on X's actions name the tab they turn to
       if (a.op === 'actionTab') return ((a.arg ?? 1) < 0 ? ctx.menu?.actions?.prev : ctx.menu?.actions?.next) ?? 'Actions tab'
       // X and Y name the first tab of what they open (action-tabs.ts, pack-tabs.ts)
-      return { commands: 'Spells', equipment: 'Gear', palette: 'Commands', system: 'Character', keyboard: 'Keyboard', faceHostile: 'Face threat', toggleRenderer: 'View', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log' }[a.op]
+      return { commands: 'Spells', equipment: 'Gear', palette: 'Commands', system: 'Character', keyboard: 'Keyboard', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log' }[a.op]
     case 'osk':
       return { move: 'Move', type: 'Type', backspace: 'Backspace', space: 'Space', submit: 'Done', cancel: 'Cancel', shift: 'Shift' }[a.op]
     case 'step':
       return 'Step'
-    case 'turn':
-      return 'Turn'
-    case 'look':
-      return 'Look'
     case 'cursor':
       return 'Cursor'
   }
@@ -1744,13 +1736,8 @@ function repeatsHeld(a: Action): boolean {
   return a.kind === 'fight' || (a.kind === 'keys' && !!a.repeats)
 }
 
-/**
- * Resolve a pad event into an action, or null. `turns` says whether left and
- * right turn the camera for the direction source the event came from; the
- * two pad sources are asked apart even though one setting answers for both
- * (servers.ts `leftRightTurns`). Left alone, both turn, as they always have.
- */
-export function resolve(ev: PadEvent, ctx: Context, turns: (source: 'dpad' | 'lstick') => boolean = () => true): Action | null {
+/** Resolve a controller event into a compass action or the current screen's control. */
+export function resolve(ev: PadEvent, ctx: Context): Action | null {
   const t = bindingTable(ctx)
   if (ev.type === 'press' || ev.type === 'repeat') {
     const a = t[ev.button]
@@ -1776,12 +1763,10 @@ export function resolve(ev: PadEvent, ctx: Context, turns: (source: 'dpad' | 'ls
     }
     switch (ctx.mode) {
       case 'command': {
-        // the left stick is a d-pad, and each says for itself whether left and
-        // right turn the camera or strafe.
+        // The left stick and d-pad share compass directions.
         // held: one more single step per tick, paced by the runner; never a run
-        const t = turns(ev.source)
-        if (ev.type === 'dirRepeat') return { kind: 'step', dir: ev.dir as RelDir, turns: t, held: true }
-        return { kind: 'step', dir: ev.dir as RelDir, turns: t }
+        if (ev.type === 'dirRepeat') return { kind: 'step', dir: ev.dir as RelDir, held: true }
+        return { kind: 'step', dir: ev.dir as RelDir }
       }
       case 'menu':
         if (ev.dir === 0) return { kind: 'menu', op: 'prev' }
@@ -1804,6 +1789,5 @@ export function resolve(ev: PadEvent, ctx: Context, turns: (source: 'dpad' | 'ls
         return null
     }
   }
-  if (ev.type === 'look') return { kind: 'look', dx: ev.dx, dy: ev.dy }
   return null
 }

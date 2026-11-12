@@ -301,27 +301,25 @@ describe('direct command controls', () => {
   })
   it('a held direction is a typewriter of single steps, never a run', () => {
     const c = ctx({})
-    expect(resolve({ type: 'dir', source: 'lstick', dir: 0 }, c)).toEqual({ kind: 'step', dir: 0, turns: true })
+    expect(resolve({ type: 'dir', source: 'lstick', dir: 0 }, c)).toEqual({ kind: 'step', dir: 0 })
     // every repeat tick offers one held step, never a Shift run
     const held = resolve({ type: 'dirRepeat', source: 'lstick', dir: 0, n: 1 }, c)
-    expect(held).toEqual({ kind: 'step', dir: 0, turns: true, held: true })
+    expect(held).toEqual({ kind: 'step', dir: 0, held: true })
     expect((held as { run?: boolean }).run).toBeUndefined()
-    expect(resolve({ type: 'dirRepeat', source: 'dpad', dir: 4, n: 2 }, c)).toEqual({ kind: 'step', dir: 4, turns: true, held: true })
+    expect(resolve({ type: 'dirRepeat', source: 'dpad', dir: 4, n: 2 }, c)).toEqual({ kind: 'step', dir: 4, held: true })
     // the stick walks under either trigger too; only a keyboard Shift+dir runs
-    expect(resolve({ type: 'dirRepeat', source: 'lstick', dir: 0, n: 1 }, ctx({ layer: 'macro' }))).toEqual({ kind: 'step', dir: 0, turns: true, held: true })
+    expect(resolve({ type: 'dirRepeat', source: 'lstick', dir: 0, n: 1 }, ctx({ layer: 'macro' }))).toEqual({ kind: 'step', dir: 0, held: true })
     // the left stick is a d-pad: its left / right turn the camera rather than strafe
-    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, ctx({ layer: 'info' }))).toEqual({ kind: 'step', dir: 2, turns: true })
+    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, ctx({ layer: 'info' }))).toEqual({ kind: 'step', dir: 2 })
   })
-  it('the d-pad and the left stick each say for themselves whether left and right turn', () => {
+  it('the d-pad and the left stick send compass steps', () => {
     const c = ctx({})
-    // the settings the game reads (servers.ts leftRightTurns): here the stick strafes, the d-pad turns
-    const turns = (source: 'dpad' | 'lstick') => source === 'dpad'
-    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, c, turns)).toEqual({ kind: 'step', dir: 2, turns: false })
-    expect(resolve({ type: 'dir', source: 'dpad', dir: 2 }, c, turns)).toEqual({ kind: 'step', dir: 2, turns: true })
+    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, c)).toEqual({ kind: 'step', dir: 2 })
+    expect(resolve({ type: 'dir', source: 'dpad', dir: 2 }, c)).toEqual({ kind: 'step', dir: 2 })
     // a held direction carries the same answer
-    expect(resolve({ type: 'dirRepeat', source: 'lstick', dir: 6, n: 1 }, c, turns)).toEqual({ kind: 'step', dir: 6, turns: false, held: true })
+    expect(resolve({ type: 'dirRepeat', source: 'lstick', dir: 6, n: 1 }, c)).toEqual({ kind: 'step', dir: 6, held: true })
     // asked nothing, both turn, as they always have
-    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, c)).toEqual({ kind: 'step', dir: 2, turns: true })
+    expect(resolve({ type: 'dir', source: 'lstick', dir: 2 }, c)).toEqual({ kind: 'step', dir: 2 })
   })
   it('triggers are actions, never modifiers', () => {
     for (const layer of ['micro', 'macro', 'info'] as const) {
@@ -337,8 +335,8 @@ describe('direct command controls', () => {
   })
   it('the d-pad always moves, even with a trigger held', () => {
     for (const layer of ['micro', 'macro', 'info'] as const) {
-      expect(resolve({ type: 'dir', source: 'dpad', dir: 1 }, ctx({ layer }))).toEqual({ kind: 'step', dir: 1, turns: true })
-      expect(resolve({ type: 'dirRepeat', source: 'dpad', dir: 4, n: 1 }, ctx({ layer }))).toEqual({ kind: 'step', dir: 4, turns: true, held: true })
+      expect(resolve({ type: 'dir', source: 'dpad', dir: 1 }, ctx({ layer }))).toEqual({ kind: 'step', dir: 1 })
+      expect(resolve({ type: 'dirRepeat', source: 'dpad', dir: 4, n: 1 }, ctx({ layer }))).toEqual({ kind: 'step', dir: 4, held: true })
     }
   })
   it('offers wait/rest on LB only while hurt with nothing in view', () => {

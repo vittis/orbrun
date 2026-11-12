@@ -1,5 +1,5 @@
-import type { Camera, Scene } from '@orbrun/scene'
-import { parseDes, vaultCamera, vaultScene, type TileNames, type Vault } from '@orbrun/vault'
+import type { Scene } from '@orbrun/scene'
+import { parseDes, vaultCenter, vaultScene, type TileNames, type Vault } from '@orbrun/vault'
 import des from './antechamber.des?raw'
 
 /**
@@ -13,7 +13,7 @@ function antechamber(): Vault {
   return (parsed ??= parseDes(des))
 }
 
-export function antechamberScene(names: TileNames): { scene: Scene; camera: Camera } {
+export function antechamberScene(names: TileNames): { scene: Scene; center: { x: number; y: number } } {
   const v = antechamber()
-  return { scene: vaultScene(v, names), camera: vaultCamera(v) }
+  return { scene: vaultScene(v, names), center: vaultCenter(v) }
 }

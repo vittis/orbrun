@@ -34,7 +34,7 @@ export const HOME: Page = {
   name: 'Orbrun',
   title: 'Orbrun - Dungeon Crawl Stone Soup',
   description:
-    'Play Dungeon Crawl Stone Soup (DCSS) in first-person 3D, with a gamepad or by touch. Built for the Steam Deck, phones and tablets, on your WebTiles account.',
+    'Play Dungeon Crawl Stone Soup in a 2.5D dungeon with keyboard, gamepad or touch controls. Online WebTiles play and anonymous spectating.',
 }
 
 export const PAGES: Page[] = [
@@ -43,16 +43,17 @@ export const PAGES: Page[] = [
     path: '/about',
     name: 'About',
     doc: 'ABOUT.md',
-    title: 'About Orbrun - DCSS in first person',
+    contents: true,
+    title: 'About Orbrun - DCSS in 2.5D',
     description:
-      'Orbrun plays Dungeon Crawl Stone Soup in first person with a gamepad or by touch, on the public servers with your own account. See it, and what it does.',
+      'Play Dungeon Crawl Stone Soup in 2.5D on public WebTiles servers. Learn the keyboard, gamepad and touch controls, map views and privacy details.',
   },
   {
     path: '/about/new',
     name: 'What’s new',
     doc: 'CHANGELOG.md',
     title: 'What’s new in Orbrun',
-    description: 'Orbrun’s release notes, newest first: what changed in the first-person, gamepad-first client for Dungeon Crawl Stone Soup.',
+    description: 'Orbrun’s release notes, newest first: what changed in the 2.5D client for Dungeon Crawl Stone Soup.',
   },
   {
     path: '/about/steam',
@@ -61,7 +62,7 @@ export const PAGES: Page[] = [
     contents: true,
     title: 'Add Orbrun to Steam on the Steam Deck',
     description:
-      'Five steps that put Orbrun, Dungeon Crawl Stone Soup in first person, in your Steam Deck’s library, with artwork and controller support.',
+      'Add Orbrun, the 2.5D Dungeon Crawl Stone Soup client, to your Steam Deck library with artwork and controller support.',
   },
   {
     path: '/about/install',
@@ -70,7 +71,7 @@ export const PAGES: Page[] = [
     contents: true,
     title: 'Add Orbrun to your phone or tablet’s home screen',
     description:
-      'Put Orbrun, Dungeon Crawl Stone Soup in first person, on your phone or tablet’s home screen, or install it on a computer. It opens full screen, even offline.',
+      'Install Orbrun on your phone, tablet or computer. Play Dungeon Crawl Stone Soup in 2.5D on public servers; online gameplay needs a connection.',
   },
 ]
 

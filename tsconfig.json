@@ -1,15 +1,32 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/scene" },
-    { "path": "packages/webtiles" },
-    { "path": "packages/gamedata" },
-    { "path": "packages/scene-webtiles" },
-    { "path": "packages/render-2d" },
-    { "path": "packages/render-3d" },
-    { "path": "packages/render-2.5d" },
-    { "path": "packages/vault" },
-    { "path": "packages/offline" },
-    { "path": "apps/orbrun" }
+    {
+      "path": "packages/scene"
+    },
+    {
+      "path": "packages/webtiles"
+    },
+    {
+      "path": "packages/gamedata"
+    },
+    {
+      "path": "packages/scene-webtiles"
+    },
+    {
+      "path": "packages/render-2d"
+    },
+    {
+      "path": "packages/render-2.5d"
+    },
+    {
+      "path": "packages/vault"
+    },
+    {
+      "path": "packages/offline"
+    },
+    {
+      "path": "apps/orbrun"
+    }
   ]
 }

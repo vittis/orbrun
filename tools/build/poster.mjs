@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 /**
  * The front room's poster: the room drawn once, headless, at rest, to a
- * JPEG the menus stand on before WebGL is up (and if it never is), and the
+ * JPEG the menus stand on before the live Dungeon scenery is ready, and the
  * site's social card. Written to apps/orbrun/public/room/poster.jpg and
  * committed, like the atlas; run it again when the room changes.
  *
  *   node tools/build/poster.mjs [url]
  *
  * With no url it starts the dev server itself on a port of its own and stops
- * it after. Needs Chrome (CHROME=<path> to say which); WebGL comes from
- * SwiftShader, so no GPU is needed. Nothing else: raw DevTools protocol over
+ * it after. Needs Chrome (CHROME=<path> to say which); Canvas 2D needs no GPU. Raw DevTools protocol over
  * the `ws` package.
  */
 import { spawn } from 'node:child_process'
@@ -57,7 +56,7 @@ const page = `${url.replace(/\/$/, '')}/testbed/room.html?poster`
 const profile = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'orbrun-poster-'))
 const chrome = spawn(
   CHROME,
-  ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--no-first-run', 'about:blank'],
+  ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', 'about:blank'],
   { stdio: ['ignore', 'ignore', 'pipe'] },
 )
 let stopped = false
@@ -124,13 +123,15 @@ try {
     const r = await s('Runtime.evaluate', { expression: 'window.__poster === true', returnByValue: true })
     ready = r.result.value === true
   }
-  if (!ready) throw new Error(`${page} never drew its first frame (is WebGL up?)`)
+  if (!ready) throw new Error(`${page} never drew its first frame (did the Dungeon fixture load?)`)
   // one more frame settles the fade; then the drawing buffer is what the screenshot reads
   await sleep(300)
   const shot = await s('Page.captureScreenshot', { format: 'jpeg', quality: 70, captureBeyondViewport: false })
   fs.mkdirSync(path.dirname(OUT), { recursive: true })
   fs.writeFileSync(OUT, Buffer.from(shot.data, 'base64'))
   console.log(`${path.relative(root, OUT)}: ${WIDTH}x${HEIGHT}, ${fs.statSync(OUT).size} bytes`)
+  const card = await s('Page.captureScreenshot', { format: 'jpeg', quality: 80, captureBeyondViewport: false })
+  fs.writeFileSync(path.join(root, 'apps/orbrun/public/room/card.jpg'), Buffer.from(card.data, 'base64'))
   ws.close()
 } finally {
   await stop()

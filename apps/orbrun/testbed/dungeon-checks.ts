@@ -35,10 +35,15 @@ function cell(x: number, y: number, wall = false): SceneCell {
     flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false } }
 }
 
+// Individual lanes keep large Canvas matrices runnable on memory-limited browsers.
+// The default runs every lane; selecting each named lane executes the same assertions.
+const lane = new URLSearchParams(location.search).get('lane') ?? 'all'
+const run = (name: string) => lane === 'all' || lane === name
 const failures: unknown[] = []
 let checks = 0
-for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) {
+if (run('tiles')) for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) {
   for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) for (const wall of [false, true]) {
+    await new Promise(resolve => setTimeout(resolve, 0))
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, zoom, animate: false, filterScaling })
     r.mount(canvas)
@@ -63,6 +68,7 @@ for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) fo
     if (badPixels) failures.push({ kind: 'seam', viewWidth, viewHeight, dpr, filterScaling, degrees, zoom, wall, badPixels, firstPixel: [...pixels.slice(0, 4)] })
     if (viewWidth === 512 && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1 && !wall) document.querySelector('#captures')!.append(canvas)
     r.destroy()
+    if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
   }
 
   const canvas = document.createElement('canvas')
@@ -102,9 +108,11 @@ for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) fo
     Math.max(...silhouettes.map(s => s.height)) - Math.min(...silhouettes.map(s => s.height)) > 1) failures.push({ kind: 'sprite scale/picking', viewWidth, viewHeight, dpr, filterScaling, silhouettes })
   if (viewWidth === 512 && dpr === 1 && !filterScaling) document.querySelector('#captures')!.append(canvas)
   r.destroy()
+  if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
+  await new Promise(resolve => setTimeout(resolve, 0))
 }
 // Visibility and marker checks use real Canvas pixels, including filtered fractional scales.
-for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
+if (run('markers')) for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
   const canvas = document.createElement('canvas')
   const r = new Render25d({ tilt: degrees, zoom, animate: false, filterScaling })
   r.mount(canvas)
@@ -168,19 +176,16 @@ for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (
   if (!neutral || max - min < 2 || max > 24 || r.pick(5, 192) !== null || r.animating) failures.push({ kind: 'neutral textured unknown fog / hidden entity / still mode', dpr, filterScaling, degrees, zoom, min, max, neutral })
   if (dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
   r.destroy()
+  if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
+  await new Promise(resolve => setTimeout(resolve, 0))
 }
-const surfaces = surfaceLightChecks()
-checks += surfaces.checks; failures.push(...surfaces.failures)
-const movement = movementChecks(source)
-checks += movement.checks; failures.push(...movement.failures)
-const depth = wallDepthChecks(source)
-checks += depth.checks; failures.push(...depth.failures)
-const visibility = visibilityChecks(source)
-checks += visibility.checks; failures.push(...visibility.failures)
-const arrival = arrivalChecks()
-checks += arrival.checks; failures.push(...arrival.failures)
-const coherence = wallCoherenceChecks()
-checks += coherence.checks; failures.push(...coherence.failures)
-const corridors = corridorChecks(source)
-checks += corridors.checks; failures.push(...corridors.failures)
-document.querySelector('#result')!.textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)
+for (const [name, check] of [
+  ['surfaces', () => surfaceLightChecks()], ['movement', () => movementChecks(source)],
+  ['depth', () => wallDepthChecks(source)], ['visibility', () => visibilityChecks(source)],
+  ['arrival', () => arrivalChecks()], ['coherence', () => wallCoherenceChecks()],
+  ['corridors', () => corridorChecks(source)],
+] as const) if (run(name)) {
+  await new Promise(resolve => setTimeout(resolve, 0))
+  const result = await check(); checks += result.checks; failures.push(...result.failures)
+}
+document.querySelector('#result')!.textContent = JSON.stringify({ lane, checks, passed: checks - failures.length, failures }, null, 2)

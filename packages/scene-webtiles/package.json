@@ -1,7 +1,7 @@
 {
   "name": "@orbrun/scene-webtiles",
   "version": "0.1.0",
-  "description": "Builds an @orbrun/scene Scene from a WebTiles GameState and the server's gamedata: tile ranges, feature classification, monster list rules, the viewmodel",
+  "description": "Builds an @orbrun/scene Scene from a WebTiles GameState and the server's gamedata: tile ranges, feature classification, monster list rules",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",

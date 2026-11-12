@@ -1,86 +1,42 @@
 # Contributing
 
-Bug reports and questions go to [GitHub
-issues](https://github.com/Caeous/orbrun/issues). Pull requests are welcome;
-the contract every change is held to is: match WebTiles, work with a
-controller, and never break the keyboard.
+This fork preserves DCSS WebTiles behavior with a 2.5D dungeon and keyboard, gamepad and touch controls. Report issues at [vittis/orbrun](https://github.com/vittis/orbrun/issues). Upstream Orbrun is [Caeous/orbrun](https://github.com/Caeous/orbrun).
 
-## Layout
+## Layout and scope
 
-npm workspaces. `apps/orbrun` is the Vite app; `packages/*` are the
-libraries, each with a README (see "DCSS as a library" in the
-[README](README.md)); `tools/record` captures fixtures from a live server;
-`tools/build` packs the front room's tiles and renders its poster and the
-brand artwork. All of those outputs are committed, so an ordinary build never
-runs the tools.
+The npm workspace contains the Vite app in `apps/orbrun`, focused libraries in `packages`, optional offline sources in `engine`, fixture recorders in `tools/record` and build/asset utilities in `tools/build`. See [architecture](project-notes/ARCHITECTURE.md) and package READMEs.
+
+Dungeon (2.5D) is the only gameplay presentation. Flat rendering supports the minimap, temporary level maps and development comparisons. Keep authoritative state server-derived, commands responsive and combat/visibility effects based on confirmed information. Preserve Still/reduced-motion behavior. Do not introduce another renderer framework or rewrite the protocol/UI for routine changes.
 
 ## Commands
 
+Use Node 24.11.1/npm 11.6.2 for the verified web workflow.
+
+```sh
+npm ci --include=dev
+npm run dev -w apps/orbrun -- --host 127.0.0.1
+npm run typecheck -- --force
+npm test
+npm run e2e
+npm run build
 ```
-npm test            # vitest run
-npm run typecheck   # tsc -b
-npm run build       # build apps/orbrun
-npm run dev         # dev server (Vite, with the gamedata proxy)
-```
 
-Run `npm test` and `npm run typecheck` before calling a change done.
+Run focused regressions during work and the integrated checks before release. Absent optional engine artifacts cause explicit skips; `REQUIRE_ENGINE=1` makes stable-artifact absence fatal. Browser fixture checks complement mocked unit tests. [RUNBOOK.md](project-notes/RUNBOOK.md) describes acceptance and coverage limits.
 
-To compare test worker settings, run
-`node tools/perf/vitest-workers.mjs --rounds 2`. It runs the complete suite
-sequentially with processes and threads, preserves file isolation and timeouts,
-and checks that every variant collects the same tests and skips. JSON reports
-and logs go to a temporary directory printed at the end; use `--output` to
-choose one, or `--cases forks-2,threads-2` for a smaller comparison. Round order
-alternates to reduce warm-cache bias. Compare repeated wall times on the target
-machine; changing the worker count locally does not reproduce a CI CPU quota.
+Test workers use isolated threads with at most four workers. To compare settings, run `node tools/perf/vitest-workers.mjs --rounds 2`; compare repeated timings and equal collected cases/skips on the target machine. Recording helpers share parsed immutable fixture input and clone mutable messages/state. Do not remove isolation or weaken assertions to improve timings.
 
-The default uses isolated threads and up to four workers, including both cores
-on a two-core runner. Keep isolation enabled. Scene recording helpers parse tile
-tables once per file and clone messages/final state for consumers; tests of the
-replay itself still process every message. Deployment tests copy a committed Git
-template, then use independent checkouts and real bare remotes for each case.
+## Fixtures and live testing
 
-Before deploying, commit your changes and integrate the latest `origin/main`.
-`npm run deploy` and direct `npx wrangler deploy` fetch main and reject stale,
-diverged or dirty source, rebuild assets, then recheck freshness before upload.
-`npm run deploy:guard` runs only the Git checks. Do not deploy from an older
-checkout that predates the guard. See [deployment notes](project-notes/DEPLOYMENT.md).
+Prefer recorded fixtures where appropriate. `npm run record -- wss://crawl.dcss.io/socket 60 out.ndjson` captures anonymous spectating; `node tools/record/menus.mjs wss://crawl.dcss.io/socket 30 outdir` records menus. The recorders use the server's `no-compression` WebSocket subprotocol.
 
-## Fixtures
+Never commit passwords, tokens, `.env` or private recordings. Authorized login scripts may read unprefixed variables from ignored `.env`; `VITE_` variables are public bundle configuration and must never hold secrets. Anonymous spectating and synthetic device events do not replace physical-controller or authenticated acceptance. Use local mocks for malformed/slow/flood cases.
 
-Prefer a recorded fixture over a hand-written one.
+## Bundled scenery and artwork
 
-- `npm run record -- wss://crawl.dcss.io/socket 60 out.ndjson` spectates the
-  least idle player for 60 seconds and writes every server message to NDJSON.
-  Spectating needs no login. The reducer tests replay such files.
-- `node tools/record/menus.mjs wss://crawl.dcss.io/socket 30 outdir` collects
-  every menu the spectated players open, each from its `menu` message to its
-  `close_menu`, as one JSON fixture per menu type.
+`tools/build/pack-room.mjs` packs the pinned DCSS tiles used by scenery. `tools/build/poster.mjs` captures the existing 2.5D room fixture for the committed poster. `tools/build/brand.mjs` generates orb/wordmark artwork using the retained font and tile attribution; it needs ImageMagick and librsvg. Ordinary builds ship committed assets and do not regenerate them.
 
-crawl.dcss.io is the recording target: it is the public server whose
-WebSocket accepts the `no-compression` subprotocol from Node, which both
-recorders need.
+Keep screenshot copy consistent with current 2.5D behavior. Retain exact tile/version provenance, fonts, license notices and source offers; see [ATTRIBUTION.md](ATTRIBUTION.md).
 
-## Live testing
+## Release
 
-Anything that logs in to a real server reads its credentials from `.env`,
-which is gitignored. Copy `.env.example` to `.env`, fill it in, and run such
-scripts with `node --env-file=.env ...`. Vite only exposes `VITE_`-prefixed
-variables to the browser bundle, so keep these unprefixed. Never commit `.env`
-and never paste a password into a fixture.
-
-## The front room and the brand
-
-The Antechamber (`apps/orbrun/src/room/antechamber.des`) is drawn from a
-small atlas of DCSS's own tiles, packed from one pinned gamedata version;
-`apps/orbrun/public/room/README.md` says how to regenerate it. The poster
-the menus stand on before WebGL is up comes from `npm run room:poster`. The
-favicon, wordmark and Steam artwork come from `node tools/build/brand.mjs`,
-which needs `rsvg-convert` and `magick` on the PATH. Tune the room at
-`/testbed/room.html` on the dev server; `/testbed/walls.html` and
-`/testbed/grid.html` exercise the wall geometry and the console grid.
-
-## Changelog
-
-`CHANGELOG.md` is public facing. Keep entries short: one line per change,
-what changed and why it matters to a player, no implementation detail.
+Follow [DEPLOYMENT.md](project-notes/DEPLOYMENT.md). Commit before guarded dry-run, integrate current `origin/main`, use a new immutable source tag and update every corresponding-source link. Atomic main/tag publication triggers Workers Builds; avoid duplicate manual deployment. Never bypass cleanliness/freshness checks or force-push. Record hosted identity and production checks before claiming release success.

@@ -1,6 +1,6 @@
 import { formattedStringToHtml, formattedStringToText, UiState, type GameState, type InvItem, type Monster, actionPanelItems } from '@orbrun/webtiles'
-import { bearingTo, cellKey, dirToYaw, rotateDir, type Billboard, type Camera, type Dir8, type Scene, type SceneCursor } from '@orbrun/scene'
-import { FACING_REACH, Render2d, drawFacing } from '@orbrun/render-2d'
+import { bearingTo, cellKey, type Billboard, type Scene, type SceneCursor } from '@orbrun/scene'
+import { Render2d } from '@orbrun/render-2d'
 import { monsterGroups } from '@orbrun/scene-webtiles'
 import type { Gamedata } from '@orbrun/gamedata'
 import { h, clear, escapeHtml, replace, snapToPixels } from './dom'
@@ -25,12 +25,11 @@ import { paneRows } from './grid/messages'
 import { panelCellAt, panelCellIndex, panelGrid, panelSpan, type PanelBox, type PanelGrid } from './grid/panel'
 import { paintRow } from './grid/paint'
 import { PORTRAIT_ROWS, glanceRow, statsRows, type BarMemory } from './grid/stats'
-import { edgePlace, pipSizeInView, pipTargets, placePips, type EdgePlace, type EdgePipMode, type Projector, type PxRect } from './pips'
+interface PxRect { left: number; top: number; width: number; height: number }
 
 const ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
 
 export interface HudHooks {
-  onSelectMonster(b: Billboard): void
   onBarAction(a: Action): void
   onMinimapClick(): void
   /** anywhere on the stats pane, the portrait and the name with it: the character screen, as the Character button opens it */
@@ -55,24 +54,6 @@ export interface HudHooks {
   onSpellTap(spell: Spell): void
   /** the spell bar's More: every spell */
   onSpellMore(): void
-}
-
-/**
- * A pip is drawn the size the sprite would have been in the frame (pips.ts
- * pipSizeInView), bent by that function's knee toward this fraction of the
- * view's shorter side: in view, the thing in the next cell fills a third of
- * the screen, and a pip that big is a wall rather than a marker. Since the
- * knee only approaches the fraction, the ceiling can sit this low without
- * flattening the near range.
- */
-const PIP_MAX_FRAC = 0.14
-interface PipNode {
-  node: HTMLDivElement
-  canvas: HTMLCanvasElement
-  r2d: Render2d
-  /** what the sprite was last drawn from: the rc's look, then the cell and what stands on it (`drawnFrom`) */
-  drawn: string
-  drawnFrom: unknown[]
 }
 
 /** monster_list.js: at most this many rows, then an ellipsis on the last. */
@@ -165,7 +146,7 @@ const MENU_BUTTONS: readonly Button[] = [...MENU_LEFT, ...MENU_RIGHT]
 /**
  * One row of the WebTiles monster list (`monster_list.js`): a strip of sprites
  * drawn with the cell renderer, the glyph-mode health box, the name.
- * Orbrun adds a bearing arrow relative to facing in front.
+ * Orbrun adds a compass bearing arrow in front.
  */
 interface MonsterRow {
   node: HTMLElement
@@ -241,18 +222,6 @@ export const MINIMAP_SHARE = 0.45
 export const MINIMAP_SHARE_PHONE = 0.6
 /** the status strip's badges are squares this many rows of the grid tall (renderStatuses) */
 export const STATUS_BADGE_ROWS = 4
-/**
- * the trapped mark (renderTrapped) is a square this fraction of the free view's shorter side: most of the view, so
- * it reads as something wrapped round the player rather than a sprite standing in the cell ahead
- */
-export const TRAPPED_FRACTION = 0.8
-/**
- * The most the "Minimap size" setting can take: half the screen across (the
- * view keeps its left half clear) and MINIMAP_TALLEST of the column down, so
- * the monster list under it keeps some rows even at the biggest stop. The
- * disc is square, so whichever cap is tighter sets its size. Held upright the
- * stats pane beside the map is the cap (`bandFit`).
- */
 const MINIMAP_WIDEST = 0.5
 const MINIMAP_TALLEST = 0.7
 /**
@@ -351,7 +320,7 @@ export class Hud {
    * as the monster list's thumbnails (`render_cell`), at the pane's
    * top-left corner beside the title and god lines. The doll, its status
    * badges and whatever the player stands on, exactly as the 2D view draws
-   * the player's cell; first person has no other place for them.
+   * the player's cell, next to the status summary.
    */
   private portraitCanvas = h('canvas', { class: 'portrait' })
   private portrait = new Render2d({ mode: 'tiles', cellSize: 32 })
@@ -386,20 +355,6 @@ export class Hud {
   private statusKey = ''
   /** what the strip was last considered for, checked before the scene is scanned */
   private statusPre: unknown[] | undefined
-  /**
-   * The trapped mark: the net or the web over the player, the badges
-   * WebTiles paints across the whole doll (scene `statusIcons` `full`),
-   * blown up in the middle of the free view at part opacity, so being held
-   * reads at a glance without hiding what stands behind it. Only in the
-   * first-person dungeon view: overhead renderers draw these on the character.
-   * A menu, a popup or the level map covers it.
-   */
-  private trapped = h('div', { class: 'trapped', hidden: true })
-  private trappedCanvas = h('canvas', { class: 'trapped-canvas' })
-  private trappedR2d = new Render2d({ mode: 'tiles', cellSize: 32 })
-  private trappedKey = ''
-  private trappedPre: unknown[] | undefined
-  private trappedOverlayEnabled = true
   /** the minimap's unexplored ground is the same translucent backing as the stats pane, since it lies over the view too */
   private minimap = new Render2d({ mode: 'tiles', cellSize: MINIMAP_CELL_DEFAULT, follow: true, background: 'rgba(0, 0, 0, 0)' })
   /**
@@ -415,20 +370,6 @@ export class Hud {
   private minimapKey = ''
   /** Held upright, the minimap is a band across the top of the screen (`layout`), not a disc: never cut. */
   private minimapBand = false
-  /**
-   * How wide the 3D view opens across, in radians (game `viewFov`), drawn on
-   * the minimap, which stands north up, as the cone the view faces; null
-   * draws none, as in the 2D view.
-   */
-  minimapFov: number | null = null
-  /**
-   * That cone, on a canvas of its own over the map, drawn once and turned by
-   * css (`placeCone`): the map under it is drawn again only when what it
-   * shows moves, never for a turn of the view.
-   */
-  private minimapCone = h('canvas', { class: 'minimap-cone' })
-  /** what the cone was last drawn for */
-  private coneKey = ''
   private minimapTiles: Gamedata | null = null
   /** The level map is open: the minimap has become it and stays out of sight. */
   private minimapHidden = false
@@ -500,16 +441,12 @@ export class Hud {
   private cells: GameLayout | null = null
   /** the free part of the view in css px, from `layout`, for `keepClear` */
   private freePx: PxRect | null = null
-  /** where the edge pips ride (renderPips): the free view widened to the view's right edge and down to its bottom, so they go round the sidebar's panes rather than stop at its column, and stand over the bare message pane */
-  private pipsPx: PxRect | null = null
+  /** Bounds used to place the menu strip across the view. */
+  private viewBounds: PxRect | null = null
   /** the free view, whose bottom-right corner the prompts stack up from (layout), and where they were last put (placeBar) */
   private barCorner: PxRect | null = null
   private barAt = ''
   private barUnder = false
-  private handsInset = 0
-  /** edge pips (pips.ts): one marker per monster or item in sight but out of the 3D frame, on the free view's edge */
-  private pips = h('div', { class: 'pips' })
-  private pipNodes = new Map<string, PipNode>()
   /** the size the minimap was last given, in css px; nothing draws before the first `layout` */
   private minimapSize = { w: 0, h: 0 }
   private minimapDpr = 0
@@ -570,12 +507,10 @@ export class Hud {
   constructor(host: HTMLElement, hooks: HudHooks) {
     this.hooks = hooks
     this.root = h('div', { class: 'hud' })
+    this.root.append(this.stats, this.sidebar, this.statuses, this.actionPanel, this.scrim, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
     this.sidebar.append(this.minimapCanvas, this.monsters)
     this.statuses.append(this.statusCanvas)
     this.statusR2d.mount(this.statusCanvas)
-    this.trapped.append(this.trappedCanvas)
-    this.trappedR2d.mount(this.trappedCanvas)
-    this.root.append(this.pips, this.trapped, this.stats, this.sidebar, this.statuses, this.actionPanel, this.scrim, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
     host.append(this.root, this.statusEl, this.panelTooltip)
     this.minimap.mount(this.minimapCanvas)
     this.portrait.mount(this.portraitCanvas)
@@ -607,7 +542,6 @@ export class Hud {
   layout(host: GridHost, cells: GameLayout, free: CellRect, hidden: { stats: boolean; sidebar: boolean; messages: boolean }) {
     this.host = host
     this.cells = cells
-    this.mapAt = null
     this.spellbarW = null
     this.touchbarH = null
     host.place(this.stats, cells.stats)
@@ -633,12 +567,10 @@ export class Hud {
     this.scrim.hidden = hidden.messages
     const at = host.px(free)
     this.freePx = { left: at.left, top: at.top, width: at.width, height: at.height }
-    // the pips ride the view's own right and bottom edges: the column under the minimap and the rows under the message pane are
-    // 3D view too (the pane is bare, its text shadowed), so the panes on the column are stepped round and the messages are stood on;
-    // the view's rows under the touch bar are not theirs (gameSplit `foot`), so the bottom edge is the message pane's
+    // The menu strip spans the full view width.
     const viewPx = host.px(cells.view)
     const msgPx = host.px(cells.messages)
-    this.pipsPx = {
+    this.viewBounds = {
       left: at.left,
       top: at.top,
       width: Math.max(at.width, viewPx.left + viewPx.width - at.left),
@@ -707,9 +639,9 @@ export class Hud {
     this.barAt = ''
     this.placeBar(this.barUnder)
     // the menu buttons stand in both bottom corners of the same rows, the right stack on the view's own right edge under the
-    // sidebar's column rather than the free part's (pipsPx); the stack starts above them (renderMenus)
+    // sidebar's column rather than the free part's (viewBounds); the stack starts above them (renderMenus)
     this.menubar.style.left = at.left + 'px'
-    this.menubar.style.width = this.pipsPx.width + 'px'
+    this.menubar.style.width = this.viewBounds.width + 'px'
     this.menubar.style.top = at.top + at.height + 'px'
     this.menubar.style.transform = 'translateY(-100%)'
     this.menuKey = ''
@@ -770,9 +702,8 @@ export class Hud {
     const underW = portrait || !this.minimapEnabled ? sidePx.width : w
     this.statusCols = !this.statusAt ? 1 : this.statusAt.below ? Math.max(1, Math.floor(underW / this.statusPx)) : besideCols
     this.statusKey = ''
-    this.trappedKey = ''
     // left aligned in the strip, where action_panel.js stands it in the dungeon's top-left corner; it shrinks to what it
-    // draws, so the edge pips step round the panel itself, not the whole strip
+    // draws, so placement follows the panel itself.
     this.actionPanel.style.left = this.panelBox.left + 'px'
     this.actionPanel.style.top = this.panelBox.top + 'px'
     this.panelKey = ''
@@ -781,24 +712,6 @@ export class Hud {
     this.glanceKey = null
     this.lastMsgKey = ''
     this.snapDue = true
-  }
-
-  /**
-   * Keep the corner clear of the hands (rendering-3d.md II.7): `x` is the
-   * screen-px left edge of the weapon drawn low right, or null. The prompt
-   * stack slides left of it by an inset (styles.css `--hands-inset`), a
-   * cell's gap away, never past the middle of the free view.
-   */
-  keepClear(x: number | null) {
-    let inset = 0
-    if (x !== null && this.freePx && this.host) {
-      const right = this.freePx.left + this.freePx.width
-      inset = Math.min(Math.max(0, right - x + this.host.grid.cw), this.freePx.width * 0.5)
-    }
-    inset = Math.round(inset)
-    if (inset === this.handsInset) return
-    this.handsInset = inset
-    this.actionbar.style.setProperty('--hands-inset', inset + 'px')
   }
 
   status(text: string) {
@@ -825,31 +738,27 @@ export class Hud {
   }
 
   /**
-   * `list` draws the monster list; `pips` hides it, since the edge pips
-   * (renderPips) say the same thing on the view's edge instead. Never both.
    * `hints` false hides the corner prompts on both devices (the Hints setting
    * is off). The game supplies the pad's adaptive/contextual selection
    * through `padLabels`, and `holding` names the tap-or-hold button it is
    * holding down, with how far towards the hold the press has come. `menus`
    * stands the pad's menu buttons along the view's last row (renderMenus).
    */
-  update(state: GameState, scene: Scene, cam: Camera, ctx: Context, padKind: PadKind, gd: Gamedata | null, spectating: boolean, device: InputDevice, nearby: 'list' | 'pips' = 'list', hints = true, padLabels?: BindingLabel[], holding?: HoldProgress | null, menus = false, panel = false, touch: TouchLabel[] | null = null) {
+  update(state: GameState, scene: Scene, ctx: Context, padKind: PadKind, gd: Gamedata | null, spectating: boolean, device: InputDevice, hints = true, padLabels?: BindingLabel[], holding?: HoldProgress | null, menus = false, panel = false, touch: TouchLabel[] | null = null) {
     // a new frame: the panes are measured again when first asked (`paneRect`)
     this.paneRects.clear()
     this.rootAt = null
     if (!this.cells) return
-    const drawn = this.panelKey + this.statusKey + this.trappedKey + this.portraitPx + this.minimapSize.w
+    const drawn = this.panelKey + this.statusKey + this.portraitPx + this.minimapSize.w
     if (state.rev.player !== this.lastPlayerRev) {
       this.lastPlayerRev = state.rev.player
       this.renderStats(state)
     }
     this.renderPortrait(scene, state, gd)
     this.renderActionPanel(state, gd, spectating)
-    this.monsters.hidden = nearby === 'pips'
-    if (nearby === 'list') this.renderMonsters(scene, cam, state, gd)
-    this.renderMinimap(scene, cam, state, gd)
+    this.renderMonsters(scene, state, gd)
+    this.renderMinimap(scene, state, gd)
     this.renderStatuses(scene, state, gd)
-    this.renderTrapped(scene, state, gd)
     // only the player's pane can be dismissed, so that is part of the key
     // a line crawl reads there is typed in the log itself (bindings.ts typedInLog)
     const typed = !spectating && typedInLog(state.textInput) ? state.textInput!.text : undefined
@@ -867,11 +776,9 @@ export class Hud {
     this.placeBar(under)
     this.renderTouchBar(touch, gd)
     this.showHold(holding)
-    if (this.snapDue || drawn !== this.panelKey + this.statusKey + this.trappedKey + this.portraitPx + this.minimapSize.w) {
+    if (this.snapDue || drawn !== this.panelKey + this.statusKey + this.portraitPx + this.minimapSize.w) {
       this.snapDue = false
-      for (const c of [this.panelCanvas, this.portraitCanvas, this.minimapCanvas, this.statusCanvas, this.trappedCanvas]) snapToPixels(c)
-      this.coneAt = null
-      this.mapAt = null
+      for (const c of [this.panelCanvas, this.portraitCanvas, this.minimapCanvas, this.statusCanvas]) snapToPixels(c)
     }
   }
 
@@ -1027,41 +934,6 @@ export class Hud {
     const pad = Math.round(px * 0.1)
     // the first badge is the one against the map; the next stands left of it, as WebTiles shifts its row leftward
     badges.forEach((b, i) => this.statusR2d.drawTileFit(b.tile, (cols - 1 - (i % cols)) * px, Math.floor(i / cols) * px, px, pad))
-  }
-
-  /**
-   * The trapped mark in the middle of the free view: the net and the web
-   * (scene-webtiles `statusIcons` `full`) blown up to a square
-   * TRAPPED_FRACTION of the view's shorter side, both on the one square
-   * when both hold. Glyph mode paints no badges anywhere, so none here.
-   */
-  private renderTrapped(scene: Scene, state: GameState, gd: Gamedata | null) {
-    const free = this.freePx
-    const pre = [scene.revision, state.rev.any, gd, free, this.trappedOverlayEnabled]
-    if (!changed(this.trappedPre, pre)) return
-    this.trappedPre = pre
-    const me = scene.playerOnLevel ? scene.billboards.find((b) => b.kind === 'player' && b.x === scene.player.x && b.y === scene.player.y) : undefined
-    const marks = (me?.statusIcons || []).filter((i) => i.full)
-    const o = state.options
-    const glyphs = o.tile_display_mode === 'glyphs'
-    const covered = !this.trappedOverlayEnabled || state.uiState !== UiState.NORMAL || state.menus.length > 0 || state.ui.length > 0
-    const key = JSON.stringify([marks.map((b) => b.tile), glyphs, covered, o.tile_filter_scaling, gd?.version, free])
-    if (key === this.trappedKey) return
-    this.trappedKey = key
-    const shown = marks.length > 0 && !glyphs && !covered && !!gd && !!free
-    this.trapped.hidden = !shown
-    if (!shown || !free) return
-    const px = Math.round(Math.min(free.width, free.height) * TRAPPED_FRACTION)
-    this.trapped.style.left = Math.round(free.left + (free.width - px) / 2) + 'px'
-    this.trapped.style.top = Math.round(free.top + (free.height - px) / 2) + 'px'
-    const dpr = window.devicePixelRatio || 1
-    this.trappedR2d.resize(px, px, dpr)
-    this.trappedCanvas.style.width = px + 'px'
-    this.trappedCanvas.style.height = px + 'px'
-    this.trappedR2d.setOptions({ filterScaling: o.tile_filter_scaling === true })
-    this.trappedR2d.setTiles(gd!)
-    this.trappedR2d.clear(true)
-    for (const m of marks) this.trappedR2d.drawTileFit(m.tile, 0, 0, px)
   }
 
   /**
@@ -1343,10 +1215,10 @@ export class Hud {
    * every badge the map cell carries is on the thumbnail too), the glyph-mode
    * health box, then the name (or "3 jackals") in its attitude and threat
    * colours; an ellipsis on the last row when rows were cut. Orbrun adds a
-   * bearing arrow relative to facing, and a row can be tapped to face it.
+   * compass bearing arrow.
    */
-  private renderMonsters(scene: Scene, cam: Camera, state: GameState, gd: Gamedata | null) {
-    const pre = [scene.revision, cam.facing, state.rev.any, gd]
+  private renderMonsters(scene: Scene, state: GameState, gd: Gamedata | null) {
+    const pre = [scene.revision, state.rev.any, gd]
     if (!changed(this.monstersPre, pre)) return
     this.monstersPre = pre
     const groups = monsterGroups(scene)
@@ -1358,7 +1230,6 @@ export class Hud {
     const w = Math.max(16, Math.min(64, Math.round((px * vs) / 100)))
     const key = JSON.stringify([
       invis,
-      cam.facing,
       mode,
       w,
       window.devicePixelRatio,
@@ -1429,11 +1300,10 @@ export class Hud {
       } else row.name.textContent = group.length + ' ' + (mon.plural || mon.name)
       row.name.classList.add(first.attitude || 'hostile')
       row.name.classList.add(first.threat || 'easy')
-      // Orbrun: where the first of the group stands, relative to facing; a tap turns the camera to it
+      // Compass bearing of the first monster in the group.
       const b = bearingTo(scene, first.x, first.y)
-      const rel = b === null ? 0 : rotateDir(b, -cam.facing)
+      const rel = b === null ? 0 : b
       row.arrow.textContent = rel === 0 ? '▲' : ARROWS[rel]
-      row.node.onclick = () => this.hooks.onSelectMonster(first)
       if (i === rows - 1 && rows < groups.length + (invis ? 1 : 0)) {
         if (!row.ellipsis) {
           row.ellipsis = h('span', { class: 'ellipse' }, '...')
@@ -1448,109 +1318,6 @@ export class Hud {
     this.monsterRows = this.monsterRows.slice(0, rows)
   }
 
-  /**
-   * Edge pips (pips.ts; hud.md "What is around you"). After a 3D frame, one
-   * marker on the free view's edge for each monster and item the server
-   * shows in sight that the lens did not frame: the thing drawn by the same
-   * renderer as the monster list's thumbnails (so the badges and the glyph
-   * mode come with it), bare (render-2d `renderCell` `bare`) on a cleared
-   * canvas — the sprite with its status icons and damage bar, no floor
-   * under it and none of the cell's own marks, at the size the 3D frame
-   * would have drawn it. The pips ride the view's own edges, the sidebar's column and the message
-   * pane's rows included (the view runs under both; the pane is bare, so a
-   * pip over its text still reads), keeping off the stats pane, the
-   * minimap, the monster list and the prompt stack and spreading apart along
-   * their edge. A tap turns the camera to the thing, as a monster row does.
-   * `proj` is null when there is no 3D frame (2D, the level map), and then
-   * there are no pips.
-   */
-  renderPips(scene: Scene, state: GameState, gd: Gamedata | null, proj: Projector | null, mode: EdgePipMode) {
-    const rect = this.pipsPx
-    if (!rect || !proj || mode === 'off' || !scene.playerOnLevel) {
-      if (this.pipNodes.size) {
-        for (const n of this.pipNodes.values()) n.node.remove()
-        this.pipNodes.clear()
-      }
-      return
-    }
-    const o = state.options
-    const dmode = o.tile_display_mode === 'glyphs' ? 'glyphs' : o.tile_display_mode === 'hybrid' ? 'hybrid' : 'tiles'
-    const px = typeof o.tile_cell_pixels === 'number' && o.tile_cell_pixels > 0 ? o.tile_cell_pixels : 32
-    const vs = typeof o.tile_viewport_scale === 'number' && o.tile_viewport_scale > 0 ? o.tile_viewport_scale : 100
-    const w = Math.max(16, Math.min(64, Math.round((px * vs) / 100)))
-    const maxPx = Math.round(Math.min(rect.width, rect.height) * PIP_MAX_FRAC)
-    const targets = pipTargets(scene, mode)
-    const shown: { b: Billboard; at: EdgePlace; size: number }[] = []
-    for (const b of targets) {
-      const cam = proj.toCamera(b.x, b.y, b.height / 2)
-      const at = edgePlace(cam, proj, b.height / 2)
-      // the pip is the sprite at the size the frame would have drawn it, so the ring round the view reads as depth
-      if (at) shown.push({ b, at, size: pipSizeInView(cam, proj, b.height, maxPx) })
-    }
-    const avoid: PxRect[] = []
-    // the panes a pip steps round: the stats pane, the action panel in the strip beside it, the prompt stack, and the
-    // sidebar's panes (skipped with the column)
-    // nothing to place, nothing to step round: the panes go unmeasured
-    if (shown.length) for (const el of this.panes().slice(1)) {
-      if (el.hidden || (this.sidebar.hidden && el.parentElement === this.sidebar)) continue
-      const r = this.paneRect(el)
-      if (r.width && r.height) avoid.push(r)
-    }
-    const placed = placePips(
-      shown.map((s) => s.at),
-      rect,
-      shown.map((s) => s.size),
-      avoid,
-    )
-    const keep = new Set<string>()
-    shown.forEach(({ b }, i) => {
-      const key = b.x + ',' + b.y
-      keep.add(key)
-      let pn = this.pipNodes.get(key)
-      if (!pn) {
-        const canvas = h('canvas', { class: 'picture' })
-        const node = h('div', { class: 'pip' }, canvas)
-        const r2d = new Render2d({ mode: 'tiles', cellSize: w })
-        r2d.mount(canvas)
-        pn = { node, canvas, r2d, drawn: '', drawnFrom: [] }
-        this.pipNodes.set(key, pn)
-        this.pips.append(node)
-      }
-      const p = placed[i]
-      pn.node.title = b.name || ''
-      pn.node.style.left = p.x + 'px'
-      pn.node.style.top = p.y + 'px'
-      pn.node.style.setProperty('--pip', p.size + 'px')
-      pn.node.onclick = () => this.hooks.onSelectMonster(b)
-      // the sprite: redrawn only when the cell or the rc's look changed. A scene built again carries over every cell and
-      // billboard the messages left alone as the same objects (scene-webtiles buildScene), so the ones this pip draws
-      // (render-2d renderCell) say whether its picture changed, where the scene's revision moves with anything anywhere
-      const drawn = JSON.stringify([dmode, w, o.glyph_mode_font, o.tile_filter_scaling, gd?.version])
-      const from: unknown[] = [scene.cells.get(cellKey(b.x, b.y))]
-      for (const on of scene.billboards) if (on.x === b.x && on.y === b.y) from.push(on)
-      if (drawn !== pn.drawn || from.length !== pn.drawnFrom.length || from.some((f, i) => f !== pn!.drawnFrom[i])) {
-        pn.drawn = drawn
-        pn.drawnFrom = from
-        const dpr = window.devicePixelRatio || 1
-        if (pn.canvas.width !== Math.floor(w * dpr)) {
-          pn.r2d.resize(w, w, dpr)
-          pn.canvas.style.width = w + 'px'
-          pn.canvas.style.height = w + 'px'
-        }
-        pn.r2d.setOptions({ cellSize: w, mode: dmode, filterScaling: o.tile_filter_scaling === true, glyphFont: rcFont(o.glyph_mode_font) })
-        if (gd) pn.r2d.setTiles(gd)
-        pn.r2d.setScene(scene)
-        pn.r2d.clear(true)
-        pn.r2d.renderCell(b.x, b.y, 0, 0, w, { bare: true })
-      }
-    })
-    for (const [key, pn] of this.pipNodes) {
-      if (keep.has(key)) continue
-      pn.node.remove()
-      this.pipNodes.delete(key)
-    }
-  }
-
   private sizeRow(row: MonsterRow, w: number, sprites: number) {
     const dpr = window.devicePixelRatio || 1
     const width = w * Math.max(1, sprites)
@@ -1562,25 +1329,23 @@ export class Hud {
   }
 
   /**
-   * The WebTiles 2D view in miniature: the same tile renderer as the main 2D
-   * mode, following the player. Falls back to solid colour blocks until the
+   * The WebTiles 2D view in miniature: the same tile renderer as the level
+   * map, following the player. Falls back to solid colour blocks until the
    * gamedata tileset is ready.
    */
-  private renderMinimap(scene: Scene, cam: Camera, state: GameState, gd: Gamedata | null) {
+  private renderMinimap(scene: Scene, state: GameState, gd: Gamedata | null) {
     if (!this.minimapEnabled || this.minimapHidden || !this.minimapSize.w) return
     // the map is a full redraw of every known cell: only when something it shows moved.
     // The rc's palette rides `rev.player` (state.ts: `options` and `set_option` bump it).
-    // A turn of the view is not one: the facing cone is an element of its own (`placeCone`)
-    const key = `${scene.revision}|${cam.x},${cam.y}|${state.rev.player}|${gd?.version}`
+    const key = `${scene.revision}|${scene.player.x},${scene.player.y}|${state.rev.player}|${gd?.version}`
     if (key !== this.minimapKey) {
       this.minimapKey = key
-      this.drawMinimap(scene, cam, state, gd)
+      this.drawMinimap(scene, state, gd)
     }
-    this.placeCone(scene, cam)
   }
 
   /** The minimap drawn whole, north up. */
-  private drawMinimap(scene: Scene, cam: Camera, state: GameState, gd: Gamedata | null) {
+  private drawMinimap(scene: Scene, state: GameState, gd: Gamedata | null) {
     const opts = state.options
     const c = (name: string) => {
       const v = opts[name] as { r: number; g: number; b: number } | undefined
@@ -1595,8 +1360,6 @@ export class Hud {
     const mfColours = MF_OPTION_NAMES.map((n) => c(n))
     this.minimap.setOptions({
       mode,
-      // the cone the view faces stands over the map on its own (`placeCone`)
-      facing: null,
       mfColours,
       filterScaling: opts.tile_filter_scaling === true,
       glyphFont: rcFont(opts.glyph_mode_font),
@@ -1623,67 +1386,9 @@ export class Hud {
       },
     })
     this.minimap.setScene(scene)
-    this.minimap.setCamera(cam)
     this.minimap.render()
-    // the cone stands on the player's cell, wherever the map put it
-    this.coneAt = null
     if (!this.minimapBand) this.cutMinimapDisc()
   }
-
-  /** where the cone's canvas stands, in its parent's css px; null when the map has moved under it since (`placeCone`) */
-  private coneAt: { left: number; top: number } | null = null
-  /**
-   * where the map's canvas stands in the parent it shares with the cone, in css px; null when the layout may have moved
-   * it. Read once a layout, not once a move: a read forces the frame's layout, and a move has just rewritten the panes
-   */
-  private mapAt: { left: number; top: number } | null = null
-
-  /**
-   * The facing cone over a north-up map (`minimapFov`): drawn once for the
-   * lens and the map's cell (render-2d `drawFacing`, as the map drew it),
-   * stood on the player's cell, and turned to the view's yaw by css. Over
-   * the map rather than in it, so the squares in its reach take its faint
-   * light as the floor does.
-   */
-  private placeCone(scene: Scene, cam: Camera) {
-    const cone = this.minimapCone
-    const fov = this.minimapFov
-    const shown = fov != null && this.minimapEnabled && !this.minimapHidden && scene.playerOnLevel
-    if (cone.hidden !== !shown) cone.hidden = !shown
-    if (!shown) return
-    const cs = this.minimap.cellSize
-    const dpr = this.minimapDpr || 1
-    const side = Math.ceil(2 * cs * FACING_REACH)
-    const key = cs + '|' + dpr + '|' + fov
-    if (key !== this.coneKey) {
-      this.coneKey = key
-      cone.width = cone.height = Math.round(side * dpr)
-      cone.style.width = cone.style.height = side + 'px'
-      const ctx = cone.getContext('2d')
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        drawFacing(ctx, side / 2, side / 2, cs, { yaw: 0, fov })
-      }
-      this.coneAt = null
-    }
-    if (cone.previousElementSibling !== this.minimapCanvas) {
-      this.minimapCanvas.after(cone)
-      this.coneAt = null
-    }
-    if (!this.coneAt) {
-      // the map's own place in the parent they share, read once a move rather than every frame
-      const at = this.minimap.cellCentre(scene.player.x, scene.player.y)
-      const map = (this.mapAt ??= { left: this.minimapCanvas.offsetLeft, top: this.minimapCanvas.offsetTop })
-      this.coneAt = { left: map.left + at.x - side / 2, top: map.top + at.y - side / 2 }
-      cone.style.left = this.coneAt.left + 'px'
-      cone.style.top = this.coneAt.top + 'px'
-    }
-    // compared with what was set, not read back: the style's own reading of it is a serialisation every frame
-    const v = cam.yaw.toFixed(4) + 'rad'
-    if (this.coneRotate !== v) cone.style.rotate = this.coneRotate = v
-  }
-  /** the turn last set on the cone (`placeCone`) */
-  private coneRotate = ''
 
   /**
    * Cut the drawn square down to the disc inscribed in it. The cut is a
@@ -1709,30 +1414,18 @@ export class Hud {
     ctx.restore()
   }
 
-  /** Only first person needs a screen-sized net/web; overhead views show it on the character. */
-  setTrappedOverlayEnabled(enabled: boolean) {
-    if (enabled === this.trappedOverlayEnabled) return
-    this.trappedOverlayEnabled = enabled
-    this.trappedPre = undefined
-    this.trappedKey = ''
-    if (!enabled) this.trapped.hidden = true
-  }
-
   /** Overhead projections can show the dungeon without a duplicate corner view. */
   setMinimapEnabled(enabled: boolean) {
     if (enabled === this.minimapEnabled) return
     this.minimapEnabled = enabled
     this.minimapCanvas.classList.toggle('hidden', !enabled || this.minimapHidden)
-    if (!enabled) this.minimapCone.hidden = true
     this.minimapKey = ''
-    this.mapAt = null
   }
 
   /** The level map is open: the fullscreen map stands in for the minimap, and the monster list, which would lie over it, goes with it. */
   hideMinimap() {
     this.minimapHidden = true
     this.minimapCanvas.classList.add('hidden')
-    this.minimapCone.hidden = true
     this.monsters.classList.add('hidden')
   }
 
@@ -1742,7 +1435,6 @@ export class Hud {
     this.monsters.classList.remove('hidden')
     this.minimapHidden = false
     this.minimapKey = ''
-    this.mapAt = null
   }
 
   /**
@@ -2242,7 +1934,7 @@ export class Hud {
 
   /**
    * Where `el` is, in css px relative to the hud (the hud itself at 0, 0), measured once a frame: what steps round the
-   * panes (the touch lessons' rings, the edge pips) asks after writes of its own, and every measure after a write forces
+   * panes (the touch lessons' rings) asks after writes of its own, and every measure after a write forces
    * the frame's layout again. The panes they ask about stand still for the rest of the frame once `update` has set them.
    */
   private paneRect(el: HTMLElement): PxRect {
@@ -2263,7 +1955,7 @@ export class Hud {
     return r
   }
 
-  /** the panes the pips and the touch lessons step round or stand on (`paneRect`) */
+  /** the panes the touch lessons stand on (`paneRect`) */
   private panes(): HTMLElement[] {
     return [this.root, this.stats, this.actionPanel, this.actionbar, this.menubar, this.statuses, this.minimapCanvas, this.monsters]
   }
@@ -2321,10 +2013,6 @@ export class Hud {
 
   private group(name: string, ...chips: (HTMLElement | null)[]): HTMLElement {
     return h('span', { class: 'group ' + name }, ...chips)
-  }
-
-  yawFor(d: Dir8): number {
-    return dirToYaw(d)
   }
 }
 

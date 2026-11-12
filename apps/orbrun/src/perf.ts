@@ -680,24 +680,6 @@ function num(x: number): string {
   return x >= 100 ? x.toFixed(0) : x.toFixed(1)
 }
 
-/**
- * The GPU as the driver names it, once, off a throwaway context: a browser
- * that masks it says so itself, and a browser that does not settles whether
- * a slow `draw` is the machine or the code.
- */
-function gpuName(): string {
-  try {
-    const gl = document.createElement('canvas').getContext('webgl2')
-    if (!gl) return 'no webgl2'
-    const ext = gl.getExtension('WEBGL_debug_renderer_info')
-    const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER))
-    gl.getExtension('WEBGL_lose_context')?.loseContext()
-    return name.slice(0, 90)
-  } catch {
-    return '?'
-  }
-}
-
 /** Chrome's heap, in MB, for spotting a long task that is a collection; absent everywhere else. */
 function usedHeapMb(): number {
   const m = (performance as { memory?: { usedJSHeapSize: number } }).memory
@@ -778,7 +760,7 @@ export class PerfOverlay {
     return [
       `orbrun perf · ${d} · ${ua}`,
       `screen ${window.innerWidth}x${window.innerHeight} dpr${window.devicePixelRatio ?? 1} · ${navigator.hardwareConcurrency ?? '?'} cores · ${(navigator as { deviceMemory?: number }).deviceMemory ?? '?'}GB · ${window.location.search || '(no query)'}`,
-      `gpu ${gpuName()}`,
+      'renderer Canvas 2D',
       `start ${ctx.place ?? '?'} · ${ctx.mode ?? '?'} · ${ctx.cells ?? 0} cells`,
     ]
   }

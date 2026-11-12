@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, makeCamera, meleeTiming, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, meleeTiming, type SceneCell } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
@@ -511,10 +511,9 @@ describe('picking and visibility', () => {
     expect(r.pick(500, 325)).toBe(cellKey(1, 0))
   })
 
-  it('picks in CSS pixels regardless of DPR or first-person heading', () => {
+  it('picks in CSS pixels regardless of DPR', () => {
     const { r, canvas } = renderer()
     r.setScene(sceneOf(cell(0, 0), cell(1, 0)))
-    r.setCamera(makeCamera(30, 40, 5))
     r.render(0)
     expect(canvas.width).toBe(1800)
     expect(r.pick(450, 350)).toBe(cellKey(0, 0))

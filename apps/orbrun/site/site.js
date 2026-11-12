@@ -49,60 +49,12 @@
   const hero = document.querySelector('.hero')
   // About's hero has words under the still: the bar takes its ground once they reach it, not once the whole hero is gone
   const words = hero?.querySelector('.title')
-  // About's name is the bar's while it is on screen: the bar's own shows once it has gone under the bar
-  const name = hero?.classList.contains('stage') ? hero.querySelector('h1') : null
   const ground = () => {
     bar.classList.toggle('solid', !hero || (words ?? hero).getBoundingClientRect()[words ? 'top' : 'bottom'] <= bar.offsetHeight)
-    if (name) bar.classList.toggle('named', name.getBoundingClientRect().bottom <= bar.offsetHeight)
   }
-  if (name) bar.classList.add('nameless')
   addEventListener('scroll', ground, { passive: true })
   addEventListener('resize', ground, { passive: true })
   ground()
-
-  // About's comparison: WebTiles over Orbrun, cut where the slider stands
-  for (const fig of document.querySelectorAll('.compare')) {
-    const range = fig.querySelector('input')
-    const set = () => fig.style.setProperty('--x', `${range.value}%`)
-    range.addEventListener('input', set)
-    set()
-  }
-
-  // About's stills open to the whole window at a click (the comparison is a slider, and the grounds are behind words); a click anywhere, Escape or B closes
-  const viewer = document.createElement('dialog')
-  viewer.className = 'viewer'
-  viewer.innerHTML = '<img alt="" />'
-  const big = viewer.firstChild
-  // closed by the mouse, the still it came from is not left ringed as the keyboard's
-  viewer.addEventListener('click', () => {
-    viewer.close()
-    document.activeElement?.blur()
-  })
-  // the page stays put under it; hiding the page's overflow instead would take the scrollbar away and shift everything over
-  const still = (e) => e.preventDefault()
-  viewer.addEventListener('wheel', still, { passive: false })
-  viewer.addEventListener('touchmove', still, { passive: false })
-  viewer.addEventListener('keydown', (e) => {
-    if ([' ', 'PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown'].includes(e.key)) e.preventDefault()
-  })
-  document.body.append(viewer)
-  for (const img of document.querySelectorAll('main figure:not(.compare) img:not(.device)')) {
-    const zoom = document.createElement('button')
-    zoom.type = 'button'
-    zoom.className = 'zoom'
-    zoom.setAttribute('aria-label', img.alt ? `Enlarge: ${img.alt}` : 'Enlarge')
-    // the Deck's screen is stood where the glass is: the button stands there in its place
-    zoom.style.cssText = img.style.cssText
-    img.removeAttribute('style')
-    img.replaceWith(zoom)
-    zoom.append(img)
-    zoom.addEventListener('click', () => {
-      big.src = img.currentSrc || img.src
-      big.alt = img.alt
-      big.style.imageRendering = getComputedStyle(img).imageRendering
-      viewer.showModal()
-    })
-  }
 
   // a line to type (a document's fenced block) copied at a click; where the clipboard is shut, it is selected for Ctrl+C
   for (const pre of document.querySelectorAll('.doc pre')) {
@@ -142,7 +94,7 @@
   addEventListener('mousemove', () => point(null), { passive: true })
 
   const onScreen = () =>
-    [...document.querySelectorAll('main a[href], main button.copy, main button.zoom, header a[href], footer a[href]')].filter((el) => {
+    [...document.querySelectorAll('main a[href], main button.copy, header a[href], footer a[href]')].filter((el) => {
       const b = el.getBoundingClientRect()
       return b.width > 0 && b.top >= 56 && b.bottom <= innerHeight - 8
     })
@@ -178,43 +130,12 @@
       fn()
     }
   }
-  // About's pad board: the standard mapping's index of each button it draws
-  const board = document.querySelector('.padboard')
-  const rows = board ? [...board.querySelectorAll('li[data-pad]')].map((li) => ({ li, names: li.dataset.pad.split(' ') })) : []
-  const INDEX = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, SELECT: 8, START: 9, L3: 10, R3: 11 }
-  const boardInView = () => {
-    if (!board) return false
-    const r = board.getBoundingClientRect()
-    return r.top < innerHeight * 0.7 && r.bottom > innerHeight * 0.3
-  }
-
   let polling = false
   const tick = (t) => {
     const pad = [...navigator.getGamepads()].find((p) => p && p.connected)
     if (pad) {
       document.body.classList.add('pad')
       const b = (i) => !!pad.buttons[i]?.pressed
-      if (rows.length) {
-        const stick = Math.hypot(pad.axes[0] ?? 0, pad.axes[1] ?? 0) > 0.5
-        const dpad = b(12) || b(13) || b(14) || b(15)
-        for (const { li, names } of rows) li.classList.toggle('lit', names.some((n) => (n === 'LSTICK' ? stick : n === 'DPAD' ? dpad : b(INDEX[n]))))
-      }
-      // a still at full size: A or B puts it back, and nothing else moves under it
-      if (viewer.open) {
-        press('a', b(0), () => viewer.close(), t)
-        press('b', b(1) || b(9), () => viewer.close(), t)
-        requestAnimationFrame(tick)
-        return
-      }
-      if (boardInView()) {
-        // only the right stick moves on, so every other button can be tried
-        const ry = pad.axes[3] ?? 0
-        if (Math.abs(ry) > 0.2) scrollBy(0, ry * 18)
-        // and a button still down when the board scrolls away does nothing until it is pressed again
-        for (const n of ['up', 'down', 'a', 'b', 'lb', 'rb']) held.set(n, { at: t, next: Infinity })
-        requestAnimationFrame(tick)
-        return
-      }
       const ly = pad.axes[1] ?? 0
       press('up', b(12) || ly < -0.6, () => step(-1), t, true)
       press('down', b(13) || ly > 0.6, () => step(1), t, true)

@@ -5,7 +5,7 @@ import { Hud } from '../src/hud'
 import { GridHost } from '../src/grid/host'
 import { gameSplit } from '../src/grid/console'
 import type { Gamedata } from '@orbrun/gamedata'
-import type { Camera, Scene } from '@orbrun/scene'
+import type { Scene } from '@orbrun/scene'
 
 /** ids for the named tiles the panel asks for, so a draw can be told apart by what it drew */
 const NAMED: Record<string, number> = { PROMPT_NO: 9001, CMD_GAME_MENU: 9002, CURSOR3: 9003, OOR_MESH: 9004, ELLIPSIS: 9005 }
@@ -67,10 +67,9 @@ function draw(st: GameState) {
   // happy-dom has no 2d context: a stub that swallows the calls, since what is asked of gamedata is what is drawn
   canvas.getContext = () => new Proxy({}, { get: () => () => undefined }) as unknown as CanvasRenderingContext2D
   const scene = { revision: 0, playerOnLevel: false, player: { x: 0, y: 0 }, cells: new Map(), billboards: [] } as unknown as Scene
-  const cam = { x: 0, y: 0, yaw: 0 } as unknown as Camera
   const ctx = { mode: 'command', layer: 'macro', hostilesInView: 0 } as never
   // hints are off: this is about the panel, and the prompts want a scene of their own
-  hud.update(st, scene, cam, ctx, 'xbox', gd, false, 'keyboard', 'list', false)
+  hud.update(st, scene, ctx, 'xbox', gd, false, 'keyboard', false)
   const cell = (hud as unknown as { panelCell: number }).panelCell
   /** a click in the middle of panel cell `i`, the panel being one line across */
   const click = (i: number, button = 0) => canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: i * cell + cell / 2, clientY: cell / 2, button }))

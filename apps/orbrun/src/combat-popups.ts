@@ -137,7 +137,7 @@ export class CombatPopups {
     while (this.live.length > MAX_POPUPS) this.live.shift()!.node.remove()
   }
 
-  render(now: number, renderer: MapRenderer, scene: Scene, view: HTMLCanvasElement, firstPerson: boolean, reducedMotion: boolean) {
+  render(now: number, renderer: MapRenderer, scene: Scene, view: HTMLCanvasElement, reducedMotion: boolean) {
     Object.assign(this.root.style, { left: view.style.left, top: view.style.top, width: view.style.width, height: view.style.height })
     const width = view.clientWidth, height = view.clientHeight
     this.live = this.live.filter(p => {
@@ -152,9 +152,7 @@ export class CombatPopups {
       const billboard = scene.billboards.find(b => e.player ? b.kind === 'player'
         : b.kind === 'monster' && (e.actorId?.startsWith('id:') ? `id:${b.id ?? (b.ref as { id?: number } | undefined)?.id}` === e.actorId : b.x === e.x && b.y === e.y))
       const anchorHeight = e.player ? 0.8 : visualHit(e) ? (e.height ?? 0.8) * 0.55 : e.height
-      const anchor = e.player && firstPerson
-        ? { x: width * 0.5, y: height * 0.66 }
-        : billboard && renderer.projectBillboard ? renderer.projectBillboard(billboard, anchorHeight)
+      const anchor = billboard && renderer.projectBillboard ? renderer.projectBillboard(billboard, anchorHeight)
           : renderer.project?.(e.player ? scene.player.x : e.x!, e.player ? scene.player.y : e.y!, anchorHeight)
       const visible = anchor && anchor.x >= 0 && anchor.x <= width && anchor.y >= 0 && anchor.y <= height
       p.node.hidden = !visible

@@ -498,90 +498,26 @@ export function morgueUrlFor(server: ServerInfo, dump: string): string | null {
   return `/morgue-proxy/${u.host}${u.pathname}`
 }
 
-/**
- * What says what is around you (hud.md "What is around you"): the WebTiles
- * monster list on the sidebar, or Orbrun's edge pips on the 3D view's edge.
- * One or the other, never both: they answer the same question. In 2D the
- * list always shows, since there is no lens to be out of.
- */
-type Nearby = 'list' | 'pips'
-
-/**
- * What left and right do for one family of direction inputs: turn the camera
- * on the spot, or strafe — one step sideways, heading kept. Forward, back and
- * the diagonals are the same either way (runner.ts `step`).
- */
-export type LeftRight = 'turn' | 'strafe'
-
-/**
- * Where a direction came from: the three keyboard sets keys.ts `directionKey`
- * tells apart, and the pad's two direction sources (gamepad.ts `PadEvent`).
- * The five are reported apart but answered in two — the hand matters, the key
- * set does not (2026-09-15: there was a row per family, and five rows to read
- * for one question was worse than the mixed setups they bought).
- */
+/** Input family, retained for keyboard and controller classification. */
 export type DirSource = 'arrows' | 'vim' | 'numpad' | 'dpad' | 'lstick'
 
-/** The setting each source reads: one answer for the keyboard, one for the pad. */
-const LEFT_RIGHT_KEYS: Record<DirSource, keyof Settings> = {
-  arrows: 'leftRightKeys',
-  vim: 'leftRightKeys',
-  numpad: 'leftRightKeys',
-  dpad: 'leftRightPad',
-  lstick: 'leftRightPad',
-}
-
-/** Whether left and right turn (rather than strafe) for `source`. */
-export function leftRightTurns(source: DirSource, s: Settings = getSettings()): boolean {
-  return s[LEFT_RIGHT_KEYS[source]] === 'turn'
-}
-
 export interface Settings {
-  renderer: '3d' | '2.5d' | '2d'
   depthTilt: number
   depthZoom: number
   depthAnimate: boolean | 'auto'
   depthMovement: boolean
-  /** Seconds per confirmed move in the 2.5D view. */
+  /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
   depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
   combatPopups: boolean
-  /** How high the eye stands, in cells: 0 is the floor, 1 the lid (rendering-3d.md II.11). */
-  eyeHeight: number
-  /** The up-and-down field of view in degrees, 0 for Auto (settings-rows.ts `fovOf`). */
-  fov: number
-  /** Where the camera points at rest, in degrees off the horizon: negative looks down, positive up (rendering-3d.md II.11). */
-  restPitch: number
   uiScale: number
-  invertLook: boolean
-  lookSensitivity: number
   confirmStairs: boolean
-  /** Opt-in visual prediction of one clear online step; server state is never predicted. */
-  predictiveMovement: boolean
-  /** Draw the wielded weapon and off-hand item in the 3D view (rendering-3d.md II.7). */
-  viewmodel: boolean
-  /** What is around you: the monster list, or edge pips on the 3D view (hud.md "What is around you"). */
-  nearby: Nearby
-  /** How many tiles the minimap shows across (hud.md "Minimap"); 0 is Auto (settings-rows.ts `MINIMAP_AUTO`), the screen's pick. */
+  /** Zero lets the layout choose a minimap size. */
   minimapTiles: number
-  /** How big a minimap tile is drawn, in css px on a 1080-tall screen (hud.md "Minimap"); 0 is Auto, the screen's pick. */
   minimapCell: number
-  /** How many lines of messages the message pane shows; 0 is Auto (settings-rows.ts `MESSAGE_LINES_AUTO`), as many as the server's `layout` asks for. */
   messageLines: number
-  /** The gamepad prompts in the corner of the view (gamepad-hints.ts `HintMode`). */
   hints: HintMode
-  /** Keyboard (arrows, h/l, numpad 4/6): what left and right do. */
-  leftRightKeys: LeftRight
-  /** Gamepad (d-pad and left stick): what left and right do. */
-  leftRightPad: LeftRight
-  /**
-   * A finger swiping the 3D view sideways: `step` turns it a heading at a
-   * time as it goes, as an arrow key does (swipe-turn.ts); `drag` is the earlier turn that follows the finger
-   * and settles on a heading as it lifts (fling.ts). Offered for a side-by-side
-   * on a phone, until one is chosen.
-   */
-  swipeTurn: 'step' | 'drag'
-  /** Milliseconds between the steps of an explore in a game on this device, -1 for crawl's own (settings-rows.ts `exploreOptions`). */
+  /** Local engine only; online servers use the player's rc file. */
   exploreDelay: number
 }
 
@@ -599,38 +535,8 @@ function hintsFrom(saved: Partial<Settings> & { gamepadHints?: unknown; keyHints
   return 'adaptive'
 }
 
-/**
- * What a saved settings object says about left and right, in the two fields
- * or in the five it used to be split into — one per input family, merged
- * 2026-09-15 into one answer for the keyboard and one for the pad. An old
- * session that set any of a hand's families to strafe comes back strafing on
- * that whole hand.
- */
-type OldLeftRight = Partial<Record<'leftRightArrows' | 'leftRightVim' | 'leftRightNumpad' | 'leftRightDpad' | 'leftRightStick', unknown>>
-function leftRightFrom(saved: Partial<Settings> & OldLeftRight, now: keyof Settings, old: readonly (keyof OldLeftRight)[]): LeftRight {
-  const v = saved[now]
-  if (v === 'turn' || v === 'strafe') return v
-  return old.some((k) => saved[k] === 'strafe') ? 'strafe' : 'turn'
-}
-
 const SETTINGS_KEY = 'orbrun.settings'
-/** All three dungeon projections are available in View settings. */
-export const VIEW_OPTIONS: boolean = true
-/**
- * Truncated corners (rendering-3d.md II.1): how far every convex wall corner
- * is cut back, in cells. Fixed at one texel of a 32-texel wall — every corner
- * is chamfered, the player does not choose how much.
- */
-export const CHAMFER = 1 / 32
-/**
- * Inset walls (rendering-3d.md II.1): how far every wall face stands back
- * from the floor, in cells. Fixed at 12 texels of a 32-texel wall, so a
- * one-thick wall keeps an 8-texel core — the player does not choose the
- * thickness.
- */
-export const WALL_INSET = 12 / 32
 export const defaultSettings: Settings = {
-  renderer: '3d',
   depthTilt: 50,
   depthZoom: 1,
   depthAnimate: 'auto',
@@ -638,84 +544,42 @@ export const defaultSettings: Settings = {
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
   combatPopups: true,
-  eyeHeight: 0.6,
-  fov: 0,
-  restPitch: -5,
   uiScale: 1,
-  invertLook: false,
-  lookSensitivity: 1,
   confirmStairs: false,
-  predictiveMovement: false,
-  viewmodel: true,
-  nearby: 'pips',
   minimapTiles: 0,
   minimapCell: 0,
   messageLines: 0,
   hints: 'adaptive',
-  leftRightKeys: 'turn',
-  leftRightPad: 'turn',
-  swipeTurn: 'step',
   exploreDelay: 90,
 }
 
+/** Load only supported preferences; old projection/camera fields are ignored. */
 export function getSettings(): Settings {
-  const saved = load<Partial<Settings>>(SETTINGS_KEY, {})
-  const s = { ...defaultSettings, ...saved }
-  s.predictiveMovement = saved.predictiveMovement === true
+  const saved = load<Partial<Settings> | null>(SETTINGS_KEY, {}) ?? {}
+  const s = { ...defaultSettings }
+  for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
+    const value = saved[key]
+    const fallback = defaultSettings[key]
+    if (typeof value === typeof fallback && (typeof value !== 'number' || Number.isFinite(value))) {
+      (s as unknown as Record<string, unknown>)[key] = value
+    }
+  }
   s.hints = hintsFrom(saved)
-  s.leftRightKeys = leftRightFrom(saved, 'leftRightKeys', ['leftRightArrows', 'leftRightVim', 'leftRightNumpad'])
-  s.leftRightPad = leftRightFrom(saved, 'leftRightPad', ['leftRightDpad', 'leftRightStick'])
-  if (!['3d', '2.5d', '2d'].includes(s.renderer)) s.renderer = defaultSettings.renderer
-  if (![true, false, 'auto'].includes(s.depthAnimate)) s.depthAnimate = 'auto'
-  if (typeof s.depthMovement !== 'boolean') s.depthMovement = defaultSettings.depthMovement
-  if (typeof s.depthMovementDuration !== 'number' || !Number.isFinite(s.depthMovementDuration)) s.depthMovementDuration = defaultSettings.depthMovementDuration
+  s.depthAnimate = [true, false, 'auto'].includes(saved.depthAnimate!) ? saved.depthAnimate! : 'auto'
+  s.depthTilt = Math.max(35, Math.min(65, s.depthTilt))
+  s.depthZoom = Math.max(0.8, Math.min(1.4, s.depthZoom))
   s.depthMovementDuration = Math.max(0.04, Math.min(0.25, s.depthMovementDuration))
   if (!['ease-out', 'smooth', 'linear'].includes(s.depthMovementEasing)) s.depthMovementEasing = defaultSettings.depthMovementEasing
-  // A build can still restrict available views.
-  if (!VIEW_OPTIONS) s.renderer = '3d'
   return s
 }
 
-/**
- * Only what the player changed is written down: a setting still at its
- * default is left out of storage, so a default we move later moves for
- * everyone who never touched that row. Settings the build has taken away
- * (`VIEW_OPTIONS`) keep whatever a saved session said — `getSettings` reads
- * it back as 3D, but the choice is not erased on the next save.
- */
+/** Persist supported non-default preferences without touching accounts or saves. */
 export function saveSettings(s: Settings) {
-  const saved = load<Partial<Settings>>(SETTINGS_KEY, {})
   const out: Partial<Settings> = {}
   for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
     if (s[key] !== defaultSettings[key]) (out as Record<string, unknown>)[key] = s[key]
   }
-  if (!VIEW_OPTIONS) {
-    const was = saved.renderer
-    if (was !== undefined && was !== defaultSettings.renderer) out.renderer = was
-    else delete out.renderer
-  }
   save(SETTINGS_KEY, out)
-}
-
-/**
- * Where the camera pointed when the game was last left: the yaw in radians.
- * The pitch is not kept: every session starts at the rest angle (the Camera
- * angle setting), so a look up or down does not carry over.
- */
-export interface SavedView {
-  yaw: number
-}
-
-const VIEW_KEY = 'orbrun.view'
-
-export function getSavedView(): SavedView | null {
-  const v = load<Partial<SavedView> | null>(VIEW_KEY, null)
-  if (!v || typeof v.yaw !== 'number' || !isFinite(v.yaw)) return null
-  return { yaw: v.yaw }
-}
-
-export function saveView(v: SavedView) {
-  save(VIEW_KEY, { yaw: v.yaw })
 }
 
 // ------------------------------------------------------------------- servers

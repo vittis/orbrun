@@ -1,8 +1,7 @@
 // Development-only combat showcase using the same tracker and presentation as live play.
 import { Render2d } from '@orbrun/render-2d'
 import { Render25d } from '@orbrun/render-2.5d'
-import { Render3d } from '@orbrun/render-3d'
-import { makeCamera, meleeTiming, type MapRenderer } from '@orbrun/scene'
+import { meleeTiming, type MapRenderer } from '@orbrun/scene'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
@@ -37,7 +36,6 @@ let lastEffect = ''
 const frozenTime = () => attackAt + (lastEffect === 'kill'
   ? Number((document.getElementById('death-age') as HTMLSelectElement).value)
   : Number((document.getElementById('effect-age') as HTMLInputElement).value) / 100 * attackDuration)
-const camera = makeCamera(11, 5)
 const victim = scene.billboards.find(b => b.kind === 'monster' && b.name === 'goblin')!
 function restoreVictim() {
   if (!scene.billboards.includes(victim)) scene.billboards.push(victim)
@@ -60,11 +58,10 @@ function choose() {
   canvas.setAttribute('aria-label', 'Combat effects preview')
   view.prepend(canvas)
   mode = (document.getElementById('projection') as HTMLSelectElement).value
-  renderer = mode === '3d' ? new Render3d() : mode === '2d' ? new Render2d({ cellSize: 45, center: scene.player, living: true }) : new Render25d({ center: scene.player, zoom: 1.2 })
+  renderer = mode === '2d' ? new Render2d({ cellSize: 45, center: scene.player, living: true }) : new Render25d({ center: scene.player, zoom: 1.2 })
   renderer.mount(canvas)
   renderer.setTiles(tiles)
   renderer.setScene(scene)
-  renderer.setCamera(camera)
   popups.clear()
   fit()
 }
@@ -73,7 +70,7 @@ function frame(now: number) {
   const time = paused ? freezeAt : now
   renderer.render(time / 1000)
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
-  popups.render(time, renderer, scene, canvas, mode === '3d', reduced)
+  popups.render(time, renderer, scene, canvas, reduced)
   if (!paused && (popups.active || renderer.animating)) wake()
 }
 function wake() { if (!raf) raf = requestAnimationFrame(frame) }
@@ -115,7 +112,6 @@ function play(kind: string) {
     if (kind === 'kill') renderer.setOptions({ animate: false })
     renderer.setOptions({ animate: !reduced })
   }
-  if (renderer instanceof Render3d) renderer.setOptions({ motion: !reduced })
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
   const weapon = (document.getElementById('weapon') as HTMLSelectElement).value || undefined
@@ -147,6 +143,5 @@ document.getElementById('death-age')!.addEventListener('change', () => {
 })
 document.getElementById('reduced')!.addEventListener('change', () => {
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
-  if (renderer instanceof Render3d) renderer.setOptions({ motion: !(document.getElementById('reduced') as HTMLInputElement).checked })
   wake()
 })

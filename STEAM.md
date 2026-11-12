@@ -1,7 +1,7 @@
 # Add Orbrun to Steam
 
 Orbrun is a web page, so it goes onto a Steam Deck the way a browser does: as
-a non-Steam game that opens Chrome full screen on orbrun.app. It takes five
+a non-Steam game that opens Chrome full screen on dcss-client.vittis.workers.dev. It takes five
 steps and a few minutes.
 
 The first four happen in Desktop Mode: hold the power button and choose
@@ -39,7 +39,7 @@ Leave all of it. Click at the very end, after the last `@@`, type a space,
 and add:
 
 ```
---kiosk https://orbrun.app/
+--kiosk https://dcss-client.vittis.workers.dev/
 ```
 
 That opens Orbrun full screen, with no browser around it.
@@ -48,15 +48,15 @@ That opens Orbrun full screen, with no browser around it.
 
 Save each image, then set it in Steam where the line says:
 
-- [icon.png](https://orbrun.app/steam/art/icon.png): in **Properties**, click
+- [icon.png](https://dcss-client.vittis.workers.dev/steam/art/icon.png): in **Properties**, click
   the square next to the name.
-- [logo.png](https://orbrun.app/steam/art/logo.png): on the library page,
+- [logo.png](https://dcss-client.vittis.workers.dev/steam/art/logo.png): on the library page,
   hover over the banner and choose **Set custom logo**.
-- [hero.png](https://orbrun.app/steam/art/hero.png): on the library page,
+- [hero.png](https://dcss-client.vittis.workers.dev/steam/art/hero.png): on the library page,
   hover over the banner and choose **Set custom background**.
-- [grid.png](https://orbrun.app/steam/art/grid.png): right-click the entry
+- [grid.png](https://dcss-client.vittis.workers.dev/steam/art/grid.png): right-click the entry
   and choose **Manage > Set custom artwork**.
-- [portrait.png](https://orbrun.app/steam/art/portrait.png): right-click it
+- [portrait.png](https://dcss-client.vittis.workers.dev/steam/art/portrait.png): right-click it
   in the grid and choose **Manage > Set custom artwork**.
 
 ## 5. Set up the controller

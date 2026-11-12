@@ -1,7 +1,7 @@
 {
   "name": "orbrun-monorepo",
   "private": true,
-  "description": "Orbrun: Dungeon Crawl Stone Soup in first person, built for controllers and handhelds. The game plus the DCSS-as-a-library packages it is built on.",
+  "description": "Orbrun: a 2.5D Dungeon Crawl Stone Soup WebTiles client for keyboard, controllers and touch.",
   "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
@@ -32,7 +32,6 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
-    "@types/three": "^0.185.4",
     "happy-dom": "^20.14.0",
     "opentype.js": "^2.0.0",
     "typescript": "^5.9.2",

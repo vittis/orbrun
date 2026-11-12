@@ -1,117 +1,82 @@
-# Development runbook
+# Development and verification runbook
 
-All commands below run from the repository root unless otherwise stated. Use STATUS for current state, DEPLOYMENT.md for online Cloudflare operations, and BASELINE for historical results. Never commit `.env`, tokens, credentials, large recordings or generated logs.
+Run commands from the repository root. Read [STATUS.md](STATUS.md) and [DEPLOYMENT.md](DEPLOYMENT.md) before release work. Do not commit `.env`, credentials, tokens, raw recordings or generated logs.
 
-## Resume and inspect
+## Inspect and install
 
 ```sh
-cd /Users/vittis/dev/dcss-client
-cat project-notes/STATUS.md
 git status --short --branch
 git remote -v
 git rev-parse HEAD
 node --version
 npm --version
+npm ci --include=dev
 ```
 
-Read BACKLOG and DECISIONS; preserve unrelated edits. Baseline web tools: Node 24.11.1/npm 11.6.2. Installed Vite needs Node ^20.19.0 or >=22.12.0; Wrangler >=22. Node for WASM tests has a separate requirement below. Tool pinning remains P1-002.
+Verified web toolchain: Node 24.11.1/npm 11.6.2. Vite requires Node ^20.19.0 or >=22.12.0; Wrangler requires >=22. The optional WASM engine has separate requirements below. Preserve unrelated edits. Fetch and integrate current `origin/main` before substantial changes and again before publication; origin is the user's fork, upstream is Caeous's repository.
 
-## Install, run, typecheck and build
+## Run locally
 
 ```sh
-npm ci --include=dev
 npm run dev -w apps/orbrun -- --host 127.0.0.1
 ```
 
-Visit [local app](http://127.0.0.1:5173/). Keep development listeners loopback-only. `npm run dev` upstream binds all interfaces; prefer the explicit workspace command above. Stop with Ctrl-C in its terminal. On this sandbox, listener/network/keychain/Git metadata operations required approved execution; DNS/EPERM alone did not indicate application failure. A temporary cache can be used with `npm ci --include=dev --cache /private/tmp/dcss-npm-cache`.
-
-In another terminal:
+Open [development](http://127.0.0.1:5173/). Keep development listeners loopback-only. The production bundle is built and served separately:
 
 ```sh
-npm run typecheck -- --force
 npm run build
 npm run preview -w apps/orbrun -- --host 127.0.0.1
 ```
 
-Preview serves [production build](http://127.0.0.1:4173/). Build outputs `apps/orbrun/dist`; it does not build the offline engine. Phase 0 observed chunk-size warnings. Preview itself was not browser-validated in Phase 0.
+Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; the build does not provision offline engine artifacts. Network/listener/keychain sandbox refusals must be distinguished from application failures.
 
-## Tests and optional engine lane
+## Automated checks
 
 ```sh
+npm run typecheck -- --force
 npm test
 npm run e2e
+npm run build
 ```
 
-The default suite now passes with explicit skips when engine artifacts are absent.
-The optional E2E lane reports skips rather than claiming gameplay coverage.
-Historical upstream failures are retained in BASELINE.md. Require stable engine
-artifacts in dedicated CI with `REQUIRE_ENGINE=1 npm test` and
-`REQUIRE_ENGINE=1 npm run e2e`; these fail clearly when artifacts are absent.
+Run focused suites for changed behavior before the integrated suite. Keep test isolation enabled. The normal suite explicitly skips absent optional engine artifacts; `REQUIRE_ENGINE=1 npm test` and `REQUIRE_ENGINE=1 npm run e2e` make missing stable engine artifacts fatal. Report skips instead of claiming engine coverage.
 
-Focused controls regression command:
+Security-focused regressions include `packages/gamedata/test/parse.test.ts`, `packages/webtiles/test/connection.test.ts`, and app tests for gamedata proxy, session loading and Worker routes. `npm audit --json` can report current advisories; assess exposure before changing dependencies and never use `npm audit fix --force` as a routine verification step.
 
-```sh
-npx --no-install vitest run apps/orbrun/test/gamepad-repeat.test.ts apps/orbrun/test/gamepad-look.test.ts apps/orbrun/test/bindings.test.ts apps/orbrun/test/game-controls.test.ts apps/orbrun/test/runner-controls.test.ts apps/orbrun/test/runner-step.test.ts apps/orbrun/test/keys.test.ts apps/orbrun/test/osk-cursor.test.ts apps/orbrun/test/menu-nav.test.ts apps/orbrun/test/movement-cadence.test.ts apps/orbrun/test/game-movement.test.ts
-```
+## Browser acceptance
 
-Phase 0: 11 files/388 tests passed. Synthetic events/happy-dom/prototype harnesses do not prove controller hardware or real-browser reachability. Canvas/Three unit contexts are mocked. Typecheck does not cover every test file.
+Exercise the actual app at desktop and narrow/mobile viewport sizes:
 
-## Browser verification without credentials
+1. Confirm 2.5D menu scenery, settings, resize and repeated navigation lifecycle. No projection selector or first-person setting should remain.
+2. Confirm fresh settings and migrated saved projection settings use Dungeon (2.5D), preserving unrelated preferences.
+3. Open `/watch/cdi`, wait for the anonymous lobby and spectate an active player when available. Check real tiles, HUD, messages, minimap and server-driven updates. Never send chat or gameplay commands to another player's session.
+4. Use deterministic local fixtures to check level-map entry/exit, repeated transitions, cursor/selection, settings changes while open and resize. Check `X` separately from `Ctrl+X`.
+5. Check compass movement and targeting through keyboard/gamepad/touch simulation, then report hardware coverage separately.
+6. Check Still/reduced motion, visibility, wall/corridor behavior, confirmed combat effects and cleanup. Inspect console and failed network requests.
+7. Run retained development rendering fixtures such as `/testbed/dungeon.html`, `/testbed/dungeon-checks.html`, `/testbed/arrival-checks.html`, `/testbed/impact-checks.html`, `/testbed/projectile-checks.html`, `/testbed/room.html` and `/testbed/combat.html`. Record current results, not historical counts.
+8. Repeat representative shell, settings and spectating checks against production preview; this verifies production flags and emitted assets.
 
-1. Open `/` and confirm shell. Production builds offer Play and Watch on bundled servers; development still offers Offline when engine artifacts are available.
-2. Accounts → Add a server account shows bundled servers and their measured reachability; login form is viewable without submitting credentials. Escape returns to picker (verified).
-3. Open [anonymous CDI lobby](http://127.0.0.1:5173/watch/cdi); wait for roster. Choose a currently active row (names change). Verify title/HUD, actual dungeon and minimap, tile assets, and ongoing server-driven updates. Do not send chat or game commands to other players.
-4. Press Escape to open spectator menu and inspect Gamepad controls; returning to another route ends this test connection. Inspect console/network failures. Phase 0 captured no warning/error entries in queried logs; full network waterfall was not exported.
-5. Open [room testbed](http://127.0.0.1:5173/testbed/room.html). Verify Three view and Canvas map, click Face south, and verify yaw 180° plus visual change. This uses bundled assets and no live server.
-6. Other existing testbeds: `/testbed/grid.html`, `/testbed/walls.html`, `/testbed/menus.html`, `/testbed/compare.html`. Their availability is source-inspected; not all were exercised in Phase 0.
+DOM/canvas mocks do not prove raster correctness. Spectating does not prove login, character creation, save/restore or physical-controller behavior. Obtain explicitly authorized disposable-account coverage separately, with secrets entered securely and never stored in evidence.
 
-Primary 2D gameplay is not selectable in upstream UI (`VIEW_OPTIONS=false`); do not modify production simply to conceal this limitation in Phase 0. Testbed/minimap validation is narrower than gameplay parity. Use the environment's browser skill/tooling, and separate tool limitations from app failures. Supported browser tool did not expose gamepad emulation; no physical controller was supplied.
+## Fixtures and optional engine
 
-## Manual authenticated/controller acceptance (pending)
+`npm run record -- wss://crawl.dcss.io/socket 60 out.ndjson` captures anonymous spectating. `node tools/record/menus.mjs wss://crawl.dcss.io/socket 30 outdir` records menus. Keep recordings small and free of private credentials/chat where possible. Do not inject malformed traffic into public servers; use mocks.
 
-After P1 trust/transport gates, use an explicitly authorized test account. Have the user enter credentials securely; never invent or print them. If running an existing script, use unprefixed env variables in ignored `.env` per CONTRIBUTING; do not add VITE-prefixed secrets.
+Read [engine deployment](../engine/DEPLOYMENT.md) before provisioning: emsdk 6.0.10, Node 25+ JSPI, PyYAML and native build prerequisites are separate from the web toolchain. `engine/build.sh stable`, `node engine/smoke.mjs` and `npm run e2e` are the optional workflow. Engine scripts manage/clean their own worktrees; never point `ENGINE_WORK` at user work. Record resolved source identity and artifact recipe. Do not expand hosted production to offline mode as part of routine checks.
 
-Record server/version/browser/controller model and outcome for: login, existing character resume, rc inspection (do not overwrite user settings), keyboard movement/modifiers, all eight pad directions, inventory multiselect/use/drop/equipment, spells/ability/quiver/fire/target/examine, shops/confirmations, more/CRT/skills, map/travel, OSK numeric/text/character creation, save/exit/reconnect and official save/morgue/stat continuity. Run only on a disposable test character with authorization. Capture exact outbound message expectations in local fixtures; physical checks remain separate from emulation.
+## Release
 
-Check drift, diagonal boundaries, unplug/replug, device switching, background/focus, held combat across menus, latency and reconnect. No artificial failure injection against public servers; use a local mock connection for malformed/slow/flood tests. For missing cases, record failed/blocked/not-tested rather than infer from another workflow.
+Follow [DEPLOYMENT.md](DEPLOYMENT.md). Commit before the guarded dry-run; do not bypass its cleanliness/freshness checks. Preserve unrelated upstream changes and never force-push. After release record exact commit, immutable tag, build/deployment identity, hosted source/version and explicit limitations.
 
-## Safe security checks
 
-```sh
-npx --no-install vitest run packages/gamedata/test/parse.test.ts packages/webtiles/test/connection.test.ts apps/orbrun/test/gamedata-proxy.test.ts apps/orbrun/test/session-gamedata.test.ts apps/orbrun/test/worker.test.ts
-npm audit --json > /private/tmp/dcss-audit.json
-```
+## Retained browser fixtures
 
-The historical evidence/security-probes.mjs applies only to the Phase 0 source snapshot; do not run it against the changed loader. Current security regression tests use fixtures/mock IO. They are not public exploit tests. Audit findings require exposure triage; do not run `npm audit fix --force` as a baseline step. Preserve recorded Phase 0 findings when Phase 1 fixes change outputs.
+Use this checkout's actual Vite port (another checkout may occupy 5173).
 
-## Optional real-engine setup (not executed successfully here)
+- `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. Detached large canvases are released between cases and loops yield to keep the browser responsive.
+- `/testbed/living-checks.html`: 12 retained Dungeon/flat atmosphere, Still and impact assertions at desktop and narrow/DPR sizes.
+- `/testbed/live-animation.html`: actual GameScreen scheduler, combat receipt timing and reduced-motion controls.
+- `/testbed/map-lifecycle.html`: local message-driven GameScreen transitions, overview hold, cursor, settings changes, cleanup and input evidence. Renderer factory injection supplies fixture tiles; production preview separately exercises default selection.
+- `/testbed/room.html`: authored 2.5D scenery/flat overview; `?poster` for committed poster/card generation.
 
-Read `engine/DEPLOYMENT.md` before provisioning. Requires emsdk 6.0.10 active, Node 25+ with JSPI (engine/.node-version = 25), PyYAML and native WebTiles build dependencies. Current web Node24 lacks WebAssembly.Suspending; no em++/PyYAML/engine artifacts were available.
-
-Once the documented prerequisites are provisioned in a separate environment:
-
-```sh
-engine/build.sh stable
-node engine/smoke.mjs
-npm run e2e
-```
-
-These commands may fetch/build substantial engine sources. `engine/build.sh` manages and force-cleans its own worktrees; never point ENGINE_WORK at existing user work. Record resolved upstream commit and build recipe from `engine/dist/stable/engine.json` because the stable channel resolves dynamically. For future CI use pinned artifacts/refs and a required-engine check. Online-client development does not require this optional engine build.
-
-## Upstream and fork workflow
-
-Expected remotes: origin = `https://github.com/vittis/orbrun.git`; upstream = `https://github.com/Caeous/orbrun.git`. Initialization branch `chore/phase-0-foundation`; upstream baseline SHA `b65fc15ca1b58969cb061a7749db8cbdb92b8f4d`.
-
-```sh
-git fetch upstream
-git log --oneline HEAD..upstream/main
-git diff HEAD...upstream/main --stat
-```
-
-Review changes before merge; use a separate branch/worktree for upstream integration and run the relevant baseline. Do not force-push or reset user work. Creating the GitHub fork was requested and completed; no initialization branch push is implied by the local commit. When publishing that branch is intended:
-
-```sh
-git push -u origin chore/phase-0-foundation
-```
-
-GitHub authentication succeeded via keyring outside the sandbox after a sandbox-only invalid-token result. If it fails again, distinguish keychain/network restriction from truly expired credentials before asking the user to reauthenticate. Never emit token contents or change global Git config.
+Never treat simulated controller input or these local server fixtures as authenticated play or physical-controller validation.

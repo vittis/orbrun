@@ -12,18 +12,18 @@ import { stanceFor } from '@orbrun/scene-webtiles'
  * was: the game's marks are off before it is written (film-lib.ts
  * `cleanScene`), the builder's handle on each monster is dropped, and a
  * cell's flags keep only the ones that are set. Nor its glyph, colour and
- * label: only the 3D view draws a place.
+ * label: the scenery needs no targeting labels.
  */
 export interface PlaceFile {
   /** the format; a reader refuses one it does not know */
-  format: 1
+  format: 2
   id: string
   /** where the game stood, as crawl names it (`Lair:3`) */
   place: string
   source: { host: string; version: string; recording: string; at: number }
   license: string
-  /** the eye: the player's cell, and the way it faces (camera radians, 0 north, clockwise) */
-  eye: { x: number; y: number; yaw: number }
+  /** The cell at the centre of the scenery. */
+  center: { x: number; y: number }
   atlas: PlaceAtlas
   scene: PlaceScene
 }
@@ -39,7 +39,6 @@ export interface PlaceAtlas {
 export interface PlaceScene {
   bounds: Scene['bounds']
   player: Scene['player']
-  level: Scene['level']
   cells: PlaceCell[]
   billboards: Billboard[]
 }
@@ -69,7 +68,7 @@ export function writeScene(scene: Scene): PlaceScene {
     cells.push(prune(Object.keys(set).length ? { ...rest, flags: set } : rest))
   }
   const billboards = scene.billboards.filter((b) => b.kind !== 'player').map(({ ref: _ref, ...b }) => prune(b) as Billboard)
-  return { bounds: scene.bounds, player: scene.player, level: scene.level, cells, billboards }
+  return { bounds: scene.bounds, player: scene.player, cells, billboards }
 }
 
 /**
@@ -85,7 +84,7 @@ export function readScene(p: PlaceScene): Scene {
     const stance = c.kind === 'feature' && c.feature && c.feature.type !== 'other' ? stanceFor(undefined, c.feature) : c.stance
     cells.set(cellKey(c.x, c.y), { ...c, stance, flags: { ...NO_FLAGS, ...c.flags } })
   }
-  return { bounds: p.bounds, player: p.player, playerOnLevel: true, level: p.level, cells, billboards: p.billboards, revision: 1, layoutRevision: 1 }
+  return { bounds: p.bounds, player: p.player, playerOnLevel: true, cells, billboards: p.billboards, revision: 1 }
 }
 
 /** Every tile the scene names: what a place's atlas must hold. */
@@ -96,20 +95,16 @@ export function sceneTileIds(scene: Scene): Set<TileId> {
     if (Number.isInteger(id)) out.add(id!)
   }
   const all = (ids: TileId[] | undefined) => ids?.forEach(add)
-  add(scene.level.ceilingTile)
   for (const c of scene.cells.values()) {
     add(c.floorTile)
     add(c.wallTile)
-    add(c.ceilingTile)
     add(c.featureTile)
     add(c.cloud)
     Object.values(c.faceTiles ?? {}).forEach(add)
     all(c.underlays)
     all(c.overlays)
     all(c.wallShadows)
-    all(c.shorelines)
     all(c.wallOverlays)
-    all(c.translucent)
     all(c.icons)
   }
   for (const b of scene.billboards) {

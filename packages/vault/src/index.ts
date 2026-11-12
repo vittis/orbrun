@@ -1,16 +1,12 @@
 import {
   cellKey,
-  dirToYaw,
   emptyScene,
-  makeCamera,
   type Billboard,
-  type Camera,
-  type Dir8,
   type Scene,
   type SceneCell,
   type TileId,
 } from '@orbrun/scene'
-import { classifyFeature, isVegetation, roofs, stanceFor, standsFree } from '@orbrun/scene-webtiles'
+import { classifyFeature, isVegetation, stanceFor, standsFree } from '@orbrun/scene-webtiles'
 
 /**
  * @orbrun/vault
@@ -35,9 +31,7 @@ import { classifyFeature, isVegetation, roofs, stanceFor, standsFree } from '@or
  *   KMONS: <glyph> = <tile>      a monster standing on the floor (a plant,
  *                                a bush, a lotus on a pool: the room has no
  *                                actors)
- *   EYE:   <glyph> [<heading>]   Orbrun's own: where the camera stands and
- *                                the way it faces (N NE E SE S SW W NW, N by
- *                                default); the glyph is floor
+ *   EYE:   <glyph>               Orbrun's own: the view centre; its glyph is floor
  *   LIGHT: <glyph>               Orbrun's own: where the light is, when it
  *                                is not the eye; the glyph is floor
  *   # …                          a comment, outside the map
@@ -66,7 +60,7 @@ export interface Vault {
   /** the map, every row padded to `width` with void */
   map: string[]
   legend: LegendEntry[]
-  eye: { x: number; y: number; facing: Dir8 }
+  eye: { x: number; y: number }
   light: { x: number; y: number }
 }
 
@@ -82,7 +76,6 @@ export class DesError extends Error {
 
 export const DIRECTIVES = ['NAME', 'TILE', 'FTILE', 'KFEAT', 'KITEM', 'KMONS', 'EYE', 'LIGHT', 'MAP', 'ENDMAP'] as const
 
-const HEADINGS: Record<string, Dir8> = { N: 0, NE: 1, E: 2, SE: 3, S: 4, SW: 5, W: 6, NW: 7 }
 
 const LEGEND_KIND: Record<string, LegendKind> = { TILE: 'wall', FTILE: 'floor', KFEAT: 'feat', KITEM: 'item', KMONS: 'mons' }
 
@@ -94,7 +87,6 @@ export function parseDes(text: string): Vault {
   const legend: LegendEntry[] = []
   const seen = new Map<string, number>()
   let eyeGlyph: string | null = null
-  let eyeFacing: Dir8 = 0
   let lightGlyph: string | null = null
   let inMap = false
   let sawMap = false
@@ -135,12 +127,7 @@ export function parseDes(text: string): Vault {
       if (key === 'EYE') {
         if (eyeGlyph !== null) throw new DesError('a second EYE', n)
         eyeGlyph = glyph
-        if (parts[1] !== undefined) {
-          const f = HEADINGS[parts[1].toUpperCase()]
-          if (f === undefined) throw new DesError(`EYE heading ${parts[1]} is not one of ${Object.keys(HEADINGS).join(' ')}`, n)
-          eyeFacing = f
-        }
-        if (parts.length > 2) throw new DesError('EYE takes a glyph and a heading, nothing more', n)
+        if (parts.length > 1) throw new DesError('EYE takes one centre glyph', n)
       } else {
         if (lightGlyph !== null) throw new DesError('a second LIGHT', n)
         if (parts.length > 1) throw new DesError('LIGHT takes one glyph', n)
@@ -181,7 +168,7 @@ export function parseDes(text: string): Vault {
       if (!known.has(g)) throw new DesError(`"${g}" at ${x},${y} of the map has no legend entry`, mapLine + 1 + y)
       if (g === eyeGlyph) {
         if (eye) throw new DesError(`a second "${g}" (the eye) at ${x},${y}`, mapLine + 1 + y)
-        eye = { x, y, facing: eyeFacing }
+        eye = { x, y }
       }
       if (g === lightGlyph) {
         if (light) throw new DesError(`a second "${g}" (the light) at ${x},${y}`, mapLine + 1 + y)
@@ -189,7 +176,7 @@ export function parseDes(text: string): Vault {
       }
     }
   }
-  if (eyeGlyph === null) throw new DesError('no EYE: say where the camera stands', lines.length)
+  if (eyeGlyph === null) throw new DesError('no EYE: say which cell centres the view', lines.length)
   if (!eye) throw new DesError(`the eye's glyph "${eyeGlyph}" is not on the map`, mapLine)
   if (lightGlyph !== null && !light) throw new DesError(`the light's glyph "${lightGlyph}" is not on the map`, mapLine)
   // the eye and the light stand on floor: a glyph of theirs must not also be a wall or a feature
@@ -255,8 +242,6 @@ export function vaultScene(v: Vault, names: TileNames): Scene {
   }
   const scene = emptyScene()
   scene.bounds = { left: 0, top: 0, right: v.width - 1, bottom: v.height - 1 }
-  const wallBases = new Map<TileId, number>()
-  const fittings = new Set<TileId>()
   for (let y = 0; y < v.height; y++) {
     for (let x = 0; x < v.width; x++) {
       const g = v.map[y][x]
@@ -281,8 +266,6 @@ export function vaultScene(v: Vault, names: TileNames): Scene {
         cell.wallStyle = /TRANSPARENT|CRYSTAL|GLASS/.test(e.tile) ? 'transparent' : 'solid'
         cell.label = e.tile.replace(/^WALL_/, '').toLowerCase().replace(/_/g, ' ')
         cell.glyph = '#'
-        wallBases.set(id, (wallBases.get(id) ?? 0) + 1)
-        if (!roofs(e.tile)) fittings.add(id)
       } else if (e && e.kind === 'feat') {
         const id = names.id(e.tile)!
         const f = classifyFeature(e.tile, undefined, undefined)
@@ -323,9 +306,7 @@ export function vaultScene(v: Vault, names: TileNames): Scene {
       scene.cells.set(cellKey(x, y), cell)
     }
   }
-  // closed: an open cell never touches void, so the eye never looks into
-  // nothing; except a tree, which may stand at the edge of it: a wood is a
-  // boundary too, and what shows between its trunks is the dark
+  // Authored rooms are enclosed; trees may form their boundary.
   const isTree = (c: SceneCell) => c.kind === 'feature' && isVegetation(c.label)
   for (const c of scene.cells.values()) {
     if (c.occluder || isTree(c)) continue
@@ -341,32 +322,13 @@ export function vaultScene(v: Vault, names: TileNames): Scene {
     const c = scene.cells.get(cellKey(p.x, p.y))
     if (!c || c.occluder) throw new DesError(`the ${what} at ${p.x},${p.y} does not stand on open floor`, 0)
   }
-  // the lid is the masonry most of the room is built of, as the game's levels take theirs: a bookcase
-  // or a window only roofs a room built of nothing else
-  let lid: TileId | null = null
-  let most = 0
-  for (const [id, n] of wallBases)
-    if (n > most && !fittings.has(id)) {
-      most = n
-      lid = id
-    }
-  if (lid === null)
-    for (const [id, n] of wallBases)
-      if (n > most) {
-        most = n
-        lid = id
-      }
-  scene.level = { ceilingTile: lid, sky: 'none', tint: { r: 1, g: 1, b: 1 } }
   scene.player = { x: v.light.x, y: v.light.y }
   scene.playerOnLevel = true
   scene.revision = 1
-  scene.layoutRevision = 1
   return scene
 }
 
-/** The camera where the vault's EYE stands, facing its heading. */
-export function vaultCamera(v: Vault): Camera {
-  const c = makeCamera(v.eye.x, v.eye.y, v.eye.facing)
-  c.yaw = dirToYaw(v.eye.facing)
-  return c
+/** The cell at the centre of the authored view. */
+export function vaultCenter(v: Vault): { x: number; y: number } {
+  return { x: v.eye.x, y: v.eye.y }
 }

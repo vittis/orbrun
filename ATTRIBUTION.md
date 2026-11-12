@@ -2,7 +2,7 @@
 
 Orbrun is an independent, unofficial client for Dungeon Crawl Stone Soup
 (DCSS). It speaks the WebTiles protocol to standard DCSS servers and renders
-the dungeon in first person. It is not affiliated with or endorsed by the DCSS
+the dungeon in 2.5D. It is not affiliated with or endorsed by the DCSS
 development team.
 
 Copyright (C) 2026 the Orbrun developer.
@@ -18,7 +18,7 @@ The environmental lighting and living-tile behavior are inspired by
 especially its [alive.js](https://github.com/vimuston/super-dungeon-crawl/blob/main/overlay/webserver/game_data/static/alive.js)
 and [light.js](https://github.com/vimuston/super-dungeon-crawl/blob/main/overlay/webserver/game_data/static/light.js).
 This client adapts those presentation ideas to its own scene metadata,
-Canvas renderers and first-person renderer; it does not load the reference
+Canvas renderers; it does not load the reference
 client's scripts at runtime.
 
 ## Relationship to DCSS
@@ -83,7 +83,7 @@ and artwork need no font installed to render.
 
 These files port portions of the official WebTiles client to TypeScript,
 following its structure, draw order, and key handling. The presentation
-differs (first person, HUD, action bar); the behaviour being reproduced is the
+differs (2.5D dungeon, HUD, action bar); the behaviour being reproduced is the
 official client's.
 
 | File | Ported from (DCSS WebTiles) | What |
@@ -118,8 +118,8 @@ official client's.
 The rest of the codebase is an independent implementation written against the
 observed wire protocol and the behaviour of the official client: the WebSocket
 connection layer, the tolerant reducer's own structure, the scene model
-(`packages/scene`), the first-person renderer (`packages/render-3d`) and every
-rendering decision in it, the HUD layout, the gamepad system and action bar,
+(`packages/scene`), the 2.5D renderer (`packages/render-2.5d`) and its
+rendering decisions, the HUD layout, the gamepad system and action bar,
 the on-screen keyboard, the command menus, the server picker and lobby,
 settings, the front room and the `.des` subset compiler it is written in
 (`packages/vault`, an independent parser of a documented format), the build
@@ -146,8 +146,6 @@ layer is implemented independently for Orbrun's renderers.
 
 ## Third-party assets and dependencies
 
-- [three.js](https://threejs.org) (MIT): the 3D renderer, a runtime
-  dependency.
 - Grenze Gotisch by Omnibus-Type (SIL Open Font License 1.1,
   `assets/fonts/OFL.txt`): the title face, as described above.
 - Barlow Condensed Bold by the Barlow Project Authors (SIL Open Font License
@@ -171,3 +169,7 @@ remain applicable. See `project-notes` and the release history for changes.
 
 Acorn (MIT) parses generated gamedata without executing it. Its license is
 in `apps/orbrun/public/licenses/acorn.txt`, shipped at `/licenses/acorn.txt`.
+
+## Dungeon simplification — 2026-11-12
+
+This fork makes the existing 2.5D renderer the sole gameplay view, retains flat supporting maps, removes the exclusive first-person implementation and refreshes its public documentation. Upstream notices and the matching release source offer remain applicable.
