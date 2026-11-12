@@ -21,7 +21,7 @@ import { gamepadHints, type HintMode, type PadHintEvidence } from './gamepad-hin
 import { touchHints, type TouchHintEvidence, type TouchLesson } from './touch-hints'
 import { isPack, openPackKeys } from './pack-tabs'
 import { OKAY_THEN, actionNeighbour, actionTab, actionTabOf, type ActionTabId } from './action-tabs'
-import { type Settings } from './servers'
+import { type Settings } from './settings'
 import { messageLinesOf, rcPacesExplore, setAutoMessageLines, setAutoMinimap, setExploreGame, type SettingGroup } from './settings-rows'
 import { PerfOverlay, type LogContext } from './perf'
 import { FpsCounter } from './fps'
@@ -84,6 +84,8 @@ interface Drag {
 /** The device the player touched last; the prompt strip is drawn for it. A finger is `touch`, a mouse or a pen `pointer`. */
 export type InputDevice = 'pad' | 'keyboard' | 'pointer' | 'touch'
 
+export type GamePresentation = 'dungeon' | 'flat-map'
+
 export interface GameHooks {
   settings(): Settings
   /** one group's settings page, with what its Back does and what opens the Gamepad controls sheet (settings-panel.ts) */
@@ -92,7 +94,7 @@ export interface GameHooks {
   gamepad: GamepadInput
   initialInput?: InputDevice
   /** Optional renderer override for the offline protocol test harness. */
-  renderer?(): MapRenderer
+  renderer?(presentation: GamePresentation): MapRenderer
 }
 
 /**
@@ -109,12 +111,9 @@ export class GameScreen {
   private grid: GridHost
   /** what the last layout was made from; the split is redone only when it changes */
   private layoutKey = ''
-  private renderMode: '2.5d' | '2d' = '2.5d'
-  /** The level map (X) borrowed flat tiles while a depth view is selected. */
-  private mapBorrowed2d = false
-  private lastMapView = false
-  /** The level map is on screen: crawl's own, or held across a key that left it (map-hold.ts). Set once a frame, before the layout reads it. */
-  private mapShown = false
+  /** The active view; temporary maps include the hold across overview/search prompts. */
+  private presentation: GamePresentation = 'dungeon'
+  private get mapShown(): boolean { return this.presentation === 'flat-map' }
   private mapHold = new MapHold()
   private session: Session
 
@@ -643,7 +642,7 @@ export class GameScreen {
       }
     }
     this.viewPx = px
-    this.fps.place(this.renderMode === '2.5d' && !mapView ? this.grid.px(cells.view) : null)
+    this.fps.place(this.presentation === 'dungeon' && !mapView ? this.grid.px(cells.view) : null)
     // the map is centred, and its cells fitted, on its part above the touch bar (render-2d `foot`)
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
@@ -686,7 +685,7 @@ export class GameScreen {
 
   private makeRenderer(): MapRenderer {
     const st = this.hooks.settings()
-    const r: MapRenderer = this.hooks.renderer?.() ?? (this.renderMode === '2.5d' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.reducedMotion }))
+    const r: MapRenderer = this.hooks.renderer?.(this.presentation) ?? (this.presentation === 'dungeon' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.reducedMotion }))
     r.mount(this.canvas)
     if (this.session.gamedata) {
       r.setTiles(this.session.gamedata)
@@ -701,10 +700,7 @@ export class GameScreen {
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()
-    const wanted = this.mapShown ? '2d' : '2.5d'
-    this.mapBorrowed2d = this.mapShown
-    if (wanted !== this.renderMode) this.toggleRenderer(wanted)
-    else if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(st))
+    if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(st))
     // the minimap's size is the layout's to set
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
     // the engine read its delay at Play: a change reaches it as the client's set_option (Instant spelled out, as -1)
@@ -727,10 +723,11 @@ export class GameScreen {
   }
 
   /** Switch between the dungeon and its temporary flat level map. */
-  private toggleRenderer(mode: '2.5d' | '2d') {
+  private setPresentation(presentation: GamePresentation) {
+    if (presentation === this.presentation) return
     this.cancelDrag()
     const old = { canvas: this.canvas, renderer: this.renderer }
-    this.renderMode = mode
+    this.presentation = presentation
     const c = h('canvas', { class: 'view' })
     old.canvas.replaceWith(c)
     this.canvas = c
@@ -834,9 +831,8 @@ export class GameScreen {
       this.hud.setCursor(this.cursorIsOurs ? null : cursor)
       this.needsRender = true
     }
-    this.mapShown = this.mapHold.shown(st.uiState === UiState.VIEW_MAP, this.ctx.mode, now)
+    this.setPresentation(this.mapHold.shown(st.uiState === UiState.VIEW_MAP, this.ctx.mode, now) ? 'flat-map' : 'dungeon')
     this.relayout()
-    this.syncMapRenderer()
     this.applyServerOptions()
     const settings = this.settings()
     const popups = this.feedback.flush(this.session.scene)
@@ -888,9 +884,9 @@ export class GameScreen {
       this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
-        const animate = this.renderMode === '2.5d' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
+        const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
         const timed = presentCombat(this.renderer, this.session.scene, popups, incomingMelee, spells, weapon, now, animate)
-        if (showCombat) this.combatPopups.add(timed, now, this.renderMode === '2.5d')
+        if (showCombat) this.combatPopups.add(timed, now, this.presentation === 'dungeon')
       }
       this.renderer.render(now / 1000)
       rendered = true
@@ -899,7 +895,7 @@ export class GameScreen {
       if (perf) this.perf.net.drew()
     }
     this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas,
-      this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.reducedMotion) : this.reducedMotion)
+      this.presentation === 'dungeon' ? !dungeonAnimation(settings, this.reducedMotion) : this.reducedMotion)
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
     this.fps.update(now, rendered)
@@ -999,31 +995,6 @@ export class GameScreen {
   }
 
   /**
-   * The level map (X) is the WebTiles 2D view fullscreen: while it is open
-   * a depth view swaps to the 2D renderer, and swaps back when it closes. The
-   * swap is a cut, in the frame the server's `ui_state` lands: the map is
-   * there to be read, and nothing stands between the key and the reading.
-   */
-  private syncMapRenderer() {
-    const mapView = this.mapShown
-    if (mapView === this.lastMapView) return
-    this.lastMapView = mapView
-    if (mapView) {
-      if (this.renderMode === '2.5d') {
-        this.mapBorrowed2d = true
-        this.toggleRenderer('2d')
-      }
-      this.hud.hideMinimap()
-    } else {
-      if (this.mapBorrowed2d) {
-        this.mapBorrowed2d = false
-        this.toggleRenderer('2.5d')
-      }
-      this.hud.showMinimap()
-    }
-  }
-
-  /**
    * Honour the rc options the server sends (the same `options` message the
    * official client reads): tile size and scales, display mode, minibars,
    * level-map pane hiding, fonts. Cheap to call every frame; only acts on change.
@@ -1034,8 +1005,7 @@ export class GameScreen {
     const p = st.player
     const mapView = this.mapShown
     const key = JSON.stringify([
-      this.renderMode,
-      mapView,
+      this.presentation,
       // the cell size is fitted to the view (`cellPixels`), so its size belongs to the key (`relayout` ran first in the frame)
       this.viewPx?.width,
       this.viewPx?.height,

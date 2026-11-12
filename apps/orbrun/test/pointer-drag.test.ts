@@ -19,7 +19,7 @@ function harness() {
     canvas, drag: null, hover: null, pointerLive: false, tooltipTimer: 0, ctx: { mode: 'command' },
     hud: { hideTooltip: vi.fn(), dismissesMoreAt: () => false }, session: { state: initialState() },
     inputFrom: vi.fn(), wake: vi.fn(), armCellTooltip: vi.fn(), onPointer,
-  }) as { attachPointer(c: HTMLCanvasElement): void; cancelDrag(): void; toggleRenderer(): void; drag: unknown; canvas: HTMLCanvasElement }
+  }) as { attachPointer(c: HTMLCanvasElement): void; cancelDrag(): void; setPresentation(): void; drag: unknown; canvas: HTMLCanvasElement }
   screen.attachPointer(canvas)
   const at = (type: string, x: number, y: number, buttons: number) => {
     canvas.dispatchEvent(Object.assign(new Event(type), { pointerId: 1, pointerType: 'mouse', button: 0, buttons, clientX: x, clientY: y, pageX: x, pageY: y }))
@@ -82,11 +82,11 @@ describe('a drag whose release the page never saw', () => {
     const swapped = { setCursor: vi.fn(), destroy: vi.fn() }
     Object.assign(h.screen, {
       renderer: { setCursor: vi.fn(), destroy: vi.fn() }, lastCursor: null,
-      makeRenderer: () => swapped, relayout: vi.fn(), mapBorrowed2d: false,
+      makeRenderer: () => swapped, relayout: vi.fn(), presentation: 'dungeon',
     })
     h.touch('pointerdown', 300, 300, 0)
     for (let t = 8; t <= 40; t += 8) h.touch('pointermove', 300, 300 + 4 * t, t)
-    h.screen.toggleRenderer('2d')
+    h.screen.setPresentation('flat-map')
     expect(h.screen.drag).toBe(null)
     expect(h.onPointer).not.toHaveBeenCalled()
   })

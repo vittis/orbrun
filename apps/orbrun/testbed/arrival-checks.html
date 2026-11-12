@@ -8,7 +8,8 @@
 <pre id="result">Running pixel checks…</pre>
 <script type="module">
   import { arrivalChecks } from './arrival-checks.ts'
-  const { checks, failures } = arrivalChecks()
-  document.querySelector('#result').textContent = JSON.stringify({ checks, passed: checks - failures.length, failures }, null, 2)
+  import { fixtureStart, fixtureComplete } from './fixture.ts'
+  fixtureStart('arrival-checks')
+  fixtureComplete(await arrivalChecks())
 </script>
 </html>

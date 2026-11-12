@@ -15,13 +15,12 @@ Use Node 24.11.1/npm 11.6.2 for the verified web workflow.
 ```sh
 npm ci --include=dev
 npm run dev -w apps/orbrun -- --host 127.0.0.1
-npm run typecheck -- --force
-npm test
-npm run e2e
-npm run build
+npx playwright install chromium
+npm run verify
+npm run e2e # optional engine artifacts required for execution
 ```
 
-Run focused regressions during work and the integrated checks before release. Absent optional engine artifacts cause explicit skips; `REQUIRE_ENGINE=1` makes stable-artifact absence fatal. Browser fixture checks complement mocked unit tests. [RUNBOOK.md](project-notes/RUNBOOK.md) describes acceptance and coverage limits.
+Run focused regressions during work and the integrated checks before release. Absent optional engine artifacts cause explicit skips; `REQUIRE_ENGINE=1` makes stable-artifact absence fatal. The verification command includes real Chromium fixture checks and production preview; browser config/tests are typechecked too. [RUNBOOK.md](project-notes/RUNBOOK.md) describes acceptance and coverage limits.
 
 Test workers use isolated threads with at most four workers. To compare settings, run `node tools/perf/vitest-workers.mjs --rounds 2`; compare repeated timings and equal collected cases/skips on the target machine. Recording helpers share parsed immutable fixture input and clone mutable messages/state. Do not remove isolation or weaken assertions to improve timings.
 

@@ -1,11 +1,12 @@
+import { matrix, fixtureYield, releaseCanvas } from './fixture'
 import { Render25d, fittedScale, project, type MovementEasing } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 
 /** Real pixels at intermediate tween times, including badges and hit regions. */
-export function movementChecks(source: TileSource) {
+export async function movementChecks(source: TileSource) {
   const failures: unknown[] = []
   let checks = 0
-  for (const [width, height] of [[512, 384], [390, 600]]) for (const dpr of [1, 1.25, 2]) for (const degrees of [35, 50, 65]) for (const easing of ['ease-out', 'smooth', 'linear'] as MovementEasing[]) {
+  for (const [width, height] of matrix([[512, 384], [390, 600]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const degrees of matrix([35, 50, 65], [50])) for (const easing of ['ease-out', 'smooth', 'linear'] as MovementEasing[]) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, movementDuration: 0.1, movementEasing: easing, center: { x: 0, y: 0 } })
     r.mount(canvas); r.resize(width, height, dpr); r.setTiles(source)
@@ -70,7 +71,8 @@ export function movementChecks(source: TileSource) {
       if (Math.abs((left + right + 1) / 2 - width * dpr / 2) > 1.5 || Math.abs(r.project(0, 0).x - (width / 2 - f * scale)) > 1e-6 ||
         picked !== cellKey(1, 0) || r.animating !== (elapsed < 0.1)) failures.push({ kind: 'following camera / steady player / picking / sleep', width, height, dpr, degrees, easing, elapsed, left, right, picked })
     }
-    r.destroy()
+    r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('movement-checks')
   }
   return { checks, failures }
 }

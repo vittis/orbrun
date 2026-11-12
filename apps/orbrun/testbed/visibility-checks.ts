@@ -1,12 +1,13 @@
+import { matrix, fixtureYield, releaseCanvas } from './fixture'
 import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { TileCache } from '../../../packages/render-2.5d/src/tiles'
 
 /** Sample real intermediate pixels, including alpha-masked art and reversals. */
-export function visibilityChecks(source: TileSource) {
+export async function visibilityChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
-  for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (const kind of ['floor', 'wall', 'sprite']) {
+  for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const kind of ['floor', 'wall', 'sprite']) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ animate: true, filterScaling })
     r.mount(canvas); r.resize(640, 480, dpr); r.setTiles(source)
@@ -34,11 +35,11 @@ export function visibilityChecks(source: TileSource) {
     const bright = sample()[channel]
     cell.visibility = 'remembered'; scene.revision++; r.setScene(scene, 1)
     const dimming: number[] = []
-    for (let i = 0; i <= 14; i++) { r.render(1 + i / 60); dimming.push(sample()[channel]) }
+    for (let i = 0; i <= 14; i++) { r.render(1 + i / 60); dimming.push(sample()[channel]); await fixtureYield() }
     assert('LOS dims smoothly from its previous brightness', Math.abs(dimming[0] - bright) <= 1 && dimming.at(-1)! < bright * 0.5 && new Set(dimming).size > 10 && dimming.every((v, i) => !i || v <= dimming[i - 1] + 1), { bright, dimming })
     cell.visibility = 'visible'; scene.revision++; r.setScene(scene, 2)
     const reveal: number[] = []
-    for (let i = 0; i <= 14; i++) { r.render(2 + i / 60); reveal.push(sample()[channel]) }
+    for (let i = 0; i <= 14; i++) { r.render(2 + i / 60); reveal.push(sample()[channel]); await fixtureYield() }
     assert('LOS brightens smoothly and settles', Math.abs(reveal[0] - dimming.at(-1)!) <= 1 && reveal.at(-1) === bright && new Set(reveal).size > 10 && reveal.every((v, i) => !i || v >= reveal[i - 1] - 1) && !r.animating, { reveal, animating: r.animating })
     cell.visibility = 'remembered'; scene.revision++; r.setScene(scene, 3); r.render(3.08)
     const before = sample()[channel]
@@ -48,7 +49,8 @@ export function visibilityChecks(source: TileSource) {
     assert('Still mode immediately settles the brightness', sample()[channel] === bright && !r.animating, { bright, sample: sample() })
     cell.visibility = 'unseen'; scene.revision++; r.setScene(scene, 4); r.render(4)
     assert('unseen tiles cannot be picked during a fade', r.pick(q.x, q.y) !== cellKey(0, 0), {})
-    r.destroy()
+    r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('visibility-checks')
   }
 
   // A still-visible torch must fade off a departing LOS receiver rather than
@@ -79,7 +81,8 @@ export function visibilityChecks(source: TileSource) {
     r.render(2.23); const revealEnd = sample()
     checks++
     if (Math.abs(revealStart - end) > 1 || revealMiddle <= revealStart || revealMiddle >= revealEnd || Math.abs(revealEnd - bright) > 1) failures.push({ name: 'torch exposure returns smoothly with LOS', dpr, revealStart, revealMiddle, revealEnd })
-    r.destroy()
+    r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('visibility-checks')
   }
 
   // Tinting must retain partial alpha and leave the tile cache bounded over

@@ -2,6 +2,15 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.68 — 2026-11-12
+
+- Stabilize the Dungeon-only baseline while preserving existing 2.5D artwork and renderer behavior.
+- Consolidate temporary-map transitions and preserve applied settings/cursor state when returning to Dungeon.
+- Separate settings from server/account persistence and normalize supported numeric preferences safely.
+- Give narrow mouse windows readable HUD panes while retaining touch and wide-screen layouts.
+- Add repeatable Chromium raster, accessibility, map and production-preview checks, plus branch/PR verification.
+- Consolidate current engineering documentation and prior release evidence.
+
 ## 0.3.67 — 2026-11-12
 
 - Make Dungeon (2.5D) the only gameplay presentation and migrate old projection preferences safely.

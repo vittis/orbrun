@@ -19,10 +19,10 @@ function harness() {
   const fresh = { setCursor: vi.fn(), destroy: vi.fn() }
   const revived = { setCursor: vi.fn(), destroy: vi.fn() }
   const screen = Object.assign(Object.create(GameScreen.prototype), {
-    canvas, renderer: old, hud: undefined, lastCursor: null, lastOptKey: 'x', needsRender: false,
+    canvas, renderer: old, presentation: 'dungeon', hud: undefined, lastCursor: null, lastOptKey: 'x', needsRender: false,
     session: { state: initialState(), scene: emptyScene(), gamedata: undefined },
     attachPointer: vi.fn(), cancelDrag: vi.fn(), wake: vi.fn(), makeRenderer: () => fresh, revive: () => revived,
-  }) as { toggleRenderer(): unknown; lastCursor: SceneCursor | null; renderer: unknown }
+  }) as { setPresentation(): unknown; lastCursor: SceneCursor | null; renderer: unknown }
   return { screen, old, fresh, revived }
 }
 
@@ -33,7 +33,7 @@ describe('the renderer swap carries the cursor over', () => {
     // the frame already gave the cursor to the 3D view it was about to put aside
     h.old.setCursor(cursor)
     h.screen.lastCursor = cursor
-    h.screen.toggleRenderer('2d')
+    h.screen.setPresentation('flat-map')
     expect(h.screen.renderer).toBe(h.fresh)
     expect(h.fresh.setCursor).toHaveBeenCalledExactlyOnceWith(cursor)
   })
@@ -41,8 +41,9 @@ describe('the renderer swap carries the cursor over', () => {
   it('the restored dungeon view is told the cursor is gone', () => {
     const h = harness()
     // the map's close cleared its cursor (viewmap.cc `place_cursor(CURSOR_MAP, NO_CURSOR)`) in the same frame
+    Object.assign(h.screen, { presentation: 'flat-map' })
     h.screen.lastCursor = null
-    h.screen.toggleRenderer('2.5d')
+    h.screen.setPresentation('dungeon')
     expect(h.screen.renderer).toBe(h.fresh)
     expect(h.fresh.setCursor).toHaveBeenCalledExactlyOnceWith(null)
     expect(h.old.destroy).toHaveBeenCalledOnce()

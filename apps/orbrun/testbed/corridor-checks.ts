@@ -1,13 +1,14 @@
+import { matrix, fixtureYield, releaseCanvas, pixelSampler } from './fixture'
 import { Render25d } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 
 /** Real pixels and hit regions in the tightest passage, including the lowest elevation. */
-export function corridorChecks(source: TileSource) {
+export async function corridorChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
-  for (const [width, height] of [[512, 384], [390, 600], [1728, 1117]]) {
-    for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) {
-      for (const tilt of [30, 35, 50, 65, 75]) for (const zoom of [0.8, 1, 1.4]) {
+  for (const [width, height] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) {
+    for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) {
+      for (const tilt of matrix([30, 35, 50, 65, 75], [30, 75])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
         const canvas = document.createElement('canvas')
         const r = new Render25d({ tilt, zoom, animate: false, filterScaling })
         r.mount(canvas); r.resize(width, height, dpr); r.setTiles(source)
@@ -25,12 +26,12 @@ export function corridorChecks(source: TileSource) {
         ]
         r.setScene(scene); r.render(0)
         const ctx = canvas.getContext('2d')!
-        const sample = (x: number, y: number) => [...ctx.getImageData(Math.floor(x * dpr), Math.floor(y * dpr), 1, 1).data]
+        const size = r.project(1, 0).x - r.project(0, 0).x
+        const sample = pixelSampler(ctx, dpr, { x: width / 2 - size * 3, y: height / 2 - size * 2, width: size * 6, height: size * 4 })
         const details = { width, height, dpr, filterScaling, tilt, zoom }
         // The foreground lip must leave at least 85% of the floor depth exposed,
         // allowing one backing pixel for snapping at the smallest phone scales.
         const north = r.project(-2, -0.5), south = r.project(-2, 0.5)
-        const size = r.project(1, 0).x - r.project(0, 0).x
         let open = 0
         for (let y = Math.round(north.y * dpr); y < Math.round(south.y * dpr); y++) {
           const pixel = sample(north.x, (y + 0.5) / dpr)
@@ -58,7 +59,8 @@ export function corridorChecks(source: TileSource) {
             failures.push({ kind: 'corridor raised wall depth / picking', ...details, y, z, pixel })
           }
         }
-        r.destroy()
+        r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('corridor-checks')
       }
     }
   }

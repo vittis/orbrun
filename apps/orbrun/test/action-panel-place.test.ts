@@ -7,9 +7,9 @@ import { initialState, reduce } from '@orbrun/webtiles'
 import { emptyScene } from '@orbrun/scene'
 
 /** the HUD on a 1600×900 screen, and where it put the action panel: its left edge is the strip's own left edge */
-function place(opts: { minimapTiles?: number; hideStats?: boolean; hideSidebar?: boolean; mapView?: boolean; phone?: boolean; dungeon?: boolean } = {}) {
+function place(opts: { minimapTiles?: number; hideStats?: boolean; hideSidebar?: boolean; mapView?: boolean; phone?: boolean; dungeon?: boolean; width?: number } = {}) {
   const host = document.createElement('div')
-  Object.defineProperty(host, 'clientWidth', { value: 1600 })
+  Object.defineProperty(host, 'clientWidth', { value: opts.width ?? 1600 })
   Object.defineProperty(host, 'clientHeight', { value: 900 })
   document.body.append(host)
   const hud = new Hud(host, { onSelectMonster() {}, onBarAction() {}, onMinimapClick() {}, onPanelItem() {}, onPanelShow() {} })
@@ -42,13 +42,14 @@ function place(opts: { minimapTiles?: number; hideStats?: boolean; hideSidebar?:
 }
 
 describe('the action panel stands in the strip between the stats pane and the minimap', () => {
-  it('keeps the right column below wrapped character statuses and restores its position when they clear', () => {
+  it('keeps the list below wrapped character statuses and restores its position', () => {
     const { hud, host, grid, cells } = place({ dungeon: true })
     const st = initialState(), scene = emptyScene()
     const update = () => hud.update(st, scene, { mode: 'command', layer: 'macro', hostilesInView: 0 } as never, 'xbox', null, false, 'keyboard', false)
     update()
     const sidebar = host.querySelector<HTMLElement>('.sidebar')!
     const originalTop = parseFloat(sidebar.style.top)
+    expect(sidebar.querySelector<HTMLElement>('.chat-space')!.hidden).toBe(true)
     reduce(st, { msg: 'player', status: Array.from({ length: 30 }, (_, i) => ({ light: 'LongStatus' + i, text: 'LongStatus' + i, col: 7 })) })
     update()
     const rows = host.querySelector('.stats')!.children.length - 1
@@ -58,6 +59,28 @@ describe('the action panel stands in the strip between the stats pane and the mi
     reduce(st, { msg: 'player', status: [] })
     update()
     expect(parseFloat(sidebar.style.top)).toBe(originalTop)
+    hud.destroy(); grid.destroy(); host.remove()
+  })
+  it('keeps long narrow character sheets and lists in scrollable bands above the prompts', () => {
+    const { hud, host, grid, cells } = place({ dungeon: true, width: 390 })
+    const st = initialState()
+    reduce(st, { msg: 'player', status: Array.from({ length: 30 }, (_, i) => ({ light: 'LongStatus' + i, text: 'LongStatus' + i, col: 7 })) })
+    hud.update(st, emptyScene(), { mode: 'command', layer: 'macro', hostilesInView: 0 } as never, 'xbox', null, false, 'keyboard', false)
+    const stats = host.querySelector<HTMLElement>('.stats')!
+    const sidebar = host.querySelector<HTMLElement>('.sidebar')!
+    expect(host.querySelector('.hud')!.classList.contains('stacked-desktop')).toBe(true)
+    expect(stats.style.height).not.toBe('auto')
+    expect(stats.children.length - 1).toBeGreaterThan(cells.stats.h)
+    expect(parseFloat(sidebar.style.top)).toBe(grid.px(cells.sidebar).top)
+    expect(parseFloat(sidebar.style.top) + parseFloat(sidebar.style.height)).toBeLessThan(grid.px(cells.clear).top)
+    expect(sidebar.querySelector('.statuses')).not.toBeNull()
+    const scrollFoot = sidebar.querySelector<HTMLElement>('.chat-space')!
+    expect(scrollFoot.hidden).toBe(false)
+    expect(scrollFoot).toBe(sidebar.lastElementChild)
+    expect(parseFloat(scrollFoot.style.height)).toBe(2 * grid.grid.ch)
+    for (const selector of ['.actionbar', '.menubar']) {
+      expect(host.querySelector<HTMLElement>(selector)!.style.maxHeight).toBe(grid.px(cells.clear).height + 'px')
+    }
     hud.destroy(); grid.destroy(); host.remove()
   })
   it('moves the dungeon character pane right, leaves the item strip left and starts the list below the character', () => {

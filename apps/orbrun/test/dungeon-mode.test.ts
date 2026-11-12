@@ -1,13 +1,9 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
-import { emptyScene, type Dir8 } from '@orbrun/scene'
 import { Render25d } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { initialState } from '@orbrun/webtiles'
 import { GameScreen } from '../src/game'
-import { Runner, type RunnerHooks } from '../src/runner'
-import { defaultSettings } from '../src/servers'
-import type { Session } from '../src/session'
+import { defaultSettings } from '../src/settings'
 
 describe('effective dungeon animation', () => {
   it('passes configured movement properties to the renderer', () => {
@@ -26,48 +22,53 @@ describe('effective dungeon animation', () => {
   })
 })
 
-describe('the 2.5D level map', () => {
-  it('borrows flat tiles and restores the selected dungeon view on close', () => {
+describe('the Dungeon presentation lifecycle', () => {
+  it('swaps once per transition, transfers the cursor and destroys each outgoing renderer', () => {
+    const canvas = document.createElement('canvas')
+    canvas.className = 'view'
+    const root = document.createElement('div')
+    root.append(canvas)
+    const renderers = [{ setCursor: vi.fn(), destroy: vi.fn() }]
     const screen = Object.assign(Object.create(GameScreen.prototype), {
-      renderer: new Render25d(), renderMode: '2.5d', mapBorrowed2d: false,
-      mapShown: true, lastMapView: false,
-      settings: () => ({ ...defaultSettings }),
-      hud: { hideMinimap: vi.fn(), showMinimap: vi.fn() },
+      canvas, renderer: renderers[0], presentation: 'dungeon',
+      lastCursor: { x: 12, y: 7, mode: 'map' },
+      cancelDrag: vi.fn(), attachPointer: vi.fn(), relayout: vi.fn(), wake: vi.fn(),
+      makeRenderer: vi.fn(() => {
+        const next = { setCursor: vi.fn(), destroy: vi.fn() }
+        renderers.push(next)
+        return next
+      }),
     })
-    screen.toggleRenderer = vi.fn((mode: string) => {
-      screen.renderMode = mode
-      screen.renderer = mode === '2d' ? new Render2d() : new Render25d()
-    })
-    screen.syncMapRenderer()
-    expect(screen.toggleRenderer).toHaveBeenLastCalledWith('2d')
-    expect(screen.mapBorrowed2d).toBe(true)
-    screen.mapShown = false
-    screen.syncMapRenderer()
-    expect(screen.toggleRenderer).toHaveBeenLastCalledWith('2.5d')
-    expect(screen.mapBorrowed2d).toBe(false)
-    for (let cycle = 0; cycle < 5; cycle++) {
-      screen.mapShown = true
-      screen.syncMapRenderer()
-      screen.syncMapRenderer()
-      expect(screen.renderMode).toBe('2d')
-      screen.mapShown = false
-      screen.syncMapRenderer()
-      expect(screen.renderMode).toBe('2.5d')
+    for (let cycle = 0; cycle < 6; cycle++) {
+      screen.setPresentation('flat-map')
+      expect(screen.mapShown).toBe(true)
+      expect(screen.renderer.setCursor).toHaveBeenCalledExactlyOnceWith(screen.lastCursor)
+      screen.setPresentation('flat-map')
+      expect(root.querySelectorAll('canvas.view')).toHaveLength(1)
+      screen.lastCursor = null
+      screen.setPresentation('dungeon')
+      expect(screen.mapShown).toBe(false)
+      expect(screen.renderer.setCursor).toHaveBeenCalledExactlyOnceWith(null)
+      screen.setPresentation('dungeon')
     }
-    expect(screen.toggleRenderer).toHaveBeenCalledTimes(12)
+    expect(screen.makeRenderer).toHaveBeenCalledTimes(12)
+    for (const old of renderers.slice(0, -1)) expect(old.destroy).toHaveBeenCalledOnce()
+    expect(renderers.at(-1)!.destroy).not.toHaveBeenCalled()
+    expect(screen.cancelDrag).toHaveBeenCalledTimes(12)
   })
 
-  it('keeps the map flat when dungeon settings change while it is open', () => {
+  it('keeps a temporary map and its renderer when dungeon settings change', () => {
+    const renderer = new Render2d()
     const screen = Object.assign(Object.create(GameScreen.prototype), {
-      renderer: new Render2d(), renderMode: '2d', mapShown: true,
-      mapBorrowed2d: true, settingsCache: null, exploreDelay: null,
+      renderer, presentation: 'flat-map', settingsCache: null, exploreDelay: null,
       settings: () => ({ ...defaultSettings }),
-      grid: { setTextSize: vi.fn() }, textPx: () => 16,
-      shrinkText: vi.fn(),
-      hud: { setMinimapTiles: vi.fn() }, relayout: vi.fn(), toggleRenderer: vi.fn(), wake: vi.fn(),
+      grid: { setTextSize: vi.fn() }, textPx: () => 16, shrinkText: vi.fn(),
+      hud: { setMinimapTiles: vi.fn() }, relayout: vi.fn(), setPresentation: vi.fn(), wake: vi.fn(),
     })
     screen.applySettings()
-    expect(screen.toggleRenderer).not.toHaveBeenCalled()
-    expect(screen.mapBorrowed2d).toBe(true)
+    expect(screen.setPresentation).not.toHaveBeenCalled()
+    expect(screen.renderer).toBe(renderer)
+    expect(screen.mapShown).toBe(true)
+    expect(screen.relayout).toHaveBeenCalledWith(true)
   })
 })

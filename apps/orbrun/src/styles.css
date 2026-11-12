@@ -2355,6 +2355,39 @@ a.item.beside {
   pointer-events: auto;
 }
 
+/* A narrow desktop reserves readable, scrollable panes above the clear view.
+   Native scrolling keeps longer sheets and monster lists reachable. */
+.hud.stacked-desktop .stats,
+.hud.stacked-desktop .sidebar {
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+.hud.stacked-desktop .sidebar > * {
+  flex-shrink: 0;
+}
+.hud .chat-space {
+  pointer-events: none;
+}
+.hud.stacked-desktop .sidebar > [hidden] {
+  display: none !important;
+}
+.hud.stacked-desktop .statuses {
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hud.stacked-desktop .actionbar,
+.hud.stacked-desktop .menubar {
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.hud.stacked-desktop .actionbar .chip {
+  flex-shrink: 0;
+}
+
 /* the WebTiles stats pane (player.js / game.html) as rows on its cells at the view's top-left corner; the widths are in grid/stats.ts.
    A press anywhere on it opens the character screen (hud.ts `onStatsClick`), so its text is not for selecting */
 .stats {

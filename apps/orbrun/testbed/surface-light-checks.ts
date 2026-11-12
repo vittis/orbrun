@@ -1,10 +1,11 @@
+import { fixtureYield, releaseCanvas, pixelSampler } from './fixture'
 import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 
-/** Actual Canvas regressions for continuous light, exposure and thin beams. */
+/** Actual Canvas regressions for continuous light, exposure and authored projectile artwork. */
 export async function surfaceLightChecks() {
   // Leave the browser responsive between readback-heavy frames; sample times remain deterministic.
-  const yieldFrame = () => new Promise<void>(resolve => setTimeout(resolve, 0))
+  const yieldFrame = () => fixtureYield()
   const failures: unknown[] = []; let checks = 0
   const assert = (name: string, passed: boolean, detail: unknown) => { checks++; if (!passed) failures.push({ name, detail }) }
   const atlas = document.createElement('canvas'); atlas.width = 96; atlas.height = 32
@@ -17,7 +18,7 @@ export async function surfaceLightChecks() {
     atlas: () => atlas, atlasNames: () => ['test'],
   }
   for (const dpr of [1, 2]) {
-    await yieldFrame()
+    await fixtureYield(`surfaces DPR${dpr}`)
     const canvas = document.createElement('canvas'), r = new Render25d({ animate: false })
     r.mount(canvas); r.resize(640, 480, dpr); r.setTiles(source)
     const scene = emptyScene(); scene.playerOnLevel = true
@@ -27,9 +28,13 @@ export async function surfaceLightChecks() {
     } as SceneCell)
     const p = { x: 0, y: 0, width: 640, height: 480, tilt: 50 * Math.PI / 180, scale: fittedScale(640, 480, 50 * Math.PI / 180) }
     const ctx = canvas.getContext('2d')!
+    let snapshot: ReturnType<typeof pixelSampler> | undefined
+    const draw = r.render.bind(r)
+    r.render = now => { snapshot = undefined; draw(now) }
     const sample = (x: number, y: number, z = 0) => {
       const q = project(p, x, y, z)
-      return [...ctx.getImageData(Math.floor(q.x * dpr), Math.floor(q.y * dpr), 1, 1).data]
+      snapshot ??= pixelSampler(ctx, dpr, { x: 140, y: 150, width: 330, height: 120 })
+      return snapshot(q.x, q.y)
     }
     const fire = { colour: [255, 158, 64] as [number, number, number], radius: 4.2, power: 0.7, pulse: 'fire' as const }
     r.setScene(scene); r.render(0)
@@ -75,20 +80,44 @@ export async function surfaceLightChecks() {
       await yieldFrame()
     }
     assert('spell afterglow fades without stepped updates', new Set(fade).size > 12 && Math.max(...fade.slice(1).map((v, i) => Math.abs(v - fade[i]))) <= 5 && Math.abs(fade.at(-1)! - fadeAmbient) <= 1, { dpr, fade, fadeAmbient })
-    // No lights: isolate beam pixels from the terrain and compare with the
-    // projected cell. Its width stays cell-long while its thickness shrinks.
+    // The source artwork owns projectile thickness. Independently rasterize its
+    // entire 32×32 cell onto snapped ground-plane corners using native Canvas;
+    // do not invoke the renderer's tile cache, planeRect or thinning path.
     scene.cells.get(cellKey(-1, 0))!.life = undefined
     scene.billboards = [0, 1].map(x => ({ kind: 'projectile' as const, tile: 3, x, y: 1, height: 0.5 }))
     scene.revision++; r.setOptions({ animate: false }); r.setScene(scene); r.render(0)
     const q = project(p, 0.5, 1, 0.28), half = p.scale
-    const pixels = ctx.getImageData(Math.floor((q.x - half) * dpr), Math.floor((q.y - half / 2) * dpr), Math.ceil(half * 2 * dpr), Math.ceil(half * dpr))
-    let top = pixels.height, bottom = -1, columns = new Set<number>()
-    for (let y = 0; y < pixels.height; y++) for (let x = 0; x < pixels.width; x++) {
-      const i = (y * pixels.width + x) * 4
-      if (pixels.data[i] > 140 && pixels.data[i + 1] > 130 && pixels.data[i] > pixels.data[i + 2] * 1.2) { top = Math.min(top, y); bottom = Math.max(bottom, y); columns.add(x) }
+    const left = Math.floor((q.x - half) * dpr), top = Math.floor((q.y - half / 2) * dpr)
+    const pixels = ctx.getImageData(left, top, Math.ceil(half * 2 * dpr), Math.ceil(half * dpr))
+    const reference = document.createElement('canvas'); reference.width = pixels.width; reference.height = pixels.height
+    const ref = reference.getContext('2d')!; ref.imageSmoothingEnabled = false
+    const expected = (widthFactor = 1, heightFactor = 1, gap = 0) => {
+      ref.clearRect(0, 0, reference.width, reference.height)
+      for (const x of [0, 1]) {
+        const a = project(p, x - 0.5, 0.5, 0.28), b = project(p, x + 0.5, 1.5, 0.28)
+        const dx = Math.round(a.x * dpr) - left, dy = Math.round(a.y * dpr) - top
+        const width = Math.round(b.x * dpr) - Math.round(a.x * dpr), height = Math.round(b.y * dpr) - Math.round(a.y * dpr)
+        ref.drawImage(atlas, 64, 0, 32, 32, dx + (x ? gap : 0), dy, width * widthFactor, height * heightFactor)
+      }
+      return ref.getImageData(0, 0, reference.width, reference.height)
     }
-    const cellDepth = project(p, 0, 1).y - project(p, 0, 0).y
-    assert('thin connected beam segments', bottom >= top && bottom - top + 1 <= Math.ceil(cellDepth * dpr * 0.12) && columns.size >= Math.floor(p.scale * 1.9 * dpr), { dpr, thickness: bottom - top + 1, columns: columns.size, scale: p.scale })
+    const mask = (image: ImageData) => {
+      const result = new Uint8Array(image.width * image.height)
+      for (let i = 0; i < result.length; i++) {
+        const offset = i * 4, data = image.data
+        result[i] = Number(data[offset + 3] > 0 && data[offset] > 140 && data[offset + 1] > 130 && data[offset] > data[offset + 2] * 1.2)
+      }
+      return result
+    }
+    const authored = mask(expected()), actual = mask(pixels)
+    const differences = (candidate: Uint8Array) => authored.reduce((sum, value, i) => sum + Number(value !== candidate[i]), 0)
+    assert('projectiles retain authored art thickness, width and connected coverage', authored.some(Boolean) && differences(actual) === 0,
+      { dpr, differingPixels: differences(actual), authoredPixels: authored.reduce((sum, value) => sum + value, 0), scale: p.scale })
+    // Prove the oracle rejects each historical failure mode instead of merely
+    // increasing a permissive thickness threshold for this browser.
+    const mutations = { width: differences(mask(expected(0.75))), thickness: differences(mask(expected(1, 0.5))), gap: differences(mask(expected(1, 1, 2))) }
+    assert('authored art oracle rejects changed width, thickness and gaps', Object.values(mutations).every(count => count > 0), { dpr, mutations })
+    releaseCanvas(reference)
 
     // Hold the camera still while the player moves, to distinguish a world
     // anchored grade from a fixed screen vignette. No semantic emitter exists.
@@ -104,7 +133,7 @@ export async function surfaceLightChecks() {
     const remote = sample(0, 0.2)
     assert('remote maps retain ungraded atlas colours', remote[0] === 64 && remote[1] === 64 && remote[2] === 64, { dpr, remote })
     r.destroy()
-    canvas.width = 0; canvas.height = 0
+    releaseCanvas(canvas)
   }
   return { checks, failures }
 }

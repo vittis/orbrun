@@ -12,6 +12,8 @@ scratchpad/
 dist-types/
 __pycache__/
 .wrangler/
+test-results/
+playwright-report/
 
 # Local-only docs
 docs/

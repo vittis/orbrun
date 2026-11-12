@@ -1,9 +1,10 @@
+import { matrix, fixtureYield, releaseCanvas, equalPixels } from './fixture'
 import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
 /** Catch stretched roofs, repeated face artwork and topology/LOS-dependent sizes. */
-export function wallCoherenceChecks() {
+export async function wallCoherenceChecks() {
   const atlas = document.createElement('canvas'); atlas.width = atlas.height = 32
   const ink = atlas.getContext('2d')!
   ink.fillStyle = '#20c020'; ink.fillRect(0, 0, 32, 32)
@@ -16,7 +17,7 @@ export function wallCoherenceChecks() {
   }
   let checks = 0
   const failures: unknown[] = []
-  for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
+  for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
     const canvas = document.createElement('canvas'), r = new Render25d({ animate: false, filterScaling, tilt: degrees, zoom })
     r.mount(canvas); r.resize(900, 700, dpr); r.setTiles(source)
     const scene = emptyScene()
@@ -49,11 +50,11 @@ export function wallCoherenceChecks() {
     assert('roof retains the unstretched original stonework', body[1] > body[0] * 3, body)
     const foot = sample(450, ground.y + ground.height - 2 / dpr)
     assert('original bottom stripe remains at the wall foot', foot[0] > foot[1] * 3, foot)
-    const crop = () => [...ctx.getImageData(Math.round(roof.x * dpr), Math.round(roof.y * dpr), Math.round(roof.width * dpr), Math.round((ground.y + ground.height - roof.y) * dpr)).data].join(',')
+    const crop = () => ctx.getImageData(Math.round(roof.x * dpr), Math.round(roof.y * dpr), Math.round(roof.width * dpr), Math.round((ground.y + ground.height - roof.y) * dpr)).data
     const before = crop()
     scene.cells.get(cellKey(0, -1))!.visibility = 'remembered'
     scene.revision++; r.setScene(scene); r.render(0)
-    assert('LOS behind a wall cannot resize or alter its artwork', before === crop(), {})
+    assert('LOS behind a wall cannot resize or alter its artwork', equalPixels(before, crop()), {})
     // The gap in the back wall opens a junction above the foreground run.
     // Its middle tile must share the low roof of its neighbours, as opposed
     // to protruding above them when its own cross-section is wider.
@@ -83,7 +84,8 @@ export function wallCoherenceChecks() {
     })
     assert('connected roofs and picking stay aligned through corners', cornerRoofs.every(({ x, body, above, roof }) =>
       body[1] > body[0] * 3 && above !== cellKey(x, 0) && roof === cellKey(x, 0)), cornerRoofs)
-    r.destroy()
+    r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('wall-coherence-checks')
   }
   return { checks, failures }
 }

@@ -1,4 +1,4 @@
-# Simplification decisions — 2026-11-12
+# Current architecture decisions
 
 1. **One gameplay presentation.** Dungeon (2.5D) is the only gameplay option in development and production. Fresh preferences and saved first-person/flat preferences resolve to it. Unrelated settings, accounts and saves remain intact.
 2. **Flat rendering is retained internally.** Level maps, overview/minimap and useful development comparisons keep the traditional renderer. Temporary flat views restore 2.5D when closed. `X` and `Ctrl+X` retain their distinct meanings.
@@ -8,3 +8,8 @@
 6. **Keep production scope bounded.** Hosted production remains bundled-server online play and spectating; offline/custom-server development remains available locally. No new hosting services or credentials are required by this refactor.
 7. **Reset engineering documentation.** Current architecture, procedures, evidence and residual risks replace obsolete proposals and long historical ledgers. Git history preserves superseded material. Retain legal notices, source-distribution obligations, security safeguards and rollback knowledge.
 8. **Release through the established pipeline.** Increment versions, use a new immutable source tag, integrate current origin/main and obey clean/fresh build guards. Atomic publication to the user's fork triggers Workers Builds; do not race it with a manual deployment.
+
+9. **Represent supporting views explicitly.** One Dungeon/flat-map presentation state owns renderer replacement; preferences cannot select a gameplay renderer.
+10. **Separate preferences from server persistence.** Keep existing storage keys/defaults, validate supported numeric domains on reads and writes, and never touch account/save keys during normalization.
+11. **Fit layout to space.** Narrow windows receive readable HUD geometry regardless of pointer type. Device classification still controls touch affordances.
+12. **Gate changes with repeatable checks.** Chromium fixtures report completion/errors and full assertion counts; CI runs the same `npm run verify` as local development. No retries hide flaky failures. Engine acceptance remains explicitly separate.

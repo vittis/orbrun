@@ -1,7 +1,7 @@
 import { h } from './dom'
 import { gamepadHints } from './gamepad-hints'
 import { touchHints } from './touch-hints'
-import { getSettings, saveSettings } from './servers'
+import { getSettings, saveSettings } from './settings'
 import { adjustSetting, groupAtDefaults, resetGroup, rowHint, rowOff, settingGroups, settingValue, type SettingGroup } from './settings-rows'
 
 /**

@@ -1,0 +1,97 @@
+{
+  "tool": "Playwright 1.65.0 / Chromium",
+  "stats": {
+    "startTime": "2026-11-12T20:53:02.307Z",
+    "duration": 59765.933000000005,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "full raster: tiles",
+      "project": "",
+      "status": "expected",
+      "durationMs": 9466
+    },
+    {
+      "title": "full raster: markers",
+      "project": "",
+      "status": "expected",
+      "durationMs": 2096
+    },
+    {
+      "title": "full raster: surfaces",
+      "project": "",
+      "status": "expected",
+      "durationMs": 4093
+    },
+    {
+      "title": "full raster: movement",
+      "project": "",
+      "status": "expected",
+      "durationMs": 5565
+    },
+    {
+      "title": "full raster: depth",
+      "project": "",
+      "status": "expected",
+      "durationMs": 3501
+    },
+    {
+      "title": "full raster: visibility",
+      "project": "",
+      "status": "expected",
+      "durationMs": 11130
+    },
+    {
+      "title": "full raster: arrival",
+      "project": "",
+      "status": "expected",
+      "durationMs": 1050
+    },
+    {
+      "title": "full raster: coherence",
+      "project": "",
+      "status": "expected",
+      "durationMs": 4398
+    },
+    {
+      "title": "full raster: corridors",
+      "project": "",
+      "status": "expected",
+      "durationMs": 8208
+    },
+    {
+      "title": "Dungeon and flat atmosphere, Still, and impact",
+      "project": "",
+      "status": "expected",
+      "durationMs": 611
+    },
+    {
+      "title": "real GameScreen follows native reduced motion, Still, and explicit On",
+      "project": "",
+      "status": "expected",
+      "durationMs": 2474
+    },
+    {
+      "title": "production shell has Dungeon scenery and only bundled online play",
+      "project": "",
+      "status": "expected",
+      "durationMs": 859
+    },
+    {
+      "title": "readable HUD and repeated map/overview restoration",
+      "project": "",
+      "status": "expected",
+      "durationMs": 1998
+    },
+    {
+      "title": "readable HUD and repeated map/overview restoration",
+      "project": "",
+      "status": "expected",
+      "durationMs": 1900
+    }
+  ]
+}

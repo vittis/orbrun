@@ -14,7 +14,8 @@ import { emptyScene, type Scene } from '@orbrun/scene'
 import { LocalWasmConnection, browserRcBook, browserSaveBook } from '@orbrun/offline'
 import { engines, keepSaves } from './engines'
 import type { ServerInfo } from './servers'
-import { gamedataBaseFor, getSettings, getToken, setToken } from './servers'
+import { gamedataBaseFor, getToken, setToken } from './servers'
+import { getSettings } from './settings'
 import { exploreOptions } from './settings-rows'
 
 /**

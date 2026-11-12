@@ -1,8 +1,9 @@
+import { fixtureYield, releaseCanvas } from './fixture'
 import { emptyScene } from '@orbrun/scene'
 import { DungeonArrival } from '../../../packages/render-2.5d/src/arrival'
 
 /** Real Canvas gradients: all compass directions, aspect ratios and DPRs. */
-export function arrivalChecks() {
+export async function arrivalChecks() {
   let checks = 0
   const failures: unknown[] = []
   for (const [width, height] of [[640, 480], [390, 600]]) for (const dpr of [1, 2]) {
@@ -33,6 +34,7 @@ export function arrivalChecks() {
       }
       checks++
       if (paint(1.32)) failures.push({ name: 'sweep expires without keeping frames awake', width, height, dpr, dx, dy })
+      releaseCanvas(canvas); await fixtureYield('arrival')
     }
   }
   return { checks, failures }

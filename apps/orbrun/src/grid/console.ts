@@ -42,6 +42,8 @@ export const STAT_WIDTH = 42
  * meant to show that many at once.
  */
 const MIN_VIEW_COLS = 34
+/** Below this width the side-by-side character columns cannot keep their captions readable. */
+const MIN_STATS_COLS = 36
 
 /** the console's smallest window, so a layout never has to cope with nothing */
 export const MIN_COLS = 40
@@ -61,13 +63,15 @@ export function fitGrid(width: number, height: number, cw: number, ch: number): 
 
 /** the game screen's regions, all in cells of the one grid; the panes lie over the view */
 export interface GameLayout {
+  /** A narrow desktop reserves scrollable character/list bands above the clear view. */
+  stackedDesktop?: boolean
   /** the dungeon view: the whole grid, the panes over it; on a phone held upright, everything under the minimap's band (`gameSplit`) */
   view: CellRect
-  /** on a phone held upright, the band across the top of the screen the minimap and the stats pane stand in (`gameSplit`); no rows elsewhere */
+  /** Top band reserved for a phone's minimap or a narrow desktop's character sheet. */
   band: CellRect
   /**
    * The part of the view no pane lies over: left of the sidebar column,
-   * above the messages. What rides the view's edges (the action panel, the
+   * above the messages (below the character sheet on a narrow desktop). What rides the view's edges (the action panel, the
    * action bar) rides this rectangle's, and the level map is
    * confined to it as game.js confines the map to the view.
    */
@@ -91,10 +95,9 @@ const STATS_ROWS = 13
 /**
  * A phone's grid too narrow for even a compact sidebar beside the view's
  * least width, and taller than it is wide: a phone held upright. The panes
- * then stack instead of standing side by side (`gameSplit`). A desktop
- * window of that shape keeps its panes side by side, compact, as it always
- * did: the stack is laid out for a phone's least grid (host.ts PHONE_COLS),
- * and cuts its numbers off on a narrower one.
+ * then stack instead of standing side by side (`gameSplit`). This selects
+ * phone-specific minimap and touch placement; a narrow desktop's character
+ * sheet uses the separate available-width fallback in `gameSplit`.
  */
 const PORTRAIT_SIDE = 36
 /** in portrait, the minimap's columns when no width is given for it (hud.ts `portraitBand` gives one) */
@@ -166,7 +169,9 @@ export function touchBeside(grid: Grid): boolean {
  * `under` rows under the messages, left of the column, are the spell bar's
  * (hud.ts renderSpellBar): the messages stand on it, in both orientations.
  * `statsOnRight` puts the character in the top-right corner and the sidebar
- * below it for the 2.5D view, which has no minimap.
+ * below it for the 2.5D view, which has no minimap. On a narrow desktop the
+ * character sheet keeps a readable width at the top, the list below it, and
+ * the messages and clear area span the full width.
  */
 export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, foot = 0, sideFoot = 0, columnWidth = statWidth, band = 0, mapCols = PORTRAIT_MAP_COLS, under = 0, statsOnRight = false): GameLayout {
   const rows = Math.max(MIN_ROWS - 4, grid.rows - foot)
@@ -189,6 +194,29 @@ export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, f
     }
   }
   const side = Math.max(0, Math.min(columnWidth, grid.cols - MIN_VIEW_COLS))
+  // A narrow desktop window still needs a readable character sheet. Stack the
+  // HUD regions without changing the dungeon canvas or opting into phone input.
+  // Phone layouts retain their existing portrait/landscape and touch placement.
+  if (statsOnRight && !grid.phone && side < MIN_STATS_COLS) {
+    const statsW = Math.min(statWidth, grid.cols)
+    // Leave four clear rows even when the window is short or the log asks for
+    // many lines. Both compact panes scroll instead of losing their contents.
+    const narrowMsgs = Math.min(msgs, Math.max(2, lower - 10))
+    const clearBottom = lower - narrowMsgs
+    const statsH = Math.min(STATS_ROWS, Math.max(2, clearBottom - 8))
+    const listH = Math.min(Math.ceil(128 / grid.ch), Math.max(2, clearBottom - statsH - 6))
+    const listY = statsH + 1
+    const top = listY + listH + 1
+    return {
+      stackedDesktop: true,
+      view,
+      band: { x: 0, y: 0, w: grid.cols, h: top },
+      clear: { x: 0, y: top, w: grid.cols, h: Math.max(0, clearBottom - top) },
+      messages: { x: 0, y: clearBottom, w: grid.cols, h: narrowMsgs },
+      sidebar: { x: grid.cols - statsW, y: listY, w: statsW, h: listH },
+      stats: { x: grid.cols - statsW, y: 0, w: statsW, h: statsH },
+    }
+  }
   const leftW = grid.cols - side
   const statsW = Math.min(side, statWidth)
   const statsH = Math.min(STATS_ROWS, rows)
@@ -220,7 +248,8 @@ export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, f
 export function levelMapSplit(grid: Grid, layout: GameLayout, opts: { hideSidebar?: boolean; hideMessages?: boolean }): CellRect {
   const w = opts.hideSidebar || isPortrait(grid) ? layout.view.w : layout.clear.w
   const h = opts.hideMessages ? layout.messages.y + layout.messages.h : layout.clear.y + layout.clear.h
-  return { x: 0, y: 0, w, h }
+  const y = layout.stackedDesktop && !opts.hideSidebar ? layout.clear.y : 0
+  return { x: 0, y, w, h: Math.max(0, h - y) }
 }
 
 /**
@@ -233,8 +262,8 @@ export function levelMapSplit(grid: Grid, layout: GameLayout, opts: { hideSideba
  * between it and the bar. `rows` is the grid's.
  */
 export function levelMapCanvas(layout: GameLayout, map: CellRect, beside: boolean, rows: number): CellRect {
-  const reachesFoot = map.h >= layout.messages.y + layout.messages.h
+  const reachesFoot = map.y + map.h >= layout.messages.y + layout.messages.h
   if (!reachesFoot) return map
-  return { x: 0, y: 0, w: beside ? layout.view.w : map.w, h: rows }
+  return { x: 0, y: map.y, w: beside ? layout.view.w : map.w, h: Math.max(0, rows - map.y) }
 }
 

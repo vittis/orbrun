@@ -52,17 +52,8 @@ Report hardware, authenticated-play, unavailable live games and absent engine ar
 
 In Cloudflare Workers → dcss-client → Deployments, select a previously verified deployment. Confirm its source/version and repeat essential smoke checks. Do not move source tags or force-push history. Disabling this Worker's workers.dev route takes only this app offline if necessary. Keep the repository/main and deployed rollback decision documented, and avoid overwriting a newer healthy release from an older checkout.
 
-## Release ledger
+## Release records
 
-Starting source: `91bf21a182e75e5ac46a4b0f656ef03296f381b7`, app 0.3.66, immutable source tag `cloudflare-online-v1.63`. These are the inspected source baseline, not a fresh production verification.
+Current source baseline: **0.3.68** / `cloudflare-online-v1.65`. [Release record](releases/0.3.68.md) contains preflight results and links the published deployment evidence.
 
-Released **0.3.67** at source commit **`a37449b0749bbbf3c241a55e099947f646c4a860`**, immutable tag **`cloudflare-online-v1.64`**. Implementation commit: `6d04873018701e06ecbb5fda82b509e07760a695`; subsequent source-release commit records browser evidence. Fresh origin/main was unchanged at `91bf21a` before atomic publication. Clean guarded dry-run passed on the final source commit; no guard bypass or manual duplicate deployment.
-
-- [Workers Build](https://dash.cloudflare.com/7892eeada7b3f36b0a8b4a5e9ab1b0e3/workers/services/view/dcss-client/production/builds/311efdf6-0a49-45d2-a1de-9fb56007f704): **success**, reported by the GitHub check on the release commit.
-- Deployment: `a93acdf8-e472-4b33-975c-f9cd42b541b4`, created `2026-11-12T20:17:12.947Z`.
-- Worker version: `3f558834-b256-4815-a751-55a02c4feb26`, 100% traffic. ASSETS binding only; no ENGINE or EVENTS.
-- Production UI displays **0.3.67**, Dungeon menu scenery and anonymous CBRG gameplay at desktop/narrow viewport sizes. No observed console errors. Supporting flat transitions/overview/targeting were verified locally; spectating did not send map commands to a public player.
-- Root/About source links reference the immutable tag. `/assets/main-xbF7spjz.js` is byte-identical to the guarded local build, SHA-256 `dfd34862d2870678677302d7062b6873cbbb9261f7d02e657b95d14303524421`.
-- HTTP root/About, Acorn notice and representative versioned gamedata: 200. Strict CSP preserved. Unlisted proxy host and `/engine/health`: 404. [HTTP evidence](evidence/production-http.json), [menu](evidence/production-menu.png), [desktop game](evidence/production-game.png), [narrow game](evidence/production-mobile.png).
-
-Validation limits and the pre-existing raster assertion mismatch are in [BASELINE.md](BASELINE.md). Final post-deployment evidence is published on the [codex/dungeon-only branch](https://github.com/vittis/orbrun/blob/codex/dungeon-only/project-notes/DEPLOYMENT.md). This documentation-only follow-up does not change deployed runtime/build files, move the immutable tag, or trigger another main deployment.
+Previous verified release: [0.3.67 — Dungeon-only simplification](releases/0.3.67.md). Its final evidence is included in this release source.

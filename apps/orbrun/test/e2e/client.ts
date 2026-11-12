@@ -236,7 +236,7 @@ interface Transport {
 
 async function startClient(t: Transport, device: InputDevice, before: (settle: () => Promise<void>) => Promise<void>, afterScreen: (g: E2e, settle: () => Promise<void>) => Promise<void>): Promise<E2e> {
   stubBrowser()
-  const [{ Session }, { GameScreen }, { getSettings }] = await Promise.all([import('../../src/session'), import('../../src/game'), import('../../src/servers')])
+  const [{ Session }, { GameScreen }, { getSettings }] = await Promise.all([import('../../src/session'), import('../../src/game'), import('../../src/settings')])
   const server = { id: 'e2e', name: 'e2e', host: 'e2e', ws: '', http: '', offline: true }
   const session = new Session(server, 'e2e', t.conn)
   const sent: ClientMessage[] = []
@@ -312,7 +312,7 @@ async function startClient(t: Transport, device: InputDevice, before: (settle: (
   if (!t.conn.open) await new Promise<void>((r) => t.conn.onOpen(() => r()))
   await before(settle)
   const gs = new GameScreen(host, session, {
-    settings: () => ({ ...getSettings(), renderer: '2d' }),
+    settings: () => getSettings(),
     settingsPanel: () => ({ el: document.createElement('div'), rows: [] }),
     onSystem() {},
     gamepad: { kind: 'xbox', isHeld: (b: Button) => held.has(b), virtualRelease() {} } as never,

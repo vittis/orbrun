@@ -344,6 +344,7 @@ export class Hud {
    * here a poisoned character reads from across the room. Hidden when
    * there is nothing to show, and with the sidebar.
    */
+  private sidebarFoot = h('div', { class: 'chat-space', hidden: true, 'aria-hidden': 'true' })
   private statuses = h('div', { class: 'statuses', hidden: true })
   private statusCanvas = h('canvas', { class: 'status-canvas' })
   private statusR2d = new Render2d({ mode: 'tiles', cellSize: 32 })
@@ -508,7 +509,7 @@ export class Hud {
     this.hooks = hooks
     this.root = h('div', { class: 'hud' })
     this.root.append(this.stats, this.sidebar, this.statuses, this.actionPanel, this.scrim, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
-    this.sidebar.append(this.minimapCanvas, this.monsters)
+    this.sidebar.append(this.minimapCanvas, this.monsters, this.sidebarFoot)
     this.statuses.append(this.statusCanvas)
     this.statusR2d.mount(this.statusCanvas)
     host.append(this.root, this.statusEl, this.panelTooltip)
@@ -546,7 +547,15 @@ export class Hud {
     this.touchbarH = null
     host.place(this.stats, cells.stats)
     // the pane grows with its rows (the status lights wrap); the cells give it its width and where it starts
-    this.stats.style.height = 'auto'
+    this.root.classList.toggle('stacked-desktop', !!cells.stackedDesktop)
+    // The folded chat footer lies over this band's foot. Extra scroll content
+    // lets the final monster row move fully above it.
+    this.sidebarFoot.hidden = !cells.stackedDesktop
+    this.sidebarFoot.style.height = cells.stackedDesktop ? 2 * host.grid.ch + 'px' : ''
+    if (!cells.stackedDesktop) this.stats.style.height = 'auto'
+    // Compact status badges scroll with the monster list rather than lying over the clear view.
+    if (cells.stackedDesktop) this.sidebar.prepend(this.statuses)
+    else if (this.statuses.parentElement !== this.root) this.root.insertBefore(this.statuses, this.actionPanel)
     host.place(this.sidebar, cells.sidebar)
     host.place(this.messages, cells.messages)
     this.stats.hidden = hidden.stats || cells.stats.w === 0
@@ -567,6 +576,7 @@ export class Hud {
     this.scrim.hidden = hidden.messages
     const at = host.px(free)
     this.freePx = { left: at.left, top: at.top, width: at.width, height: at.height }
+    for (const bar of [this.actionbar, this.menubar]) bar.style.maxHeight = cells.stackedDesktop ? at.height + 'px' : ''
     // The menu strip spans the full view width.
     const viewPx = host.px(cells.view)
     const msgPx = host.px(cells.messages)
@@ -812,7 +822,7 @@ export class Hud {
     if (!this.cells) return
     // upright, the pane stands beside the minimap (console.ts gameSplit)
     const corner = !!this.host && isPortrait(this.host.grid)
-    const { rows, prev, bars } = statsRows(state.player, state.options, this.bars, this.cells.stats.w, this.portraitCols, corner)
+    const { rows, prev, bars } = statsRows(state.player, state.options, this.bars, this.cells.stats.w - (this.cells.stackedDesktop ? 2 : 0), this.portraitCols, corner)
     this.bars = prev
     // held upright on a phone, the same Health and Magic again, side by side between the log and the spell bar, where the
     // eyes are in a fight: the pane is at the far end of the screen. Like the 2D view's minibars (cell_renderer.js
@@ -841,7 +851,7 @@ export class Hud {
     // Status lights can wrap beyond the character pane's reserved rows.
     // Keep the 2.5D list and badges below its actual text as conditions change.
     const host = this.host
-    if (host && !this.minimapEnabled && !corner && this.cells.stats.x > 0) {
+    if (host && !this.cells.stackedDesktop && !this.minimapEnabled && !corner && this.cells.sidebar.y > this.cells.stats.y) {
       const sidebar = host.px(this.cells.sidebar)
       const stats = host.px(this.cells.stats)
       const top = Math.max(sidebar.top, stats.top + (rows.length + 1) * host.grid.ch)
@@ -922,7 +932,7 @@ export class Hud {
     this.statuses.style.left = at.right - width + 'px'
     this.statuses.style.top = at.top + 'px'
     // under the map, the monster list starts under the badges
-    if (at.below) this.monsters.style.marginTop = height + 2 * at.below + 'px'
+    if (at.below && !this.cells?.stackedDesktop) this.monsters.style.marginTop = height + 2 * at.below + 'px'
     const dpr = window.devicePixelRatio || 1
     this.statusR2d.resize(width, height, dpr)
     this.statusCanvas.style.width = width + 'px'

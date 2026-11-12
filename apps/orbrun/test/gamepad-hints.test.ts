@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GamepadHints, gamepadHints, padLesson, type PadHintEvidence } from '../src/gamepad-hints'
 import { bindingTable, type Action } from '../src/bindings'
 import type { Context, MenuContext } from '../src/context'
-import { defaultSettings, getSettings, saveSettings } from '../src/servers'
+import { defaultSettings, getSettings, saveSettings } from '../src/settings'
 import { settingsPanel } from '../src/settings-panel'
 import { isPadActivity } from '../src/gamepad'
 

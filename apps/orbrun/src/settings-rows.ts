@@ -1,4 +1,4 @@
-import { defaultSettings, getSettings, saveSettings, type Settings } from './servers'
+import { defaultSettings, getSettings, saveSettings, type Settings } from './settings'
 import { isPhone } from './grid/host'
 import { rcOption } from '@orbrun/offline'
 import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from './hud'

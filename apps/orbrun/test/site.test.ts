@@ -38,7 +38,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.64/issues')
+        expect(html).not.toContain('cloudflare-online-v1.65/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")
@@ -162,7 +162,7 @@ describe('the site’s pages', () => {
     expect(fs.existsSync(path.join(here, '..', 'public', poster.getAttribute('src')!))).toBe(true)
     expect(doc.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(`${SITE_URL}/room/card.jpg`)
     expect(Array.from(doc.querySelectorAll('.bar nav a:not([target])'), (a) => a.getAttribute('href'))).toEqual(['/about', '/about/new', '/about/steam', '/about/install'])
-    expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.64"]')).not.toBeNull()
+    expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.65"]')).not.toBeNull()
     void window.happyDOM.close()
   })
 

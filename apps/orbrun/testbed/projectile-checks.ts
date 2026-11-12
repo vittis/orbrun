@@ -1,3 +1,4 @@
+import { fixtureStart, fixtureComplete, fixtureError, fixtureYield, captures, releaseCanvas } from './fixture'
 import { loadGamedata, browserIo } from '@orbrun/gamedata'
 import { Render25d } from '@orbrun/render-2.5d'
 import { type SpellEffect, type Billboard, type Scene } from '@orbrun/scene'
@@ -5,7 +6,7 @@ import { type Connection, type ServerMessage } from '@orbrun/webtiles'
 import { Session } from '../src/session'
 import type { ServerInfo } from '../src/servers'
 
-const result = document.getElementById('result')!
+fixtureStart('projectile-checks')
 try {
   const gd = await loadGamedata({ base: '/gamedata-proxy/crawl.dcss.io', version: '0703b2fa62e821390161d95cf52f9da1183761d4', io: browserIo() })
   const cases = [
@@ -54,7 +55,8 @@ try {
       for (let i = 0; i < pixels.length; i += 4) if (Math.abs(pixels[i] - before[i]) + Math.abs(pixels[i + 1] - before[i + 1]) + Math.abs(pixels[i + 2] - before[i + 2]) > 8) changedPixels++
       const passed = phase === 'Expired' ? changedPixels === 0 && !renderer.animating : changedPixels > 5
       checks.push({ spell: name, phase, changedPixels, sleeping: !renderer.animating, passed })
-      if (phase === 'Expired') continue
+      await fixtureYield(`${name}:${phase}`)
+      if (phase === 'Expired' || !captures) continue
       const figure = document.createElement('figure'), label = document.createElement('figcaption'), copy = document.createElement('canvas')
       const top = renderer.project(-3.7, -3.1), bottom = renderer.project(3.7, 2.8)
       const sx = Math.max(0, Math.floor(top.x * 2)), sy = Math.max(0, Math.floor(top.y * 2))
@@ -64,9 +66,9 @@ try {
       label.textContent = `${name.replace('BOLT_', '').replaceAll('_', ' ')} · ${phase} · ${passed ? 'PASS' : 'FAIL'}`
       figure.append(label, copy); document.getElementById('captures')!.append(figure)
     }
-    renderer.destroy(); plain.destroy(); session.close()
+    renderer.destroy(); plain.destroy(); session.close(); releaseCanvas(canvas); releaseCanvas(baseline)
   }
   const report = { checks: checks.length, passed: checks.filter(c => c.passed).length, failures: checks.filter(c => !c.passed) }
-  result.textContent = JSON.stringify(report, null, 2)
+  fixtureComplete(report)
   document.getElementById('details')!.textContent = JSON.stringify({ ...report, results: checks }, null, 2)
-} catch (error) { result.textContent = String(error); throw error }
+} catch (error) { fixtureError(error); throw error }

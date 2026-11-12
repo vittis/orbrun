@@ -33,11 +33,19 @@ Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy
 ## Automated checks
 
 ```sh
-npm run typecheck -- --force
+npx playwright install chromium
+npm run verify
+# Faster focused lanes:
+npm run typecheck:full
 npm test
+npm run verify:browser
+# Optional engine lane (separate from web acceptance):
 npm run e2e
-npm run build
 ```
+
+`verify` runs forced workspace and browser-test TypeScript checks, unit tests, production build and the full isolated Chromium suite. `verify:browser` rebuilds production assets before starting strict loopback servers on 5286/5287; an occupied port fails instead of testing another checkout. Full raster counts are pinned in `tests/browser/baseline.spec.ts`. The suite tests native reduced-motion transitions, repeated maps/overview/settings/resize, narrow mouse/touch layout, and the online-only production menu. No public server or credentials are required. Browser results and failure traces/screenshots go to ignored `test-results/`.
+
+Branch/PR CI runs the same command in `.github/workflows/verify.yml`; browser download is pinned by the exact Playwright dependency. CI installs Linux browser dependencies with `npx playwright install --with-deps chromium`. No automatic retry hides failures.
 
 Run focused suites for changed behavior before the integrated suite. Keep test isolation enabled. The normal suite explicitly skips absent optional engine artifacts; `REQUIRE_ENGINE=1 npm test` and `REQUIRE_ENGINE=1 npm run e2e` make missing stable engine artifacts fatal. Report skips instead of claiming engine coverage.
 
@@ -73,10 +81,10 @@ Follow [DEPLOYMENT.md](DEPLOYMENT.md). Commit before the guarded dry-run; do not
 
 Use this checkout's actual Vite port (another checkout may occupy 5173).
 
-- `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. Detached large canvases are released between cases and loops yield to keep the browser responsive.
+- `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. The full profile is the verification default. `&profile=smoke` is explicitly representative, never reported as full acceptance. `&capture=1` retains visual captures; default runs release canvases and yield between bounded cases. JSON in `#result`/`window.__orbrunFixture` reports status, profile, checks, failures and duration.
 - `/testbed/living-checks.html`: 12 retained Dungeon/flat atmosphere, Still and impact assertions at desktop and narrow/DPR sizes.
-- `/testbed/live-animation.html`: actual GameScreen scheduler, combat receipt timing and reduced-motion controls.
-- `/testbed/map-lifecycle.html`: local message-driven GameScreen transitions, overview hold, cursor, settings changes, cleanup and input evidence. Renderer factory injection supplies fixture tiles; production preview separately exercises default selection.
+- `/testbed/live-animation.html`: actual GameScreen scheduler, combat receipt timing and reduced-motion controls. `?native-motion=1&motion=auto` uses browser media emulation; default synthetic controls support manual inspection. Pixel sampling is opt-in and bounded (`sample=1`), so the probe does not stall the scheduler.
+- `/testbed/map-lifecycle.html`: local message-driven GameScreen transitions, overview hold, cursor, settings changes, cleanup and input evidence. The renderer factory receives the actual presentation requested by GameScreen, supplies fixture tiles and reports applied Dungeon options. Production preview separately exercises default selection.
 - `/testbed/room.html`: authored 2.5D scenery/flat overview; `?poster` for committed poster/card generation.
 
 Never treat simulated controller input or these local server fixtures as authenticated play or physical-controller validation.

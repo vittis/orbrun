@@ -1,3 +1,4 @@
+import { matrix, fixtureStart, fixtureComplete, fixtureYield, captures } from './fixture'
 /** Real Canvas checks: DOM mocks cannot detect raster seams or filtering bleed. */
 import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
@@ -9,6 +10,7 @@ import { wallCoherenceChecks } from './wall-coherence-checks'
 import { visibilityChecks } from './visibility-checks'
 import { arrivalChecks } from './arrival-checks'
 
+fixtureStart('dungeon-checks')
 const atlas = document.createElement('canvas')
 atlas.width = 160
 atlas.height = 32
@@ -38,12 +40,14 @@ function cell(x: number, y: number, wall = false): SceneCell {
 // Individual lanes keep large Canvas matrices runnable on memory-limited browsers.
 // The default runs every lane; selecting each named lane executes the same assertions.
 const lane = new URLSearchParams(location.search).get('lane') ?? 'all'
+const lanes = ['tiles', 'markers', 'surfaces', 'movement', 'depth', 'visibility', 'arrival', 'coherence', 'corridors']
+if (lane !== 'all' && !lanes.includes(lane)) throw new Error(`Unknown raster lane: ${lane}`)
 const run = (name: string) => lane === 'all' || lane === name
 const failures: unknown[] = []
 let checks = 0
-if (run('tiles')) for (const [viewWidth, viewHeight] of [[512, 384], [390, 600], [1728, 1117]]) for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) {
-  for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) for (const wall of [false, true]) {
-    await new Promise(resolve => setTimeout(resolve, 0))
+if (run('tiles')) for (const [viewWidth, viewHeight] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) {
+  for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) for (const wall of [false, true]) {
+    await fixtureYield(lane)
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, zoom, animate: false, filterScaling })
     r.mount(canvas)
@@ -66,7 +70,7 @@ if (run('tiles')) for (const [viewWidth, viewHeight] of [[512, 384], [390, 600],
     }
     checks++
     if (badPixels) failures.push({ kind: 'seam', viewWidth, viewHeight, dpr, filterScaling, degrees, zoom, wall, badPixels, firstPixel: [...pixels.slice(0, 4)] })
-    if (viewWidth === 512 && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1 && !wall) document.querySelector('#captures')!.append(canvas)
+    if (captures && viewWidth === 512 && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1 && !wall) document.querySelector('#captures')!.append(canvas)
     r.destroy()
     if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
   }
@@ -106,13 +110,13 @@ if (run('tiles')) for (const [viewWidth, viewHeight] of [[512, 384], [390, 600],
   if (silhouettes.some(s => !s.picked || s.width < 1 || s.height < 1) ||
     Math.max(...silhouettes.map(s => s.width)) - Math.min(...silhouettes.map(s => s.width)) > 1 ||
     Math.max(...silhouettes.map(s => s.height)) - Math.min(...silhouettes.map(s => s.height)) > 1) failures.push({ kind: 'sprite scale/picking', viewWidth, viewHeight, dpr, filterScaling, silhouettes })
-  if (viewWidth === 512 && dpr === 1 && !filterScaling) document.querySelector('#captures')!.append(canvas)
+  if (captures && viewWidth === 512 && dpr === 1 && !filterScaling) document.querySelector('#captures')!.append(canvas)
   r.destroy()
   if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await fixtureYield(lane)
 }
 // Visibility and marker checks use real Canvas pixels, including filtered fractional scales.
-if (run('markers')) for (const dpr of [1, 1.25, 2]) for (const filterScaling of [false, true]) for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
+if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
   const canvas = document.createElement('canvas')
   const r = new Render25d({ tilt: degrees, zoom, animate: false, filterScaling })
   r.mount(canvas)
@@ -174,10 +178,10 @@ if (run('markers')) for (const dpr of [1, 1.25, 2]) for (const filterScaling of 
   }
   checks++
   if (!neutral || max - min < 2 || max > 24 || r.pick(5, 192) !== null || r.animating) failures.push({ kind: 'neutral textured unknown fog / hidden entity / still mode', dpr, filterScaling, degrees, zoom, min, max, neutral })
-  if (dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
+  if (captures && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
   r.destroy()
   if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await fixtureYield(lane)
 }
 for (const [name, check] of [
   ['surfaces', () => surfaceLightChecks()], ['movement', () => movementChecks(source)],
@@ -185,7 +189,7 @@ for (const [name, check] of [
   ['arrival', () => arrivalChecks()], ['coherence', () => wallCoherenceChecks()],
   ['corridors', () => corridorChecks(source)],
 ] as const) if (run(name)) {
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await fixtureYield(lane)
   const result = await check(); checks += result.checks; failures.push(...result.failures)
 }
-document.querySelector('#result')!.textContent = JSON.stringify({ lane, checks, passed: checks - failures.length, failures }, null, 2)
+fixtureComplete({ lane, checks, failures })

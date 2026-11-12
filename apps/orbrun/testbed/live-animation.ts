@@ -2,10 +2,11 @@
 // No testbed RAF drives the renderer, and there is no server connection.
 import '../src/styles.css'
 import { GameScreen } from '../src/game'
+import { dungeonAnimation } from '../src/effects-motion'
 import { Render25d } from '@orbrun/render-2.5d'
 import { initialState, reduce, MouseMode, UiState } from '@orbrun/webtiles'
 import { cellKey, type TileSource } from '@orbrun/scene'
-import { defaultSettings, type Settings } from '../src/servers'
+import { defaultSettings, type Settings } from '../src/settings'
 import type { Session, SessionEvent } from '../src/session'
 import type { GamepadInput } from '../src/gamepad'
 import { antechamberScene } from '../src/room/scene'
@@ -31,13 +32,23 @@ const session = {
     return true
   }, send: () => {}, deviceRc: () => null,
 } as unknown as Session
-let settings: Settings = { ...defaultSettings, depthAnimate: true, hints: 'off' }
+const params = new URLSearchParams(location.search)
+const nativeMotion = params.has('native-motion')
+const initialMotion = params.get('motion') ?? (nativeMotion ? 'auto' : 'on')
+let settings: Settings = { ...defaultSettings, depthAnimate: initialMotion === 'auto' ? 'auto' : initialMotion === 'on', hints: 'off' }
+;(document.getElementById('motion') as HTMLSelectElement).value = initialMotion
 const deviceMotion = new EventTarget() as EventTarget & { matches: boolean; media: string }
 deviceMotion.matches = false; deviceMotion.media = '(prefers-reduced-motion: reduce)'
 const nativeMatch = window.matchMedia.bind(window)
-window.matchMedia = query => query === deviceMotion.media ? deviceMotion as unknown as MediaQueryList : nativeMatch(query)
-const renderer = new Render25d({ animate: true }); renderer.setTiles(tiles as TileSource)
-let frames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
+if (!nativeMotion) window.matchMedia = query => query === deviceMotion.media ? deviceMotion as unknown as MediaQueryList : nativeMatch(query)
+const preference = window.matchMedia(deviceMotion.media)
+const reducedInput = document.getElementById('reduced') as HTMLInputElement
+reducedInput.disabled = nativeMotion; reducedInput.checked = preference.matches
+const syncPreference = () => { reducedInput.checked = preference.matches }
+preference.addEventListener('change', syncPreference)
+const renderer = new Render25d({ animate: dungeonAnimation(settings, preference.matches) }); renderer.setTiles(tiles as TileSource)
+let frames = 0, totalFrames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
+let pixelSamples = 0, lastSampleAt = -Infinity, destroyed = false
 let hits = 0
 let moves = 0, maxPlayerDrift = 0
 let lastPopup: { text: string; visible: boolean; width: number; height: number } | null = null
@@ -47,7 +58,7 @@ const impact = renderer.impact.bind(renderer)
 renderer.impact = (...args) => { impacts++; impact(...args) }
 const draw = renderer.render.bind(renderer)
 renderer.render = now => {
-  draw(now); frames++; frameTimes.push(now!); frameTimes = frameTimes.slice(-120)
+  draw(now); frames++; totalFrames++; frameTimes.push(now!); frameTimes = frameTimes.slice(-120)
   const player = scene.billboards.find(b => b.kind === 'player')!
   const feet = renderer.projectBillboard(player)
   const frameCanvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
@@ -63,7 +74,8 @@ renderer.render = now => {
   }
   const canvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
   const q = renderer.project(scene.player.x, scene.player.y)
-  if (canvas && q) {
+  if (params.has('sample') && pixelSamples < 12 && performance.now() - lastSampleAt >= 250 && canvas && q) {
+    pixelSamples++; lastSampleAt = performance.now()
     const dpr = canvas.width / canvas.clientWidth
     const pixels = canvas.getContext('2d')!.getImageData(Math.floor((q.x - 20) * dpr), Math.floor((q.y - 50) * dpr), Math.ceil(40 * dpr), Math.ceil(55 * dpr)).data
     let hash = 2166136261
@@ -103,15 +115,29 @@ const walk = () => {
   const msg = { msg: 'player', pos: { x, y }, turn: ++state.player.turn }
   reduce(state, msg); for (const fn of listeners) fn({ type: 'state', msg })
 }
-if (new URLSearchParams(location.search).has('check')) {
+const timers: ReturnType<typeof setTimeout>[] = []
+const later = (fn: () => void, delay: number) => timers.push(setTimeout(fn, delay))
+if (params.has('check')) {
   const thorns = new URLSearchParams(location.search).has('ice-thorns')
-  setTimeout(() => hit(thorns ? 'The ice thorns skewer the goblin but do no damage.' : undefined), 400)
-  setTimeout(walk, 600)
-  setTimeout(walk, 690)
-  setTimeout(walk, 780)
-  setTimeout(() => hit(thorns ? 'The ice thorns skewer the goblin.' : undefined), 1100)
+  later(() => hit(thorns ? 'The ice thorns skewer the goblin but do no damage.' : undefined), 400)
+  later(walk, 600)
+  later(walk, 690)
+  later(walk, 780)
+  later(() => hit(thorns ? 'The ice thorns skewer the goblin.' : undefined), 1100)
 }
-setInterval(() => {
+const snapshot = () => {
   const number = document.querySelector<HTMLElement>('.combat-number')
-  document.getElementById('result')!.textContent = JSON.stringify({ frames, hits, moves, maxPlayerDrift, impacts, seenPopups: [...seenPopups.values()], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: deviceMotion.matches, popupAnimation: number ? getComputedStyle(number).animationName : null, lastPopup })
-}, 100)
+  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, seenPopups: [...seenPopups.values()], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed, popupAnimation: number ? getComputedStyle(number).animationName : null, lastPopup }
+}
+const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
+function destroy() {
+  if (destroyed) return
+  destroyed = true; clearInterval(interval); timers.forEach(clearTimeout)
+  preference.removeEventListener('change', syncPreference)
+  screen.destroy()
+  if (!nativeMotion) window.matchMedia = nativeMatch
+  document.getElementById('result')!.textContent = JSON.stringify(snapshot())
+}
+declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy } } }
+window.__orbrunLiveAnimation = { snapshot, destroy }
+window.addEventListener('pagehide', destroy, { once: true })

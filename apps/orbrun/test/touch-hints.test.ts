@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TouchHints, touchHints, type TouchHintEvidence } from '../src/touch-hints'
 import type { Context } from '../src/context'
-import { defaultSettings, getSettings, saveSettings } from '../src/servers'
+import { defaultSettings, getSettings, saveSettings } from '../src/settings'
 import { settingsPanel } from '../src/settings-panel'
 
 const ctx = (over: Partial<Context> = {}): Context => ({

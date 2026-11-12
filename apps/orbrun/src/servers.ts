@@ -1,4 +1,3 @@
-import type { HintMode } from './gamepad-hints'
 import type { GameLink } from '@orbrun/webtiles'
 import bundled from '../data/servers.json'
 import { ownWindow } from './quit'
@@ -500,87 +499,6 @@ export function morgueUrlFor(server: ServerInfo, dump: string): string | null {
 
 /** Input family, retained for keyboard and controller classification. */
 export type DirSource = 'arrows' | 'vim' | 'numpad' | 'dpad' | 'lstick'
-
-export interface Settings {
-  depthTilt: number
-  depthZoom: number
-  depthAnimate: boolean | 'auto'
-  depthMovement: boolean
-  /** Seconds per confirmed move in Dungeon. */
-  depthMovementDuration: number
-  depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
-  combatPopups: boolean
-  uiScale: number
-  confirmStairs: boolean
-  /** Zero lets the layout choose a minimap size. */
-  minimapTiles: number
-  minimapCell: number
-  messageLines: number
-  hints: HintMode
-  /** Local engine only; online servers use the player's rc file. */
-  exploreDelay: number
-}
-
-const HINT_MODES: readonly string[] = ['adaptive', 'contextual', 'off']
-
-/**
- * What a saved settings object says about hints, in the one field or in the
- * two it used to be split into: `gamepadHints` (adaptive/contextual/off) and
- * `keyHints` (a boolean), merged 2026-09-09. An old pad mode carries over; a
- * keyboard opt-out alone was the older global opt-out and still means off.
- */
-function hintsFrom(saved: Partial<Settings> & { gamepadHints?: unknown; keyHints?: unknown }): HintMode {
-  for (const v of [saved.hints, saved.gamepadHints]) if (typeof v === 'string' && HINT_MODES.includes(v)) return v as HintMode
-  if (saved.keyHints === false) return 'off'
-  return 'adaptive'
-}
-
-const SETTINGS_KEY = 'orbrun.settings'
-export const defaultSettings: Settings = {
-  depthTilt: 50,
-  depthZoom: 1,
-  depthAnimate: 'auto',
-  depthMovement: true,
-  depthMovementDuration: 0.1,
-  depthMovementEasing: 'ease-out',
-  combatPopups: true,
-  uiScale: 1,
-  confirmStairs: false,
-  minimapTiles: 0,
-  minimapCell: 0,
-  messageLines: 0,
-  hints: 'adaptive',
-  exploreDelay: 90,
-}
-
-/** Load only supported preferences; old projection/camera fields are ignored. */
-export function getSettings(): Settings {
-  const saved = load<Partial<Settings> | null>(SETTINGS_KEY, {}) ?? {}
-  const s = { ...defaultSettings }
-  for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
-    const value = saved[key]
-    const fallback = defaultSettings[key]
-    if (typeof value === typeof fallback && (typeof value !== 'number' || Number.isFinite(value))) {
-      (s as unknown as Record<string, unknown>)[key] = value
-    }
-  }
-  s.hints = hintsFrom(saved)
-  s.depthAnimate = [true, false, 'auto'].includes(saved.depthAnimate!) ? saved.depthAnimate! : 'auto'
-  s.depthTilt = Math.max(35, Math.min(65, s.depthTilt))
-  s.depthZoom = Math.max(0.8, Math.min(1.4, s.depthZoom))
-  s.depthMovementDuration = Math.max(0.04, Math.min(0.25, s.depthMovementDuration))
-  if (!['ease-out', 'smooth', 'linear'].includes(s.depthMovementEasing)) s.depthMovementEasing = defaultSettings.depthMovementEasing
-  return s
-}
-
-/** Persist supported non-default preferences without touching accounts or saves. */
-export function saveSettings(s: Settings) {
-  const out: Partial<Settings> = {}
-  for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
-    if (s[key] !== defaultSettings[key]) (out as Record<string, unknown>)[key] = s[key]
-  }
-  save(SETTINGS_KEY, out)
-}
 
 // ------------------------------------------------------------------- servers
 

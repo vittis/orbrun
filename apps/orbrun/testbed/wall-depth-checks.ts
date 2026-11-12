@@ -1,12 +1,13 @@
+import { matrix, fixtureYield, releaseCanvas, equalPixels, pixelSampler } from './fixture'
 import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
 /** Raster checks for depth cues, including consistent height and hidden neighbours. */
-export function wallDepthChecks(source: TileSource) {
+export async function wallDepthChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
-  for (const dpr of [1, 1.25, 2]) for (const degrees of [35, 50, 65]) for (const zoom of [0.8, 1, 1.4]) {
+  for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, zoom, animate: false })
     r.mount(canvas); r.resize(900, 700, dpr); r.setTiles(source)
@@ -20,11 +21,13 @@ export function wallDepthChecks(source: TileSource) {
     }
     const p = { x: 0, y: 0, width: 900, height: 700, tilt: degrees * Math.PI / 180, scale: fittedScale(900, 700, degrees * Math.PI / 180, zoom) }
     const ctx = canvas.getContext('2d')!
-    const pixel = (x: number, y: number) => ctx.getImageData(Math.floor(x * dpr), Math.floor(y * dpr), 1, 1).data[0]
+    let snapshot: ReturnType<typeof pixelSampler>
+    const pixel = (x: number, y: number) => snapshot(x, y)[0]
+    const draw = () => { r.render(0); snapshot = pixelSampler(ctx, dpr, { x: 450, y: 0, width: 1, height: 700 }) }
     const assert = (name: string, passed: boolean, detail: unknown) => {
       checks++; if (!passed) failures.push({ name, dpr, degrees, zoom, detail })
     }
-    r.setScene(scene); r.render(0)
+    r.setScene(scene); draw()
     const ground = planeRect(p, 0, 0, 0, dpr), roof = planeRect(p, 0, 0, 0.58, dpr)
     const bottom = ground.y + ground.height, faceTop = roof.y + roof.height
     const upper = pixel(450, faceTop + (bottom - faceTop) * 0.35)
@@ -41,23 +44,24 @@ export function wallDepthChecks(source: TileSource) {
     const tall = shadowInk()
     const behind = scene.cells.get(cellKey(0, -1))!
     behind.kind = 'floor'; behind.occluder = false
-    scene.revision++; r.setScene(scene); r.render(0)
+    scene.revision++; r.setScene(scene); draw()
     const short = shadowInk()
     assert('opening ground behind a wall preserves its height and shadow', tall === short, { tall, short })
     const wall = scene.cells.get(cellKey(0, 0))!
     wall.wallStyle = 'transparent'
-    scene.revision++; r.setScene(scene); r.render(0)
+    scene.revision++; r.setScene(scene); draw()
     const transparent = shadowInk()
     assert('transparent walls cast lighter shadows', transparent < short, { transparent, short })
     // Changing unseen geometry must not change any visible shadow or bevel.
     wall.visibility = 'unseen'
-    scene.revision++; r.setScene(scene); r.render(0)
-    const before = canvas.toDataURL()
+    scene.revision++; r.setScene(scene); draw()
+    const before = ctx.getImageData(0, 0, canvas.width, canvas.height).data
     wall.occluder = false; wall.kind = 'unknown'
-    scene.revision++; r.setScene(scene); r.render(0)
-    assert('hidden walls never affect visible depth cues', canvas.toDataURL() === before, {})
+    scene.revision++; r.setScene(scene); draw()
+    assert('hidden walls never affect visible depth cues', equalPixels(ctx.getImageData(0, 0, canvas.width, canvas.height).data, before), {})
     assert('static depth cues let still scenes sleep', !r.animating, {})
-    r.destroy()
+    r.destroy(); releaseCanvas(canvas)
+    await fixtureYield('wall-depth-checks')
   }
   return { checks, failures }
 }

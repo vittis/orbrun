@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
-import { defaultSettings } from '../src/servers'
+import { defaultSettings } from '../src/settings'
 import { Room25d, roomOptions } from '../src/room/room-25d'
 
 const mocks = vi.hoisted(() => ({ mount: vi.fn(), setOptions: vi.fn(), setTiles: vi.fn(), setScene: vi.fn(), render: vi.fn(), destroy: vi.fn() }))

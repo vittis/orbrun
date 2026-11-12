@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { defaultSettings, getSettings, saveSettings } from '../src/servers'
+import { defaultSettings, getSettings, saveSettings } from '../src/settings'
 import { settingsPanel } from '../src/settings-panel'
 import { adjustSetting, ALL_SETTING_ROWS, groupAtDefaults, resetGroup, settingGroups, MESSAGE_LINES, MESSAGE_LINES_AUTO, MINIMAP_AUTO, MINIMAP_CELLS, MINIMAP_TILES, rowHint, rowOff, SETTING_ROWS, settingValue, messageLinesOf, setAutoMessageLines, setAutoMinimap, exploreOptions, setExploreGame } from '../src/settings-rows'
 
-// happy-dom's localStorage has no working methods; give servers.ts a plain one
+// happy-dom's localStorage has no working methods; give settings.ts a plain one
 const store = new Map<string, string>()
 Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
@@ -20,6 +20,15 @@ const row = (label: string) => ALL_SETTING_ROWS.find((r) => r.label === label)!
 
 describe('what is written down', () => {
   beforeEach(() => store.clear())
+
+  it('round-trips every offered setting value without normalization changing it', () => {
+    for (const row of ALL_SETTING_ROWS) {
+      for (const value of row.values) {
+        saveSettings({ ...defaultSettings, [row.key]: value })
+        expect(getSettings()[row.key], `${row.key}=${value}`).toBe(value)
+      }
+    }
+  })
 
   it('offers combat popups in every view and persists the off switch', () => {
     const effects = row('Combat popups')

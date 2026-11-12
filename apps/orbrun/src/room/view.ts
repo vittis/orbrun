@@ -1,5 +1,5 @@
 import { h } from '../dom'
-import { getSettings } from '../servers'
+import { getSettings } from '../settings'
 import { placeById } from './places'
 import type { Room25d } from './room-25d'
 

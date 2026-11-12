@@ -20,7 +20,7 @@
     "prebuild": "node tools/build/ensure-dev-deps.mjs",
     "build": "npm run build -w apps/orbrun",
     "preview": "npm run preview -w apps/orbrun",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.browser.json",
     "test": "vitest run",
     "e2e": "vitest run -c vitest.e2e.config.ts",
     "record": "node tools/record/record.mjs",
@@ -28,9 +28,13 @@
     "room:poster": "node tools/build/poster.mjs",
     "deploy": "wrangler deploy",
     "deploy:guard": "node tools/build/deploy-guard.mjs",
-    "deploy:check": "wrangler deploy --dry-run"
+    "deploy:check": "wrangler deploy --dry-run",
+    "verify": "npm run typecheck:full && npm test && npm run verify:browser",
+    "verify:browser": "npm run build && playwright test",
+    "typecheck:full": "tsc -b --force && tsc -p tsconfig.browser.json"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@types/node": "^26.4.1",
     "happy-dom": "^20.14.0",
     "opentype.js": "^2.0.0",

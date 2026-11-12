@@ -1,5 +1,5 @@
 import { Render25d } from '@orbrun/render-2.5d'
-import { getSettings, type Settings } from '../servers'
+import { getSettings, type Settings } from '../settings'
 import { dungeonAnimation } from '../effects-motion'
 import { loadPlace, type LoadedPlace } from './places'
 
