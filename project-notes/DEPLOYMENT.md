@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.54 point at the `cloudflare-online-v1.51` release tag in
+Source links for 0.3.55 point at the `cloudflare-online-v1.52` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1384,3 +1384,26 @@ Release validation and the guarded production dry-run precede an atomic,
 non-forced main/source-tag push through the existing Workers Builds pipeline.
 Verify hosted version, immutable source links, bundle identity, CSP and proxies
 after deployment.
+
+
+## 0.3.55 snappy, more readable projectile timing — prepared 2026-11-12
+
+User authorized committing to main and deploying with explicit care for
+concurrent worktrees. Integrated origin/main `b206f78`, preserving 0.3.54's
+stronger idle motion and flying hover, the FPS counter, hybrid recipient
+overlays and all previous integrated work. Immutable source tag:
+`cloudflare-online-v1.52`.
+
+Hybrid projectile travel scales its native/fallback timing by 1.35, with a
+70 ms minimum instead of 40 ms. The 300 ms travel cap and 60 ms landing
+exposure remain; impact timing follows the slower arrival. Timing regressions
+and the actual-art preview use the new contact clock.
+
+Implementation validation passed 2,527 tests and typecheck before integration.
+Integrated validation passed 2,533 tests with two optional-engine skips and a
+forced TypeScript rebuild; the optional engine E2E reports 44 explicit skips
+because artifacts are absent. The guarded production dry-run precedes the
+atomic, non-forced main/source-tag push. If main advances, fetch, integrate and
+revalidate; never force-push or replace a newer deployment from this worktree.
+Use the existing Workers Builds pipeline and verify live version, source links,
+exact bundles, CSP, proxies and anonymous spectating after rollout.
