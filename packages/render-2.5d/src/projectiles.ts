@@ -17,7 +17,11 @@ export interface ProjectileSprite extends Billboard {
   contactBlend: number
   destination: { x: number; y: number }
 }
-export interface ProjectileContact { time(): number }
+export interface ProjectileContact {
+  time(): number
+  /** Incoming path segment, kept current while a native batch is assembled. */
+  direction(): { x: number; y: number } | undefined
+}
 const LANDING_TIME = 0.06
 const MIN_TRAVEL = 0.07
 const TRAVEL_STRETCH = 1.35
@@ -132,7 +136,18 @@ export class DungeonProjectiles {
     if (matches.length !== 1) return
     const f = matches[0]
     if (effect.actorId && tail(f).x === effect.x && tail(f).y === effect.y) f.targetId = effect.actorId
-    return { time: () => {
+    return { direction: () => {
+      const index = effect.actorId && effect.actorId === f.targetId ? f.points.length - 1
+        : f.points.findIndex(b => b.x === effect.x && b.y === effect.y)
+      const to = f.points[Math.max(0, index)], from = f.points[Math.max(0, index - 1)]
+      const next = f.points[1]
+      const dx = index > 0 ? to.x - from.x : next ? next.x - to.x : 0
+      const dy = index > 0 ? to.y - from.y : next ? next.y - to.y : 0
+      const distance = Math.hypot(dx, dy)
+      if (distance) return { x: dx / distance, y: dy / distance }
+      const art = to.life?.projectile
+      if (art && art.angle !== undefined) return { x: Math.cos(art.angle), y: Math.sin(art.angle) }
+    }, time: () => {
       if (effect.actorId && effect.actorId === f.targetId) return arrival(f)
       let along = 0
       for (let i = 0; i < f.points.length; i++) {

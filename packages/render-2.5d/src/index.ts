@@ -13,7 +13,7 @@ import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
-import { sampleMeleeSpray } from './melee-spray.js'
+import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
@@ -281,7 +281,7 @@ export class Render25d implements MapRenderer {
         const position = actor ? this.actorPosition(actor, now) : burst
         if (!cell || cell.occluder || !this.inFrame(p, position)) continue
         if (burst.spray) {
-          for (const particle of sampleMeleeSpray(this.scene, burst, now, position)) {
+          for (const particle of sampleHitSpray(this.scene, burst, now, position)) {
             if (particle.ground) deathParticles.push(particle)
             else {
               const cell = this.scene.cells.get(cellKey(Math.round(particle.x), Math.round(particle.y)))!

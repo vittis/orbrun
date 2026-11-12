@@ -2,7 +2,8 @@ import { cellKey, impactStrength, lightReaches, type DeathKind, type Scene } fro
 import { debrisPalettes, debrisRandom, type DeathParticle } from './death.js'
 import type { SpellBurst } from './effects.js'
 
-export interface MeleeSpray {
+export interface HitSpray {
+  source: 'melee' | 'ranged'
   kind: DeathKind
   height: number
   direction: { x: number; y: number }
@@ -12,7 +13,7 @@ export interface MeleeSpray {
 }
 
 /** A few material fragments, using death art at a much smaller scale. */
-export function sampleMeleeSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }): DeathParticle[] {
+export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }): DeathParticle[] {
   const spray = burst.spray, t = now - burst.born
   if (!spray || t < 0 || t >= burst.duration) return []
   const origin = spray.origin ??= { ...position }

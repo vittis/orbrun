@@ -178,10 +178,11 @@ describe('picking and visibility', () => {
     } finally { art.mockRestore(); r.destroy() }
   })
 
-  it('lands the single projectile over an approaching recipient at full upright tile size', () => {
+  it('lands the single projectile over an approaching recipient and emits one material spray at arrival', () => {
     const { r } = renderer()
     const order: string[] = []
     const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => { order.push('impact') })
+    const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => { order.push('spray') })
     const projectile = vi.spyOn(TileCache.prototype, 'drawPlane').mockImplementation((_ctx, layers) => {
       if (layers[0].tile === 9) order.push('projectile')
       return true
@@ -203,9 +204,11 @@ describe('picking and visibility', () => {
       const moved = { ...recipient, x: 2 }
       r.setScene({ ...base, revision: 2, projectileTime: 0.03, billboards: [moved] }, 1.03)
       r.spell({ x: 2, y: 0, actorId: 'id:7', kind: 'magic' }, 1.03)
+      r.hit({ x: 2, y: 0, actorId: 'id:7' }, 1.03)
       r.impact(2, 0, 0.6, 1.03)
       r.render(1.035)
       expect(art).not.toHaveBeenCalled() // wait for the head to arrive
+      expect(spray).not.toHaveBeenCalled()
       projectile.mockClear(); art.mockClear(); order.length = 0
       r.render(1.08)
       const heads = projectile.mock.calls.filter(c => c[1][0].tile === 9)
@@ -217,12 +220,17 @@ describe('picking and visibility', () => {
       expect(rect.height).toBeCloseTo(scale)
       expect(rect.x + rect.width / 2).toBeCloseTo(body.x)
       expect(rect.y + rect.height / 2).toBeCloseTo(body.y + footOffset - scale / 2)
-      expect(art.mock.calls.filter(c => c[10] !== true)).toHaveLength(1)
-      expect(art.mock.calls[0][5]).toBeCloseTo(rect.x + rect.width / 2)
-      expect(art.mock.calls[0][6]).toBeCloseTo(rect.y + rect.height / 2)
+      expect(art).not.toHaveBeenCalled()
+      expect(spray.mock.calls.length).toBeGreaterThanOrEqual(4)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(12)
+      const sourceX = (body.x - r.project(0, 0).x) / scale
+      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].x > sourceX && c[3].x < sourceX + 0.2)).toBe(true)
       expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
-      expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('impact'))
-    } finally { actor.mockRestore(); projectile.mockRestore(); art.mockRestore(); r.destroy() }
+      expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('spray'))
+      spray.mockClear(); r.render(1.8)
+      expect(spray).not.toHaveBeenCalled()
+      expect(r.animating).toBe(false)
+    } finally { actor.mockRestore(); projectile.mockRestore(); art.mockRestore(); spray.mockRestore(); r.destroy() }
   })
 
   it('replaces coalesced melee, flash, wound and elemental impacts with one material spray at contact', () => {

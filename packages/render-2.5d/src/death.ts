@@ -74,14 +74,14 @@ export class DungeonDeaths {
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
       const random = debrisRandom(b.seed)
-      const density = 0.75 + random() * 0.55, energy = 0.75 + random() * 0.6
-      const liftScale = 0.85 + random() * 0.25, sizeScale = 0.85 + random() * 0.3
+      const density = (0.75 + random() * 0.55) * 0.9, energy = (0.75 + random() * 0.6) * 0.8
+      const liftScale = (0.85 + random() * 0.25) * 0.9, sizeScale = (0.85 + random() * 0.3) * 0.92
       const distribution = Math.floor(random() * 3) // Radial, forward fan, or opposing fans.
       const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
         + (random() - 0.5) * 1.4
       const spread = 0.7 + random() * 1.8, width = 0.55 + random() * 0.6
-      const push = 0.65 + random() * 0.7, originSpread = 0.03 + random() * 0.1
-      const poolCount = 5 + Math.floor(random() * 6), poolScale = 0.8 + random() * 0.4
+      const push = (0.65 + random() * 0.7) * 0.8, originSpread = (0.03 + random() * 0.1) * 0.8
+      const poolCount = 4 + Math.floor(random() * 5), poolScale = (0.8 + random() * 0.4) * 0.85
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
       if (t < 0.14) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.26 + Math.floor(t * 30) * 0.055) * sizeScale,
         angle: Math.round(heading / (Math.PI / 2)) * Math.PI / 2, stretch: width,

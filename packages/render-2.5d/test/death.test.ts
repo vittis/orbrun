@@ -13,6 +13,20 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it('keeps the reduced death spray close to its centre across every material and profile', () => {
+    const scene = room()
+    for (const kind of ['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const) {
+      for (let id = 1; id <= 24; id++) {
+        const fx = new DeathEffects()
+        fx.observe(scene, true); fx.spawn(scene, death(kind, id), 1)
+        expect(fx.sample(scene, 1).length).toBeLessThanOrEqual(65)
+        const settled = fx.sample(scene, 1.6)
+        expect(settled.length).toBeGreaterThan(0)
+        expect(settled.every(p => Math.hypot(p.x, p.y) <= 1.4)).toBe(true)
+      }
+    }
+  })
+
   it('varies count, launch speed and spray shape between consecutive enemies of every material', () => {
     const scene = room()
     for (const kind of ['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const) {
@@ -123,7 +137,7 @@ describe('enemy death presentation', () => {
     fx.observe(scene, true); fx.spawn(scene, death(), 1)
     const spray = fx.sample(scene, 1.2)
     expect(spray.length).toBeGreaterThan(50)
-    expect(spray.filter(p => p.sprite === 'gib').length).toBeGreaterThanOrEqual(8)
+    expect(spray.filter(p => p.sprite === 'gib').length).toBeGreaterThanOrEqual(6)
     expect(spray.some(p => p.sprite === 'drop' && !p.ground && p.z > 0.2)).toBe(true)
     expect(spray.some(p => p.ground && p.sprite === 'splat' && p.size >= 0.3)).toBe(true)
     const remains = fx.sample(scene, 2.5)

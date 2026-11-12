@@ -1,11 +1,11 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
-import type { MeleeSpray } from './melee-spray.js'
+import type { HitSpray } from './hit-spray.js'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: MeleeSpray }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -89,7 +89,23 @@ export class DungeonEffects {
     const target = this.target(scene, { ...effect, kind: 'physical' }, now)
     const placed = target ? { ...effect, actorId: combatActorId(target), x: target.x, y: target.y } : effect
     const contact = this.missiles.bind({ ...placed, kind: 'physical' }, now)
-    return this.hits.spawn(scene, placed, now, contact?.time)
+    const added = this.hits.spawn(scene, placed, now, contact?.time)
+    // Only confirmed damage emits body material. Misses, resisted casts and
+    // utility effects can still have their own spell art without shedding blood.
+    if (added && target) {
+      const direction = contact?.direction() ?? (target.kind === 'player' ? { x: 0, y: 0 }
+        : { x: target.x - scene.player.x, y: target.y - scene.player.y })
+      this.spell(scene, { ...placed, kind: 'physical' }, now, 'generic', this.sprayFor(target, direction, 'ranged'))
+    }
+    return added
+  }
+
+  private sprayFor(target: Billboard, direction: { x: number; y: number }, source: HitSpray['source']): HitSpray {
+    const seed = ++this.spraySequence, length = Math.hypot(direction.x, direction.y)
+    // Untraced incoming damage has no known attacker; vary its emission angle.
+    const angle = seed * 2.399963229728653
+    return { kind: creatureMaterial(target), height: Math.max(0.35, Math.min(1.4, target.height)), seed, source,
+      direction: length ? { x: direction.x / length, y: direction.y / length } : { x: Math.cos(angle), y: Math.sin(angle) } }
   }
 
   private target(scene: Scene, effect: SpellEffect, now: number) {
@@ -106,7 +122,7 @@ export class DungeonEffects {
     return moved.length === 1 ? moved[0] : undefined
   }
 
-  spell(scene: Scene, effect: SpellEffect, now: number, source: ImpactSource = 'confirmed', spray?: MeleeSpray) {
+  spell(scene: Scene, effect: SpellEffect, now: number, source: ImpactSource = 'confirmed', spray?: HitSpray) {
     const target = this.target(scene, effect, now)
     const previous = target && this.actors.get(combatActorId(target))?.previous
     const art = [...this.shots.values()].filter(shot => (shot.ended === undefined || now - shot.ended < PROJECTILE_EXPOSURE)
@@ -137,13 +153,15 @@ export class DungeonEffects {
         if (source === 'melee') { existing.requested = now; existing.born = now; existing.contact = undefined }
       }
       existing.intensity = intensity
-      if (spray) {
+      if (spray && (!existing.spray || spray.source === 'melee' && existing.spray.source !== 'melee')) {
         existing.spray = spray
-        existing.born = existing.requested = now
-        existing.contact = undefined
         existing.duration = 0.5
+        if (spray.source === 'melee') {
+          existing.born = existing.requested = now
+          existing.contact = undefined
+        }
       }
-      if (contact && !existing.contact && !existing.spray) { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
+      if (contact && !existing.contact && existing.spray?.source !== 'melee') { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
       return false
     }
     const duration = spray ? 0.5 : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
@@ -162,10 +180,7 @@ export class DungeonEffects {
     if (attack.hit) {
       const effect = { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity }
       const target = this.target(scene, effect, now)
-      const spray: MeleeSpray | undefined = target ? {
-        kind: creatureMaterial(target), height: Math.max(0.35, Math.min(1.4, target.height)), seed: ++this.spraySequence,
-        direction: { x: (attack.to.x - attack.from.x) / distance, y: (attack.to.y - attack.from.y) / distance },
-      } : undefined
+      const spray = target ? this.sprayFor(target, { x: attack.to.x - attack.from.x, y: attack.to.y - attack.from.y }, 'melee') : undefined
       this.spell(scene, effect, now + meleeTiming(attack.style).contact, 'melee', spray)
     }
     return true
@@ -194,7 +209,11 @@ export class DungeonEffects {
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
-      if (burst.contact) burst.born = Math.max(burst.requested, burst.contact.time())
+      if (burst.contact) {
+        burst.born = Math.max(burst.requested, burst.contact.time())
+        const direction = burst.contact.direction()
+        if (direction && burst.spray?.source === 'ranged' && !burst.spray.origin) burst.spray.direction = direction
+      }
       const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
       if (target) { burst.x = target.x; burst.y = target.y }
     }
