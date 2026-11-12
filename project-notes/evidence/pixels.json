@@ -26,5 +26,33 @@
         }
       }
     ]
+  },
+  {
+    "lane": "movement",
+    "checks": 324,
+    "passed": 324,
+    "failures": []
+  },
+  {
+    "lane": "visibility",
+    "checks": 96,
+    "passed": 96,
+    "failures": []
+  },
+  {
+    "lane": "all",
+    "checks": 4070,
+    "passed": 4069,
+    "failures": [
+      {
+        "name": "thin connected beam segments",
+        "detail": {
+          "dpr": 1,
+          "thickness": 4,
+          "columns": 49,
+          "scale": 24.953212764825302
+        }
+      }
+    ]
   }
 ]

@@ -34,9 +34,9 @@ Implementation ownership and shared interfaces will be recorded before edits beg
 - [x] Meaningful regressions; forced TypeScript, unit suite, production build, browser fixtures and E2E.
 - [x] Independent final-diff review; resolve actionable findings.
 - [x] Audit source/assets/lockfile/bundles; explain legitimate historical references.
-- [ ] Re-fetch main, commit, guarded dry-run, immutable release tag, push and automatic deployment.
-- [ ] Verify production identity, menu/gameplay/maps, anonymous spectating, gamedata/CSP/proxy bounds.
-- [ ] Record release evidence and explicit coverage limitations.
+- [x] Re-fetch main, commit, guarded dry-run, immutable release tag, push and automatic deployment.
+- [x] Verify production identity, menu/gameplay, anonymous spectating, gamedata/CSP/proxy bounds; verify flat map transitions locally.
+- [x] Record release evidence and explicit coverage limitations.
 
 ## Decisions and evidence
 
@@ -62,17 +62,27 @@ Independent docs agent inspected actual runtime diff and ran 555 tests/31 files 
 
 Independent renderer agent reviewed docs/tooling: corrected scene-webtiles package description, documented live packed place format 2 separately from authored fixture/poster atlas, and migrated retained animated/Still/impact raster checks from the deleted mixed-renderer script to `testbed/living-checks.html`. Pure first-person cases are removed; retained renderer acceptance checks remain.
 
-Actual browser: new 2.5D room fixture inspected and used to regenerate poster/card; View menu contains Dungeon tilt/zoom/animation/movement only. Live GameScreen scheduler produces distinct actor frames and stops in Still mode. Real GameScreen map fixture transfers cursor to flat renderer and keeps exactly one gameplay canvas. Further repeated transitions, narrow layout, production preview and hosted checks pending.
+Actual browser: new 2.5D room fixture inspected and used to regenerate poster/card; View menu contains Dungeon tilt/zoom/animation/movement only. Live GameScreen scheduler produces distinct actor frames and stops in Still mode. Real GameScreen map fixture transfers cursor to flat renderer and keeps exactly one gameplay canvas. At that checkpoint, repeated transitions, narrow layout, production preview and hosted checks were still pending; their final results appear below.
 
 
 ### Release preparation checkpoint
 
-Clean reinstall removed stale local Three packages. Final full suite: 132 files passed/one optional file skipped, 2236 tests passed/two skipped (13.30s). Forced TypeScript and production build passed. Final input review: 136/136; final public/menu focused tests:112/112. Net collected test reduction432 is explained in BASELINE.md. origin/main re-fetched unchanged at91bf21a. Existing GitHub and Cloudflare credentials verified without changing scopes. Prepared release0.3.67/source tag cloudflare-online-v1.64; tag not yet created, commit/dry-run/publication pending.
+Clean reinstall removed stale local Three packages. Final full suite: 132 files passed/one optional file skipped, 2236 tests passed/two skipped (13.30s). Forced TypeScript and production build passed. Final input review: 136/136; final public/menu focused tests:112/112. Net collected test reduction432 is explained in BASELINE.md. origin/main re-fetched unchanged at91bf21a. Existing GitHub and Cloudflare credentials verified without changing scopes. Prepared release0.3.67/source tag cloudflare-online-v1.64; at that checkpoint the tag was not yet created and commit/dry-run/publication were pending; see the final release record below.
 
-Browser evidence: preview anonymous CBRG game rendered with no console errors, desktop and390px captures saved. Pixel lanes tiles342/342 and markers216/216 pass. Surface-light fixture exposed synchronous readback starvation, so only test scheduling changed: yield between every existing sample, retain exact sample times/assertions and release discarded canvases. Remaining lane results will be recorded before publication where available.
+Browser evidence: preview anonymous CBRG game rendered with no console errors, desktop and390px captures saved. Pixel lanes tiles342/342 and markers216/216 pass. Surface-light fixture exposed synchronous readback starvation, so only test scheduling changed: yield between every existing sample, retain exact sample times/assertions and release discarded canvases. Additional lane results subsequently completed and are recorded in the final evidence below.
 
 ### Pre-publication assessment
 
-Implementation commit `6d04873018701e06ecbb5fda82b509e07760a695` passed the guarded deployment dry-run; it fetched and included unchanged origin/main `91bf21a` both before and after the production build. Only ASSETS is bound. Browser results and limits, including the unchanged baseline beam assertion failure, are recorded in BASELINE.md and evidence/pixels.json. No renderer assertion was weakened. This evidence update is committed before repeating the guard and publishing.
+Implementation commit `6d04873018701e06ecbb5fda82b509e07760a695` passed the guarded deployment dry-run; it fetched and included unchanged origin/main `91bf21a` both before and after the production build. Only ASSETS is bound. Browser results and limits, including the unchanged baseline beam assertion failure, are recorded in BASELINE.md and evidence/pixels.json. No renderer assertion was weakened. This evidence update was committed before the guard was repeated and the release published.
 
-Post-deployment evidence will be committed and published on `codex/dungeon-only`, linked from DEPLOYMENT.md. This keeps the immutable release source and its main-triggered build stable while publishing the measured deployment result.
+Post-deployment evidence is committed and published on `codex/dungeon-only`, linked from DEPLOYMENT.md. This keeps the immutable release source and its main-triggered build stable while publishing the measured deployment result.
+
+### Final release and evidence
+
+- Release source: `a37449b0749bbbf3c241a55e099947f646c4a860`; immutable tag `cloudflare-online-v1.64`; origin/main and source tag published atomically, no force push.
+- Guarded dry-run repeated on the final source commit; clean source and fresh origin/main checks passed before/after build.
+- Automatic Workers Build `311efdf6-0a49-45d2-a1de-9fb56007f704`: success. Deployment `a93acdf8-e472-4b33-975c-f9cd42b541b4`, version `3f558834-b256-4815-a751-55a02c4feb26`, 100% traffic, created 2026-11-12T20:17:12.947Z.
+- Hosted 0.3.67 menu, source tag and byte-identical main bundle verified. Anonymous lobby/spectating, desktop/narrow captures, strict CSP, real gamedata, license and disallowed proxy/engine responses verified.
+- Full raster eventually completed 4,069/4,070; single baseline beam mismatch retained. Movement324/324 and visibility96/96 also passed. No failed assertion was weakened.
+- Remaining limits: live reduced-motion toggle browser timeout, optional engine artifacts, physical controllers, authenticated play and broader browser/server coverage. Local fixture proves flat transitions; production spectating does not independently exercise every map command.
+- This final documentation/evidence update changes no runtime or build source. It is published to `codex/dungeon-only` without moving the tag or launching a second main deployment.

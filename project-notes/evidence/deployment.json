@@ -1,0 +1,20 @@
+{
+  "buildId": "311efdf6-0a49-45d2-a1de-9fb56007f704",
+  "buildConclusion": "success",
+  "commit": "a37449b0749bbbf3c241a55e099947f646c4a860",
+  "tag": "cloudflare-online-v1.64",
+  "deploymentId": "a93acdf8-e472-4b33-975c-f9cd42b541b4",
+  "createdOn": "2026-11-12T20:17:12.947043Z",
+  "versions": [
+    {
+      "version_id": "3f558834-b256-4815-a751-55a02c4feb26",
+      "percentage": 100
+    }
+  ],
+  "bindings": [
+    {
+      "name": "ASSETS",
+      "type": "assets"
+    }
+  ]
+}
