@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.62 — 2026-11-12
+
+- Give ranged damage subtle, varied splatters matched to the struck creature's body material and timed to projectile arrival in Dungeon (2.5D).
+- Tone down death bursts with fewer particles, smaller fragments and pools, and less outward travel.
+
 ## 0.3.61 — 2026-11-12
 
 - Replace low-health tile fire flashes with a subtle red corner vignette that fades away after damage at 30% HP or below.

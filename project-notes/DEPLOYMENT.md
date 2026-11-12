@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.61 point at the `cloudflare-online-v1.58` release tag in
+Source links for 0.3.62 point at the `cloudflare-online-v1.59` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1582,3 +1582,43 @@ checks. The guarded production dry-run precedes an atomic, non-forced main and
 source-tag push through Workers Builds. If main advances, integrate and
 revalidate; preserve any newer deployment containing this change. Verify hosted
 version, source links, exact assets and CSP after rollout.
+
+
+## 0.3.62 ranged material splatters and quieter deaths — prepared 2026-11-12
+
+User explicitly authorized committing to main and deploying while preserving
+concurrent worktrees. Integrated origin/main `eacec26`, retaining the near-death
+vignette, foreground-wall alignment, melee material sprays and earlier work.
+Immutable source tag: `cloudflare-online-v1.59`.
+
+Confirmed ranged damage uses the same small, varied material splatters as melee.
+Flesh, bone, slime, stone, spirit, fire, ice, plant, insect and water targets
+shed their own material instead of a generic or spell-coloured impact stamp.
+Projectile contacts expose their incoming path segment as well as their arrival
+clock, so both incoming and outgoing hits follow native travel. A later native
+path can update the direction before emission without reseeding. Reports for
+one recipient and turn coalesce into one spray; launched fragments detach from
+the actor. Misses, resisted/zero-damage casts and utility effects do not emit
+body material without confirmed damage. Existing melee contact timing remains.
+
+Death effects retain their profiles and material identities with 10% fewer
+particles, 20% less launch speed and directional push, 10% less lift, 8% smaller
+fragments/impact silhouettes, and 15% smaller floor pools with fewer flecks.
+A before/after comparison across 240 material/actor profiles at 0.6 seconds
+measured 9.95% fewer launch particles, a 19.79% smaller mean radius, and maximum
+reach shrinking from 1.72 to 1.37 cells. Every sampled profile had a smaller
+average footprint.
+
+Pre-integration validation passed 2,626 unit tests with two optional-engine
+skips and TypeScript. New regressions cover all ten ranged target materials,
+five path directions, incoming player hits, late native paths, contact timing,
+repeat-hit variation, duplicate/flash reports, cleanup and compact death bounds.
+The renderer test retains moving-target projectile sizing and ordering while
+checking material debris replaces the old impact stamp. The actual-art
+projectile gallery now exercises confirmed-damage splatters. Optional engine
+E2E reports 44 skips because engine artifacts are absent.
+
+Integrated release validation passed TypeScript and 2,632 unit tests with two
+optional-engine skips. The guarded production dry-run precedes an atomic,
+non-forced main/source-tag push through Workers Builds. Fetch, integrate and
+revalidate if main advances; preserve newer deployments containing this change.
