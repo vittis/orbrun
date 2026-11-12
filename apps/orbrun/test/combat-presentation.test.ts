@@ -15,15 +15,17 @@ function harness() {
 }
 
 describe('combat contact timing', () => {
-  it('spawns death VFX at melee contact and immediately for ranged kills, respecting Still mode', () => {
+  it.each(['long sword', 'mace', 'battleaxe'])('spawns death VFX immediately for %s and ranged kills, respecting Still mode', weapon => {
     const { scene, renderer } = harness()
     const death = deathFor({ kind: 'monster', id: 1, name: 'jelly', tile: 1, height: 0.8, x: 1, y: 0 }, scene.player)
     const events = combatText('You slash the jelly! You kill the jelly!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1', ...(e.kind === 'kill' ? { death } : {}) }))
-    presentCombat(renderer, scene, events, [], [], 'long sword', 1000, true)
-    expect(renderer.death).toHaveBeenLastCalledWith(death, 1 + meleeTiming('slash').contact)
+    const timed = presentCombat(renderer, scene, events, [], [], weapon, 1000, true)
+    expect(renderer.melee).toHaveBeenCalledTimes(1)
+    expect(timed[0].delay).toBeGreaterThan(0)
+    expect(renderer.death).toHaveBeenLastCalledWith(death, 1)
     presentCombat(renderer, scene, [events[1]], [], [], undefined, 2000, true)
     expect(renderer.death).toHaveBeenLastCalledWith(death, 2)
-    presentCombat(renderer, scene, events, [], [], 'long sword', 3000, false)
+    presentCombat(renderer, scene, events, [], [], weapon, 3000, false)
     expect(renderer.death).toHaveBeenCalledTimes(2)
   })
   it('aligns the confirmed number, elemental burst and ripple with the outgoing stroke', () => {

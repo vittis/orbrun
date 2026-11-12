@@ -18,7 +18,8 @@ export function presentCombat(renderer: MapRenderer, scene: Scene, events: Comba
     const x = event.player ? scene.player.x : event.x, y = event.player ? scene.player.y : event.y
     const contactResult = event.kind === 'hit' || event.kind === 'hurt' || event.kind === 'miss' || event.kind === 'block' || event.kind === 'kill'
     const delay = contactResult ? delayFor(x, y, event.player ? 'player' : event.actorId) : 0
-    if (animate && event.kind === 'kill' && event.death) renderer.death?.(event.death, (now + delay) / 1000)
+    // The server has already removed the body: replace it on this frame.
+    if (animate && event.kind === 'kill' && event.death) renderer.death?.(event.death, now / 1000)
     if ((event.kind === 'hit' || event.kind === 'hurt' || event.kind === 'level') && event.amount !== 0 && x !== undefined && y !== undefined) {
       renderer.impact?.(x, y, event.kind === 'level' ? 1 : impactStrength(event.intensity), (now + delay) / 1000)
     }

@@ -13,6 +13,16 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it('draws the burst and debris on the exact frame the enemy is removed', () => {
+    const scene = room(), fx = new DeathEffects(), now = 1.234
+    fx.observe(scene, true)
+    fx.spawn(scene, death(), now)
+    const particles = fx.sample(scene, now)
+    expect(particles.some(p => p.sprite === 'burst' && p.alpha === 1)).toBe(true)
+    expect(particles.some(p => p.sprite === 'gib' && p.alpha === 1)).toBe(true)
+    expect(fx.coversImpact(0, 0, now)).toBe(true)
+  })
+
   it('retains a delayed killing blow, then bursts, lands and fades without timers', () => {
     const scene = room(), fx = new DeathEffects()
     fx.observe(scene, true)
