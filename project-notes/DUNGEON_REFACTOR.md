@@ -31,7 +31,7 @@ Implementation ownership and shared interfaces will be recorded before edits beg
 - [x] Dungeon-only settings migration and compass controls; temporary flat views restore reliably.
 - [x] Existing 2.5D renderer supplies front-menu scenery with lifecycle cleanup.
 - [x] Reset documentation and public presentation, retain legal/security/runbook knowledge.
-- [ ] Meaningful regressions; forced TypeScript, unit suite, production build, browser fixtures and E2E.
+- [x] Meaningful regressions; forced TypeScript, unit suite, production build, browser fixtures and E2E.
 - [x] Independent final-diff review; resolve actionable findings.
 - [x] Audit source/assets/lockfile/bundles; explain legitimate historical references.
 - [ ] Re-fetch main, commit, guarded dry-run, immutable release tag, push and automatic deployment.
@@ -40,7 +40,7 @@ Implementation ownership and shared interfaces will be recorded before edits beg
 
 ## Decisions and evidence
 
-Pending investigations. Never replace observed results with historical counts. Physical-controller and authenticated-play coverage must remain distinct from synthetic input and anonymous spectating.
+Investigations and implementation completed below. Never replace observed results with historical counts. Physical-controller and authenticated-play coverage must remain distinct from synthetic input and anonymous spectating.
 
 ### Ownership and interface agreement
 
@@ -70,3 +70,9 @@ Actual browser: new 2.5D room fixture inspected and used to regenerate poster/ca
 Clean reinstall removed stale local Three packages. Final full suite: 132 files passed/one optional file skipped, 2236 tests passed/two skipped (13.30s). Forced TypeScript and production build passed. Final input review: 136/136; final public/menu focused tests:112/112. Net collected test reduction432 is explained in BASELINE.md. origin/main re-fetched unchanged at91bf21a. Existing GitHub and Cloudflare credentials verified without changing scopes. Prepared release0.3.67/source tag cloudflare-online-v1.64; tag not yet created, commit/dry-run/publication pending.
 
 Browser evidence: preview anonymous CBRG game rendered with no console errors, desktop and390px captures saved. Pixel lanes tiles342/342 and markers216/216 pass. Surface-light fixture exposed synchronous readback starvation, so only test scheduling changed: yield between every existing sample, retain exact sample times/assertions and release discarded canvases. Remaining lane results will be recorded before publication where available.
+
+### Pre-publication assessment
+
+Implementation commit `6d04873018701e06ecbb5fda82b509e07760a695` passed the guarded deployment dry-run; it fetched and included unchanged origin/main `91bf21a` both before and after the production build. Only ASSETS is bound. Browser results and limits, including the unchanged baseline beam assertion failure, are recorded in BASELINE.md and evidence/pixels.json. No renderer assertion was weakened. This evidence update is committed before repeating the guard and publishing.
+
+Post-deployment evidence will be committed and published on `codex/dungeon-only`, linked from DEPLOYMENT.md. This keeps the immutable release source and its main-triggered build stable while publishing the measured deployment result.

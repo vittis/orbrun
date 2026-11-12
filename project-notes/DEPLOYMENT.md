@@ -56,4 +56,4 @@ In Cloudflare Workers → dcss-client → Deployments, select a previously verif
 
 Starting source: `91bf21a182e75e5ac46a4b0f656ef03296f381b7`, app 0.3.66, immutable source tag `cloudflare-online-v1.63`. These are the inspected source baseline, not a fresh production verification.
 
-Prepared refactor: **0.3.67**, proposed tag **cloudflare-online-v1.64**. Implementation, review, guarded dry-run, publication and hosted checks are pending. The orchestrator must replace this preparation entry with measured final evidence before claiming release completion.
+Prepared refactor: **0.3.67**, proposed tag **cloudflare-online-v1.64**. Implementation, independent review and guarded dry-run passed; measured browser limitations are in BASELINE.md. Publication and hosted identity checks are pending at this source snapshot. Final measured deployment evidence is published on the [codex/dungeon-only branch](https://github.com/vittis/orbrun/blob/codex/dungeon-only/project-notes/DEPLOYMENT.md), without modifying the immutable source tag or triggering a duplicate main deployment.

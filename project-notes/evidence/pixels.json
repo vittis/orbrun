@@ -1,0 +1,30 @@
+[
+  {
+    "lane": "tiles",
+    "checks": 342,
+    "passed": 342,
+    "failures": []
+  },
+  {
+    "lane": "markers",
+    "checks": 216,
+    "passed": 216,
+    "failures": []
+  },
+  {
+    "lane": "surfaces",
+    "checks": 26,
+    "passed": 25,
+    "failures": [
+      {
+        "name": "thin connected beam segments",
+        "detail": {
+          "dpr": 1,
+          "thickness": 4,
+          "columns": 49,
+          "scale": 24.953212764825302
+        }
+      }
+    ]
+  }
+]

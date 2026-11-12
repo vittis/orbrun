@@ -2,6 +2,7 @@
 
 Refactor completion is tracked in [DUNGEON_REFACTOR.md](DUNGEON_REFACTOR.md). The following work remains useful after the simplification; none is implicitly claimed complete by a green unit suite.
 
+- **Raster harness:** replace the pre-existing thin-beam expectation with an independent authored-sprite oracle without changing current art; investigate readback-heavy fixture responsiveness and complete the remaining browser raster/reduced-motion matrix. See [BASELINE.md](BASELINE.md).
 - **Hardware and authenticated acceptance:** test disposable authorized accounts and named controllers/browsers for login, creation/resume, inventory, spells/targeting, map/travel, text prompts, save/exit/reconnect and rc/save continuity. Separate physical device checks from synthetic events and anonymous spectating.
 - **Broader compatibility:** exercise stable/trunk across supported public servers and desktop/mobile browsers. Capture fixtures for changed generated gamedata; parser failures require reviewed extensions.
 - **Packed-art provenance:** inventory exact redistributed room/orb tiles against their original licenses. Existing version/rectangle provenance does not establish per-tile CC0. Preserve font, DCSS and upstream notices.
