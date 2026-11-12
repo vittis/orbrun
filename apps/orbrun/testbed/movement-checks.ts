@@ -33,7 +33,7 @@ export function movementChecks(source: TileSource) {
       const boxes = { blue: [Infinity, Infinity, -1, -1], green: [Infinity, Infinity, -1, -1], red: [Infinity, Infinity, -1, -1] }
       for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
         const i = (py * canvas.width + px) * 4, r = pixels[i], g = pixels[i + 1], b = pixels[i + 2]
-        const colour = b > r * 1.6 && b > g * 1.3 ? 'blue' : g > 100 && g > r * 3 && g > b * 3 ? 'green' : r > 100 && r > g * 3 && r > b * 3 ? 'red' : null
+        const colour = b > 100 && b > r * 1.6 && b > g * 1.3 ? 'blue' : g > 100 && g > r * 3 && g > b * 3 ? 'green' : r > 100 && r > g * 3 && r > b * 3 ? 'red' : null
         if (!colour) continue
         const box = boxes[colour]
         box[0] = Math.min(box[0], px); box[1] = Math.min(box[1], py); box[2] = Math.max(box[2], px); box[3] = Math.max(box[3], py)
@@ -60,7 +60,7 @@ export function movementChecks(source: TileSource) {
       let left = Infinity, right = -1
       for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
         const i = (py * canvas.width + px) * 4
-        if (pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3) { left = Math.min(left, px); right = Math.max(right, px) }
+        if (pixels[i + 2] > 100 && pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3) { left = Math.min(left, px); right = Math.max(right, px) }
       }
       const progress = elapsed / 0.1
       const f = easing === 'ease-out' ? 1 - (1 - progress) ** 3 : easing === 'smooth' ? progress * progress * (3 - 2 * progress) : progress

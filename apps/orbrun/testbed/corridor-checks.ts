@@ -34,7 +34,8 @@ export function corridorChecks(source: TileSource) {
         let open = 0
         for (let y = Math.round(north.y * dpr); y < Math.round(south.y * dpr); y++) {
           const pixel = sample(north.x, (y + 0.5) / dpr)
-          if (pixel[0] > 170 && Math.abs(pixel[0] - pixel[2]) < 3 && r.pick(north.x, (y + 0.5) / dpr) === cellKey(-2, 0)) open++
+          // Contact shadows remain usable floor; exclude the coloured wall art.
+          if (pixel[0] > 90 && Math.abs(pixel[0] - pixel[2]) < 3 && r.pick(north.x, (y + 0.5) / dpr) === cellKey(-2, 0)) open++
         }
         checks++
         if (open + 1 < Math.max((south.y - north.y) * 0.85, size * Math.sin(tilt * Math.PI / 180) * 1.1) * dpr) {
