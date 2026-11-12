@@ -1,5 +1,6 @@
-import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type Billboard, type Scene, type MeleeAttack, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
+import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type DeathEffect, type Billboard, type Scene, type MeleeAttack, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
 import { formattedStringToText, type GameState, type ServerMessage, type StatusEntry } from '@orbrun/webtiles'
+import { deathFor } from './death-effects'
 import { incomingMelee } from './melee-effects'
 import { spellText, spellStatuses, type SpellCue } from './spell-effects'
 
@@ -26,6 +27,7 @@ export interface CombatPopup {
   delay?: number
   turn?: number
   actorId?: string
+  death?: DeathEffect
 }
 
 // Includes Crawl's set_attack_verb variants for weak/strong weapon and unarmed hits.
@@ -49,6 +51,8 @@ export function combatText(text: string): CombatPopup[] {
     const s = sentence.trim()
     let m: RegExpExecArray | null
     if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off) (.+?)[.!]+$/.exec(s))) {
+      out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
+    } else if ((m = /^(?:The|Your) (.+?) (?:dies|is destroyed|crumbles to dust|is blown up)[.!]+$/.exec(s))) {
       out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
     } else if (/^(?!You\b).+? you(?: with .+?)? but (?:do|does) no damage[.!]+$/.test(s)) {
       // There is no HP delta for a zero-damage incoming hit. Keep the server's explicit result.
@@ -224,6 +228,7 @@ export class CombatFeedback {
     }
     this.melee = this.melee.slice(-12)
     const used = new Set<string>()
+    const slain = new Set<string>()
     const lastHit = new Map<string, Billboard>()
     const killedNames = new Set(pending.filter(p => p.kind === 'kill').map(p => bare(p.target ?? '')))
     const changed = (b: Billboard) => {
@@ -235,6 +240,7 @@ export class CombatFeedback {
       const wanted = bare(event.target ?? '')
       const deathEvidence = (b: Billboard) => killedNames.has(wanted) && before.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
       const matches = [...candidates.values()].filter(b => {
+        if (event.kind === 'kill' && slain.has(actorKey(b))) return false
         const ref = b.ref as { name?: string; plural?: string } | undefined
         return [b.name, ref?.name, ref?.plural].some(n => n && bare(plain(n)) === wanted)
       }).sort((a, b) => Number(used.has(actorKey(a))) - Number(used.has(actorKey(b)))
@@ -246,7 +252,9 @@ export class CombatFeedback {
       const id = actorKey(b)
       used.add(id)
       if (event.kind === 'hit') lastHit.set(wanted, b)
-      return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height) }]
+      if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted) }
+      return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height),
+        ...(event.kind === 'kill' ? { death: deathFor(b, scene.player) } : {}) }]
     })
     // Resolve direct spell results even when they produce no damage popup.
     // Previous visible actors preserve a killing blow's position; never pick a

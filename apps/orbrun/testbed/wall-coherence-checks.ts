@@ -2,12 +2,13 @@ import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
-/** Catch texture restarts, outlined caps and topology/LOS-dependent wall sizes. */
+/** Catch stretched roofs, repeated face artwork and topology/LOS-dependent sizes. */
 export function wallCoherenceChecks() {
   const atlas = document.createElement('canvas'); atlas.width = atlas.height = 32
   const ink = atlas.getContext('2d')!
   ink.fillStyle = '#20c020'; ink.fillRect(0, 0, 32, 32)
-  // A single stripe near the foot must never repeat beneath a separate cap.
+  // The roof's bottom stripe must continue into its extrusion, without
+  // restarting the green body of the texture on the vertical face.
   ink.fillStyle = '#f02020'; ink.fillRect(0, 28, 32, 4)
   const source: TileSource = {
     tile: () => ({ atlas: 'stripe', sx: 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
@@ -43,7 +44,9 @@ export function wallCoherenceChecks() {
     const roof = planeRect(p, 0, 0, 0.58, dpr), ground = planeRect(p, 0, 0, 0, dpr)
     const seam = roof.y + roof.height
     const above = sample(450, seam - 1 / dpr), below = sample(450, seam + 1 / dpr)
-    assert('continuous art has no red stripe restart or cap recess', above[1] > above[0] * 3 && below[1] > below[0] * 3 && Math.abs(above[1] - below[1]) < 25, { above, below })
+    assert('roof edge extrudes into a shaded face without restarting the artwork', above[0] > above[1] * 3 && below[0] > below[1] * 3 && below[0] < above[0] - 40, { above, below })
+    const body = sample(450, roof.y + roof.height * 0.5)
+    assert('roof retains the unstretched original stonework', body[1] > body[0] * 3, body)
     const foot = sample(450, ground.y + ground.height - 2 / dpr)
     assert('original bottom stripe remains at the wall foot', foot[0] > foot[1] * 3, foot)
     const crop = () => [...ctx.getImageData(Math.round(roof.x * dpr), Math.round(roof.y * dpr), Math.round(roof.width * dpr), Math.round((ground.y + ground.height - roof.y) * dpr)).data].join(',')

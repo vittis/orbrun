@@ -2,6 +2,23 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.40 — 2026-11-12
+
+- Give enemy deaths a sharp burst and fading debris in dungeon and first-person views, with bone shards, slime splashes, rubble, embers and spectral wisps matched to the creature.
+
+## 0.3.39 — 2026-11-12
+
+- Speed up idle breathing slightly while keeping its pronounced movement and smooth edges.
+
+## 0.3.38 — 2026-11-12
+
+- Give Dungeon (2.5D) stone walls raised tops and dark vertical faces, with deeper fades into unexplored space.
+- Warm nearby terrain, cool distant stone, and let torches and magic illuminate a broader area.
+
+## 0.3.37 — 2026-11-12
+
+- Make idle breathing more pronounced while keeping its slow rhythm and smooth edges.
+
 ## 0.3.36 — 2026-11-11
 
 - Skip LOS fades when fast auto-explore or travel jumps to a new location, so the surroundings appear at their final brightness.

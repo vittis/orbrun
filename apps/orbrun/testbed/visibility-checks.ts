@@ -72,7 +72,7 @@ export function visibilityChecks(source: TileSource) {
     r.render(1.11); const middle = sample()
     r.render(1.23); const end = sample()
     checks++
-    if (bright <= 64 || Math.abs(start - bright) > 1 || middle >= start || middle <= end || end > 30) failures.push({ name: 'torch exposure fades with LOS', dpr, bright, start, middle, end })
+    if (bright <= 64 || Math.abs(start - bright) > 1 || middle >= start || middle <= end || end > bright * 0.44) failures.push({ name: 'torch exposure fades with LOS', dpr, bright, start, middle, end })
     cell.visibility = 'visible'; scene.revision++; r.setScene(scene, 2)
     r.render(2); const revealStart = sample()
     r.render(2.11); const revealMiddle = sample()

@@ -5,7 +5,7 @@ import type { Context2d, SurfaceLighting } from './tiles.js'
 import { wallHeight } from './wall-depth.js'
 export function lightField(scene: Scene) { return lightingFor(scene).field }
 
-export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(1.35, source.radius * 0.32))
+export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(6, source.radius * 0.85))
 
 /** Locate the visible art, rather than the floor below a standing emitter. */
 type ActorPosition = (b: Billboard) => { x: number; y: number }

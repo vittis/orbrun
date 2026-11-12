@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.35 point at the `cloudflare-online-v1.32` release tag in
+Source links for 0.3.40 point at the `cloudflare-online-v1.37` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -922,3 +922,73 @@ numbers, unknown Magic Dart damage, incoming HP loss and Still mode. Guarded
 production build/dry-run precedes the atomic main/source-tag push; hosted
 source, bundle identity and CSP checks follow the Workers Builds result.
 
+
+
+## 0.3.37 more pronounced idle breathing — prepared 2026-11-12
+
+User authorized committing to main and deploying. Based on current origin/main
+987e8f2, retaining all prior releases and the LOS arrival fix. Immutable source
+tag: `cloudflare-online-v1.34`. Idle breathing has 50% more range with unchanged
+rhythm; overhead breathing retains smooth edges and no sideways stretching.
+
+Validation: 2,338 unit tests passed with two optional-engine skips, forced
+TypeScript rebuild and production build passed. One geometry test timed out
+during the first release suite; the full suite passed with four workers.
+Optional engine E2E reports 44 skips because engine artifacts are absent.
+The guarded Worker dry-run precedes the atomic main/source-tag push, which
+triggers Cloudflare Workers Builds. Hosted source and bundle checks follow
+the deployment result.
+
+## 0.3.38 dungeon depth and atmosphere — prepared 2026-11-12
+
+User authorized committing to main and deploying. Integrated origin/main
+`d6589a4`, preserving 0.3.37's idle breathing and earlier combat, corridor and
+LOS fixes. Immutable source tag: `cloudflare-online-v1.35`.
+
+Dungeon (2.5D) keeps wall artwork on raised roofs and extends its bottom edge
+into a shaded vertical face. Ambient grading follows the drawn player, warming
+nearby stone and cooling distant terrain; the warm lift clips to known geometry.
+Semantic torch/magic light pools reach neighbouring cells and retain occlusion.
+Frontier fog feathers both floor edges and raised roofs into darker black.
+
+Before integration, all 2,338 unit tests and 3,866 Canvas pixel checks passed;
+typecheck and production build passed. Release checks repeat against integrated
+main and updated metadata, including the guarded Worker dry-run. Hosted source,
+bundle identity and CSP checks follow production rollout.
+
+
+## 0.3.39 faster idle breathing — prepared 2026-11-12
+
+User explicitly authorized pushing to main and deploying the faster idle
+breathing update. Integrated origin/main 12b51a4, preserving 0.3.38's wall
+extrusion, lighting and unexplored-space atmosphere. Immutable source tag:
+`cloudflare-online-v1.36`. Breathing runs about 23% faster in all views,
+retaining the movement range from 0.3.37. Overhead breathing stays smooth
+and does not stretch sideways; other idle motions retain their timing.
+
+Integrated validation passed a forced TypeScript rebuild and 2,338 unit tests
+with two optional-engine skips. The guarded production build/dry-run precedes
+the atomic main/tag push, which triggers Cloudflare Workers Builds. Verify hosted source links
+and bundle identity after deployment.
+
+
+## 0.3.40 creature-specific death VFX — prepared 2026-11-12
+
+User authorized committing to main and deploying. Integrated origin/main
+`8cc3953`, retaining 0.3.38's wall extrusion and atmosphere and 0.3.39's faster
+idle breathing. Immutable source tag: `cloudflare-online-v1.37`.
+
+Confirmed visible kills spawn directional bursts and fading debris in Dungeon
+(2.5D) and first-person views. Ten creature materials use distinct colors,
+shapes and motion, including bone shards, slime splashes, rubble, embers, ice
+fragments, leaves, chitin and rising spectral wisps. Effects expire in
+1.5–2.8 seconds, respect visibility/level transitions and Still mode, and do
+not depend on combat popups. Melee deaths share the contact clock. Same-name
+victims and explicit damage-over-time deaths receive separate effects.
+
+Integrated validation passed a forced TypeScript rebuild and 2,368 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. Browser checks covered both views. The
+guarded production build/dry-run precedes the atomic main/tag push, which
+triggers Cloudflare Workers Builds. Hosted version, source links, bundle
+identity, CSP and proxy checks follow production rollout.

@@ -36,11 +36,11 @@ describe('living dungeon visibility', () => {
       const pose = livingPose({ motion: 'breath' }, 0, 0, frame / 60, true, presentation)
       const next = livingPose({ motion: 'breath' }, 0, 0, (frame + 1) / 60, true, presentation)
       expect(pose.sx).toBe(1)
-      expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0151)
-      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0005)
+      expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0226)
+      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0008)
       low = Math.min(low, pose.sy); high = Math.max(high, pose.sy)
     }
-    expect(high - low).toBeGreaterThan(0.029)
+    expect(high - low).toBeGreaterThan(0.044)
   })
   it('lights walls on their near face but neither memory nor cells behind a wall', () => {
     const s = room()

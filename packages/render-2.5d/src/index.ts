@@ -1,5 +1,5 @@
 import {
-  cellKey, emptyScene, minibarRects, DungeonLife, livingPose,
+  cellKey, emptyScene, minibarRects, DungeonLife, livingPose, DeathEffects, type DeathEffect, type DeathParticle,
   type Billboard, type Camera, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -35,7 +35,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -51,6 +51,7 @@ export class Render25d implements MapRenderer {
   private life = new DungeonLife()
   private movement = new DungeonMovement()
   private effects = new DungeonEffects()
+  private deaths = new DeathEffects()
   private visibility = new DungeonVisibility()
   private arrival = new DungeonArrival()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
@@ -78,7 +79,7 @@ export class Render25d implements MapRenderer {
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
-    if (!this.opts.animate) { this.effects.clear(); this.visibility.finish(); this.arrival.finish() }
+    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.visibility.finish(); this.arrival.finish() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -105,6 +106,7 @@ export class Render25d implements MapRenderer {
     this.arrival.observe(scene, now, this.opts.animate)
     this.life.observe(scene, now)
     this.effects.observe(scene, now, this.opts.animate)
+    this.deaths.observe(scene, this.opts.animate)
     // Never render effects or entities in unseen cells, even if a producer supplies them.
     this.cells = [...scene.cells.values()].filter(c => c.visibility !== 'unseen' && c.kind !== 'unknown')
     this.standing = []
@@ -213,6 +215,10 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
   }
 
+  death(effect: DeathEffect, now: number) {
+    if (this.opts.animate && this.deaths.spawn(this.scene, effect, now)) this.active = true
+  }
+
   render(now = performance.now() / 1000) {
     const ctx = this.ctx
     if (!ctx) return
@@ -228,6 +234,11 @@ export class Render25d implements MapRenderer {
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
     if (this.opts.animate) {
+      for (const death of this.deaths.sample(this.scene, now)) {
+        const cell = this.scene.cells.get(cellKey(Math.round(death.x), Math.round(death.y)))!
+        standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
+      }
+      if (this.deaths.active) this.active = true
       for (const billboard of this.effects.retainedProjectiles(now)) {
         const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))
         if (!cell || !this.inFrame(p, billboard)) continue
@@ -312,7 +323,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.death || entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -329,7 +340,21 @@ export class Render25d implements MapRenderer {
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
       if (entry.moving) this.active = true
-      if (entry.burst) {
+      if (entry.death) {
+        const d = entry.death, q = project(p, d.x, d.y, d.z), radius = d.size * s
+        ctx.save(); ctx.translate(q.x, q.y); ctx.globalAlpha = d.alpha
+        const colour = `rgb(${d.colour.join(',')})`
+        if (d.shape === 'ring') {
+          ctx.scale(1, sy); ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, s * 0.018)
+          ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke()
+        } else {
+          ctx.rotate(d.angle); ctx.fillStyle = colour
+          if (d.shape === 'mote') { ctx.beginPath(); ctx.ellipse(0, 0, radius * d.stretch, radius, 0, 0, Math.PI * 2); ctx.fill() }
+          else ctx.fillRect(-radius * d.stretch, -radius * 0.55, radius * d.stretch * 2, radius * 1.1)
+        }
+        ctx.restore()
+      }
+      else if (entry.burst) {
         const rect = planeRect(p, entry.x, entry.y, 0, this.dpr)
         ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1); ctx.clip()
         drawSpellBurst(ctx, p, entry.burst, now); ctx.restore()
@@ -354,6 +379,7 @@ export class Render25d implements MapRenderer {
       this.active = true
     }
     this.impactRipples(ctx, p, time)
+    this.dungeonExposure(ctx, p, cells)
 
     if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
 
@@ -396,10 +422,47 @@ export class Render25d implements MapRenderer {
     ctx.fillRect(0, 0, this.width, this.height)
   }
 
+  /** A broad, world-anchored pool of warm exposure, with cooler distant stone.
+   * This is presentation ambient, not an emitter: it never reveals terrain or
+   * changes occlusion. Remote level maps retain their ungraded atlas colours. */
+  private dungeonExposure(ctx: Context2d, p: Projection, cells: SceneCell[]) {
+    if (!this.scene.playerOnLevel) return
+    const player = this.scene.billboards.find(b => b.kind === 'player')
+    const anchor = player ? this.actorPosition(player, this.frameTime) : this.scene.player
+    const q = project(p, anchor.x, anchor.y)
+    const sy = groundDepth(p.tilt), radius = p.scale * 10
+    ctx.save()
+    ctx.translate(q.x, q.y); ctx.scale(1, sy)
+    const exposure = ctx.createRadialGradient(0, 0, p.scale * 1.5, 0, 0, radius)
+    exposure.addColorStop(0, '#fff5df')
+    exposure.addColorStop(0.4, '#e4dfd2')
+    exposure.addColorStop(1, '#78899e')
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = exposure
+    ctx.fillRect(-q.x, -q.y / sy, this.width, this.height / sy)
+    ctx.restore()
+
+    // Lift the near floor gently without adding a halo over unexplored black.
+    // The union of known terrain includes raised wall tops and their faces.
+    ctx.save(); ctx.beginPath()
+    for (const cell of cells) {
+      const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      const roof = cell.occluder ? planeRect(p, cell.x, cell.y, wallHeight(this.scene, cell), this.dpr) : ground
+      ctx.rect(ground.x, roof.y, ground.width, ground.y + ground.height - roof.y)
+    }
+    ctx.clip(); ctx.translate(q.x, q.y); ctx.scale(1, sy)
+    const warmth = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 0.8)
+    warmth.addColorStop(0, 'rgba(196,128,58,0.07)')
+    warmth.addColorStop(0.45, 'rgba(156,105,52,0.025)')
+    warmth.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = warmth
+    ctx.fillRect(-q.x, -q.y / sy, this.width, this.height / sy)
+    ctx.restore()
+  }
+
   /** Neutral, world-anchored mist behind known geometry; uses no hidden map data.
    * Static wisps also preserve still mode and let an idle scene sleep. */
   private unexploredFog(ctx: Context2d, p: Projection, time: number) {
-    ctx.fillStyle = '#030404'
+    ctx.fillStyle = '#010202'
     ctx.fillRect(0, 0, this.width, this.height)
     const sy = groundDepth(p.tilt), step = 4
     const left = Math.floor((p.x - this.width / p.scale / 2) / step) * step - step
@@ -413,8 +476,8 @@ export class Render25d implements MapRenderer {
       const q = project(p, x + Math.sin(phase + time * 0.08) * 1.2, y + Math.cos(phase + time * 0.06) * 0.8)
       const cy = q.y / sy, radius = p.scale * (2.8 + Math.sin(phase * 1.7) * 0.6)
       const mist = ctx.createRadialGradient(q.x, cy, 0, q.x, cy, radius)
-      mist.addColorStop(0, 'rgba(44,45,43,0.18)')
-      mist.addColorStop(0.45, 'rgba(35,36,34,0.065)')
+      mist.addColorStop(0, 'rgba(44,45,43,0.1)')
+      mist.addColorStop(0.45, 'rgba(35,36,34,0.04)')
       mist.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.fillStyle = mist
       ctx.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
@@ -534,7 +597,7 @@ export class Render25d implements MapRenderer {
 
   private frontierFog(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
     for (const cell of cells) {
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      const rect = planeRect(p, cell.x, cell.y, cell.occluder ? wallHeight(this.scene, cell) : 0, this.dpr)
       for (const [dx, dy, turn] of [[0,-1,0],[1,0,Math.PI/2],[0,1,Math.PI],[-1,0,-Math.PI/2]]) {
         const neighbour = this.scene.cells.get(cellKey(cell.x + dx, cell.y + dy))
         if (neighbour && neighbour.visibility !== 'unseen' && neighbour.kind !== 'unknown') continue
@@ -542,10 +605,10 @@ export class Render25d implements MapRenderer {
         ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.width, rect.height); ctx.clip()
         ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
         ctx.scale(rect.width, rect.height); ctx.rotate(turn); ctx.translate(-0.5, -0.5)
-        const fog = ctx.createLinearGradient(0, 0, 0, 0.26)
-        fog.addColorStop(0, 'rgba(0,0,0,0.35)'); fog.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = fog; ctx.fillRect(0, 0, 1, 0.26)
-        ctx.fillStyle = 'rgba(0,0,0,0.08)'
+        const fog = ctx.createLinearGradient(0, 0, 0, 0.38)
+        fog.addColorStop(0, 'rgba(0,0,0,0.76)'); fog.addColorStop(0.4, 'rgba(0,0,0,0.24)'); fog.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.fillStyle = fog; ctx.fillRect(0, 0, 1, 0.38)
+        ctx.fillStyle = 'rgba(0,0,0,0.2)'
         for (const offset of [0.17, 0.69]) {
           ctx.beginPath(); ctx.moveTo(offset - 0.1, 0)
           ctx.bezierCurveTo(offset + 0.12, 0.05, offset + 0.16 + curl, 0.24, offset + curl, 0.3)
@@ -567,11 +630,14 @@ export class Render25d implements MapRenderer {
     if (cell.wallStyle === 'transparent') ctx.globalAlpha = 0.65
     ctx.fillStyle = '#343039'
     ctx.fillRect(surface.x, surface.y, surface.width, surface.height)
-    // Map the art once over the entire raised silhouette. Restarting it on a
-    // compressed front face produces a horizontal seam through every wall.
-    this.tiles.drawPlane(ctx, [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))], surface,
-      this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), surface)
+    // The original stonework belongs to the horizontal roof. Extruding its
+    // boundary creates a distinct vertical face without a second copy of the art.
+    const layers = [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))]
+    this.tiles.drawPlane(ctx, layers, roof,
+      this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), roof)
+    this.tiles.drawWallFace(ctx, layers, face, this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell))
     shadeWallFace(ctx, face)
+    this.frontierFog(ctx, p, [cell], this.opts.animate ? this.frameTime : 0)
     ctx.restore()
     this.hits.push({ key: cellKey(cell.x, cell.y), left: roof.x, right: roof.x + roof.width, top: roof.y, bottom: ground.y + ground.height })
   }
@@ -759,6 +825,7 @@ export class Render25d implements MapRenderer {
     this.movement.clear()
     this.life.clear()
     this.effects.clear()
+    this.deaths.clear()
     this.visibility.clear()
     this.arrival.clear()
     this.fogField = null

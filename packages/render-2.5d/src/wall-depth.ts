@@ -43,13 +43,13 @@ export function drawWallShadows(ctx: Context2d, p: Projection, scene: Scene, cel
   }
 }
 
-/** Fade into the foot without drawing a cap seam or outlining tile edges. */
+/** Directional shade separates the vertical extrusion from the horizontal stonework. */
 export function shadeWallFace(ctx: Context2d, face: SurfaceRect) {
   if (face.height <= 0) return
   const shade = ctx.createLinearGradient(0, face.y, 0, face.y + face.height)
-  shade.addColorStop(0, 'rgba(0,0,0,0)')
-  shade.addColorStop(0.35, 'rgba(0,0,0,0.16)')
-  shade.addColorStop(1, 'rgba(0,0,0,0.56)')
+  shade.addColorStop(0, 'rgba(0,0,0,0.38)')
+  shade.addColorStop(0.35, 'rgba(0,0,0,0.48)')
+  shade.addColorStop(1, 'rgba(0,0,0,0.72)')
   ctx.fillStyle = shade
   ctx.fillRect(face.x, face.y, face.width, face.height)
 }
