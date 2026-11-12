@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.46 point at the `cloudflare-online-v1.43` release tag in
+Source links for 0.3.47 point at the `cloudflare-online-v1.44` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1133,3 +1133,27 @@ precedes the atomic main/source-tag push. Use main-triggered Workers Builds only
 non-forced push must succeed; re-fetch, integrate and revalidate if main moves.
 After rollout, verify live source links, bundle identity, CSP and proxies.
 Any later main release must include this fix before being accepted as current.
+
+
+## 0.3.47 projectile direction, speed and facing — prepared 2026-11-12
+
+Follow-up correction to the authorized projectile release. Based on current
+origin/main `b7a686d`, retaining the concurrent death timing, pixel melee,
+HUD/web and earlier releases. Immutable source tag: `cloudflare-online-v1.44`.
+
+Launch extension requires an actor behind the confirmed travel direction;
+nearby targets cannot become shooters. Displayed missiles never jump back to
+an inferred origin, and consecutive short shots cannot join into a return
+flight. Directional overlay batches follow native headings instead of map
+cell order. Exact server tile variants preserve their artwork heading and
+family; animation/distance variants are not mistaken for directions.
+
+Travel doubles from 20 to 40 cells per second. Directional art rotates in the
+ground plane to face from origin to destination, with camera foreshortening
+applied afterwards. Endpoint VFX no longer wait through the old arrival hold.
+Regressions cover incoming shots, repeated close shots, late updates, all
+eight directions, unsorted batches, tile semantics and actual render rotation.
+All 56 real-art browser checks and 2,450 unit tests pass, with two
+optional-engine skips. Forced TypeScript rebuild passes. The guarded
+production dry-run precedes the atomic main/source-tag push. Follow the
+existing main deployment pipeline and preserve any newer integrated release.
