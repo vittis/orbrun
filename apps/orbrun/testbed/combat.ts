@@ -97,13 +97,16 @@ function play(kind: string) {
   if (kind === 'level') send({ msg: 'player', xl: state.player.xl + 1 })
   const now = performance.now()
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
-  if (renderer instanceof Render25d) renderer.setOptions({ animate: !reduced })
+  if (renderer instanceof Render25d) {
+    if (kind === 'kill') renderer.setOptions({ animate: false })
+    renderer.setOptions({ animate: !reduced })
+  }
   if (renderer instanceof Render3d) renderer.setOptions({ motion: !reduced })
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
   const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), 'long sword', now, mode !== '2d' && !reduced)
   popups.add(timed, now)
-  if (paused) freezeAt = now + 180
+  if (paused) freezeAt = now + Number((document.getElementById('effect-age') as HTMLSelectElement).value)
   wake()
 }
 feedback.flush(scene)

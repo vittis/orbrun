@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.40 point at the `cloudflare-online-v1.37` release tag in
+Source links for 0.3.42 point at the `cloudflare-online-v1.39` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1014,3 +1014,25 @@ main/source-tag push. Use the existing main-triggered Workers Builds pipeline;
 do not upload a second local build over a potentially newer main deployment.
 Verify the hosted source tag and bundle after rollout; if main advances, retain
 the newer release when it includes this change instead of redeploying older code.
+
+
+## 0.3.42 pixel gore in Dungeon (2.5D) — prepared 2026-11-12
+
+User authorized committing to main and deploying the 2.5D-only gore remake.
+Integrated origin/main `e0ef8b7`, preserving directional travel arrivals and
+all preceding releases. Immutable source tag: `cloudflare-online-v1.39`.
+
+Dungeon death effects use shaded pixel stamps with dark outlines and exposed
+bone, larger gibs, denser blood trails and ragged floor splatters. Residue
+lasts up to 4.6 seconds and dissolves whole texels. Bone, slime, stone,
+elemental and spectral deaths retain distinct colors and motion. Death bursts
+replace the smooth impact ring; floor stains draw below actors and terrain.
+Visibility, Still mode, level cleanup, bounded histories and sprite caches
+remain enforced. First-person effects are unchanged.
+
+Integrated validation passed a forced TypeScript rebuild and 2,399 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. Browser checks covered blood, slime and
+complete expiry. The guarded production build/dry-run precedes the atomic
+main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
+source links, bundle identity and proxy checks follow rollout.
