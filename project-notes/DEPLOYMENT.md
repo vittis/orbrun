@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.62 point at the `cloudflare-online-v1.59` release tag in
+Source links for 0.3.63 point at the `cloudflare-online-v1.60` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1622,3 +1622,36 @@ Integrated release validation passed TypeScript and 2,632 unit tests with two
 optional-engine skips. The guarded production dry-run precedes an atomic,
 non-forced main/source-tag push through Workers Builds. Fetch, integrate and
 revalidate if main advances; preserve newer deployments containing this change.
+
+
+## 0.3.63 stronger hit splatters and compact, snappy deaths — prepared 2026-11-12
+
+Continues the user's authorized main/deployment workflow while preserving
+concurrent worktrees. Based on origin/main `74786ec`, retaining ranged material
+splatters, melee timing, the near-death vignette and all earlier changes.
+Immutable source tag: `cloudflare-online-v1.60`.
+
+Melee and ranged splatters now emit roughly 6–16 fragments with a six-CSS-pixel
+minimum stamp instead of four. Samples across 24 repeated solid hits showed
+32.6% more particles and 47.9% larger fragments. Direction, contact timing,
+material identity, per-hit variation and the half-second lifetime remain.
+
+Death effects now use substantially fewer fragments, less launch energy and
+push, stronger drag, smaller pools with fewer flecks, and a 100 ms impact stamp.
+Their motion settles 35% faster while drag restrains travel. Material-specific
+lifetimes are now 0.65–1.3 seconds instead of 2–4.6 seconds. A before/after
+comparison across 240 material/actor profiles at 0.3 seconds measured 37.4%
+fewer launch particles and a 51.9% smaller mean radius; maximum sampled reach
+shrank from 1.04 to 0.50 cells.
+
+Validation passed TypeScript and 2,632 unit tests with two optional-engine
+skips. Compactness checks cover ten materials, 24 profiles and three creature
+heights at four points in the effect, bound particle centres to 0.7 cells and
+require complete expiry by 1.31 seconds. Hit tests enforce the larger stamp and
+updated count/size bounds while retaining material, direction, deterministic
+redraw, duplicate-report and contact-clock checks. Optional engine E2E reports
+44 skips because engine artifacts are absent.
+
+The guarded production build/dry-run precedes an atomic, non-forced main/source
+tag push through Workers Builds. Fetch and integrate again if main advances;
+preserve newer deployments that already contain this tuning.

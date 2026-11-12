@@ -32,9 +32,9 @@ describe('material-specific ranged hit splatters', () => {
     const burst = fx.bursts[0]
     expect(burst.spray).toMatchObject({ kind, source: 'ranged' })
     const particles = sampleHitSpray(scene, burst, 1.1)
-    expect(particles.length).toBeGreaterThanOrEqual(4)
-    expect(particles.length).toBeLessThanOrEqual(12)
-    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.04 && p.sprite !== 'burst')).toBe(true)
+    expect(particles.length).toBeGreaterThanOrEqual(6)
+    expect(particles.length).toBeLessThanOrEqual(16)
+    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.06 && p.minPixels === 6 && p.sprite !== 'burst')).toBe(true)
     expect(sampleHitSpray(scene, burst, 1.5)).toEqual([])
   })
 

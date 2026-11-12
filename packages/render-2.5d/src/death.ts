@@ -24,7 +24,7 @@ export const debrisPalettes: Record<DeathKind, readonly (readonly [number, numbe
   insect: [[115, 121, 47], [159, 142, 57], [80, 85, 32]],
   water: [[89, 164, 227], [175, 233, 255], [66, 119, 171]],
 }
-const durations: Record<DeathKind, number> = { flesh: 4.6, bone: 3.8, slime: 4.6, stone: 3.8, spirit: 2, fire: 2, ice: 3, plant: 3.8, insect: 4.4, water: 2.8 }
+const durations: Record<DeathKind, number> = { flesh: 1.25, bone: 1.1, slime: 1.3, stone: 1.1, spirit: 0.65, fire: 0.65, ice: 0.9, plant: 1.1, insect: 1.2, water: 0.85 }
 interface Burst extends DeathEffect { born: number; seed: number }
 
 /** Mix similar actor IDs thoroughly so consecutive kills get distinct sprays. */
@@ -74,18 +74,18 @@ export class DungeonDeaths {
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
       const random = debrisRandom(b.seed)
-      const density = (0.75 + random() * 0.55) * 0.9, energy = (0.75 + random() * 0.6) * 0.8
-      const liftScale = (0.85 + random() * 0.25) * 0.9, sizeScale = (0.85 + random() * 0.3) * 0.92
+      const density = (0.75 + random() * 0.55) * 0.55, energy = (0.75 + random() * 0.6) * 0.45
+      const liftScale = (0.85 + random() * 0.25) * 0.8, sizeScale = (0.85 + random() * 0.3) * 0.82
       const distribution = Math.floor(random() * 3) // Radial, forward fan, or opposing fans.
       const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
         + (random() - 0.5) * 1.4
       const spread = 0.7 + random() * 1.8, width = 0.55 + random() * 0.6
-      const push = (0.65 + random() * 0.7) * 0.8, originSpread = (0.03 + random() * 0.1) * 0.8
-      const poolCount = 4 + Math.floor(random() * 5), poolScale = (0.8 + random() * 0.4) * 0.85
+      const push = (0.65 + random() * 0.7) * 0.45, originSpread = (0.03 + random() * 0.1) * 0.5
+      const poolCount = 2 + Math.floor(random() * 3), poolScale = (0.8 + random() * 0.4) * 0.55
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
-      if (t < 0.14) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.26 + Math.floor(t * 30) * 0.055) * sizeScale,
+      if (t < 0.1) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.23 + Math.floor(t * 40) * 0.04) * sizeScale,
         angle: Math.round(heading / (Math.PI / 2)) * Math.PI / 2, stretch: width,
-        alpha: 1 - t / 0.14, colour: palette[1], sprite: 'burst', ground: false })
+        alpha: 1 - t / 0.1, colour: palette[1], sprite: 'burst', ground: false })
       const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
       const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
       for (let i = 0; i < count; i++) {
@@ -98,8 +98,10 @@ export class DungeonDeaths {
         const size = (large ? 0.065 + random() * 0.048 : 0.018 + random() * 0.027) * Math.sqrt(b.height) * sizeScale
         const spin = (random() - 0.5) * 14, fade = 0.8 + random() * 0.2
         const originAngle = random() * Math.PI * 2, originRadius = Math.sqrt(random()) * originSpread
-        const elapsed = Math.floor(t * 60) / 60
-        const drag = large ? 2.9 : 3.5, drift = (1 - Math.exp(-elapsed * drag)) / drag
+        // Quicker settling with strong drag: speed up the action without
+        // throwing debris farther from the victim's cell.
+        const elapsed = Math.floor(t * 1.35 * 60) / 60
+        const drag = large ? 4.8 : 5.8, drift = (1 - Math.exp(-elapsed * drag)) / drag
         const swirl = airy ? elapsed * 1.6 : 0
         const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * width
         const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * (gory ? 1.3 : 0.8) * push
@@ -115,8 +117,8 @@ export class DungeonDeaths {
           : z0 + lift * elapsed - gravity * elapsed * elapsed
         const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
         if (!cell || cell.visibility !== 'visible' || cell.occluder || !lightReaches(scene, b, cell)) continue
-        const lifetime = airy ? duration * fade : large || stain ? duration * fade : Math.min(duration * fade, 1.8)
-        const alpha = Math.max(0, Math.min(1, (lifetime - t) / (airy ? 0.6 : 0.8)))
+        const lifetime = airy ? duration * fade : large || stain ? duration * fade : Math.min(duration * fade, 0.65)
+        const alpha = Math.max(0, Math.min(1, (lifetime - t) / (airy ? 0.18 : 0.25)))
         if (!alpha) continue
         const colour = palette[i % palette.length]
         const sprite: DeathSprite = stain ? 'splat' : airy ? 'wisp' : gory && !large || liquid ? 'drop'
@@ -128,7 +130,7 @@ export class DungeonDeaths {
           alpha, colour, sprite, ground: stain }
         particles.push(particle)
         // Short, stepped blood trails make the initial spray read at tile scale.
-        if (gory && !large && i % 5 === 0 && t > 0.035 && t < 0.3) particles.push({ ...particle,
+        if (gory && !large && i % 7 === 0 && t > 0.035 && t < 0.18) particles.push({ ...particle,
           x: x - Math.round(vx * 0.045 * Math.exp(-elapsed * drag) * 64) / 64,
           y: y - Math.round(vy * 0.045 * Math.exp(-elapsed * drag) * 64) / 64,
           size: size * 0.75, alpha: alpha * 0.7 })
@@ -145,7 +147,7 @@ export class DungeonDeaths {
         const colour = palette[i % palette.length].map(c => Math.round(c * (liquid ? 0.75 : 0.62))) as [number, number, number]
         particles.push({ x, y, z: 0.012, size,
           angle, stretch: i === 0 ? 1.25 : 1,
-          alpha: Math.max(0, Math.min(1, (duration - t) / 0.8)), colour, sprite: 'splat', ground: true })
+          alpha: Math.max(0, Math.min(1, (duration - t) / 0.25)), colour, sprite: 'splat', ground: true })
       }
     }
     return particles
