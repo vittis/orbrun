@@ -1036,3 +1036,27 @@ because engine artifacts are absent. Browser checks covered blood, slime and
 complete expiry. The guarded production build/dry-run precedes the atomic
 main/source-tag push, which triggers Cloudflare Workers Builds. Hosted version,
 source links, bundle identity and proxy checks follow rollout.
+
+
+## 0.3.43 single traveling projectiles — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' changes. Integrated origin/main `aaad668`, retaining 0.3.42's pixel gore,
+0.3.41's directional arrivals and all previous features. Immutable source tag:
+`cloudflare-online-v1.40`.
+
+Dungeon (2.5D) groups confirmed projectile samples into one interpolated sprite,
+including flights received and cleared before a render. Magic darts, bow arrows
+and other missiles retain their artwork and produce arrival VFX only at the
+endpoint, including walls. Physical missiles use physical impact effects;
+projectile lighting follows the head. Separate launches and visibility, level,
+remote-map and Still cleanup remain covered.
+
+Feature validation passed 2,395 unit tests with two optional-engine skips,
+typecheck, production build and all 24 real-art browser checks. Integrated
+validation passed a forced TypeScript rebuild and 2,404 unit tests with two
+optional-engine skips; optional engine E2E reports 44 explicit skips because
+engine artifacts are absent. The guarded Worker dry-run precedes an atomic
+main/source tag push. Use main-triggered Workers Builds only, preserving any newer release
+that includes this change. Verify hosted source links and bundle identity after
+rollout.

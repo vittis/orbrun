@@ -2,13 +2,15 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.43 — 2026-11-12
+
+- Show dungeon projectiles as a single traveling sprite, with impact effects at their destination.
+
 ## 0.3.42 — 2026-11-12
 
 - Give Dungeon (2.5D) deaths chunkier shaded pixel gore, denser blood sprays and ragged splatters that linger before dissolving.
 
 ## 0.3.41 — 2026-11-12
-
-- Show dungeon projectiles as a single traveling sprite, with impact effects at their destination.
 
 - Add a subtle directional sweep on fast explore/travel arrivals to show the general direction traveled.
 
