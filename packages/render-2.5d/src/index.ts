@@ -681,7 +681,7 @@ export class Render25d implements MapRenderer {
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
     const breathing = creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
-    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 2.5, smooth: true })
+    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
     const wound = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(b.damage ?? 'uninjured')

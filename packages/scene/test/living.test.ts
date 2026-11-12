@@ -29,18 +29,36 @@ describe('living dungeon visibility', () => {
       expect(livingPose({ ...life, held: true }, 2, 3, 1, true, presentation)).toEqual(livingPose(undefined, 2, 3, 1))
     }
   })
-  it('keeps overhead breathing shallow, continuous and free of sideways stretching', () => {
-    const presentation = { strength: 2.5, smooth: true }
+  it('keeps stronger overhead breathing continuous and free of sideways stretching', () => {
+    const presentation = { strength: 3, smooth: true }
     let low = 1, high = 1
     for (let frame = 0; frame < 300; frame++) {
       const pose = livingPose({ motion: 'breath' }, 0, 0, frame / 60, true, presentation)
       const next = livingPose({ motion: 'breath' }, 0, 0, (frame + 1) / 60, true, presentation)
       expect(pose.sx).toBe(1)
-      expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0226)
-      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0008)
+      expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0361)
+      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0013)
       low = Math.min(low, pose.sy); high = Math.max(high, pose.sy)
     }
-    expect(high - low).toBeGreaterThan(0.044)
+    expect(high - low).toBeGreaterThan(0.07)
+  })
+  it('hovers clearly above the ground without wading or stretching, and freezes when held or motion is off', () => {
+    const life: TileLife = { motion: 'fly', flying: true, wading: true }
+    const presentation = { strength: 3, smooth: true }
+    let low = Infinity, high = -Infinity
+    for (let frame = 0; frame < 300; frame++) {
+      const pose = livingPose(life, 0, 0, frame / 60, true, presentation)
+      const next = livingPose(life, 0, 0, (frame + 1) / 60, true, presentation)
+      expect(pose.y).toBeGreaterThan(0)
+      expect(pose.sx).toBe(1); expect(pose.sy).toBe(1)
+      expect(Math.abs(next.y - pose.y)).toBeLessThan(0.003)
+      expect(pose).toEqual(livingPose({ ...life, wading: false }, 0, 0, frame / 60, true, presentation))
+      low = Math.min(low, pose.y); high = Math.max(high, pose.y)
+    }
+    expect(high - low).toBeGreaterThan(0.17)
+    const still = livingPose(undefined, 0, 0, 1)
+    expect(livingPose(life, 0, 0, 1, false, presentation)).toEqual(still)
+    expect(livingPose({ ...life, held: true }, 0, 0, 1, true, presentation)).toEqual(still)
   })
   it('lights walls on their near face but neither memory nor cells behind a wall', () => {
     const s = room()

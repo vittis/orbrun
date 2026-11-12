@@ -1,7 +1,7 @@
 import type { Billboard, CellKey, Scene, SceneCell } from './index.js'
 import { cellKey } from './coordinates.js'
 
-export type LifeMotion = 'breath' | 'plant' | 'undead' | 'float' | 'ooze' | 'swirl' | 'serpent' | 'skitter' | 'cloud' | 'flame' | 'water' | 'lava' | 'crystal' | 'portal' | 'altar' | 'fountain' | 'bog' | 'grass' | 'up' | 'down' | 'gold' | 'gem' | 'potion' | 'paper' | 'still'
+export type LifeMotion = 'breath' | 'plant' | 'undead' | 'float' | 'fly' | 'ooze' | 'swirl' | 'serpent' | 'skitter' | 'cloud' | 'flame' | 'water' | 'lava' | 'crystal' | 'portal' | 'altar' | 'fountain' | 'bog' | 'grass' | 'up' | 'down' | 'gold' | 'gem' | 'potion' | 'paper' | 'still'
 export interface TileLight { colour: [number, number, number]; radius: number; power: number; pulse?: 'fire' | 'slow' | 'electric'; transient?: boolean }
 export interface ProjectileAppearance {
   kind: 'sand' | 'stone' | 'metal' | 'air' | 'fire' | 'cold' | 'electric' | 'poison' | 'acid' | 'magic'
@@ -31,13 +31,14 @@ export function livingPose(life: TileLife | undefined, x: number, y: number, tim
       const breath = Math.sin(t * (presentation.smooth ? 2.1 : 2.7) + phase)
       if (presentation.smooth) {
         // A readable rise keeps faces and equipment from visibly widening.
-        p.sy += breath * 0.009 * a
-      } else { p.sy += breath * 0.018 * a; p.sx += breath * 0.006 * a }
+        p.sy += breath * 0.012 * a
+      } else { p.sy += breath * 0.024 * a; p.sx += breath * 0.008 * a }
       break
     }
     case 'plant': case 'grass': p.angle = Math.sin(t * 0.9 + phase) * 0.018 * a; break
     case 'undead': p.x = Math.sin(t * 0.7 + phase) ** (presentation.smooth ? 3 : 15) * 0.009 * a; break
     case 'float': p.y = Math.sin(t * 1.3 + phase) * 0.023 * a; break
+    case 'fly': break // Flight below also supports callers supplying only the flying flag.
     case 'ooze': p.sy += wave * 0.025 * a; p.sx -= wave * 0.025 * a; break
     case 'swirl': case 'portal': p.angle = Math.sin(t + phase) * 0.025 * a; p.glow = 0.5 + wave * 0.5; break
     case 'serpent': p.x = wave * 0.012 * a; p.angle = Math.sin(t * 1.4 + phase) * 0.012 * a; break
@@ -56,8 +57,13 @@ export function livingPose(life: TileLife | undefined, x: number, y: number, tim
   }
   if (life.weary) p.x += Math.sin(t * 0.8 + phase) * 0.006
   if (life.fleeing) p.x += Math.sin(t * (presentation.smooth ? 4 : 23) + phase) * 0.002
-  if (life.wading && !life.flying) p.y += Math.sin(t * 1.1 + phase) * 0.008
-  if (life.flying) p.y += Math.sin(t * 1.7 + phase) * 0.016
+  const flying = life.flying || life.motion === 'fly'
+  if (life.wading && !flying) p.y += Math.sin(t * 1.1 + phase) * 0.008
+  if (flying) {
+    // Keep the sprite above its ground marker throughout a smooth hover cycle.
+    p.y = (1 + Math.sin(t * 1.7 + phase) * 0.75) * 0.04 * a
+    p.x += Math.sin(t * 0.85 + phase) * 0.006 * a
+  }
   const strength = presentation.strength ?? 1
   p.x *= strength; p.y *= strength; p.angle *= strength
   p.sx = 1 + (p.sx - 1) * strength; p.sy = 1 + (p.sy - 1) * strength
