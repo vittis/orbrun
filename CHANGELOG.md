@@ -2,6 +2,14 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.59 — 2026-11-12
+
+- Keep foreground wall tiles aligned through corridor junctions and widened passages in Dungeon (2.5D).
+
+## 0.3.58 — 2026-11-12
+
+- Vary enemy death bursts, debris and floor pools in Dungeon (2.5D).
+
 ## 0.3.57 — 2026-11-12
 
 - Briefly flash creatures when melee or spells damage them, timed to the hit and respecting reduced motion.

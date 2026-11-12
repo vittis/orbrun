@@ -2,7 +2,7 @@
 
 This is the DCSS Client fork, deployed for online play on the bundled public
 servers. Offline play and custom servers are unavailable in this deployment.
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.54) is available under
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.56) is available under
 AGPL-3.0-or-later. Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun);
 the upstream feature guide below also describes features outside this deployment.
 

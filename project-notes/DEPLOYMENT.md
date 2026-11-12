@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.58 point at the `cloudflare-online-v1.55` release tag in
+Source links for 0.3.59 point at the `cloudflare-online-v1.56` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1485,3 +1485,31 @@ Optional engine E2E reports 44 skips because engine artifacts are absent.
 The guarded production dry-run precedes an atomic, non-forced main/source-tag
 push through Workers Builds. Fetch and integrate again if main advances;
 preserve any newer deployment that already contains this change.
+
+
+## 0.3.59 aligned foreground walls — prepared 2026-11-12
+
+User authorized committing to main and deploying. Based on origin/main
+`d25ee1e`, preserving 0.3.58's varied death effects and all previous releases.
+Immutable source tag: `cloudflare-online-v1.56`.
+
+Dungeon (2.5D) shares the low passage cutaway across each continuous foreground
+wall edge, including junctions and widened sections. This removes isolated
+raised tiles such as the wall below the shield in the reported case. Gaps,
+corners and unknown terrain stop propagation. Drawing, picking, lighting and
+shadows consume the same height; remembered terrain preserves the silhouette.
+
+Regression coverage includes one-, three- and five-cell junctions, passage and
+roof picking, remembered terrain, and propagation boundaries. The new Canvas
+alignment assertion passed all 54 tilt/zoom/DPR/filter combinations. An existing
+LOS crop assertion reported one mismatch; the original fixture has no narrow
+cross-sections, so all its wall heights remain unchanged by this fix.
+
+Release metadata advances to 0.3.59 and restores the missing 0.3.58 changelog
+entry so the What's new screen agrees with the app version. Publication uses
+the guarded production dry-run and atomic, non-forced main/source-tag push
+through Workers Builds. Fetch and integrate again if main advances.
+
+Integrated validation passed a forced TypeScript rebuild and 2,577 unit tests
+with two optional-engine skips. The optional engine E2E lane reports 44 skips
+because engine artifacts are absent.

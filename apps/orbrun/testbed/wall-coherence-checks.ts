@@ -54,6 +54,23 @@ export function wallCoherenceChecks() {
     scene.cells.get(cellKey(0, -1))!.visibility = 'remembered'
     scene.revision++; r.setScene(scene); r.render(0)
     assert('LOS behind a wall cannot resize or alter its artwork', before === crop(), {})
+    // The gap in the back wall opens a junction above the foreground run.
+    // Its middle tile must share the low roof of its neighbours, as opposed
+    // to protruding above them when its own cross-section is wider.
+    for (let x = -4; x <= 4; x++) {
+      Object.assign(scene.cells.get(cellKey(x, -1))!, { kind: 'floor', occluder: false, visibility: 'visible' })
+      Object.assign(scene.cells.get(cellKey(x, -2))!, { kind: x === 0 ? 'floor' : 'wall', occluder: x !== 0 })
+    }
+    scene.revision++; r.setScene(scene); r.render(0)
+    const lip = planeRect(p, 0, 0, 0.08, dpr)
+    const junctionRoofs = [-1, 0, 1].map(x => {
+      const q = r.project(x, 0)
+      const body = sample(q.x, lip.y + lip.height * 0.8)
+      const passage = r.project(x, -0.55, 0.2)
+      return { x, body, passage: r.pick(passage.x, passage.y) }
+    })
+    assert('junction foreground roofs align without a raised tile or blocked passage',
+      junctionRoofs.every(({ x, body, passage }) => body[1] > body[0] * 3 && passage === cellKey(x, -1)), junctionRoofs)
     r.destroy()
   }
   return { checks, failures }
