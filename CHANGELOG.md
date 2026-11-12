@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.64 — 2026-11-12
+
+- Keep adjoining wall roofs level through corners and passage junctions in Dungeon (2.5D), with matching click targets.
+
 ## 0.3.63 — 2026-11-12
 
 - Make melee and ranged material splatters more pronounced with larger fragments and denser sprays.

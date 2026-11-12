@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.63 point at the `cloudflare-online-v1.60` release tag in
+Source links for 0.3.64 point at the `cloudflare-online-v1.61` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1655,3 +1655,27 @@ redraw, duplicate-report and contact-clock checks. Optional engine E2E reports
 The guarded production build/dry-run precedes an atomic, non-forced main/source
 tag push through Workers Builds. Fetch and integrate again if main advances;
 preserve newer deployments that already contain this tuning.
+
+
+## 0.3.64 corner wall alignment — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+agents' worktrees. Merged origin/main `eb37eba` (0.3.63) into the isolated
+`codex/wall-corner-alignment` branch, retaining stronger material splatters,
+compact death effects and all earlier releases. Immutable source tag:
+`cloudflare-online-v1.61`.
+
+Connected wall rows share their passage cutaway through corners and widened
+junctions. Gaps and unknown wall terrain still end a run. Roofs, faces,
+click targets, lighting and shadows use the same height; remembered terrain
+retains its silhouette.
+
+Feature validation passed 241 renderer-package tests, TypeScript and all 378
+focused Canvas wall checks across tilt, zoom, filtering and pixel density.
+The original code fails all 54 new corner checks; the corrected code passes.
+The full Canvas suite passed 4,069 of 4,070 checks, with one beam-width failure;
+isolated wall and surface-light/beam reruns passed all 404 checks. Integrated
+validation passed a forced TypeScript rebuild and 2,633 tests, with two optional
+engine skips. Engine E2E explicitly skipped 44 checks because artifacts are
+absent. The guarded production dry-run precedes a non-forced atomic
+main/source-tag push, which triggers Workers Builds. If main advances, merge and revalidate before publication.
