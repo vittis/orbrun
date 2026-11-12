@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.47 point at the `cloudflare-online-v1.44` release tag in
+Source links for 0.3.48 point at the `cloudflare-online-v1.45` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1202,3 +1202,25 @@ All 56 real-art browser checks and 2,450 unit tests pass, with two
 optional-engine skips. Forced TypeScript rebuild passes. The guarded
 production dry-run precedes the atomic main/source-tag push. Follow the
 existing main deployment pipeline and preserve any newer integrated release.
+
+
+## 0.3.48 indirect-kill death VFX — prepared 2026-11-12
+
+User authorized committing to main and deploying. Integrated origin/main
+`5a19fd8`, preserving projectile direction/speed/facing corrections and the
+concurrent build-speed improvements, along with all earlier releases.
+Immutable source tag: `cloudflare-online-v1.45`.
+
+Combat feedback recognizes passive indirect deaths, named uniques without
+articles and explicit explosion deaths. A bounded two-second history retains
+visible victims when map removal precedes the kill message. It is used only
+with explicit death evidence; walking, blinking, expired Foxfires and leaving
+sight never infer kills. Histories expire, clear on level/session transitions,
+and reject hidden destinations. Same-name victims retain separate identities.
+
+Integrated validation passed a forced TypeScript rebuild and 2,468 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. The guarded production dry-run precedes
+the atomic, non-forced main/source-tag push to the existing Workers Builds pipeline.
+Preserve any newer integrated release, and verify live source links, bundle
+identity, CSP and proxies after rollout.

@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.48 — 2026-11-12
+
+- Show death VFX for Foxfire and other indirect kills, including delayed death messages and named enemies.
+
 ## 0.3.47 — 2026-11-12
 
 - Keep projectiles moving toward their targets, double travel speed, and align directional sprites with their flight.
