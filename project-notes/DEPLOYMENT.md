@@ -24,10 +24,55 @@ is shipped at `/licenses/acorn.txt`.
 - Repository: `vittis/orbrun`; production branch: `main`.
 - Root/path: `/` (the monorepo root).
 - Node: `24.11.1` via `NODE_VERSION`.
-- Build: `npm ci --include=dev && npm run typecheck && NODE_ENV=test npm test && npm run build`.
+- Build variable: `SKIP_DEPENDENCY_INSTALL=1` (disable Cloudflare's automatic dependency install).
+- Build: `npm ci --include=dev --prefer-offline --no-audit --no-fund && npm run typecheck && NODE_ENV=test npm test`.
 - Deploy: `npm run deploy` (direct `npx wrangler deploy` also uses the guard).
 - Preview builds: disabled for the initial deployment.
 - No game credentials or application secrets are required.
+
+The build command installs dependencies once and retains the full typecheck and
+test suite. The deploy command then runs the guarded asset build once through
+Wrangler's custom build hook. Do not append `npm run build` to the build command:
+that would build the same assets twice. The build variable and commands above
+must also be saved in the Worker's dashboard settings; Wrangler does not apply
+Workers Builds settings from this file. `--no-audit` skips npm's install-time
+advisory lookup, not tests; run dependency audits separately when needed.
+
+On 2026-11-12, the production Workers Builds settings were updated to the
+single-install/single-build configuration above; the build cache was already
+enabled. The preceding build `ed164992-325b-43e0-962e-24c62b34a5db`
+(commit `b7a686d`, 0.3.46) took approximately 305 seconds: environment setup
+53 seconds, automatic dependency installation 13 seconds, explicit installation
+8 seconds, typecheck 15 seconds, tests 172 seconds, and the first Vite build
+approximately 10 seconds including script startup. Wrangler then rebuilt assets
+again. Removing the automatic install and first build should save approximately
+20–25 seconds on a comparable run; this has not yet been measured in a new
+Cloudflare build. Tests and the before/after deployment guard remain enabled.
+
+The slowest test files in that Cloudflare run were scene incremental equivalence
+(16.44 seconds), recorded scene construction (10.82 seconds), chunked geometry
+(10.57 seconds), and the deployment guard (4.37 seconds). These file timings
+are not additive estimates of deployment-time savings. Before deleting coverage,
+benchmark Vitest worker settings and repeated fixture setup. The ordinary suite
+already excludes the engine E2E lane and skips missing engine artifacts.
+
+Vitest worker and fixture benchmarks were completed locally on 2026-11-12;
+[the evidence](evidence/vitest-workers-benchmark.json) records both rounds,
+machine details and rejected variants. The suite now uses isolated threads,
+one minimum worker and at most four workers, using both CPUs on a two-core
+runner. With four threads, fixture reuse reduced the full-suite median from
+17.41 to 14.66 seconds (approximately 16%). All original 2,433 collected cases
+remain, with the same two skips; three additional checks cover cached fixture
+equivalence and mutation isolation. All 262 existing `expect` calls in the
+modified files are unchanged. The selected two- and four-worker thread pools
+passed both before/after rounds; all-CPU settings produced geometry timeouts
+and were rejected. These are local measurements, not a new Cloudflare timing.
+
+`node tools/perf/vitest-workers.mjs --rounds 2` reproduces the comparison.
+Recording data and final-state snapshots are cloned for each mutable consumer;
+tests exercising full/incremental replays still run every original message and
+flush cadence. Guard tests retain real Git operations against separate remotes,
+copying only their initial committed history from a shared template.
 
 Cloudflare's automatic build-token form grants account-level Worker and storage
 permissions plus zone routes; it offers no per-project narrowing. The user

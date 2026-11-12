@@ -1,0 +1,152 @@
+{
+  "date": "2026-11-12",
+  "sourceHead": "cef0b2307f83742408acb295b54d98f25dbf52fd",
+  "node": "v24.11.1",
+  "vitest": "3.2.7",
+  "platform": "darwin arm64",
+  "availableParallelism": 12,
+  "method": "Sequential full-suite runs, two rounds with reverse order in round two. NODE_ENV=test; isolation, assertions, skips and timeouts retained. Warm local runs; worker limits do not simulate a CI CPU quota. Results are descriptive, without performance pass/fail thresholds.",
+  "selected": {
+    "pool": "threads",
+    "minWorkers": 1,
+    "maxWorkers": "min(4, availableParallelism())",
+    "isolate": true
+  },
+  "coverage": {
+    "originalCases": 2433,
+    "originalCasesMissing": 0,
+    "additionalIsolationChecks": 3,
+    "passed": 2434,
+    "skipped": 2,
+    "existingExpectCallsUnchanged": 262
+  },
+  "comparisons": [
+    {
+      "case": "forks-default",
+      "before": {
+        "seconds": [
+          19.66,
+          13.22
+        ],
+        "medianSeconds": 16.44,
+        "passedRuns": 2,
+        "runs": 2
+      },
+      "after": {
+        "seconds": [
+          11.61,
+          18.92
+        ],
+        "medianSeconds": 15.27,
+        "passedRuns": 1,
+        "runs": 2
+      }
+    },
+    {
+      "case": "threads-all",
+      "before": {
+        "seconds": [
+          17.35,
+          12.07
+        ],
+        "medianSeconds": 14.71,
+        "passedRuns": 1,
+        "runs": 2
+      }
+    },
+    {
+      "case": "forks-2",
+      "before": {
+        "seconds": [
+          37.53,
+          29.11
+        ],
+        "medianSeconds": 33.32,
+        "passedRuns": 2,
+        "runs": 2
+      },
+      "after": {
+        "seconds": [
+          28.66,
+          29.93
+        ],
+        "medianSeconds": 29.3,
+        "passedRuns": 2,
+        "runs": 2
+      }
+    },
+    {
+      "case": "threads-2",
+      "before": {
+        "seconds": [
+          35.39,
+          26.38
+        ],
+        "medianSeconds": 30.88,
+        "passedRuns": 2,
+        "runs": 2
+      },
+      "after": {
+        "seconds": [
+          27.95,
+          25.08
+        ],
+        "medianSeconds": 26.52,
+        "passedRuns": 2,
+        "runs": 2
+      }
+    },
+    {
+      "case": "forks-4",
+      "before": {
+        "seconds": [
+          24.4,
+          18.53
+        ],
+        "medianSeconds": 21.46,
+        "passedRuns": 2,
+        "runs": 2
+      }
+    },
+    {
+      "case": "threads-4",
+      "before": {
+        "seconds": [
+          18.28,
+          16.53
+        ],
+        "medianSeconds": 17.41,
+        "passedRuns": 2,
+        "runs": 2
+      },
+      "after": {
+        "seconds": [
+          14.75,
+          14.58
+        ],
+        "medianSeconds": 14.66,
+        "passedRuns": 2,
+        "runs": 2
+      }
+    }
+  ],
+  "fixtureFileTimings": [
+    {
+      "file": "apps/orbrun/test/deploy-guard.test.ts",
+      "beforeMedianSeconds": 10.31,
+      "afterMedianSeconds": 3.85
+    },
+    {
+      "file": "packages/scene-webtiles/test/build.test.ts",
+      "beforeMedianSeconds": 3.83,
+      "afterMedianSeconds": 2.87
+    },
+    {
+      "file": "packages/scene-webtiles/test/incremental.test.ts",
+      "beforeMedianSeconds": 6.74,
+      "afterMedianSeconds": 5.75
+    }
+  ],
+  "rejectedVariants": "All-CPU threads timed out a geometry test before fixture changes; default all-but-one-CPU forks timed out two geometry tests in an after run. Bounded pools passed all repeated runs.",
+  "cloudflare": "Not rerun on Cloudflare; the prior 172-second hosted suite is context, not a directly comparable benchmark."
+}

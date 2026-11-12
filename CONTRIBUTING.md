@@ -25,6 +25,21 @@ npm run dev         # dev server (Vite, with the gamedata proxy)
 
 Run `npm test` and `npm run typecheck` before calling a change done.
 
+To compare test worker settings, run
+`node tools/perf/vitest-workers.mjs --rounds 2`. It runs the complete suite
+sequentially with processes and threads, preserves file isolation and timeouts,
+and checks that every variant collects the same tests and skips. JSON reports
+and logs go to a temporary directory printed at the end; use `--output` to
+choose one, or `--cases forks-2,threads-2` for a smaller comparison. Round order
+alternates to reduce warm-cache bias. Compare repeated wall times on the target
+machine; changing the worker count locally does not reproduce a CI CPU quota.
+
+The default uses isolated threads and up to four workers, including both cores
+on a two-core runner. Keep isolation enabled. Scene recording helpers parse tile
+tables once per file and clone messages/final state for consumers; tests of the
+replay itself still process every message. Deployment tests copy a committed Git
+template, then use independent checkouts and real bare remotes for each case.
+
 Before deploying, commit your changes and integrate the latest `origin/main`.
 `npm run deploy` and direct `npx wrangler deploy` fetch main and reject stale,
 diverged or dirty source, rebuild assets, then recheck freshness before upload.

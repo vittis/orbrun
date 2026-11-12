@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { assertDeployable } from '../../../tools/build/deploy-guard.mjs'
 import { prepareDeployment } from '../../../tools/build/deploy-build.mjs'
 
 let temporary: string[] = []
+let template: string
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, {
   cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
 }).trim()
@@ -20,9 +21,9 @@ const commit = (cwd: string, name: string, content = name) => {
   git(cwd, 'commit', '-m', name)
   return git(cwd, 'rev-parse', 'HEAD')
 }
-function fixture() {
-  const dir = mkdtempSync(join(tmpdir(), 'orbrun-deploy-guard-'))
-  temporary.push(dir)
+beforeAll(() => {
+  template = mkdtempSync(join(tmpdir(), 'orbrun-deploy-template-'))
+  const dir = template
   git(dir, 'init', '--bare', '--initial-branch=main', 'remote.git')
   git(dir, 'init', '--initial-branch=main', 'publisher')
   const publisher = join(dir, 'publisher'), repo = join(dir, 'repo')
@@ -33,6 +34,17 @@ function fixture() {
   git(publisher, 'push', 'origin', 'main')
   git(dir, 'clone', join(dir, 'remote.git'), 'repo')
   identity(repo)
+})
+afterAll(() => { if (template) rmSync(template, { recursive: true, force: true }) })
+
+function fixture() {
+  const dir = mkdtempSync(join(tmpdir(), 'orbrun-deploy-guard-'))
+  temporary.push(dir)
+  // Copy the committed baseline, including independent Git object files. Every
+  // test still fetches/pushes against its own real, mutable bare remote.
+  cpSync(template, dir, { recursive: true })
+  const publisher = join(dir, 'publisher'), repo = join(dir, 'repo')
+  for (const checkout of [publisher, repo]) git(checkout, 'remote', 'set-url', 'origin', join(dir, 'remote.git'))
   const advance = () => {
     const head = commit(publisher, 'features.txt', 'new popup feature\n')
     git(publisher, 'push', 'origin', 'main')
