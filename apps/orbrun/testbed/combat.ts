@@ -2,13 +2,14 @@
 import { Render2d } from '@orbrun/render-2d'
 import { Render25d } from '@orbrun/render-2.5d'
 import { Render3d } from '@orbrun/render-3d'
-import { makeCamera, type MapRenderer } from '@orbrun/scene'
+import { makeCamera, meleeTiming, type MapRenderer } from '@orbrun/scene'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { CombatPopups } from '../src/combat-popups'
 import { presentCombat } from '../src/combat-presentation'
+import { meleeStyle } from '../src/melee-effects'
 
 const tiles = await loadRoomTiles()
 const { scene } = antechamberScene(tiles)
@@ -30,6 +31,9 @@ let raf = 0
 let mode = '2.5d'
 let paused = false
 let freezeAt = 0
+let attackAt = 0
+let attackDuration = 320
+const frozenTime = () => attackAt + Number((document.getElementById('effect-age') as HTMLInputElement).value) / 100 * attackDuration
 const camera = makeCamera(11, 5)
 const victim = scene.billboards.find(b => b.kind === 'monster' && b.name === 'goblin')!
 function restoreVictim() {
@@ -72,6 +76,13 @@ function frame(now: number) {
 function wake() { if (!raf) raf = requestAnimationFrame(frame) }
 function send(msg: ServerMessage) { reduce(state, msg); feedback.observe(state, msg) }
 function play(kind: string) {
+  if (paused) {
+    popups.clear()
+    if (renderer instanceof Render25d) {
+      renderer.setOptions({ animate: false })
+      renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
+    }
+  }
   restoreVictim()
   send({ msg: 'player', turn: state.player.turn + 1 })
   const messages: Record<string, string> = {
@@ -101,9 +112,12 @@ function play(kind: string) {
   if (renderer instanceof Render3d) renderer.setOptions({ motion: !reduced })
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
-  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), 'long sword', now, mode !== '2d' && !reduced)
+  const weapon = (document.getElementById('weapon') as HTMLSelectElement).value || undefined
+  const timed = presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), weapon, now, mode !== '2d' && !reduced)
   popups.add(timed, now)
-  if (paused) freezeAt = now + 180
+  attackAt = now
+  attackDuration = meleeTiming(kind === 'incoming' ? 'crush' : meleeStyle(weapon) ?? 'slash').duration * 1000
+  if (paused) freezeAt = frozenTime()
   wake()
 }
 feedback.flush(scene)
@@ -117,6 +131,9 @@ document.getElementById('paused')!.addEventListener('change', e => {
   freezeAt = performance.now()
   if (!paused) popups.clear()
   wake()
+})
+document.getElementById('effect-age')!.addEventListener('input', () => {
+  if (paused) { freezeAt = frozenTime(); wake() }
 })
 document.getElementById('reduced')!.addEventListener('change', () => {
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
