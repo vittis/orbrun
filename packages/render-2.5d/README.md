@@ -10,7 +10,8 @@ At 100% zoom the full 17-cell field of view fits, including sprite headroom.
 Higher zoom values deliberately trade coverage for larger tiles.
 
 Ground rows have 25% extra depth to open horizontal corridors. A low foreground
-lip exposes single-cell passages while back walls and room walls retain their
+lip exposes single-cell passages and stays level along each continuous foreground
+edge, including junctions and widened sections. Back walls and other room walls retain their
 raised silhouettes and coherent artwork. Drawing, picking, lighting and shadows
 share the same wall height, which stays stable through LOS fades. The preview's
 **Narrow corridors** scene exercises the passage and a north–south junction.
@@ -35,7 +36,8 @@ and picking regions. The existing first-person renderer remains independent.
   ratio, capped at two, so adjacent quads meet without gaps or overlap strips.
 - `index.ts` paints ground layers, continuous floor lighting, contact
   shadows, depth-sorted walls and sprites, and readable targeting markers.
-  Walls share a consistent raised height, independent of neighbours and LOS.
+  Joined foreground roofs share their cutaway height across passage junctions;
+  other walls retain their raised height. Both stay stable through LOS fades.
   Sprites retain doll composition, atlas offsets, clipping, status badges and
   player minibars. Ground fog renders beneath raised terrain and upright art.
   Monsters and ordinary objects use the same atlas scale as the player;

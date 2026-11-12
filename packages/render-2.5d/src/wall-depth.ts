@@ -8,11 +8,28 @@ export const WALL_HEIGHT = 0.58
 
 const known = (cell?: SceneCell): cell is SceneCell => !!cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown'
 
-/** Expose one-cell horizontal passages without changing room walls or reacting to LOS fades. */
+/** Keep a continuous foreground edge level, including where a narrow passage widens. */
 export function wallHeight(scene: Scene, cell: SceneCell) {
-  const behind = scene.cells.get(cellKey(cell.x, cell.y - 1))
-  const back = scene.cells.get(cellKey(cell.x, cell.y - 2))
-  return known(behind) && !behind.occluder && known(back) && back.occluder ? 0.08 : WALL_HEIGHT
+  const foreground = (x: number) => {
+    const wall = scene.cells.get(cellKey(x, cell.y))
+    const behind = scene.cells.get(cellKey(x, cell.y - 1))
+    return known(wall) && wall.occluder && known(behind) && !behind.occluder
+  }
+  const narrow = (x: number) => {
+    const back = scene.cells.get(cellKey(x, cell.y - 2))
+    return known(back) && back.occluder
+  }
+  if (!foreground(cell.x)) return WALL_HEIGHT
+  if (narrow(cell.x)) return 0.08
+  // A junction can interrupt the back wall without interrupting this wall.
+  // Share its cutaway across the whole exposed run, stopping at gaps,
+  // corners and unknown terrain rather than leaving isolated raised tiles.
+  for (const direction of [-1, 1]) {
+    for (let x = cell.x + direction; foreground(x); x += direction) {
+      if (narrow(x)) return 0.08
+    }
+  }
+  return WALL_HEIGHT
 }
 
 /** Paint only receiving ground. Neighbouring wall tiles never get dark seams. */

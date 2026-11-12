@@ -8,6 +8,7 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
+import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
   return { x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
@@ -67,6 +68,46 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it.each([1, 3, 5])('keeps the foreground wall level across a junction %s cells wide', width => {
+    const { r } = renderer()
+    const radius = (width - 1) / 2
+    const cells = [-2, -1, 0, 1, 2].flatMap(y =>
+      Array.from({ length: width + 4 }, (_, i) => i - radius - 2).map(x =>
+        cell(x, y, y !== 0 && !(y < 0 && Math.abs(x) <= radius)
+          ? { kind: 'wall', occluder: true } : {})))
+    const scene = sceneOf(...cells)
+    r.setOptions({ animate: false })
+    r.setScene(scene); r.render(0)
+    for (let x = -radius - 2; x <= radius + 2; x++) {
+      expect(wallHeight(scene, scene.cells.get(cellKey(x, 1))!)).toBe(0.08)
+      // The space above the low roof belongs to the passage, including its junction.
+      const q = r.project(x, 0.45, 0.2)
+      expect(r.pick(q.x, q.y)).toBe(cellKey(x, 0))
+      const roof = r.project(x, 0.6, 0.08)
+      expect(r.pick(roof.x, roof.y)).toBe(cellKey(x, 1))
+    }
+    // Back walls and the row beyond the foreground edge keep their full height.
+    for (const [x, y] of [[-radius - 2, -1], [0, 2]]) {
+      expect(wallHeight(scene, scene.cells.get(cellKey(x, y))!)).toBe(WALL_HEIGHT)
+    }
+    // Remembered geometry still anchors the same silhouette.
+    for (const c of scene.cells.values()) c.visibility = 'remembered'
+    expect(wallHeight(scene, scene.cells.get(cellKey(0, 1))!)).toBe(0.08)
+    r.destroy()
+  })
+
+  it.each(['gap', 'corner', 'unseen', 'unknown'] as const)('stops the cutaway at a %s', boundary => {
+    const scene = sceneOf(...[-2, -1, 0].flatMap(y => [0, 1, 2].map(x =>
+      cell(x, y, y === 0 || y === -2 && x === 0 ? { kind: 'wall', occluder: true } : {}))))
+    const target = scene.cells.get(cellKey(2, 0))!
+    expect(wallHeight(scene, target)).toBe(0.08)
+    if (boundary === 'gap') scene.cells.delete(cellKey(1, 0))
+    if (boundary === 'corner') Object.assign(scene.cells.get(cellKey(1, -1))!, { kind: 'wall', occluder: true })
+    if (boundary === 'unseen') scene.cells.get(cellKey(1, 0))!.visibility = 'unseen'
+    if (boundary === 'unknown') scene.cells.get(cellKey(1, -1))!.kind = 'unknown'
+    expect(wallHeight(scene, target)).toBe(WALL_HEIGHT)
+  })
+
   it.each([30, 35, 50, 65, 75])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
     const { r } = renderer()
     r.setOptions({ tilt, animate: false })
