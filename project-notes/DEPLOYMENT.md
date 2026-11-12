@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.45 point at the `cloudflare-online-v1.42` release tag in
+Source links for 0.3.46 point at the `cloudflare-online-v1.43` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1109,3 +1109,27 @@ engine artifacts are absent. The guarded Worker dry-run precedes an atomic
 main/source tag push. Use main-triggered Workers Builds only, preserving any
 newer release that includes this change. Verify hosted source links and bundle identity after
 rollout.
+
+
+## 0.3.46 immediate death VFX — prepared 2026-11-12
+
+User authorized committing to main and deploying while preserving concurrent
+worktree releases. Integrated origin/main `cef0b23`, retaining single traveling
+projectiles, weapon-specific pixel melee, HUD/web fixes, pixel gore, directional
+arrivals and all previous releases. Immutable source tag:
+`cloudflare-online-v1.43`.
+
+Confirmed kill effects start on the frame the server removes the enemy,
+instead of waiting 135–170 ms for the melee presentation contact point.
+Other melee feedback keeps its contact timing. Regression checks cover
+multiple weapon families and visible debris on the exact spawn frame.
+The development preview retains both concurrent attack-progress controls
+and death-phase controls, including a new first-frame option.
+
+Integrated validation passed a forced TypeScript rebuild and 2,434 unit tests
+with two optional-engine skips. Optional engine E2E reports 44 explicit skips
+because engine artifacts are absent. The guarded production build/dry-run
+precedes the atomic main/source-tag push. Use main-triggered Workers Builds only. A normal
+non-forced push must succeed; re-fetch, integrate and revalidate if main moves.
+After rollout, verify live source links, bundle identity, CSP and proxies.
+Any later main release must include this fix before being accepted as current.

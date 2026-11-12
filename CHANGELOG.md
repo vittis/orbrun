@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.46 — 2026-11-12
+
+- Start death VFX as soon as the enemy disappears, removing the brief gap before gore and debris appear.
+
 ## 0.3.45 — 2026-11-12
 
 - Show dungeon projectiles as a single traveling sprite, with impact effects at their destination.
