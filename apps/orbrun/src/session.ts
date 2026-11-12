@@ -91,6 +91,7 @@ export class Session {
   get loading(): boolean {
     return this.loadingVersion !== null
   }
+  private projectileTime = 0
   private sceneDirty = false
   /** Arrival time of the latest scene update, in performance.now() milliseconds. */
   sceneChangedAt = 0
@@ -235,6 +236,7 @@ export class Session {
     if (!this.closed || this.loadFailure || !this.conn.reopen) return false
     this.state = initialState()
     this.scene = emptyScene()
+    this.projectileTime = 0
     this.lastSceneRev = { map: -1, player: -1, ui: -1 }
     this.sceneDirty = false
     this.queue = []
@@ -350,6 +352,7 @@ export class Session {
       if (who) setToken(this.server.id, who, null)
     }
     if (m.msg === 'game_client') {
+      this.projectileTime = 0
       reduce(this.state, m)
       this.emit({ type: 'state', msg: m })
       const version = m.version as string
@@ -388,6 +391,7 @@ export class Session {
     this.gamedata = null
     this.state = initialState()
     this.scene = emptyScene()
+    this.projectileTime = 0
     this.sceneDirty = false
     this.lastSceneRev = { map: -1, player: -1, ui: -1 }
     this.diag(reason)
@@ -396,6 +400,8 @@ export class Session {
   }
 
   private apply(m: ServerMessage) {
+    if (m.msg === 'delay' && typeof m.t === 'number' && Number.isFinite(m.t)) this.projectileTime += Math.max(0, Math.min(1000, m.t)) / 1000
+    if (m.msg === 'game_client' || m.msg === 'go_lobby') this.projectileTime = 0
     reduce(this.state, m)
     if (m.msg === 'map' || m.msg === 'player' || m.msg === 'game_client' || m.msg === 'go_lobby') {
       this.sceneDirty = true
@@ -473,6 +479,7 @@ export class Session {
     this.lastSceneRev = { map: r.map, player: r.player, ui: r.ui }
     // only the cells the messages touched are built again; the rest of the level stands as it was
     this.scene = buildScene(this.state, this.gamedata, { previous: this.scene, dirty: { cells: this.state.dirtyCells, mapCleared: this.state.mapCleared } })
+    this.scene.projectileTime = this.projectileTime
     this.state.dirtyCells.clear()
     this.state.mapCleared = false
     this.emit({ type: 'scene', scene: this.scene })

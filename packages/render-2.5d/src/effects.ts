@@ -1,9 +1,10 @@
+import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStrength, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind'] }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -22,6 +23,7 @@ export class DungeonEffects {
   private flashes = new Map<ReturnType<typeof cellKey>, string>()
   private spells = new Map<string, SpellSample>()
   private shots = new Map<string, ProjectileSample>()
+  private missiles = new DungeonProjectiles()
   private actors = new Map<string, ActorPosition>()
   private level: string | undefined
   private onLevel = false
@@ -36,6 +38,7 @@ export class DungeonEffects {
       const previous = old && (old.x !== b.x || old.y !== b.y) ? { x: old.x, y: old.y, at: now } : old?.previous
       return [id, { x: b.x, y: b.y, at: now, previous }]
     }))
+    if (animate && scene.playerOnLevel) this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now))
     const flashes = new Map<ReturnType<typeof cellKey>, string>()
     if (animate && scene.playerOnLevel) for (const cell of scene.cells.values()) {
       const f = cell.flash
@@ -76,14 +79,7 @@ export class DungeonEffects {
     while (this.shots.size > 128) this.shots.delete(this.shots.keys().next().value!)
   }
 
-  /** Preserve every native path tile, including additions/removals inside one RAF. */
-  projectiles(now: number): Billboard[] {
-    return [...this.shots.values()].flatMap(({ billboard, ended }) => {
-      if (ended === undefined) return [billboard]
-      const age = (now - ended) / PROJECTILE_EXPOSURE
-      return age < 0 || age >= 1 ? [] : [{ ...billboard, alpha: (billboard.alpha ?? 0.95) * (1 - age) }]
-    })
-  }
+  projectiles(now: number) { return this.missiles.sample(now) }
 
   private target(scene: Scene, effect: SpellEffect, now: number) {
     const actors = scene.billboards.filter(b => creature(b) && visible(scene, b))
@@ -113,9 +109,11 @@ export class DungeonEffects {
       ...(target ? { x: target.x, y: target.y, actorId: combatActorId(target) } : {}) }
     if (!scene.playerOnLevel || !visible(scene, placed) || scene.cells.get(cellKey(placed.x, placed.y))?.occluder) return false
     const utility = (kind: SpellEffect['kind']) => ['heal', 'buff', 'debuff', 'teleport'].includes(kind)
+    const contact = source === 'melee' || utility(placed.kind) ? undefined : this.missiles.bind(placed, now)
+    const born = Math.max(now, contact?.time() ?? now)
     const existing = this.bursts.find(b => {
       const sameTarget = b.actorId && placed.actorId ? b.actorId === placed.actorId : b.x === placed.x && b.y === placed.y
-      const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.born) < 0.2
+      const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.requested) < 0.2
       return sameTarget && sameResult
     })
     if (existing) {
@@ -125,13 +123,14 @@ export class DungeonEffects {
       if (priority[source] > priority[existing.source]
         || source === existing.source && existing.kind === 'physical' && placed.kind !== 'physical') {
         Object.assign(existing, placed, { source })
-        if (source === 'melee') existing.born = now
+        if (source === 'melee') { existing.requested = now; existing.born = now; existing.contact = undefined }
       }
       existing.intensity = intensity
+      if (contact && !existing.contact) { existing.contact = contact; existing.born = Math.max(existing.requested, contact.time()) }
       return false
     }
     const duration = utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
-    this.bursts.push({ ...placed, born: now, duration, source })
+    this.bursts.push({ ...placed, born, requested: now, contact, duration, source })
     this.bursts = this.bursts.slice(-48)
     return true
   }
@@ -168,7 +167,9 @@ export class DungeonEffects {
   }
 
   tick(scene: Scene, now: number) {
+    this.missiles.tick(scene, now)
     for (const burst of this.bursts) {
+      if (burst.contact) burst.born = Math.max(burst.requested, burst.contact.time())
       const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
       if (target) { burst.x = target.x; burst.y = target.y }
     }
@@ -192,5 +193,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

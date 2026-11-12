@@ -305,6 +305,8 @@ export interface SceneLevel {
 }
 
 export interface Scene {
+  /** Cumulative native animation delays in seconds; presentation only. */
+  projectileTime?: number
   /** Confirmed player turn, when the producer supplies one. */
   turn?: number
   /** Producer identity used to discard transient effects at level transitions. */

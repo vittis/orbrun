@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.52 point at the `cloudflare-online-v1.49` release tag in
+Source links for 0.3.53 point at the `cloudflare-online-v1.50` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1329,3 +1329,35 @@ samples and view changes.
 Release validation precedes an atomic, non-forced main/source-tag push through
 the existing Workers Builds pipeline. Verify the hosted release, source links,
 exact bundles, CSP and proxy restrictions after deployment.
+
+
+## 0.3.53 hybrid projectile travel and recipient overlay — prepared 2026-11-12
+
+User authorized committing and deploying. Integrated origin/main `5cae987`,
+preserving the concurrent 0.3.52 FPS counter, unified impacts, moving-recipient
+anchors and the auto-explore correction. Immutable source tag:
+`cloudflare-online-v1.50`.
+
+One head follows the confirmed native path and blends its last segment onto
+the recipient's upright tile footprint, briefly remaining over that creature
+at contact. The recipient identity follows interpolated movement; terrain
+projectiles retain their ground-plane endpoint. No repeated path artwork or
+particle trail is added. Native artwork variants and ray ordering are retained.
+
+Session records cumulative native animation delays without delaying game state
+or input. Each flight uses that batch budget once, with a short minimum travel
+time and landing exposure; missing delays fall back to distance-based travel.
+Confirmed feedback retains one impact owner and clock, held until the head's
+contact point. Clear boundaries keep successive casts separate.
+
+Implementation validation passed 2,522 tests with two optional-engine skips,
+a forced TypeScript rebuild, production build and all 56 actual-art Canvas
+checks. Recorded Magic Dart batches produce one forward head and one impact.
+Regression checks cover native timing, landing over a moving creature at full
+upright size, draw order, incoming missiles, repeated casts and cleanup.
+Integrated validation passed 2,527 tests with two optional-engine skips and a
+forced TypeScript rebuild; optional engine E2E reports 44 explicit skips because
+artifacts are absent. The guarded dry-run precedes an atomic, non-forced
+main/source-tag push through the existing Workers Builds pipeline.
+Verify live version, source links, exact bundle, CSP, proxies and anonymous
+spectating after rollout.

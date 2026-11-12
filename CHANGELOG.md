@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.53 — 2026-11-12
+
+- Show one travelling projectile that lands over the destination creature, paced by WebTiles animation delays.
+- Keep the projectile and its single impact aligned with moving targets.
+
 ## 0.3.52 — 2026-11-12
 
 - Add an FPS counter to the Dungeon (2.5D) view, measuring frames actually drawn.
