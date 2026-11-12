@@ -93,5 +93,16 @@
       "status": "expected",
       "durationMs": 1900
     }
-  ]
+  ],
+  "fontMetricFixRecheck": {
+    "stats": {
+      "startTime": "2026-11-12T21:06:01.603Z",
+      "duration": 8636.179,
+      "expected": 4,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "scope": "native reduced motion, narrow mouse, narrow touch, production preview; after actual-size font measurement fix"
+  }
 }

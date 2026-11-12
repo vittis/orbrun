@@ -36,6 +36,8 @@ One presentation state replaces the prior correlated flags; settings cannot sele
 
 The new browser gate caught a test-selector error, fixed without changing runtime behavior. Full raster matrices now finish in about a minute and pass all 4,072 checks; native reduced-motion transitions pass. Verification is typechecked, rejects reduced assertion counts, aborts public WebSockets in preview tests and preserves failure traces.
 
-Independent reviewers inspected settings/storage, renderer oracles and full matrices, map/pointer/layout behavior, verification/CI and documentation links/security safeguards. Local `npm run verify` passed: 2,292 unit tests plus 14 browser tests. See BASELINE.md for measured limits.
+Independent reviewers inspected settings/storage, renderer oracles and full matrices, map/pointer/layout behavior, verification/CI and documentation links/security safeguards. Local `npm run verify` passed: 2,296 unit tests plus 14 browser tests. See BASELINE.md for measured limits.
 
 Release source, guarded preflight, branch CI and hosted evidence: [releases/0.3.68.md](releases/0.3.68.md).
+
+Linux CI found a real font-metric defect after the local gate passed: actual small glyphs were wider than a scaled100px estimate. Fixed GridHost to measure/cache actual sizes, added four nonlinear-metric/cache regressions and kept browser overflow assertions unchanged. Local full units and affected browser cases pass; branch CI is rerun before promotion.

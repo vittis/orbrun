@@ -43,11 +43,11 @@ export function isPhone(): boolean {
 }
 
 /**
- * The font px for a `w`×`h` host whose characters advance `adv` of the
- * size: `px`, or less until the grid holds `cols` × `rows` cells.
+ * The font px for a `w`×`h` host: measure each candidate's actual glyph
+ * advance, reducing `px` until the grid holds `cols` × `rows` cells.
  */
-export function fitPx(w: number, h: number, adv: number, px: number, cols = MIN_COLS, rows = MIN_ROWS): number {
-  while (px > MIN_PX && (Math.floor(w / (px * adv)) < cols || Math.floor(h / Math.round(px * LINE_HEIGHT)) < rows)) px--
+export function fitPx(w: number, h: number, measure: (px: number) => number, px: number, cols = MIN_COLS, rows = MIN_ROWS): number {
+  while (px > MIN_PX && (Math.floor(w / measure(px)) < cols || Math.floor(h / Math.round(px * LINE_HEIGHT)) < rows)) px--
   return px
 }
 
@@ -64,8 +64,8 @@ export class GridHost {
   phone = false
   /** the least grid the size comes down to (`setLeast`) */
   private least = { cols: MIN_COLS, rows: MIN_ROWS }
-  /** the width of one character of the grid font at 100px, measured once per font */
-  private advance = 0
+  /** Actual glyph advances by font size; small hinted glyphs need not scale linearly. */
+  private advances = new Map<number, number>()
   /**
    * the host's own width in css px (its clientWidth) as of the last fit, 0 before it was laid out: for what wants it
    * every frame, where reading it would force the frame's layout
@@ -134,24 +134,26 @@ export class GridHost {
     return true
   }
 
-  /** Measure the grid font: the advance of one character, at 100px, in the host's own font. */
-  private measure(): number {
-    if (this.advance) return this.advance
+  /** Measure at the displayed size: Linux font hinting can round an 11px glyph up to 7px. */
+  private measure(px: number): number {
+    const cached = this.advances.get(px)
+    if (cached !== undefined) return cached
     const probe = document.createElement('span')
     probe.className = 'grid-probe'
-    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-size:100px;line-height:1'
+    probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font-size:${px}px;line-height:1`
     probe.textContent = 'M'.repeat(50)
     this.host.append(probe)
     const w = probe.getBoundingClientRect().width / 50
     probe.remove()
     // no layout yet (a detached host, a test): a typical monospace advance
-    this.advance = w > 0 ? w : 60.2
-    return this.advance
+    const advance = w > 0 ? w : px * 0.602
+    this.advances.set(px, advance)
+    return advance
   }
 
   /** the font was changed (the rc's family arrived, a web font landed): measure again */
   refont() {
-    this.advance = 0
+    this.advances.clear()
     this.fit()
   }
 
@@ -161,12 +163,12 @@ export class GridHost {
     this.width = this.host.clientWidth
     const w = (this.width || window.innerWidth) - ins.left - ins.right
     const hgt = (this.host.clientHeight || window.innerHeight) - ins.top
-    const adv = this.measure() / 100
     // a phone's least window or a desktop's, for the screen as it is now
     const leastChanged = this.takeLeast()
-    // too small for the least window at this size: the text comes down until it fits
-    const px = fitPx(w, hgt, adv, this.fontPx, this.least.cols, this.least.rows)
-    const cw = px * adv
+    // Fit using each candidate's actual advance, not a scaled large-font probe.
+    // Cached measurements keep resize and repeated fits from probing again.
+    const px = fitPx(w, hgt, size => this.measure(size), this.fontPx, this.least.cols, this.least.rows)
+    const cw = this.measure(px)
     const ch = Math.round(px * LINE_HEIGHT)
     this.fittedPx = px
     const fitted = fitGrid(w, hgt, cw, ch)

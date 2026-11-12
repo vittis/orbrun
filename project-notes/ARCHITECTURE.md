@@ -39,7 +39,7 @@ The gamedata parser accepts a bounded known grammar and fails closed on unsuppor
 
 `settings.ts` reads and writes only `orbrun.settings`. It preserves existing keys/defaults and legacy hint migration, ignores retired fields, normalizes finite numbers to documented supported domains, and stores only non-default values. Reading never rewrites storage. Server/account/save persistence remains in `servers.ts`.
 
-HUD geometry uses available grid space. Narrow mouse windows receive readable top stats and full-width messages; input affordances still depend on the device. Existing phone portrait and wide desktop geometry remain separate retained paths. Renderer algorithms and authored artwork are unchanged by stabilization.
+HUD geometry uses available grid space. Narrow mouse windows receive readable top stats and full-width messages; input affordances still depend on the device. Existing phone portrait and wide desktop layout rules remain separate retained paths. GridHost measures glyph advances at actual displayed sizes, caches them and invalidates on font changes; it does not extrapolate small hinted text from a large font probe. Renderer algorithms and authored artwork are unchanged by stabilization.
 
 ## Verification
 

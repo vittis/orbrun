@@ -9,7 +9,7 @@ Stabilization started at `88166befdfa7a4bfa37027751df2de56f039bcdb`, with fetche
 `npm run verify` passed locally:
 
 - Forced application and browser-test TypeScript checks: passed.
-- Unit suite: **2,292 passed, two optional-engine skips**, 134 files passed/one skipped, 12.56s. The net increase of 56 covers settings normalization, offered-value round trips, lifecycle changes and responsive layout. Final affected HUD/layout/control tests also passed (106 cases).
+- Unit suite: **2,296 passed, two optional-engine skips**, 135 files passed/one skipped, 12.07s. The net increase of 60 covers settings normalization, offered-value round trips, lifecycle changes and responsive layout. Final affected HUD/layout/control tests also passed (106 cases); four further font-metric/cache regressions reproduce the Linux issue described below.
 - Production build: passed. Renderer packages and authored artwork are unchanged. Existing large-main-chunk and mixed JSON-import-attribute warnings remain; these are not test failures.
 - Chromium: **14/14 passed**, no skips/retries/flaky results, 59.8s. Includes all nine full raster lanes (**4,072/4,072**), Dungeon/flat atmosphere (**12/12**), actual GameScreen native reduced-motion transitions, mouse/touch-emulated map/overview/settings/resize/targeting, text overflow and online-only production preview. [Browser report](releases/0.3.68/browser.json).
 - Engine E2E: **44 cases skipped in 12 files** because optional artifacts are absent. This is not offline-engine acceptance.
@@ -24,3 +24,9 @@ The narrow fine-pointer HUD now has readable, bounded scroll panes and a separat
 Automated Chromium tests use local server-message fixtures and production preview. They do not establish physical-controller, physical-phone, authenticated-login/save continuity, optional engine execution, or every public-server/browser combination. Anonymous production spectating and deployment checks are recorded separately in [the release record](releases/0.3.68.md).
 
 `npm run verify` is the reproducible web gate. Full assertion counts are pinned; the smoke profile is not full acceptance. No player credentials or private recordings are kept in evidence.
+
+## Cross-platform CI correction
+
+The first Linux branch CI run passed all unit/raster/native-motion checks but caught narrow touch HP/MP text overflow (406px of text in a 383px pane). The old grid extrapolated 11px text width from a 100px font probe; small hinted glyphs on Linux were wider than that estimate. GridHost now caches measurements at actual candidate sizes and invalidates them on font changes. The same overflow assertion is retained.
+
+After correction, the full local unit suite passed 2,296 cases; all four affected browser cases passed in 8.6s, including native motion, both narrow pointer types and production preview. The pure fitting helper now uses the actual measurement callback, avoiding an unused legacy linear helper. The clean Linux CI result is recorded in the release evidence.

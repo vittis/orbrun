@@ -584,16 +584,16 @@ describe('the layout on a phone', () => {
 describe('on a phone the text comes down to a phone-sized console', () => {
   const adv = 0.6
   it('upright, wide enough for the narrow stats pane beside the minimap', () => {
-    const px = fitPx(390, 844, adv, 16, PHONE_COLS, PHONE_ROWS)
+    const px = fitPx(390, 844, px => px * adv, 16, PHONE_COLS, PHONE_ROWS)
     expect(px).toBeLessThan(13)
     expect(Math.floor(390 / (px * adv))).toBeGreaterThanOrEqual(PHONE_COLS)
   })
   it('on its side, tall enough for the panes over the touch bar', () => {
-    const px = fitPx(844, 390, adv, 16, PHONE_COLS, PHONE_ROWS)
+    const px = fitPx(844, 390, px => px * adv, 16, PHONE_COLS, PHONE_ROWS)
     expect(px).toBeLessThan(13)
     expect(Math.floor(390 / Math.round(px * 1.2))).toBeGreaterThanOrEqual(PHONE_ROWS)
   })
   it('a big screen keeps its size', () => {
-    expect(fitPx(1280, 800, adv, 16, PHONE_COLS, PHONE_ROWS)).toBe(16)
+    expect(fitPx(1280, 800, px => px * adv, 16, PHONE_COLS, PHONE_ROWS)).toBe(16)
   })
 })
