@@ -3,11 +3,20 @@ import { cellKey, combatActorId, emittersFor, meleePose, meleeTiming, impactStre
 export interface MeleeStroke extends MeleeAttack { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 export interface SpellBurst extends SpellEffect { born: number; duration: number; impact?: boolean; material?: ProjectileAppearance['kind']; direction?: number }
+export interface ProjectileTrail { x: number; y: number; kind: ProjectileAppearance['kind']; colour: [number, number, number]; age: number; seed: number }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ProjectilePoint { billboard: Billboard; at: number }
-interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number; presented?: boolean }
-const PROJECTILE_SPEED = 240
-const MIN_PROJECTILE_TIME = 0.02
+interface ProjectileFlight { points: ProjectilePoint[]; seen: number; ended?: number; presented?: boolean; impacted?: boolean }
+// A full LOS flight stays below ~150 ms; short shots last several frames.
+const PROJECTILE_SPEED = 72
+const MIN_PROJECTILE_TIME = 0.05
+const trailDuration = (kind: ProjectileAppearance['kind']) => kind === 'fire' ? 0.16
+  : kind === 'poison' || kind === 'acid' ? 0.15 : kind === 'metal' || kind === 'electric' ? 0.075 : 0.12
+const trailAppearance = (b: Billboard): Pick<ProjectileAppearance, 'kind' | 'colour'> => {
+  const light = b.life?.lights?.find(l => l.transient)
+  return b.life?.projectile || { kind: light?.pulse === 'fire' ? 'fire' : light?.pulse === 'electric' ? 'electric' : 'magic',
+    colour: light?.colour ?? [194, 177, 218] }
+}
 const shotKey = (b: Billboard) => `${b.x},${b.y}:${b.tile}`
 const shotFamily = (b: Billboard) => {
   const a = b.life?.projectile
@@ -190,6 +199,31 @@ export class DungeonEffects {
     })
   }
 
+  /** Time-based path samples: stable between frames and retained briefly after contact. */
+  projectileTrails(scene: Scene, now: number): ProjectileTrail[] {
+    const samples: ProjectileTrail[] = []
+    for (const flight of this.flights) {
+      const points = flight.points, appearance = trailAppearance(tail(flight).billboard)
+      const duration = trailDuration(appearance.kind)
+      for (let i = 1; i < points.length; i++) {
+        const from = points[i - 1], to = points[i]
+        if (to.at < now - duration || from.at >= now) continue
+        const steps = Math.ceil(separation(from.billboard, to.billboard) / 0.2)
+        for (let step = 0; step < steps; step++) {
+          const t = step / steps, born = from.at + (to.at - from.at) * t
+          const age = (now - born) / duration
+          if (age <= 0 || age >= 1) continue
+          const x = from.billboard.x + (to.billboard.x - from.billboard.x) * t
+          const y = from.billboard.y + (to.billboard.y - from.billboard.y) * t
+          const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
+          if (cell?.visibility !== 'visible' || cell.occluder) continue
+          samples.push({ x, y, kind: appearance.kind, colour: appearance.colour, age, seed: i * 17 + step * 7 })
+        }
+      }
+    }
+    return samples
+  }
+
   spell(scene: Scene, effect: SpellEffect, now: number) {
     if (!scene.playerOnLevel || !visible(scene, effect) || scene.cells.get(cellKey(effect.x, effect.y))?.occluder) return false
     const existing = this.bursts.find(b => b.x === effect.x && b.y === effect.y && b.kind === effect.kind && Math.abs(now - b.born) < 0.09)
@@ -241,6 +275,8 @@ export class DungeonEffects {
       if (!visible(scene, billboard)) return false
       const born = arrival(flight)
       if (now < born) return true
+      if (flight.impacted) return now < born + trailDuration(trailAppearance(billboard).kind)
+      flight.impacted = true
       const appearance = billboard.life?.projectile || undefined
       const light = billboard.life?.lights?.find(l => l.transient)
       const source: Emitter = light ? { ...light, x: billboard.x, y: billboard.y } : {
@@ -252,7 +288,7 @@ export class DungeonEffects {
       const kind = appearance?.kind === 'sand' || appearance?.kind === 'stone' ? 'earth' : physical ? 'physical' : appearance?.kind ?? 'magic'
       const burstDuration = kind === 'electric' ? 0.5 : 0.4
       if (now - born < burstDuration) this.bursts.push({ x: billboard.x, y: billboard.y, kind: kind as SpellEffect['kind'], born, duration: burstDuration, impact: true, material: appearance?.kind, direction: Math.atan2(billboard.y - flight.points[0].billboard.y, billboard.x - flight.points[0].billboard.x) })
-      return false
+      return now < born + trailDuration(trailAppearance(billboard).kind)
     })
     this.traces = this.traces.slice(-48)
     this.bursts = this.bursts.slice(-48)

@@ -90,6 +90,18 @@ describe('living dungeon visibility', () => {
     life.clear()
     expect(life.emitters(4)).toEqual([])
   })
+  it('does not infer an arrival impact from batched auto-explore or travel steps', () => {
+    const life = new DungeonLife(), scene = room()
+    life.observe(scene, 1)
+    scene.player = { x: 4, y: 3 }; scene.revision++
+    life.observe(scene, 2)
+    expect(life.ripples).toEqual([])
+    // Water footsteps still have their own cue, even after batched movement.
+    scene.cells.get(cellKey(-3, 1))!.flags.water = true
+    scene.player = { x: -3, y: 1 }; scene.revision++
+    life.observe(scene, 3)
+    expect(life.ripples).toMatchObject([{ x: -3, y: 1, kind: 'water' }])
+  })
   it('discards afterglows and ripples on a level change at identical coordinates', () => {
     const life = new DungeonLife(), a = room(), b = room()
     a.levelKey = 'D:1'; b.levelKey = 'D:2'

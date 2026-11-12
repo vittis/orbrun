@@ -166,8 +166,10 @@ export class DungeonLife {
       next.set(id, rank)
     }
     if (old && this.previous && scene.playerOnLevel && (this.lastPlayer.x !== scene.player.x || this.lastPlayer.y !== scene.player.y)) {
-      const c = scene.cells.get(cellKey(scene.player.x, scene.player.y)), jump = Math.hypot(this.lastPlayer.x - scene.player.x, this.lastPlayer.y - scene.player.y) > 1.5
-      if (c?.visibility === 'visible' && (c.flags?.water || jump)) this.ripple(c.x, c.y, now, jump ? 0.8 : 0.35, jump ? 'arrival' : 'water')
+      const c = scene.cells.get(cellKey(scene.player.x, scene.player.y))
+      // Auto-explore/travel can batch many steps into one scene. Distance alone
+      // does not confirm an impact or teleport; confirmed spells own that VFX.
+      if (c?.visibility === 'visible' && c.flags?.water) this.ripple(c.x, c.y, now, 0.35, 'water')
     }
     this.actors = next
     this.sources = emittersFor(scene)

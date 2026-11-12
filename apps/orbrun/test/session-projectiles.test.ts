@@ -111,7 +111,7 @@ describe('projectile receipt before the next animation frame', () => {
       }
       expect(impact.mock.calls.filter(c => c[10] !== true)).toHaveLength(0)
       impact.mockClear(); draws.length = 0
-      renderer.render(1.08)
+      renderer.render(1.2)
       expect(draws).toHaveLength(0)
       const bursts = impact.mock.calls.filter(c => c[10] !== true)
       expect(bursts).toHaveLength(1)
@@ -120,7 +120,7 @@ describe('projectile receipt before the next animation frame', () => {
       expect(bursts[0][5]).toBeCloseTo(q.x)
       expect(bursts[0][6]).toBeCloseTo(q.y - (renderer.project(1, 0).x - renderer.project(0, 0).x) * 0.4)
       impact.mockClear()
-      renderer.render(1.46)
+      renderer.render(1.7)
       expect(impact.mock.calls.filter(c => c[10] !== true)).toHaveLength(0) // no delayed generic second hit
     } finally { impact.mockRestore(); draw.mockRestore(); renderer.destroy(); session.close() }
   })
@@ -165,5 +165,22 @@ describe('projectile receipt before the next animation frame', () => {
       renderer.render(1.016)
       expect(renderer.animating).toBe(false)
     } finally { renderer.destroy(); session.close() }
+  })
+
+  it('does not play a character impact when batched auto-explore movement is flushed', () => {
+    const { session, deliver, renderer } = harness()
+    const impact = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    try {
+      // Several confirmed steps arrive before the next scene flush/RAF.
+      for (const x of [1, 2, 3]) deliver({ msg: 'player', pos: { x, y: 0 } })
+      session.flushScene()
+      expect(session.scene.player.x).toBe(3)
+      renderer.render(1.016)
+      expect(impact).not.toHaveBeenCalled()
+      // Confirmed teleport feedback still owns its effect.
+      renderer.spell({ x: 3, y: 0, kind: 'teleport' }, 1.02)
+      renderer.render(1.04)
+      expect(impact.mock.calls.some(c => c[1] === 'teleport')).toBe(true)
+    } finally { impact.mockRestore(); renderer.destroy(); session.close() }
   })
 })

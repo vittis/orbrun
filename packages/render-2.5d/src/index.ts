@@ -7,8 +7,8 @@ import { fittedScale, groundDepth, planeRect, project, unproject, type Projectio
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
 import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
-import { DungeonEffects, type SpellBurst } from './effects.js'
-import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
+import { DungeonEffects, type SpellBurst, type ProjectileTrail } from './effects.js'
+import { drawSpellTrace, drawSpellBurst, drawProjectileTrail } from './effects-draw.js'
 import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
@@ -39,7 +39,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; trail?: ProjectileTrail; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -249,6 +249,12 @@ export class Render25d implements MapRenderer {
         standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
       }
       if (this.deaths.active) this.active = true
+      for (const trail of this.effects.projectileTrails(this.scene, now)) {
+        if (!this.inFrame(p, trail)) continue
+        const cell = this.scene.cells.get(cellKey(Math.round(trail.x), Math.round(trail.y)))!
+        standing.push({ cell, trail, x: trail.x, y: trail.y, depth: trail.y + 0.29 })
+        this.active = true
+      }
       for (const billboard of this.effects.projectiles(now)) {
         const cell = this.scene.cells.get(cellKey(Math.round(billboard.x), Math.round(billboard.y)))
         if (!cell || !this.inFrame(p, billboard)) continue
@@ -355,7 +361,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.death || entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.death || entry.burst || entry.trail || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -375,6 +381,7 @@ export class Render25d implements MapRenderer {
       if (entry.death) {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
+      else if (entry.trail) drawProjectileTrail(ctx, p, entry.trail, this.dpr)
       else if (entry.burst) {
         ctx.save(); ctx.beginPath()
         for (let y = entry.y - 1; y <= entry.y + 1; y++) for (let x = entry.x - 1; x <= entry.x + 1; x++) {

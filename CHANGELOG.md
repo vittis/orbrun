@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.50 — 2026-11-12
+
+- Make single projectiles easier to follow with slightly slower travel and fading trails matched to their material or element.
+- Stop showing an impact burst on the character after auto-explore or travel batches multiple steps.
+
 ## 0.3.49 — 2026-11-12
 
 - Give projectiles, spell hits, melee and shared impact feedback shaded pixel bursts, debris and elemental remnants that match the dungeon artwork.

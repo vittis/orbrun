@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.49 point at the `cloudflare-online-v1.46` release tag in
+Source links for 0.3.50 point at the `cloudflare-online-v1.47` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1257,3 +1257,26 @@ one endpoint impact, including wrapped variants and repeated casts. Final
 release checks and the guarded production dry-run precede an atomic main/tag
 push. Follow the existing main deployment pipeline; integrate newer main and
 preserve concurrent work if it advances before publication.
+
+
+## 0.3.50 readable projectiles and auto-explore impact correction — prepared 2026-11-12
+
+User authorized committing, merging to main and deploying. Based on origin/main
+`fe520f3`, retaining the integrated pixel impacts, recorded Magic Dart correction,
+indirect death effects and earlier releases. Immutable source tag:
+`cloudflare-online-v1.47`.
+
+Projectiles travel at 72 cells/second with a 50 ms minimum, keeping short flights
+visible for several frames while longer flights remain brief. Shaded pixel trails
+follow the confirmed path, with material/element colours, drift and fade times;
+trails briefly outlive the head without creating another endpoint impact. Hidden
+cells, level transitions and Still mode clear or suppress the trail.
+
+Batched auto-explore/travel movement no longer infers an impact from distance
+alone. Water footsteps and confirmed teleport effects retain their own cues.
+Regressions cover the batched Session-to-renderer path, one head/one impact,
+all ten trail materials, fading and visibility/reset cleanup. All 56 actual
+projectile Canvas checks passed during implementation. Release validation and
+the guarded production dry-run precede an atomic non-forced main/tag push through
+the existing Workers Builds pipeline; verify hosted version, source links, CSP
+and proxies after rollout.
