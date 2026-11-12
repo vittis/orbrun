@@ -43,10 +43,11 @@ and picking regions. The existing first-person renderer remains independent.
   first-person renderer's billboard heights. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
   Exposed wall bases have dense contact shadows and soft south/east cast
-  shadows. Wall artwork maps once across each raised silhouette, with a soft
-  fade toward its foot. There are no cap outlines or separate compressed face
-  textures, so connected walls and corners stay visually consistent.
-  Dense contact shadows and darker face bottoms emphasize the height change.
+  shadows. Original wall artwork maps onto the raised horizontal roof. Its
+  bottom texel extends down into the vertical face, with directional shading
+  and a darker foot. The texture never stretches across both planes or restarts
+  on the face. Joined roofs keep their shared pixel boundaries, and frontier
+  fog feathers their exposed edges into unexplored black.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
@@ -55,8 +56,13 @@ and picking regions. The existing first-person renderer remains independent.
   smooth per-frame flicker and afterglow fading. Known occluders block light;
   unseen and settled remembered terrain never receives it. A departing LOS
   tile fades its exposure to still-visible emitters with its terrain brightness.
-  The player emits no light.
-  LOS has uniform bright ambient exposure and a gentle vignette.
+  Light pools use 85% of the semantic emitter radius, capped at six cells,
+  so torches and magic illuminate neighbouring terrain instead of only their
+  source tile. The player emits no semantic light. A separate continuous
+  ambient grade warms nearby stone and cools distant terrain, following the
+  drawn player during movement. Its faint warm lift is clipped to known
+  terrain; remote level maps retain their original atlas exposure. Neither
+  ambient grading nor the static vignette keeps idle scenes awake.
 - `movement.ts` tweens confirmed entity positions and the following camera on
   the renderer's existing clock. Every billboard kind shares the same motion;
   shadows, glows, depth sorting, upright badges/bars and hit regions follow the
@@ -118,8 +124,8 @@ and picking regions. The existing first-person renderer remains independent.
   state, so a flight received entirely between frames cannot disappear unseen.
 
 Unexplored space uses neutral, world-anchored dark mist behind known geometry.
-Remembered tiles and standing art retain 44% of their ambient brightness,
-with neutral black shading and faint dark fog; visible tiles remain bright. Server item cursors
+Remembered tiles and standing art receive 56% black shading before ambient
+grading, with faint dark fog; visible tiles remain bright. Server item cursors
 share the upright item frame, while other cell badges keep their ground anchor.
 The unexplored mist is static, so it does not keep idle scenes awake.
 
@@ -193,9 +199,9 @@ visibility, lighting occlusion, animation sleep, atlas composition, compass
 controls, persistence, and temporary level-map switching. Browser captures
 check real Canvas rendering at desktop and phone sizes.
 
-Wall coherence checks use striped artwork to detect texture restarts and hard
-cap seams at three tilts, zooms and device pixel ratios, with filtering on/off.
-They also verify original bottom texels, corner/foreground picking and stable
+Wall coherence checks use striped artwork to verify unstretched roofs and
+edge extrusion with distinct face shading at three tilts, zooms and device
+pixel ratios, with filtering on/off. They also verify original bottom texels, corner/foreground picking and stable
 wall silhouettes when the ground behind them leaves LOS.
 
 ## Extending the mode

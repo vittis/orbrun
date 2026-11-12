@@ -37,7 +37,7 @@ describe('living dungeon visibility', () => {
       const next = livingPose({ motion: 'breath' }, 0, 0, (frame + 1) / 60, true, presentation)
       expect(pose.sx).toBe(1)
       expect(Math.abs(pose.sy - 1)).toBeLessThanOrEqual(0.0226)
-      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0007)
+      expect(Math.abs(next.sy - pose.sy)).toBeLessThan(0.0008)
       low = Math.min(low, pose.sy); high = Math.max(high, pose.sy)
     }
     expect(high - low).toBeGreaterThan(0.044)

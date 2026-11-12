@@ -20,12 +20,14 @@ export function livingPose(life: TileLife | undefined, x: number, y: number, tim
   const phase = x * 2.31 + y * 1.73, t = time * (life.rate ?? 1), a = life.amplitude ?? 1
   const wave = Math.sin(t * 2.2 + phase)
   switch (life.motion) {
-    case 'breath':
+    case 'breath': {
+      const breath = Math.sin(t * (presentation.smooth ? 2.1 : 2.7) + phase)
       if (presentation.smooth) {
-        // A slow, readable rise keeps faces and equipment from visibly widening.
-        p.sy += Math.sin(t * 1.7 + phase) * 0.009 * a
-      } else { p.sy += wave * 0.018 * a; p.sx += wave * 0.006 * a }
+        // A readable rise keeps faces and equipment from visibly widening.
+        p.sy += breath * 0.009 * a
+      } else { p.sy += breath * 0.018 * a; p.sx += breath * 0.006 * a }
       break
+    }
     case 'plant': case 'grass': p.angle = Math.sin(t * 0.9 + phase) * 0.018 * a; break
     case 'undead': p.x = Math.sin(t * 0.7 + phase) ** (presentation.smooth ? 3 : 15) * 0.009 * a; break
     case 'float': p.y = Math.sin(t * 1.3 + phase) * 0.023 * a; break
