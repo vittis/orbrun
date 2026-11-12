@@ -285,7 +285,10 @@ export class Render25d implements MapRenderer {
             if (particle.ground) deathParticles.push(particle)
             else {
               const cell = this.scene.cells.get(cellKey(Math.round(particle.x), Math.round(particle.y)))!
-              standing.push({ cell, death: particle, x: particle.x, y: particle.y, depth: particle.y + 0.65 })
+              // A short spray starts in front of the struck sprite, including
+              // northward hits whose fragments still overlap its upright art.
+              standing.push({ cell, death: particle, x: particle.x, y: particle.y,
+                depth: Math.max(particle.y + 0.35, burst.spray.origin!.y + 0.65) })
             }
           }
         } else standing.push({ cell, burst, x: position.x, y: position.y, depth: position.y + 0.65 })

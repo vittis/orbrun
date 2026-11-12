@@ -18,7 +18,7 @@ export function sampleMeleeSpray(scene: Scene, burst: SpellBurst, now: number, p
   const origin = spray.origin ??= { ...position }
   const random = debrisRandom(spray.seed), strength = impactStrength(burst.intensity)
   const count = Math.round((5 + random() * 5) * (0.7 + strength * 0.5))
-  const energy = 0.7 + random() * 0.65, spread = 0.5 + random() * 0.9
+  const energy = 0.7 + random() * 0.65, spread = 0.7 + random() * 1.1
   const heading = Math.atan2(spray.direction.y, spray.direction.x) + (random() - 0.5) * 0.3
   const z0 = spray.height * (0.35 + random() * 0.25), scatter = 0.015 + random() * 0.035
   const airy = spray.kind === 'spirit' || spray.kind === 'fire'
@@ -26,13 +26,13 @@ export function sampleMeleeSpray(scene: Scene, burst: SpellBurst, now: number, p
   const particles: DeathParticle[] = []
   for (let i = 0; i < count; i++) {
     const a = heading + (random() - 0.5) * spread
-    const speed = (0.65 + random() * 0.85) * energy * (0.7 + strength * 0.4)
+    const speed = (0.9 + random() * 0.9) * energy * (0.7 + strength * 0.4)
     const lift = 0.15 + random() * 0.5, size = (0.014 + random() * 0.018) * Math.sqrt(spray.height)
     const lateral = (random() - 0.5) * scatter, vertical = (random() - 0.5) * scatter
     const spin = (random() - 0.5) * 10, lifetime = burst.duration * (0.75 + random() * 0.25)
     const elapsed = Math.floor(t * 60) / 60, drift = (1 - Math.exp(-elapsed * 2.7)) / 2.7
-    const x = origin.x + Math.round((spray.direction.x * 0.07 + lateral + Math.cos(a) * speed * drift) * 64) / 64
-    const y = origin.y + Math.round((spray.direction.y * 0.07 + vertical + Math.sin(a) * speed * drift) * 64) / 64
+    const x = origin.x + Math.round((spray.direction.x * 0.12 + lateral + Math.cos(a) * speed * drift) * 64) / 64
+    const y = origin.y + Math.round((spray.direction.y * 0.12 + vertical + Math.sin(a) * speed * drift) * 64) / 64
     const z = airy ? z0 + elapsed * 0.2 : z0 + lift * elapsed - 5 * elapsed * elapsed
     const ground = z <= 0.018 && liquid
     const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
