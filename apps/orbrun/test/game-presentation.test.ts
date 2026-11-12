@@ -9,6 +9,7 @@ import { CameraController } from '../src/camera'
 import { GameScreen } from '../src/game'
 import { FpsCounter } from '../src/fps'
 import { PredictiveMovement } from '../src/predictive-movement'
+import { NearDeath } from '../src/near-death'
 import type { Session } from '../src/session'
 
 // These tests drive GameScreen.loop directly; scheduler ordering is tested in frames.test.ts.
@@ -35,7 +36,7 @@ function harness() {
   renderer.setScene(scene, 1)
   const session = { state, scene, sceneChangedAt: 1050, flushScene: vi.fn(() => false) }
   const screen = Object.assign(Object.create(GameScreen.prototype), {
-    session, cam, renderer, prediction: new PredictiveMovement(session as unknown as Session, cam, () => false), lastFrame: 1000, hooks: {},
+    session, cam, renderer, nearDeath: new NearDeath(state), prediction: new PredictiveMovement(session as unknown as Session, cam, () => false), lastFrame: 1000, hooks: {},
     awake: () => false, wake: vi.fn(), idleTick: vi.fn(), sceneTime: undefined, fps: new FpsCounter(),
   }) as {
     loop(now: number): void

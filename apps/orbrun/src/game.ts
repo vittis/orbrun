@@ -41,6 +41,7 @@ import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { CombatPopups } from './combat-popups'
 import { presentCombat } from './combat-presentation'
+import { NearDeath } from './near-death'
 
 /** The most drawn pixels per CSS pixel the game view gets (Part IV of rendering-3d.md): the display's density, capped here. */
 const VIEW_MAX_DPR = 1
@@ -123,6 +124,7 @@ export interface GameHooks {
 export class GameScreen {
   private feedback: CombatFeedback
   private combatPopups = new CombatPopups()
+  private nearDeath: NearDeath
   private prediction: PredictiveMovement
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
@@ -334,11 +336,12 @@ export class GameScreen {
     this.loop = this.loop.bind(this)
     this.session = session
     this.feedback = new CombatFeedback(session.state)
+    this.nearDeath = new NearDeath(session.state)
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     this.root.append(this.canvas, this.loading, this.fps.root)
-    this.root.append(this.combatPopups.root)
+    this.root.append(this.nearDeath.root, this.combatPopups.root)
     const st = hooks.settings()
     this.renderMode = st.renderer
     this.is3d = st.renderer === '3d'
@@ -484,6 +487,7 @@ export class GameScreen {
         } else if (e.type === 'state') {
           const resets = this.feedback.resets
           this.feedback.observe(session.state, e.msg)
+          this.nearDeath.observe(session.state, e.msg, performance.now())
           if (resets !== this.feedback.resets) this.combatPopups.clear()
           this.prediction.state(e.msg, performance.now())
           this.lastHeard = performance.now()
@@ -502,6 +506,7 @@ export class GameScreen {
           this.prediction.sent(e.msg, this.runner.sendingStep, this.lastSent)
         } else if (e.type === 'closed') {
           this.combatPopups.clear()
+          this.nearDeath.clear()
           this.prediction.reset(performance.now())
           this.wake()
         } else if (e.type === 'gamedata') {
@@ -591,6 +596,7 @@ export class GameScreen {
     document.documentElement.style.removeProperty('--phone-shrink')
     this.renderer.destroy()
     this.combatPopups.clear()
+    this.nearDeath.clear()
     this.park.clear()
     this.root.remove()
   }
@@ -1130,6 +1136,8 @@ export class GameScreen {
     }
     this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas, this.is3d,
       this.renderMode === '2.5d' ? !dungeonAnimation(settings, this.cam.reducedMotion) : this.cam.reducedMotion)
+    this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.cam.reducedMotion)
     this.fps.update(now, rendered)
     perf?.end()
   }
@@ -1167,7 +1175,7 @@ export class GameScreen {
   private syncRendererScene(scene: Scene, now?: number, renderer = this.renderer) {
     if (!renderer) return
     if (renderer instanceof Render25d) renderer.setOptions({ center: this.session.state.map.viewCenter })
-    renderer.setScene(scene, now)
+    renderer.setScene(this.nearDeath.scene(scene), now)
   }
 
   /**
@@ -1226,7 +1234,7 @@ export class GameScreen {
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
     if (this.cam.steering || this.padLooking) return true
-    if (this.renderer.animating || this.combatPopups.active) return true
+    if (this.renderer.animating || this.combatPopups.active || this.nearDeath.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 

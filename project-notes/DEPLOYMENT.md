@@ -13,7 +13,7 @@ Cloudflare serves the client and bounded gamedata/morgue proxies. The browser
 connects directly to the selected DCSS server over WSS; accounts and saves stay
 on that server. No player's credentials are needed to deploy or smoke-test.
 
-Source links for 0.3.60 point at the `cloudflare-online-v1.57` release tag in
+Source links for 0.3.61 point at the `cloudflare-online-v1.58` release tag in
 `vittis/orbrun`, which must exist at the exact code being deployed. Retain that
 tag unchanged. A later release must update the source links and use a new tag.
 Upstream credits, source licenses and fonts are retained; Acorn's MIT notice
@@ -1552,3 +1552,33 @@ the changelog, and all tests passed with two workers.
 Release validation and the guarded production dry-run precede an atomic,
 non-forced main/source-tag push through Workers Builds. If main advances,
 integrate and revalidate; preserve any newer deployment containing this change.
+
+
+## 0.3.61 fading near-death vignette — prepared 2026-11-12
+
+User authorized committing to main and deploying, with explicit care for
+concurrent agents and worktrees. Integrated origin/main `b05393b`, preserving
+the material-specific melee sprays, foreground-wall alignment and all earlier
+releases. Immutable source tag: `cloudflare-online-v1.58`.
+
+Confirmed damage leaving the character at 30% HP or below now triggers a subtle
+red corner vignette. It eases in over 160 ms and fades completely within
+2.8 seconds even while HP remains low. The centre stays clear, the layer passes
+pointer input through, rapid damage shares one envelope, and reduced motion
+lowers its intensity. Menus and remote level maps hide it. Death, level changes,
+new games and disconnection clear it. The animation releases the frame loop
+when it expires and does not depend on combat-popup settings.
+
+At low health, uniform view-wide red server flashes are removed before renderer
+receipt-time observations can turn each tile into a fire burst. Local flashes,
+other flash colours and confirmed fire spell effects retain their presentation.
+The source scene remains unchanged.
+
+Integrated validation passed a forced TypeScript rebuild and 2,608 unit tests,
+with two optional-engine skips. The optional engine E2E lane explicitly skipped
+44 tests because engine artifacts are absent. The existing isolated headless
+Chrome harness passed six viewport, gradient, pointer, peak, fade and expiry
+checks. The guarded production dry-run precedes an atomic, non-forced main and
+source-tag push through Workers Builds. If main advances, integrate and
+revalidate; preserve any newer deployment containing this change. Verify hosted
+version, source links, exact assets and CSP after rollout.
