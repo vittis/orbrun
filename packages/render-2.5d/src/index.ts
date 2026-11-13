@@ -16,6 +16,7 @@ import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight, wallRoof } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
+import { drawUnexploredAtmosphere } from './unexplored-fog.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -27,6 +28,8 @@ export interface Render25dOptions {
   zoom?: number
   /** Animated atmosphere, automatically disabled by the app for reduced motion. */
   animate?: boolean
+  /** Additional mist and motes behind unknown terrain; gameplay opts in. */
+  unexploredFog?: boolean
   /** Tween confirmed movement; still/reduced-motion mode also disables this. */
   movement?: boolean
   /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
@@ -80,7 +83,7 @@ export class Render25d implements MapRenderer {
   private hits: Hit[] = []
   private active = false
   private opts: Required<Render25dOptions> = {
-    tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
+    tilt: 50, zoom: 1, animate: true, unexploredFog: false, center: null, minibars: null, filterScaling: false,
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
@@ -336,6 +339,8 @@ export class Render25d implements MapRenderer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
     this.unexploredFog(ctx, p, time)
+    if (this.opts.unexploredFog && this.scene.playerOnLevel
+      && drawUnexploredAtmosphere(ctx, p, this.cells, time, this.dpr) && this.opts.animate) this.active = true
     const cells = this.cells.filter(c => this.inFrame(p, c))
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 

@@ -99,7 +99,8 @@ test('level gain celebrates without intercepting input, respects motion, and exp
 test('level announcement appears before answering the stat choice and follows the rendered character', async ({ page }) => {
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
-  await page.clock.install()
+  await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
   await page.evaluate(() => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
     fixture.receive({ msg: 'player', xl: 5 })
@@ -155,7 +156,8 @@ test('level-up embers rise, then disappear with Still and native reduced motion'
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
-  await page.clock.install()
+  await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
   await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'player', xl: 4 }))
   const embers = () => page.locator('.level-up-art').evaluate(canvas => {
     const art = canvas as HTMLCanvasElement, dpr = art.width / art.clientWidth
@@ -429,6 +431,21 @@ for (const touch of [false, true]) {
   })
 }
 
+
+test('unexplored fog can be toggled in Still mode, persists and resets', async ({ page }) => {
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.goto('/settings/view')
+  const fog = page.locator('[data-focus="setting:Unexplored fog"]')
+  await expect(fog.locator('.val')).toHaveText('On')
+  await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
+  await expect(page.locator('[data-focus="setting:Dungeon animation"] .val')).toHaveText('Still')
+  await page.getByRole('button', { name: 'Unexplored fog next', exact: true }).click()
+  await expect(fog.locator('.val')).toHaveText('Off')
+  await page.reload()
+  await expect(fog.locator('.val')).toHaveText('Off')
+  await page.getByText('Reset to defaults', { exact: true }).click()
+  await expect(fog.locator('.val')).toHaveText('On')
+})
 
 test('fine combat controls work in a narrow settings panel and persist across reload', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })

@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.112 — 2026-11-13
+
+- Added soft, cool mist and sparse drifting motes behind unexplored dungeon terrain. Slow world-anchored motion adds atmosphere while keeping explored terrain and gameplay markers clear.
+- View → Unexplored fog toggles the effect, enabled by default. Still/reduced motion freezes it; fully explored viewports stop its animation loop. Hidden terrain and actors never influence its appearance.
+
 ## 0.3.111 — 2026-11-13
 
 - Level-up feedback now uses smooth, understated lettering with a small rising burst of warm embers and a soft 1.8-second fade. It remains above the character and triggers before stat selection; Still/reduced motion show a static label.

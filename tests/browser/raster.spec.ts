@@ -1,6 +1,17 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
+test('unexplored mist and motes respect visibility, toggling and Still mode', async ({ page }) => {
+  await page.goto('/testbed/fog-checks.html')
+  await expect.poll(async () => {
+    try { return (await result(page)).status } catch { return 'loading' }
+  }).toMatch(/complete|error/)
+  const report = await result(page)
+  expect(report.status, JSON.stringify(report)).toBe('complete')
+  expect(report.checks).toBe(21)
+  expect(report.failures, JSON.stringify(report)).toEqual([])
+})
+
 test('elemental splatters stay visible at tile scale and lightning has bright zigzag cores', async ({ page }) => {
   await page.goto('/testbed/elemental-checks.html')
   await expect.poll(async () => {
