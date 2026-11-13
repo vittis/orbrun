@@ -9,6 +9,11 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
   const age = (now - burst.born) / burst.duration
   if (age < 0 || age >= 1) return
   const q = project(p, position.x, position.y + (burst.actorId ? 0.3 : 0.22))
+  if (burst.outcome) {
+    art.draw(ctx, burst.outcome, age, Math.floor(burst.born * 1000), 0.25,
+      q.x + (burst.outcome === 'miss' ? p.scale * 0.26 : 0), q.y - p.scale * 0.5, p.scale * 0.7, dpr)
+    return
+  }
   const kind = burst.material === 'sand' && burst.kind === 'earth' ? 'sand' : burst.kind
   const strength = burst.intensity ? impactStrength(burst.intensity) : 0.6
   art.draw(ctx, kind, age, burst.x * 11 + burst.y * 23 + Math.floor(burst.born * 1000), strength,

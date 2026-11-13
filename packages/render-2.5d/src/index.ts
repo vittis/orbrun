@@ -1,6 +1,6 @@
 import {
   cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
-  type Billboard, type CellKey, type MapRenderer, type Minibars,
+  type Billboard, type CellKey, type MapRenderer, type Minibars, type DeflectionEffect,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type CombatBump, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
@@ -235,6 +235,10 @@ export class Render25d implements MapRenderer {
 
   hit(effect: HitEffect, now: number) {
     if (this.opts.animate && this.effects.hit(this.scene, effect, now)) this.active = true
+  }
+
+  deflect(effect: DeflectionEffect, now: number) {
+    if (this.opts.animate && this.effects.deflect(this.scene, effect, now)) this.active = true
   }
 
   spell(effect: SpellEffect, now: number) {

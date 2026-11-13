@@ -30,6 +30,12 @@ describe('shared shaded pixel impact art', () => {
     expect(new Set(['physical', 'earth', 'sand', 'fire', 'cold', 'electric', 'poison', 'air', 'drain', 'heal', 'teleport'].map(k => shape(k as ImpactKind))).size).toBe(11)
     expect(area(frame('physical', 0.3, false, 1))).toBeGreaterThan(area(frame('physical', 0.3, false, 0.25)))
   })
+  it('keeps misses and harmless contact smaller and distinct from damaging impacts', () => {
+    for (const kind of ['miss', 'no-damage'] as const) {
+      expect(area(frame(kind, 0.15))).toBeLessThan(area(frame('physical', 0.15)) / 3)
+      expect(frame(kind, 0.15)).not.toEqual(frame(kind === 'miss' ? 'no-damage' : 'miss', 0.15))
+    }
+  })
   it('dissolves shaded floor remnants and removes them completely', () => {
     for (const kind of kinds) {
       expect(area(frame(kind, 0, true))).toBeGreaterThan(0)

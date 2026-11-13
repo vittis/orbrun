@@ -11,7 +11,7 @@ function harness() {
   for (const x of [0, 1, 2]) scene.cells.set(cellKey(x, 0), {
     x, y: 0, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 0, flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false },
   })
-  const renderer = { bump: vi.fn(), spell: vi.fn(), impact: vi.fn(), hit: vi.fn(), death: vi.fn() } as unknown as MapRenderer
+  const renderer = { bump: vi.fn(), spell: vi.fn(), impact: vi.fn(), deflect: vi.fn(), hit: vi.fn(), death: vi.fn() } as unknown as MapRenderer
   return { scene, renderer }
 }
 
@@ -86,8 +86,26 @@ describe('combat contact timing', () => {
       presentCombat(renderer, scene, events, [], 'mace', 0, true)
     }
     expect(renderer.bump).toHaveBeenCalledTimes(2)
+    expect(renderer.deflect).toHaveBeenNthCalledWith(1, { x: 1, y: 0, actorId: undefined, turn: undefined, outcome: 'miss' }, bumpTiming().contact)
+    expect(renderer.deflect).toHaveBeenNthCalledWith(2, { x: 1, y: 0, actorId: undefined, turn: undefined, outcome: 'no-damage' }, bumpTiming().contact)
     expect(renderer.impact).not.toHaveBeenCalled()
     expect(renderer.hit).not.toHaveBeenCalled()
+  })
+
+  it.each([0.5, 2])('times incoming misses and zero damage at %sx without guessing from absent amounts', speed => {
+    const { scene, renderer } = harness()
+    const source = { x: 1, y: 0, actorId: 'id:1' }
+    presentCombat(renderer, scene, [
+      { kind: 'miss', player: true, melee: true, sourceName: 'goblin', source },
+      { kind: 'hurt', player: true, amount: 0, melee: true, sourceName: 'goblin', source },
+      { kind: 'hit', x: 2, y: 0 },
+    ], [], undefined, 1000, true, speed)
+    expect(renderer.deflect).toHaveBeenCalledTimes(2)
+    for (const outcome of ['miss', 'no-damage']) expect(renderer.deflect).toHaveBeenCalledWith(
+      { x: 0, y: 0, actorId: 'player', turn: undefined, outcome }, 1 + bumpTiming(speed).contact)
+    expect(renderer.hit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ x: 2 }), 1)
+    presentCombat(renderer, scene, [{ kind: 'miss', x: 1, y: 0 }, { kind: 'hit', amount: 0, x: 2, y: 0 }], [], undefined, 2000, false)
+    expect(renderer.deflect).toHaveBeenCalledTimes(2)
   })
 
   it('flashes direct spell damage but ignores resisted, utility, zero-damage and Still-mode results', () => {

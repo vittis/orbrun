@@ -1,13 +1,13 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
 import { nativeSpellArt } from './spell-presentation.js'
-import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeflectionEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
 export interface BodyBump extends CombatBump { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
+export interface SpellBurst extends SpellEffect { outcome?: DeflectionEffect['outcome']; born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -129,6 +129,19 @@ export class DungeonEffects {
     return added
   }
 
+  deflect(scene: Scene, effect: DeflectionEffect, now: number) {
+    const target = this.target(scene, { ...effect, kind: 'physical' }, now)
+    // Feedback belongs to a known, visible recipient, never an empty/hidden cell.
+    if (!target || !scene.playerOnLevel || scene.cells.get(cellKey(target.x, target.y))?.occluder) return false
+    const placed = { ...effect, x: target.x, y: target.y, actorId: combatActorId(target), turn: effect.turn ?? scene.turn }
+    if (this.killed(placed, now)) return false
+    if (this.bursts.some(b => b.actorId === placed.actorId && b.turn === placed.turn && Math.abs(b.requested - now) < 0.2)) return false
+    this.bursts.push({ ...placed, kind: 'physical', intensity: 'light', born: now, requested: now,
+      duration: effect.outcome === 'miss' ? 0.24 : 0.2, source: 'confirmed' })
+    this.bursts = this.bursts.slice(-48)
+    return true
+  }
+
   private sprayFor(target: Billboard, direction: { x: number; y: number }, source: HitSpray['source']): HitSpray {
     const seed = ++this.spraySequence, length = Math.hypot(direction.x, direction.y)
     // Untraced incoming damage has no known attacker; vary its emission angle.
@@ -168,7 +181,11 @@ export class DungeonEffects {
     const utility = (kind: SpellEffect['kind']) => ['heal', 'buff', 'debuff', 'teleport'].includes(kind)
     const contact = source === 'melee' || utility(placed.kind) ? undefined : this.missiles.bind(placed, now)
     const born = Math.max(now, contact?.time() ?? now)
+    // A damaging result owns the contact when several reports share a turn.
+    this.bursts = this.bursts.filter(b => !b.outcome || b.actorId !== placed.actorId || b.turn !== placed.turn
+      || Math.abs(b.requested - now) >= 0.2)
     const existing = this.bursts.find(b => {
+      if (b.outcome) return false
       const sameTarget = b.actorId && placed.actorId ? b.actorId === placed.actorId : b.x === placed.x && b.y === placed.y
       const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.requested) < 0.2
       return sameTarget && sameResult
@@ -282,7 +299,7 @@ export class DungeonEffects {
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
-      if (!['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
+      if (!burst.outcome && !['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
       if (burst.contact) {
         burst.born = Math.max(burst.requested, burst.contact.time())
         const direction = burst.contact.direction()
@@ -290,6 +307,7 @@ export class DungeonEffects {
       }
       const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
       if (target) { burst.x = target.x; burst.y = target.y }
+      else if (burst.outcome) burst.duration = 0
     }
     this.bursts = this.bursts.filter(b => now - b.born < b.duration && visible(scene, b))
     this.bumps = this.bumps.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
