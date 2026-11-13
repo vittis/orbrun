@@ -12,7 +12,9 @@ Higher zoom values deliberately trade coverage for larger tiles.
 Ground rows have 25% extra depth to open horizontal corridors. A low foreground
 lip exposes single-cell passages and stays level along each connected wall row,
 including corners, junctions and widened sections. Back walls and other room walls retain their
-raised silhouettes and coherent artwork. Drawing, picking, lighting and shadows
+raised silhouettes and coherent artwork. In gameplay, cutaways apply only south
+of the player; walls beside or behind them keep their full height, even when a
+narrow passage continues behind that wall row. Drawing, picking, lighting and shadows
 share the same wall height, which stays stable through LOS fades. The preview's
 **Narrow corridors** scene exercises the passage and a north–south junction.
 

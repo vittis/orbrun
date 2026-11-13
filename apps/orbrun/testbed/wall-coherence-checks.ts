@@ -94,6 +94,23 @@ export async function wallCoherenceChecks() {
     })
     assert('side wall stonework continues into lowered corners without internal face bands',
       joins.every(({ pixel, picked, x }) => pixel[0] + pixel[1] > 210 && picked === cellKey(x, -1)), joins)
+    // A player beside this same passage must see raised wall ends, rather
+    // than a corridor cutaway leaking sideways into the open room.
+    scene.playerOnLevel = true
+    scene.player = { x: 5, y: 0 }
+    scene.cells.set(cellKey(5, 0), { ...scene.cells.get(cellKey(4, -1))!, x: 5, y: 0 })
+    scene.revision++; r.setScene(scene); r.render(0)
+    const raised = planeRect(p, 0, 0, 0.58, dpr)
+    const raisedWalls = [-1, 0, 1].map(x => {
+      const q = r.project(x, 0)
+      const body = sample(q.x, raised.y + raised.height * 0.5)
+      const face = sample(q.x, raised.y + raised.height + (ground.y + ground.height - raised.y - raised.height) * 0.5)
+      return { x, body, face, picked: r.pick(q.x, raised.y + 2 / dpr) }
+    })
+    assert('walls beside the player retain raised stonework and matching picking',
+      raisedWalls.every(({ x, body, picked }) => body[1] > body[0] * 3 && picked === cellKey(x, 0)), raisedWalls)
+    assert('walls beside the player retain a shaded vertical face',
+      raisedWalls.every(({ face }) => face[0] > face[1] * 3 && face[0] < above[0] - 40), raisedWalls)
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('wall-coherence-checks')
   }
