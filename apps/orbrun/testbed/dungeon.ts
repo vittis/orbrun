@@ -1,6 +1,6 @@
 import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { cellKey, emptyScene, type TileSource, type MeleeAttack, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
+import { cellKey, emptyScene, type TileSource, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
@@ -236,10 +236,10 @@ function practiceEnemy() {
   return enemy
 }
 document.getElementById('wound')!.addEventListener('change', practiceEnemy)
-document.getElementById('melee')!.addEventListener('click', () => {
+document.getElementById('bump')!.addEventListener('click', () => {
   const enemy = practiceEnemy()
   if (!enemy) return
-  renderer.melee({ from: scene.player, to: enemy, style: (document.getElementById('weapon') as HTMLSelectElement).value as MeleeAttack['style'], hit: true }, performance.now() / 1000)
+  renderer.bump({ from: scene.player, to: enemy, hit: true }, performance.now() / 1000)
   if (effectFrame) captureTime = performance.now() / 1000 + effectFrame
   wake()
 })

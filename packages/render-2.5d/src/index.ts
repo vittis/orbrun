@@ -1,7 +1,7 @@
 import {
   cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
   type Billboard, type CellKey, type MapRenderer, type Minibars,
-  type Scene, type SceneCell, type SceneCursor, type TileSource, type MeleeAttack, type Emitter, type SpellEffect,
+  type Scene, type SceneCell, type SceneCursor, type TileSource, type CombatBump, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
@@ -9,7 +9,6 @@ import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects, type SpellBurst } from './effects.js'
 import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
-import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
@@ -34,10 +33,6 @@ export interface Render25dOptions {
   movementDuration?: number
   /** Monotone curves without overshoot, for readable grid movement. */
   movementEasing?: MovementEasing
-  meleeEffects?: boolean
-  meleeWeight?: number
-  meleeTrail?: number
-  meleeMotion?: number
   meleeBumpStrength?: number
   meleeBumpSnap?: number
   center?: { x: number; y: number } | null
@@ -81,7 +76,7 @@ export class Render25d implements MapRenderer {
   private active = false
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
-    meleeEffects: true, meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, meleeBumpStrength: 1, meleeBumpSnap: 1,
+    meleeBumpStrength: 1, meleeBumpSnap: 1,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
   }
 
@@ -93,7 +88,7 @@ export class Render25d implements MapRenderer {
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.6, Math.min(1.6, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
-    for (const [key, min, max] of [['meleeWeight', 0.6, 1.5], ['meleeTrail', 0.4, 1.4], ['meleeMotion', 0, 1], ['meleeBumpStrength', 0, 1.5], ['meleeBumpSnap', 0, 1]] as const) {
+    for (const [key, min, max] of [['meleeBumpStrength', 0, 1.5], ['meleeBumpSnap', 0, 1]] as const) {
       this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : 1
     }
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
@@ -178,7 +173,7 @@ export class Render25d implements MapRenderer {
   }
 
   private actorPosition(b: Billboard, now: number) {
-    const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now, this.opts.meleeMotion, this.opts.meleeBumpStrength, this.opts.meleeBumpSnap) : { x: 0, y: 0 }
+    const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now, this.opts.meleeBumpStrength, this.opts.meleeBumpSnap) : { x: 0, y: 0 }
     return { x: pos.x + offset.x, y: pos.y + offset.y }
   }
 
@@ -224,8 +219,8 @@ export class Render25d implements MapRenderer {
     this.active = true
   }
 
-  melee(attack: MeleeAttack, now: number) {
-    if (this.opts.animate && this.effects.melee(this.scene, attack, now)) this.active = true
+  bump(attack: CombatBump, now: number) {
+    if (this.opts.animate && this.effects.bump(this.scene, attack, now)) this.active = true
   }
 
   hit(effect: HitEffect, now: number) {
@@ -449,21 +444,8 @@ export class Render25d implements MapRenderer {
     const ornaments: Emitter[] = cells.filter(c => c.visibility === 'visible' && ['crystal', 'up', 'down'].includes(c.life?.motion ?? '') && !c.life?.lights?.length)
       .map(c => ({ x: c.x, y: c.y, colour: [198, 222, 255], radius: 1, power: 0 }))
     this.emitterParticles(ctx, p, [...emitters, ...ornaments], time)
-    if (this.opts.animate) for (const stroke of this.effects.strokes) {
-      if (!this.inFrame(p, stroke.from) && !this.inFrame(p, stroke.to)) continue
-      if (this.opts.meleeEffects || this.opts.meleeMotion > 0) this.active = true
-      if (!this.opts.meleeEffects) continue
-      // Like upright actor art, a swing can overhang its visible cells. A
-      // floor-shaped scissor cuts off wide blades and makes misses look like
-      // misdirected half-swings. Acceptance/tick already require BOTH combat
-      // endpoints to remain visible; drawing the overhang reveals no terrain.
-      const from = stroke.fromId && this.scene.billboards.find(b => combatActorId(b) === stroke.fromId)
-      const to = stroke.toId && this.scene.billboards.find(b => combatActorId(b) === stroke.toId)
-      drawMelee(ctx, p, { ...stroke,
-        from: from ? this.actorPosition(from, now) : stroke.from,
-        to: to ? this.actorPosition(to, now) : stroke.to }, now, { weight: this.opts.meleeWeight, trail: this.opts.meleeTrail })
-      this.active = true
-    }
+    if (this.opts.animate && this.opts.meleeBumpStrength > 0 && this.effects.bumps.some(b =>
+      this.inFrame(p, b.from) || this.inFrame(p, b.to))) this.active = true
     this.impactRipples(ctx, p, time)
     this.dungeonExposure(ctx, p, cells)
 

@@ -673,7 +673,6 @@ export class GameScreen {
   private render25dOptions(st: Settings) {
     return {
       tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.reducedMotion),
-      meleeEffects: st.meleeEffects, meleeWeight: st.meleeWeight, meleeTrail: st.meleeTrail, meleeMotion: st.meleeMotion,
       meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
       movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
     }
@@ -832,9 +831,8 @@ export class GameScreen {
     this.applyServerOptions()
     const settings = this.settings()
     const combat = this.feedback.flush(this.session.scene)
-    const incomingMelee = this.feedback.takeMelee()
     const spells = this.feedback.takeSpells()
-    if (spells.length || incomingMelee.length || combat.length) this.needsRender = true
+    if (spells.length || combat.length) this.needsRender = true
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
     let padLabels = this.chat.capturing ? [] : ours ?? this.padHints.prompts(this.ctx, settings.hints)
@@ -879,7 +877,7 @@ export class GameScreen {
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
         const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
-        presentCombat(this.renderer, this.session.scene, combat, incomingMelee, spells, weapon, now, animate)
+        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, animate)
       }
       this.renderer.render(now / 1000)
       rendered = true

@@ -301,21 +301,29 @@ describe('Dungeon-only settings migration', () => {
 })
 
 
-describe('Melee preferences', () => {
+describe('Hit bump preferences', () => {
   beforeEach(() => store.clear())
-  it('persists tuning, disables unavailable controls, and resets just combat', () => {
-    saveSettings({ ...defaultSettings, meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
-    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, meleeBumpStrength: 1.5, meleeBumpSnap: 0.5 })
-    expect(rowOff(row('Melee weight'), { ...defaultSettings, meleeEffects: false })).toBe(true)
-    expect(rowOff(row('Melee trail'), { ...defaultSettings, depthAnimate: false })).toBe(true)
-    expect(rowOff(row('Melee movement'), { ...defaultSettings, meleeEffects: false })).toBe(false)
-    expect(rowOff(row('Hit bump strength'), { ...defaultSettings, meleeMotion: 0 })).toBe(true)
+  it('persists bump tuning, honors Still/Off, and resets only combat', () => {
+    saveSettings({ ...defaultSettings, meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5 })
+    expect(rowOff(row('Hit bump strength'), { ...defaultSettings, depthAnimate: false })).toBe(true)
     expect(rowOff(row('Hit bump snap'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
     resetGroup('Combat')
-    expect(getSettings()).toMatchObject({ meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, meleeBumpStrength: 1, meleeBumpSnap: 1, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1, meleeBumpSnap: 1, depthZoom: 1.2 })
   })
-  it('normalizes malformed or out-of-range saved tuning', () => {
-    store.set('orbrun.settings', JSON.stringify({ meleeWeight: 99, meleeTrail: -1, meleeMotion: 4, meleeBumpStrength: 99, meleeBumpSnap: -1, meleeEffects: 'off' }))
-    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 1, meleeBumpStrength: 1.5, meleeBumpSnap: 0, meleeEffects: true })
+  it('drops retired VFX settings without losing bump tuning or unrelated preferences', () => {
+    store.set('orbrun.settings', JSON.stringify({ meleeEffects: false, meleeMotion: 0, meleeWeight: 1.5, meleeTrail: 0.4,
+      meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 }))
+    const s = getSettings()
+    expect(s).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(rowOff(row('Hit bump strength'), s)).toBe(false)
+    for (const key of ['meleeEffects', 'meleeMotion', 'meleeWeight', 'meleeTrail']) expect(s).not.toHaveProperty(key)
+    saveSettings(s)
+    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(settingGroups().find(g => g.group === 'Combat')!.rows.map(r => r.key)).toEqual(['meleeBumpStrength', 'meleeBumpSnap'])
+  })
+  it('clamps malformed or out-of-range bump tuning', () => {
+    store.set('orbrun.settings', JSON.stringify({ meleeBumpStrength: 99, meleeBumpSnap: -1 }))
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0 })
   })
 })

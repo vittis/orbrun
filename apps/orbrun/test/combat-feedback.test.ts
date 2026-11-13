@@ -117,16 +117,6 @@ describe('combat sentences', () => {
 })
 
 describe('combat updates', () => {
-  it('resolves incoming melee separately from HP feedback and drains each attempt once', () => {
-    const h = harness()
-    h.text('The goblin hits you with a +0 club.')
-    expect(h.feedback.flush(h.scene)).toEqual([])
-    expect(h.feedback.takeMelee()).toMatchObject([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'crush', hit: true }])
-    expect(h.feedback.takeMelee()).toEqual([])
-    h.text('The bolt of fire hits you! The goblin barely misses you.')
-    h.feedback.flush(h.scene)
-    expect(h.feedback.takeMelee()).toMatchObject([{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, style: 'unarmed', hit: false }])
-  })
 
   it('places Ice Thorns zero and damage results on a stepping enemy without requiring a wound change', () => {
     const { feedback, scene, text } = harness()

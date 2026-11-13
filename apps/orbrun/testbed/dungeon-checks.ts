@@ -9,7 +9,6 @@ import { wallDepthChecks } from './wall-depth-checks'
 import { wallCoherenceChecks } from './wall-coherence-checks'
 import { visibilityChecks } from './visibility-checks'
 import { arrivalChecks } from './arrival-checks'
-import { meleeChecks } from './melee-checks'
 
 fixtureStart('dungeon-checks')
 const atlas = document.createElement('canvas')
@@ -41,7 +40,7 @@ function cell(x: number, y: number, wall = false): SceneCell {
 // Individual lanes keep large Canvas matrices runnable on memory-limited browsers.
 // The default runs every lane; selecting each named lane executes the same assertions.
 const lane = new URLSearchParams(location.search).get('lane') ?? 'all'
-const lanes = ['tiles', 'markers', 'surfaces', 'movement', 'depth', 'visibility', 'arrival', 'coherence', 'corridors', 'melee']
+const lanes = ['tiles', 'markers', 'surfaces', 'movement', 'depth', 'visibility', 'arrival', 'coherence', 'corridors']
 if (lane !== 'all' && !lanes.includes(lane)) throw new Error(`Unknown raster lane: ${lane}`)
 const run = (name: string) => lane === 'all' || lane === name
 const failures: unknown[] = []
@@ -188,7 +187,7 @@ for (const [name, check] of [
   ['surfaces', () => surfaceLightChecks()], ['movement', () => movementChecks(source)],
   ['depth', () => wallDepthChecks(source)], ['visibility', () => visibilityChecks(source)],
   ['arrival', () => arrivalChecks()], ['coherence', () => wallCoherenceChecks()],
-  ['corridors', () => corridorChecks(source)], ['melee', () => meleeChecks()],
+  ['corridors', () => corridorChecks(source)],
 ] as const) if (run(name)) {
   await fixtureYield(lane)
   const result = await check(); checks += result.checks; failures.push(...result.failures)

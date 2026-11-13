@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, meleeTiming, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, bumpTiming, type SceneCell } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
@@ -8,7 +8,6 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
-import * as meleeArt from '../src/melee-draw.js'
 import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
@@ -268,8 +267,8 @@ describe('picking and visibility', () => {
       r.setScene(scene, 0)
       scene.cells.get(cellKey(1, 0))!.flash = { r: 120, g: 180, b: 255, a: 100 }
       scene.revision++; r.setScene(scene, 1)
-      r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, toId: 'id:7', style: 'slash', hit: true }, 1)
-      const contact = 1 + meleeTiming('slash').contact
+      r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, toId: 'id:7', hit: true }, 1)
+      const contact = 1 + bumpTiming().contact
       r.impact(1, 0, 0.6, contact)
       r.spell({ x: 1, y: 0, actorId: 'id:7', kind: 'cold' }, contact)
       r.render(contact - 0.01)
@@ -345,7 +344,7 @@ describe('picking and visibility', () => {
     const scene = sceneOf(cell(0, 0), cell(1, 0))
     scene.billboards = [{ id: 'player', x: 0, y: 0, kind: 'player', tile: 2, height: 1, life: { motion: 'still' } }]
     r.setScene(scene, 0)
-    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 1)
+    r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, hit: true }, 1)
     r.render(1.1)
     const q = r.projectBillboard(scene.billboards[0]), base = r.project(0, 0)
     expect(q.x).toBeGreaterThan(base.x)
@@ -355,47 +354,44 @@ describe('picking and visibility', () => {
     expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
     expect(r.animating).toBe(false)
     r.setOptions({ animate: false })
-    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 2)
+    r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, hit: true }, 2)
     r.render(2.1)
     expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
     expect(r.animating).toBe(false)
   })
 
-  it('anchors player swings and impacts to the moving sprites', () => {
-    const draw = vi.spyOn(meleeArt, 'drawMelee').mockImplementation(() => {})
-    const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
-    const { r } = renderer()
-    try {
-      r.setOptions({ center: { x: 1, y: 0 }, movementDuration: 0.2, movementEasing: 'linear' })
-      const start = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
-      start.billboards = [
-        { x: 0, y: 0, kind: 'player', tile: 2, height: 1 },
-        { id: 7, x: 2, y: 0, kind: 'monster', tile: 3, height: 1 },
-      ]
-      r.setScene(start, 0)
-      const player = { ...start.billboards[0], x: 1 }, enemy = start.billboards[1]
-      const scene = { ...start, revision: 1, player: { x: 1, y: 0 }, billboards: [player, enemy] }
-      r.setScene(scene, 1)
-      r.melee({ from: player, to: enemy,
-        fromId: 'player', toId: 'id:7', style: 'slash', hit: true }, 1)
-      for (const time of [1.1, 1.18]) {
-        r.render(time)
-        const anchors = draw.mock.calls.at(-1)![2]
-        expect(r.project(anchors.from.x, anchors.from.y)).toEqual(r.projectBillboard(player))
-        expect(r.project(anchors.to.x, anchors.to.y)).toEqual(r.projectBillboard(enemy))
-      }
-      // The player is still finishing a step; using its confirmed cell would float ahead.
-      const anchors = draw.mock.calls[0][2]
-      expect(anchors.from.x).toBeLessThan(player.x)
-      expect(spray).toHaveBeenCalled()
-    } finally { draw.mockRestore(); spray.mockRestore(); r.destroy() }
+  it.each([35, 50, 65])('bumps along each attack direction at %s° and draws no weapon art when planted', tilt => {
+    for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]) {
+      const { r, ctx } = renderer()
+      r.setOptions({ tilt, meleeBumpStrength: 0 })
+      const scene = sceneOf(cell(0, 0), cell(x, y))
+      const player = { x: 0, y: 0, kind: 'player' as const, tile: 2, height: 1, life: { motion: 'still' as const } }
+      scene.billboards = [player]
+      r.setScene(scene, 0)
+      const calls = () => Object.fromEntries(Object.entries(ctx).filter(([, v]) => vi.isMockFunction(v)).map(([key, v]) => [key, structuredClone(v.mock.calls)]))
+      const clear = () => Object.values(ctx).forEach(v => { if (vi.isMockFunction(v)) v.mockClear() })
+      clear(); r.render(1.1)
+      const resting = calls()
+      r.bump({ from: player, to: { x, y }, hit: false }, 1)
+      clear(); r.render(1.1)
+      expect(calls()).toEqual(resting)
+      expect(r.animating).toBe(false)
+      r.setOptions({ meleeBumpStrength: 1 })
+      r.render(1.1)
+      const from = r.project(0, 0), to = r.project(x, y), shown = r.projectBillboard(player)
+      const dx = shown.x - from.x, dy = shown.y - from.y
+      expect(dx * (to.x - from.x) + dy * (to.y - from.y)).toBeGreaterThan(0)
+      expect(dx * (to.y - from.y) - dy * (to.x - from.x)).toBeCloseTo(0)
+      expect(r.pick(shown.x, shown.y - 15)).toBe(cellKey(0, 0))
+      r.destroy()
+    }
   })
 
   it('does not keep rendering for offscreen melee or expired spell residue', () => {
     const { r } = renderer()
     const scene = sceneOf(cell(0, 0), cell(100, 100), cell(101, 100))
     r.setScene(scene, 0)
-    r.melee({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, style: 'crush', hit: true }, 1)
+    r.bump({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, hit: true }, 1)
     r.render(1.1)
     expect(r.animating).toBe(false)
     const bolt = { x: 0, y: 0, kind: 'cloud' as const, tile: 2, height: 1,

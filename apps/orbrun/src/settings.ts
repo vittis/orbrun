@@ -8,10 +8,6 @@ export interface Settings {
   /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
   depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
-  meleeEffects: boolean
-  meleeWeight: number
-  meleeTrail: number
-  meleeMotion: number
   meleeBumpStrength: number
   meleeBumpSnap: number
   uiScale: number
@@ -47,10 +43,6 @@ export const defaultSettings: Settings = {
   depthMovement: true,
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
-  meleeEffects: true,
-  meleeWeight: 1,
-  meleeTrail: 1,
-  meleeMotion: 1,
   meleeBumpStrength: 1,
   meleeBumpSnap: 1,
   uiScale: 1,
@@ -73,9 +65,6 @@ const numericDomains: Record<NumericSetting, { min: number; max: number; integer
   depthTilt: { min: 35, max: 65 },
   depthZoom: { min: 0.8, max: 1.4 },
   depthMovementDuration: { min: 0.04, max: 0.25 },
-  meleeWeight: { min: 0.6, max: 1.5 },
-  meleeTrail: { min: 0.4, max: 1.4 },
-  meleeMotion: { min: 0, max: 1 },
   meleeBumpStrength: { min: 0, max: 1.5 },
   meleeBumpSnap: { min: 0, max: 1 },
   uiScale: { min: 0.85, max: 1.5 },

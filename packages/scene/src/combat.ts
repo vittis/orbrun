@@ -1,4 +1,4 @@
-import type { Billboard, HitIntensity, MeleeAttack } from './index.js'
+import type { Billboard, HitIntensity } from './index.js'
 
 /** Match motion to an actor even when a server omits a numeric monster ID. */
 export function combatActorId(b: Billboard) {
@@ -16,15 +16,15 @@ export function hitIntensity(damage: number | undefined, punctuation = '.'): Hit
 
 export const impactStrength = (intensity: HitIntensity = 'light') => intensity === 'heavy' ? 1 : intensity === 'solid' ? 0.6 : 0.3
 
-/** Seconds on the renderer clock. All melee feedback shares this contact point. */
-export function meleeTiming(style: MeleeAttack['style']) {
-  const duration = style === 'crush' || style === 'cleave' ? 0.4 : style === 'reap' ? 0.44 : style === 'stab' || style === 'unarmed' ? 0.26 : style === 'lash' ? 0.36 : 0.32
+/** A single body-bump clock, independent of weapon type. Times are seconds. */
+export function bumpTiming() {
+  const duration = 0.32
   return { duration, contact: duration * 0.42 }
 }
 
 /** Anticipation, contact and recovery; the defender moves only after contact. */
-export function meleePose(style: MeleeAttack['style'], elapsed: number, bumpSnap = 1) {
-  const { duration, contact } = meleeTiming(style)
+export function bumpPose(elapsed: number, bumpSnap = 1) {
+  const { duration, contact } = bumpTiming()
   const age = elapsed / duration, impact = (elapsed - contact) / (duration - contact)
   const lunge = age < 0 || age >= 1 ? 0 : age < 0.16 ? -0.025 * Math.sin(age / 0.16 * Math.PI)
     : elapsed < contact ? 0.15 * ((age - 0.16) / (0.42 - 0.16)) ** 2 : 0.15 * (1 - impact) ** 2

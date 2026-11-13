@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, meleeTiming, type Billboard, type MeleeAttack, type Scene } from '@orbrun/scene'
+import { cellKey, emptyScene, bumpTiming, type Billboard, type CombatBump, type Scene } from '@orbrun/scene'
 import { DungeonEffects } from '../src/effects.js'
 
 function world(): Scene {
@@ -10,7 +10,7 @@ function world(): Scene {
   })
   return scene
 }
-const attack: MeleeAttack = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }
+const attack: CombatBump = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, hit: true }
 const player: Billboard = { x: 0, y: 0, kind: 'player', tile: 1, height: 1 }
 const target: Billboard = { x: 1, y: 0, kind: 'monster', tile: 2, height: 1 }
 const spell = (x = 1): Billboard => ({ x, y: 0, kind: 'projectile', tile: 3, height: 1,
@@ -162,17 +162,17 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
-  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('keeps %s gesture on the existing material-spray contact clock', style => {
+  it('keeps the bump and ordinary material splash on one contact clock', () => {
     const scene = world(), fx = new DungeonEffects()
     scene.billboards = [player, { ...target, id: 7, name: 'jelly' }]
     fx.observe(scene, 0, true)
     for (let i = 0; i < 6; i++) {
-      const now = 1 + i, contact = now + meleeTiming(style).contact
+      const now = 1 + i, contact = now + bumpTiming().contact
       scene.turn = i
       fx.tick(scene, now)
-      fx.melee(scene, { ...attack, style, fromId: 'player', toId: 'id:7' }, now)
-      const stroke = fx.strokes.at(-1)!
-      expect(stroke.duration).toBe(meleeTiming(style).duration)
+      fx.bump(scene, { ...attack, fromId: 'player', toId: 'id:7' }, now)
+      const stroke = fx.bumps.at(-1)!
+      expect(stroke.duration).toBe(bumpTiming().duration)
       fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: i }, contact)
       fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: i, kind: 'fire' }, contact)
       expect(fx.visibleBursts(contact - 0.001)).toEqual([])
@@ -185,39 +185,38 @@ describe('bounded dungeon combat presentation', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     const movingAttack = { ...attack, from: { x: 0, y: 0 }, to: { x: 1, y: 0 } }
-    fx.melee(scene, movingAttack, 1)
+    fx.bump(scene, movingAttack, 1)
     movingAttack.to.y = 1
     fx.observe({ ...scene, billboards: [{ ...target, y: 1 }] }, 1.1, true)
-    expect(fx.strokes[0].heading).toEqual({ x: 1, y: 0 })
-    expect(fx.strokes[0].to).toEqual({ x: 1, y: 0 })
+    expect(fx.bumps[0].to).toEqual({ x: 1, y: 0 })
   })
 
   it('can plant actors or reduce their motion without changing strike timing', () => {
     const scene = world(), fx = new DungeonEffects()
-    fx.melee(scene, attack, 1)
-    const time = 1 + meleeTiming('slash').contact
+    fx.bump(scene, attack, 1)
+    const time = 1 + bumpTiming().contact
     expect(fx.offset(player, time).x).toBeGreaterThan(0)
     expect(fx.offset(player, time, 0)).toEqual({ x: 0, y: 0 })
     expect(fx.offset(player, time, 0.35).x).toBeCloseTo(fx.offset(player, time).x * 0.35)
-    expect(fx.strokes[0].born).toBe(1)
+    expect(fx.bumps[0].born).toBe(1)
   })
 
   it('kicks sharply only after contact, tunes strength/snap independently and settles completely', () => {
     const fx = new DungeonEffects(), scene = world()
-    fx.melee(scene, { ...attack, style: 'cleave', intensity: 'heavy' }, 1)
-    const contact = 1 + meleeTiming('cleave').contact
+    fx.bump(scene, { ...attack, intensity: 'heavy' }, 1)
+    const contact = 1 + bumpTiming().contact
     expect(fx.offset(target, contact - 0.001)).toEqual({ x: 0, y: 0 })
     const at = contact + 0.02
-    const crunchy = fx.offset(target, at, 1, 1, 1).x
+    const crunchy = fx.offset(target, at, 1, 1).x
     expect(crunchy).toBeGreaterThan(0.14)
-    expect(fx.offset(target, at, 1, 1, 0).x).toBeLessThan(crunchy)
-    expect(fx.offset(target, at, 1, 0.5, 1).x).toBeCloseTo(crunchy / 2)
-    expect(fx.offset(target, at, 1, 1.5, 1).x).toBeCloseTo(crunchy * 1.5)
-    expect(fx.offset(target, at, 1, 0, 1)).toEqual({ x: 0, y: 0 })
-    expect(fx.offset(player, at, 1, 0, 0)).toEqual(fx.offset(player, at, 1, 1.5, 1))
+    expect(fx.offset(target, at, 1, 0).x).toBeLessThan(crunchy)
+    expect(fx.offset(target, at, 0.5, 1).x).toBeCloseTo(crunchy / 2)
+    expect(fx.offset(target, at, 1.5, 1).x).toBeCloseTo(crunchy * 1.5)
+    expect(fx.offset(target, at, 0, 1)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(player, at, 0, 0)).toEqual({ x: 0, y: 0 })
     expect(fx.offset(target, 1.41)).toEqual({ x: 0, y: 0 })
-    fx.clear(); fx.melee(scene, { ...attack, hit: false }, 2)
-    expect(fx.offset(target, 2.15, 1, 1.5, 1)).toEqual({ x: 0, y: 0 })
+    fx.clear(); fx.bump(scene, { ...attack, hit: false }, 2)
+    expect(fx.offset(target, 2.15, 1.5, 1)).toEqual({ x: 0, y: 0 })
   })
 
   it('interpolates one head along the native path without guessing another impact', () => {
@@ -336,15 +335,15 @@ describe('bounded dungeon combat presentation', () => {
   it('lunges and recoils without changing confirmed cells, settles, and ignores miss recoil', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
-    fx.melee(scene, attack, 1)
+    fx.bump(scene, attack, 1)
     expect(fx.offset(player, 1.1).x).toBeGreaterThan(0)
     expect(fx.offset(target, 1.2).x).toBeGreaterThan(0)
     expect(player.x).toBe(0); expect(target.x).toBe(1)
     expect(fx.offset({ ...player, life: { held: true } }, 1.1).x).toBe(0)
     fx.tick(scene, 2)
-    expect(fx.strokes).toHaveLength(0)
+    expect(fx.bumps).toHaveLength(0)
     expect(fx.offset(player, 2)).toEqual({ x: 0, y: 0 })
-    fx.melee(scene, { ...attack, hit: false }, 2)
+    fx.bump(scene, { ...attack, hit: false }, 2)
     expect(fx.offset(target, 2.1)).toEqual({ x: 0, y: 0 })
     expect(fx.offset(player, 2.1).x).toBeGreaterThan(0)
   })
@@ -353,10 +352,10 @@ describe('bounded dungeon combat presentation', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     for (const fromId of [undefined, 'id:7']) {
-      expect(fx.melee(scene, { ...attack, from: attack.to, to: attack.from, fromId, toId: 'player' }, 1)).toBe(false)
+      expect(fx.bump(scene, { ...attack, from: attack.to, to: attack.from, fromId, toId: 'player' }, 1)).toBe(false)
     }
-    expect(fx.melee(scene, { ...attack, fromId: 'id:7' }, 1)).toBe(false)
-    expect(fx.strokes).toEqual([])
+    expect(fx.bump(scene, { ...attack, fromId: 'id:7' }, 1)).toBe(false)
+    expect(fx.bumps).toEqual([])
     expect(fx.bursts).toEqual([])
     expect(fx.offset(player, 1.1)).toEqual({ x: 0, y: 0 })
     expect(fx.offset(target, 1.1)).toEqual({ x: 0, y: 0 })
@@ -365,30 +364,30 @@ describe('bounded dungeon combat presentation', () => {
   it('deduplicates rapid reports, caps history and motion, and refuses hidden targets', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
-    fx.melee(scene, attack, 1); fx.melee(scene, attack, 1.03)
-    expect(fx.strokes).toHaveLength(1)
-    for (let i = 0; i < 100; i++) fx.melee(scene, attack, 2 + i * 0.1)
-    expect(fx.strokes.length).toBeLessThanOrEqual(12)
+    fx.bump(scene, attack, 1); fx.bump(scene, attack, 1.03)
+    expect(fx.bumps).toHaveLength(1)
+    for (let i = 0; i < 100; i++) fx.bump(scene, attack, 2 + i * 0.1)
+    expect(fx.bumps.length).toBeLessThanOrEqual(12)
     expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.28)
     scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     fx.tick(scene, 12)
-    expect(fx.strokes).toHaveLength(0)
-    expect(fx.melee(scene, attack, 12)).toBe(false)
+    expect(fx.bumps).toHaveLength(0)
+    expect(fx.bump(scene, attack, 12)).toBe(false)
   })
 
-  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('repeats the same %s swing after expiry and reset', style => {
-    const fx = new DungeonEffects(), scene = world(), swing = { ...attack, style, fromId: 'player' }
+  it('repeats the same bump after expiry and reset', () => {
+    const fx = new DungeonEffects(), scene = world(), swing = { ...attack, fromId: 'player' }
     fx.observe(scene, 0, true)
-    fx.melee(scene, swing, 1)
-    const first = { ...fx.strokes[0], born: 0 }
-    fx.melee(scene, swing, 1.02)
-    expect(fx.strokes).toHaveLength(1)
+    fx.bump(scene, swing, 1)
+    const first = { ...fx.bumps[0], born: 0 }
+    fx.bump(scene, swing, 1.02)
+    expect(fx.bumps).toHaveLength(1)
     fx.tick(scene, 2)
-    fx.melee(scene, swing, 2)
-    expect({ ...fx.strokes[0], born: 0 }).toEqual(first)
+    fx.bump(scene, swing, 2)
+    expect({ ...fx.bumps[0], born: 0 }).toEqual(first)
     fx.clear()
-    fx.melee(scene, swing, 3)
-    expect({ ...fx.strokes[0], born: 0 }).toEqual(first)
+    fx.bump(scene, swing, 3)
+    expect({ ...fx.bumps[0], born: 0 }).toEqual(first)
   })
 
   it('leaves one trace when a confirmed spell disappears, with no refresh on unrelated updates', () => {
@@ -411,12 +410,12 @@ describe('bounded dungeon combat presentation', () => {
       scene.billboards = [{ ...spell(), kind: 'cloud' }]
       fx.observe(scene, 0, true)
       fx.observe({ ...scene, billboards: [] }, 0.1, true)
-      fx.melee(scene, attack, 0.1)
+      fx.bump(scene, attack, 0.1)
       if (reset === 'level') scene.levelKey = 'D:2'
       if (reset === 'remote') scene.playerOnLevel = false
       if (reset === 'visibility') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
       fx.observe({ ...scene, billboards: [] }, 0.15, reset !== 'still')
-      expect(fx.strokes).toHaveLength(0)
+      expect(fx.bumps).toHaveLength(0)
       expect(fx.traces).toHaveLength(0)
     }
   })

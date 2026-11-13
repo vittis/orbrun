@@ -305,20 +305,19 @@ export interface SceneCursor {
 // ---------------------------------------------------------------------------
 // Renderer contract
 
-/** Confirmed melee presentation. Coordinates remain the authoritative cells. */
+/** Confirmed combat presentation. Coordinates remain the authoritative cells. */
 export type HitIntensity = 'light' | 'solid' | 'heavy'
 export type DamageType = 'physical' | 'fire' | 'cold' | 'poison' | 'acid' | 'electric' | 'magic'
-export { combatActorId, hitIntensity, impactStrength, meleeTiming, meleePose } from './combat.js'
+export { combatActorId, hitIntensity, impactStrength, bumpTiming, bumpPose } from './combat.js'
 export { DeathEffects } from './death.js'
 export { creatureMaterial } from './material.js'
 export { HitEffects } from './hits.js'
 export type { HitEffect } from './hits.js'
 export type { DeathEffect, DeathKind, DeathParticle } from './death.js'
 
-export interface MeleeAttack {
+export interface CombatBump {
   from: { x: number; y: number }
   to: { x: number; y: number }
-  style: 'slash' | 'stab' | 'thrust' | 'cleave' | 'reap' | 'crush' | 'lash' | 'staff' | 'unarmed'
   hit: boolean
   fromId?: string
   toId?: string
@@ -351,7 +350,7 @@ export interface MapRenderer {
   /** A confirmed visible impact, in cell coordinates and monotonic seconds. */
   impact?(x: number, y: number, strength: number, now: number): void
   hit?(effect: import('./hits.js').HitEffect, now: number): void
-  melee?(attack: MeleeAttack, now: number): void
+  bump?(attack: CombatBump, now: number): void
   spell?(effect: SpellEffect, now: number): void
   death?(effect: import('./death.js').DeathEffect, now: number): void
   render(now?: number): void

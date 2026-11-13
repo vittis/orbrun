@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellKey, emptyScene, meleeTiming, type DeathKind, type MeleeAttack, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, bumpTiming, type DeathKind, type CombatBump, type SceneCell } from '@orbrun/scene'
 import { DungeonEffects } from '../src/effects.js'
 import { sampleHitSpray } from '../src/hit-spray.js'
 import { debrisPalettes, DungeonDeaths } from '../src/death.js'
@@ -10,8 +10,8 @@ const materials: [string, DeathKind, string][] = [
   ['ice beast', 'ice', 'shard'], ['thorn hunter', 'plant', 'chip'], ['hornet', 'insect', 'drop'],
   ['water elemental', 'water', 'drop'],
 ]
-const attack: MeleeAttack = { fromId: 'player', from: { x: -1, y: 0 }, to: { x: 0, y: 0 }, toId: 'id:7', style: 'slash', hit: true }
-const contact = 1 + meleeTiming(attack.style).contact
+const attack: CombatBump = { fromId: 'player', from: { x: -1, y: 0 }, to: { x: 0, y: 0 }, toId: 'id:7', hit: true }
+const contact = 1 + bumpTiming().contact
 function setup(name = 'orc') {
   const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'D:1' }
   for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) scene.cells.set(cellKey(x, y), {
@@ -26,7 +26,7 @@ function setup(name = 'orc') {
 describe('subtle directional melee sprays', () => {
   it.each(materials)('gives %s its own body material without a generic contact flash', (name, kind, sprite) => {
     const { scene, fx } = setup(name)
-    fx.melee(scene, attack, 1)
+    fx.bump(scene, attack, 1)
     const burst = fx.bursts[0]
     expect(burst.spray?.kind).toBe(kind)
     expect(sampleHitSpray(scene, burst, contact - 0.001)).toEqual([])
@@ -45,7 +45,7 @@ describe('subtle directional melee sprays', () => {
 
   it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])('splashes around contact while favouring the hit direction (%i, %i)', (dx, dy) => {
     const { scene, fx } = setup()
-    fx.melee(scene, { ...attack, from: { x: -dx, y: -dy } }, 1)
+    fx.bump(scene, { ...attack, from: { x: -dx, y: -dy } }, 1)
     const particles = sampleHitSpray(scene, fx.bursts[0], contact + 0.18)
     expect(particles.length).toBeGreaterThan(0)
     const travel = particles.map(p => (p.x * dx + p.y * dy) / Math.hypot(dx, dy))
@@ -62,10 +62,10 @@ describe('subtle directional melee sprays', () => {
     const { scene, fx } = setup()
     const counts = new Set<number>(), speeds = new Set<number>(), shapes = new Set<string>()
     for (let i = 0; i < 24; i++) {
-      const now = 1 + i, time = now + meleeTiming(attack.style).contact + 0.15
+      const now = 1 + i, time = now + bumpTiming().contact + 0.15
       scene.turn = i
       fx.tick(scene, now)
-      fx.melee(scene, attack, now)
+      fx.bump(scene, attack, now)
       const burst = fx.bursts.at(-1)!
       const particles = sampleHitSpray(scene, burst, time)
       counts.add(particles.length)
@@ -82,9 +82,9 @@ describe('subtle directional melee sprays', () => {
 
   it('keeps the spray through duplicate reports and brand updates without changing its seed or contact clock', () => {
     const { scene, fx } = setup('skeleton')
-    fx.melee(scene, attack, 1)
+    fx.bump(scene, attack, 1)
     const spray = fx.bursts[0].spray
-    fx.melee(scene, attack, 1.02)
+    fx.bump(scene, attack, 1.02)
     fx.spell(scene, { x: 0, y: 0, actorId: 'id:7', kind: 'fire' }, contact)
     fx.spell(scene, { x: 0, y: 0, kind: 'physical' }, contact, 'generic')
     expect(fx.bursts).toHaveLength(1)
@@ -94,9 +94,9 @@ describe('subtle directional melee sprays', () => {
 
   it('does not spray on misses and clips droplets at hidden cells and walls', () => {
     const { scene, fx } = setup()
-    fx.melee(scene, { ...attack, hit: false }, 1)
+    fx.bump(scene, { ...attack, hit: false }, 1)
     expect(fx.bursts).toEqual([])
-    fx.melee(scene, attack, 2)
+    fx.bump(scene, attack, 2)
     const burst = fx.bursts[0]
     scene.cells.get(cellKey(1, 0))!.occluder = true
     scene.cells.get(cellKey(0, 1))!.visibility = 'remembered'
@@ -110,7 +110,7 @@ describe('subtle directional melee sprays', () => {
 
   it.each(['level', 'remote', 'still', 'hidden'] as const)('cleans up melee spray on %s changes', reset => {
     const { scene, fx } = setup()
-    fx.melee(scene, attack, 1)
+    fx.bump(scene, attack, 1)
     if (reset === 'level') scene.levelKey = 'D:2'
     if (reset === 'remote') scene.playerOnLevel = false
     if (reset === 'hidden') scene.cells.get(cellKey(0, 0))!.visibility = 'remembered'

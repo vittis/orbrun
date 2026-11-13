@@ -1,13 +1,12 @@
 // Development-only combat showcase using the same tracker and presentation as live play.
 import { Render2d } from '@orbrun/render-2d'
 import { Render25d } from '@orbrun/render-2.5d'
-import { meleeTiming, type MapRenderer } from '@orbrun/scene'
+import { bumpTiming, type MapRenderer } from '@orbrun/scene'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { presentCombat } from '../src/combat-presentation'
-import { meleeStyle } from '../src/melee-effects'
 
 const tiles = await loadRoomTiles()
 const { scene } = antechamberScene(tiles)
@@ -103,14 +102,15 @@ function play(kind: string) {
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
   if (renderer instanceof Render25d) {
     if (kind === 'kill') renderer.setOptions({ animate: false })
-    renderer.setOptions({ animate: !reduced })
+    renderer.setOptions({ animate: !reduced,
+      meleeBumpStrength: Number((document.getElementById('bump-strength') as HTMLSelectElement).value),
+      meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value) })
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
-  const weapon = (document.getElementById('weapon') as HTMLSelectElement).value || undefined
-  presentCombat(renderer, scene, events, feedback.takeMelee(), feedback.takeSpells(), weapon, now, !reduced)
+  presentCombat(renderer, scene, events, feedback.takeSpells(), undefined, now, !reduced)
   attackAt = now
-  attackDuration = meleeTiming(kind === 'incoming' ? 'crush' : meleeStyle(weapon) ?? 'slash').duration * 1000
+  attackDuration = bumpTiming().duration * 1000
   lastEffect = kind
   if (paused) freezeAt = frozenTime()
   wake()

@@ -1,7 +1,6 @@
-import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type DeathEffect, type Billboard, type Scene, type MeleeAttack, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
+import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type DeathEffect, type Billboard, type Scene, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
 import { formattedStringToText, type GameState, type ServerMessage } from '@orbrun/webtiles'
 import { deathFor } from './death-effects'
-import { incomingMelee } from './melee-effects'
 import { spellText, spellStatuses, type SpellCue } from './spell-effects'
 
 /** Confirmed combat evidence consumed by renderer effects, never display text. */
@@ -88,8 +87,6 @@ export function combatText(text: string): CombatEvent[] {
 /** Consumes protocol updates individually, so fast actions between frames aren't lost. */
 export class CombatFeedback {
   private pending: CombatEvent[] = []
-  private incoming: ReturnType<typeof incomingMelee> = []
-  private melee: MeleeAttack[] = []
   private cues: SpellCue[] = []
   private spells: SpellEffect[] = []
   private previous: ReturnType<CombatFeedback['snapshot']>
@@ -117,7 +114,7 @@ export class CombatFeedback {
   observe(state: GameState, msg: ServerMessage) {
     if (msg.msg === 'game_client' || msg.msg === 'go_lobby') {
       this.pending = []
-      this.incoming = []; this.melee = []; this.cues = []; this.spells = []
+      this.cues = []; this.spells = []
       this.scene = null
       this.recentActors.clear()
       this.presented = false
@@ -140,7 +137,7 @@ export class CombatFeedback {
         if (prev.spells.has('poisoned') && !next.spells.has('poisoned')) this.cues.push({ kind: 'heal', player: true })
       } else if (this.ready && next.place !== prev.place) {
         this.pending = []
-        this.incoming = []; this.melee = []; this.cues = []; this.spells = []
+        this.cues = []; this.spells = []
         this.scene = null
         this.recentActors.clear()
         this.presented = false
@@ -163,7 +160,6 @@ export class CombatFeedback {
           const fresh = texts[i].slice(Math.max(0, skip - offset)).trim()
           offset += texts[i].length + 1
           const turn = incoming[i]?.turn ?? state.player.turn
-          this.incoming.push(...incomingMelee(fresh))
           this.cues.push(...spellText(fresh))
           for (const parsed of combatText(fresh)) {
             const event = { ...parsed, turn }
@@ -177,26 +173,23 @@ export class CombatFeedback {
       this.lines = lines
     }
     this.pending = this.pending.slice(-32)
-    this.incoming = this.incoming.slice(-12)
     this.cues = this.cues.slice(-48)
   }
 
   takeSpells(): SpellEffect[] { return this.spells.splice(0) }
 
-  takeMelee(): MeleeAttack[] { return this.melee.splice(0) }
 
   flush(scene: Scene, now = performance.now()): CombatEvent[] {
     const pending = this.pending.splice(0)
-    const incoming = this.incoming.splice(0)
     const cues = this.cues.splice(0)
     const old = this.scene
     const sameLevel = old?.playerOnLevel && this.levelKey === scene.levelKey
     this.scene = scene
     this.levelKey = scene.levelKey
     this.presented = scene.playerOnLevel && scene.cells.size > 0
-    if (!scene.playerOnLevel) { this.melee = []; this.spells = []; this.recentActors.clear(); return [] }
+    if (!scene.playerOnLevel) { this.spells = []; this.recentActors.clear(); return [] }
     if (!sameLevel) this.recentActors.clear()
-    if (!pending.length && !incoming.length && !cues.length && old === scene) return []
+    if (!pending.length && !cues.length && old === scene) return []
     const before = actorsIn(sameLevel ? old : null), after = actorsIn(scene)
     const candidates = new Map([...before, ...after])
     for (const [id, seen] of this.recentActors) if (now - seen.at > 2000) this.recentActors.delete(id)
@@ -207,14 +200,6 @@ export class CombatFeedback {
     const deathCandidates = new Map([...this.recentActors].flatMap(([id, { actor }]) =>
       scene.cells.get(cellKey(actor.x, actor.y))?.visibility === 'visible' ? [[id, actor] as const] : []))
     for (const [id, actor] of candidates) deathCandidates.set(id, actor)
-    for (const attempt of incoming) {
-      const attackers = [...candidates.values()].filter(b => bare(plain(b.name ?? '')) === bare(attempt.attacker)
-        && Math.max(Math.abs(b.x - scene.player.x), Math.abs(b.y - scene.player.y)) === 1)
-        .sort((a, b) => Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
-      const source = attackers[0]
-      if (source) this.melee.push({ from: { x: source.x, y: source.y }, to: { ...scene.player }, fromId: actorKey(source), toId: 'player', style: attempt.style, hit: attempt.hit, tone: attempt.tone, intensity: attempt.intensity })
-    }
-    this.melee = this.melee.slice(-12)
     const used = new Set<string>()
     const slain = new Set<string>()
     const lastHit = new Map<string, Billboard>()

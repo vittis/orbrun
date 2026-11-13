@@ -29,15 +29,14 @@
     <button id="los" type="button">Toggle LOS</button>
     <label>Travel direction <select id="travel-direction"><option value="1,0">East →</option><option value="1,1">Southeast ↘</option><option value="0,1">South ↓</option><option value="-1,1">Southwest ↙</option><option value="-1,0">West ←</option><option value="-1,-1">Northwest ↖</option><option value="0,-1">North ↑</option><option value="1,-1">Northeast ↗</option></select></label>
     <button id="travel" type="button">Travel</button>
-    <label>Weapon <select id="weapon"><option value="slash">Sword</option><option value="thrust">Spear</option><option value="cleave">Axe</option><option value="crush">Mace</option><option value="unarmed">Unarmed</option></select></label>
-    <button id="melee" type="button">Melee</button>
+    <button id="bump" type="button">Bump</button>
     <label>Wounds <select id="wound"><option value="uninjured">Healthy</option><option value="moderately_damaged">Damaged</option><option value="almost_dead">Almost dead</option></select></label>
     <label>Spell <select id="spell"><option value="burst:cold">Freeze</option><option value="burst:air">Airstrike</option><option value="burst:fire">Scorch</option><option value="burst:drain">Vampiric Draining</option><option value="burst:holy">Smite</option><option value="burst:electric">Discharge</option><option value="burst:earth">Shatter</option><option value="burst:poison">Toxic Radiance</option><option value="burst:acid">Acid</option><option value="burst:magic">Irradiate</option><option value="burst:debuff">Hex</option><option value="burst:buff">Buff</option><option value="burst:heal">Heal</option><option value="burst:teleport">Blink</option><option value="fire">Fire bolt</option><option value="cold">Frost</option><option value="electric">Lightning</option><option value="magic">Magic</option></select></label>
     <button id="cast" type="button">Cast</button>
     <label><input type="checkbox" id="original"> Original 2D</label>
   </header>
   <canvas id="view" aria-label="Interactive 2.5D dungeon renderer preview"></canvas>
-  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Melee/Wounds place a practice enemy nearby · Cast previews contact, area and projectile effects · <span id="cell">—</span></footer>
+  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Bump/Wounds place a practice enemy nearby · Cast previews contact, area and projectile effects · <span id="cell">—</span></footer>
   <script type="module" src="./dungeon.ts"></script>
 </body>
 </html>

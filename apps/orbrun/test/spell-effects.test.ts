@@ -46,7 +46,6 @@ describe('confirmed non-projectile spells and abilities', () => {
     const h = harness()
     h.text(line); h.feedback.flush(h.scene)
     expect(h.feedback.takeSpells()).toMatchObject([{ x: 1, y: 0, kind }])
-    expect(h.feedback.takeMelee()).toEqual([])
     expect(h.feedback.takeSpells()).toEqual([])
   })
 

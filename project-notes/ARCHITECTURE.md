@@ -37,7 +37,7 @@ The gamedata parser accepts a bounded known grammar and fails closed on unsuppor
 
 ## Combat presentation
 
-Confirmed combat events drive melee gestures, spell bursts, hit feedback and death effects. They contain effect evidence and actor identity, not display labels or DOM positioning data. Floating combat text and its setting, stylesheet, icons, font, scheduler and offline damage-number patches have been removed. HP/status changes still feed the retained world effects; native server messages remain in the message log.
+Confirmed combat events drive body bumps, spell bursts, hit splashes and death effects. Weapon VFX, swing variations, artwork previews and their settings are removed; only bump strength and snap controls remain for melee presentation. They contain effect evidence and actor identity, not display labels or DOM positioning data. Floating combat text and its setting, stylesheet, icons, font, scheduler and offline damage-number patches have been removed. HP/status changes still feed the retained world effects; native server messages remain in the message log.
 
 ## Settings and layout
 
