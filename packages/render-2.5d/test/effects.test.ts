@@ -550,7 +550,8 @@ describe('confirmed misses and harmless contact', () => {
     scene.billboards[0].x = 2
     fx.tick(scene, 1.1)
     expect(fx.visibleBursts(1.1)).toMatchObject([{ actorId: 'id:7', x: 2 }])
-    fx.tick(scene, 1.4)
+    expect(fx.visibleBursts(1.3)).toMatchObject([{ outcome }])
+    fx.tick(scene, 1.5)
     expect(fx.bursts).toEqual([])
   })
 

@@ -2,11 +2,16 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.92 — 2026-11-13
+## 0.3.93 — 2026-11-13
 
 - Added a collapsible Tune panel at the left-center of the game screen with every View and Combat setting.
 - Adjust sliders, small −/+ buttons and selectors while watching the dungeon. Changes apply immediately and share the normal saved preferences and reset controls.
 - Keyboard and controller focus stays inside the controls; Escape closes them without sending a gameplay command. The panel scrolls to fit phones and short windows.
+
+## 0.3.92 — 2026-11-13
+
+- Misses now show a bright pale-blue X with trailing whiff marks; zero-damage hits show a gold shield-shaped contact flash. Larger silhouettes, stronger contrast and longer visibility make both outcomes easier to read during combat.
+- Both symbols retain the existing pixel-art outlines and dithered fade, with no blood, floor residue or changes to confirmed combat timing, visibility or reduced-motion behavior.
 
 ## 0.3.91 — 2026-11-13
 

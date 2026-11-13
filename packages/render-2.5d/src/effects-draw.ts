@@ -11,7 +11,7 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
   const q = project(p, position.x, position.y + (burst.actorId ? 0.3 : 0.22))
   if (burst.outcome) {
     art.draw(ctx, burst.outcome, age, Math.floor(burst.born * 1000), 0.25,
-      q.x + (burst.outcome === 'miss' ? p.scale * 0.26 : 0), q.y - p.scale * 0.5, p.scale * 0.7, dpr)
+      q.x + (burst.outcome === 'miss' ? p.scale * 0.2 : 0), q.y - p.scale * 0.62, p.scale, dpr)
     return
   }
   const kind = burst.material === 'sand' && burst.kind === 'earth' ? 'sand' : burst.kind
