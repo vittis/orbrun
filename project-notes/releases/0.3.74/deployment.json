@@ -1,0 +1,17 @@
+{
+  "releaseCommit": "11b87f5426dd6b368d5873667dacbf387ea2b4d6",
+  "sourceTag": "cloudflare-online-v1.71",
+  "version": "0.3.74",
+  "buildId": "b70d266e-42fb-4226-8abe-73a39ea4eb1f",
+  "buildConclusion": "success",
+  "mainVerificationRun": 43349504274,
+  "deploymentId": "789465ef-efdb-4693-b7b8-c198b45dcd36",
+  "createdOn": "2026-11-13T02:05:12.52332Z",
+  "versions": [
+    {
+      "version_id": "0a5dbd0f-a46f-4fae-b11e-dc4ba77d162b",
+      "percentage": 100
+    }
+  ],
+  "verificationConclusion": "success"
+}

@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-11-13T02:05:44.184Z",
+  "version": "0.3.74",
+  "sourceTag": "cloudflare-online-v1.71",
+  "releaseCommit": "11b87f5426dd6b368d5873667dacbf387ea2b4d6",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 8882,
+      "sha256": "e6a8922dcf9102dd296ba5a7b6151176f3edf3e609f3711dc0fcc6c39d885f71",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "bundle": "/assets/main-Bk14yUpF.js",
+      "bundleSha256": "edb51253832c263c8d08d06bf359578db47fb5a74689cae073b2f06b703d1561",
+      "bundleMatchesLocal": true
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 39496,
+      "sha256": "562dd78a93c03f35633796e5f2b5ef83fa52fc7b727f7d73b0af407fd70261eb",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "bytes": 1099,
+      "sha256": "76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/engine/health",
+      "status": 404,
+      "bytes": 47,
+      "sha256": "e78036b2f0d9eb2d5cb6d8b3bf16be787f9ffafcd61086058e3ebe2791b73e5e",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/example.com/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 404,
+      "bytes": 9,
+      "sha256": "907ba78b4545338d3539683e63ecb51cf51c10adc9dabd86e92bd52339f298b9",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 200,
+      "bytes": 9710,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc",
+      "csp": null
+    }
+  ],
+  "browser": {
+    "viewports": [
+      "1280x900",
+      "390x844"
+    ],
+    "reducedMotion": true,
+    "onlineOnly": true,
+    "pageErrors": []
+  },
+  "lobby": {
+    "anonymous": true,
+    "games": 30
+  },
+  "spectate": {
+    "anonymous": true,
+    "loaded": true,
+    "route": "/watch/cdi#bendrew64",
+    "canvas": {
+      "width": 1272,
+      "height": 893
+    }
+  }
+}
