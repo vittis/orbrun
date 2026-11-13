@@ -40,7 +40,7 @@ for (const [width, height, dpr] of [[960, 720, 1], [390, 600, 2]]) {
     return count
   }
   const prefix = `${width} DPR${dpr}`
-  // Independent colour oracles: all three semantic symbols must survive in
+  // Independent colour oracles: all three material effects must survive in
   // the same real renderer frame, alongside red body-material particles.
   check(`${prefix} shield`, changed(239, 207, 135) > 3)
   check(`${prefix} dodge`, changed(194, 228, 237) > 3)
@@ -51,7 +51,7 @@ for (const [width, height, dpr] of [[960, 720, 1], [390, 600, 2]]) {
   check(`${prefix} simultaneous blood`, blood > 3)
   if (captures) { const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height; copy.getContext('2d')!.drawImage(canvas, 0, 0); document.getElementById('captures')!.append(copy) }
   check(`${prefix} smooth motion`, !equalPixels(contact, frame(3.3)))
-  check(`${prefix} popups outlive contact`, !equalPixels(before, frame(3.5)))
+  check(`${prefix} defensive bursts outlive contact`, !equalPixels(before, frame(3.5)))
   check(`${prefix} expired`, equalPixels(before, frame(4)))
   check(`${prefix} scheduler sleeps`, !renderer.animating)
   renderer.deflect({ x: 0, y: 0, actorId: 'player', outcome: 'block' }, 5)

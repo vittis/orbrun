@@ -12,9 +12,9 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
   const q = project(p, position.x, position.y + (burst.actorId ? 0.3 : 0.22))
   if (burst.outcome) {
     const pose = deflectionPose(age, burst.popupSlot)
-    // Hold the readable pixel silhouette while the popup itself tweens/fades.
-    art.draw(ctx, burst.outcome, Math.min(age, 0.4), Math.floor(burst.born * 1000), 0.25,
-      q.x + p.scale * pose.x, q.y - p.scale * ((burst.actorHeight ?? 1) + pose.lift),
+    // Keep the material motion evolving as each independent burst settles and fades.
+    art.draw(ctx, burst.outcome, age, Math.floor(burst.born * 1000) + (burst.popupSlot ?? 0) * 17, 0.25,
+      q.x + p.scale * pose.x, q.y - p.scale * ((burst.actorHeight ?? 1) * 0.58 + pose.lift),
       p.scale * pose.scale, dpr, pose.squash, false, undefined, pose.opacity)
     return
   }

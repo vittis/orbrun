@@ -439,7 +439,7 @@ export class Render25d implements MapRenderer {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
       else if (entry.burst) {
-        if (entry.burst.outcome) continue // Popups draw above scenery after ordinary world art.
+        if (entry.burst.outcome) continue // Defensive bursts draw after ordinary world art.
         ctx.save(); ctx.beginPath()
         for (let y = Math.round(entry.y) - 1; y <= Math.round(entry.y) + 1; y++) for (let x = Math.round(entry.x) - 1; x <= Math.round(entry.x) + 1; x++) {
           const cell = this.scene.cells.get(cellKey(x, y))
@@ -467,8 +467,8 @@ export class Render25d implements MapRenderer {
 
     if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
 
-    // Screen-facing feedback for visible recipients stays readable over nearby
-    // walls, and separate slots never mask a simultaneous blood spray.
+    // Preserve the contrast of defensive bursts around visible recipients.
+    // Their independent particles coexist with the ordinary blood spray.
     for (const entry of standing) if (entry.burst?.outcome && this.inFrame(p, entry)) {
       drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y })
     }

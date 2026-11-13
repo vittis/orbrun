@@ -1,4 +1,4 @@
-/** Fast overshoot, firm settle and a smooth lifted fade; normalized lifetime. */
+/** Fast contact expansion, firm settle and a smooth lifted fade; normalized lifetime. */
 export function deflectionPose(age: number, slot = 0) {
   if (age < 0 || age >= 1) return { scale: 0, squash: 1, lift: 0, x: 0, opacity: 0 }
   const smooth = (t: number) => t * t * (3 - 2 * t)
@@ -8,8 +8,8 @@ export function deflectionPose(age: number, slot = 0) {
   return {
     scale: 0.3 + pop * 0.7,
     squash: 0.72 + smooth(Math.min(1, age / 0.16)) * 0.28,
-    lift: (1 - (1 - Math.min(1, age / 0.3)) ** 3) * 0.2 + leave * 0.14 + Math.floor(slot / 3) * 0.65,
-    x: [0, -0.94, 0.94][slot % 3],
+    lift: (1 - (1 - Math.min(1, age / 0.3)) ** 3) * 0.07 + leave * 0.06 + Math.floor(slot / 3) * 0.18,
+    x: [0, -0.28, 0.28][slot % 3],
     opacity: smooth(Math.min(1, age / 0.045)) * (1 - leave),
   }
 }

@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.98 — 2026-11-13
+
+- Replaced defensive combat icons with material VFX: curved wind streaks for dodges, steel armor flecks for zero-damage hits and golden ricochet sparks for shield blocks.
+- Effects expand and settle around the body, keep moving as they fade, and accumulate independently alongside blood and other confirmed combat feedback.
+
 ## 0.3.97 — 2026-11-13
 
 - Shield blocks, misses and zero-damage hits now use distinct shield, sidestep and breastplate symbols. Confirmed projectile blocks also get shield feedback without a melee lunge.

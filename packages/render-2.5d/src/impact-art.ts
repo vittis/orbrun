@@ -29,23 +29,9 @@ export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
 }
 const SMOKE: Palette = ['#25232b', '#39303a', '#57434a', '#7e5b51', '#a77b5f']
 const ART = {
-  slip: ['00000011100', '00011333110', '00133211100', '01321000000', '13210000000', '01100000000'],
-  dodge: [
-    '00000000011110000', '00000000135531000', '00000000134431000', '00000000013310000',
-    '00000000001100000', '00000000134411000', '00000001345443100', '00000013443134410',
-    '00000134431013310', '00001344310001100', '00013444310000000', '00134413431000000',
-    '01343101343100000', '13431000134310000', '13310000013431000', '01100000001111000',
-  ],
-  breastplate: [
-    '0111000001110', '1343111113431', '1454311134541', '1455431345541',
-    '0145543455410', '0144545454410', '0143455543410', '0143454543410',
-    '0143454543410', '0143455543410', '0143434343410', '0144333334410',
-    '0014444444100', '0001111111000',
-  ],
-  guard: [
-    '00011111000', '01145554110', '14543334541', '14321112341',
-    '14321012341', '14321012341', '14321012341', '14321112341',
-    '01432123410', '01443234410', '00144344100', '00014441000', '00001110000',
+  gust: [
+    '00000011111110000', '00011344444331100', '00134433111111110',
+    '01344310000000000', '13443100000000000', '01311000000000000', '00100000000000000',
   ],
   flash: [
     '0000000100000000', '0001001310001000', '0000133431000000', '0100134431000100',
@@ -115,18 +101,32 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
   const count = 6 + Math.round(strength * 6), physical = kind === 'physical' || kind === 'earth' || kind === 'sand'
   ctx.globalAlpha = 1
   if (kind === 'miss') {
-    // A leaning, sidestepping figure leaves a passing slash behind it.
-    stamp(ctx, 'dodge', 3 + expand * 2, -1, colours, 0, 1, fade)
-    stamp(ctx, 'slip', -9, -5, colours, 0, 0.9, fade)
-    stamp(ctx, 'slip', -11, 2, colours, 0, 0.7, fade * 0.85)
+    // Passing air wraps around the body, with an empty centre rather than an
+    // impact stamp. The three streaks drift independently through the whiff.
+    const drift = expand * 9, side = seed % 2 ? 1 : -1
+    for (let i = 0; i < 3; i++) stamp(ctx, 'gust', side * (-5 + drift + i * 2), -9 + i * 8 - age * 3,
+      colours, i === 1 ? 2 : 0, 1 - i * 0.1, fade * (1 - i * 0.08))
     return
   }
-  if (kind === 'block' || kind === 'no-damage') {
-    stamp(ctx, kind === 'block' ? 'guard' : 'breastplate', 0, 0, colours, 0, 1, fade)
-    for (let i = 0; i < 3; i++) {
-      const angle = -Math.PI * 0.85 + i * Math.PI * 0.35
-      stamp(ctx, 'spark', Math.cos(angle) * (9 + expand * 3), Math.sin(angle) * (9 + expand * 3),
-        colours, i === 1 ? 0 : 1, 0.65, fade * 0.9)
+  if (kind === 'no-damage') {
+    // Steel flecks scatter off armor and fall away; no equipment silhouette.
+    for (let i = 0; i < 9; i++) {
+      const angle = seed * 0.7 + i * 2.4, radius = 4 + expand * (7 + i % 3 * 2)
+      const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius * 0.65 + age * age * 9
+      stamp(ctx, 'grain', x, y, colours, i % 4, i % 3 === 0 ? 0.95 : 0.75, fade)
+      if (i % 3 === 0 && age < 0.65) stamp(ctx, 'spark', x * 0.75, y * 0.75 - 2, colours, i % 4, 0.55, fade * 0.65)
+    }
+    return
+  }
+  if (kind === 'block') {
+    // A tight golden ricochet fans away from contact, unlike the rounder steel
+    // scatter. Short trailing streaks make the deflection read in motion.
+    const side = seed % 2 ? 1 : -1
+    if (age < 0.3) stamp(ctx, 'grain', -side * 4, 1, colours, 0, 1, 1 - age / 0.3)
+    for (let i = 0; i < 5; i++) {
+      const x = side * (3 + expand * (7 + i % 2 * 4)), y = (i - 2) * (3 + expand * 2) + age * age * 4
+      stamp(ctx, 'spark', x, y, colours, i % 2, 0.9, fade)
+      stamp(ctx, 'grain', x - side * (3 + expand * 2), y * 0.85, colours, i % 4, 0.65, fade * 0.75)
     }
     return
   }

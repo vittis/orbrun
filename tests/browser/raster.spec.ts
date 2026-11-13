@@ -45,7 +45,7 @@ for (const lane of Object.keys(fullChecks) as (keyof typeof fullChecks)[]) {
 
 
 
-test('shaded impact art includes readable miss and zero-damage symbols with complete expiry', async ({ page }) => {
+test('shaded impact art includes wind, ricochet and armor flecks with complete expiry', async ({ page }) => {
   await page.goto('/testbed/impact-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
@@ -56,7 +56,7 @@ test('shaded impact art includes readable miss and zero-damage symbols with comp
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-test('shield, dodge and armor popups coexist with blood, tween and expire', async ({ page }) => {
+test('shield, dodge and armor VFX coexist with blood, tween and expire', async ({ page }) => {
   await page.goto('/testbed/deflection-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
