@@ -2,7 +2,7 @@ import { cellKey, emptyScene, meleeTiming, type DamageType, type HitIntensity, t
 import { DungeonEffects } from '../../../packages/render-2.5d/src/effects'
 import { drawMelee } from '../../../packages/render-2.5d/src/melee-draw'
 import { groundDepth, project, type Projection } from '../../../packages/render-2.5d/src/projection'
-import type { MeleeVariant } from '../../../packages/render-2.5d/src/melee-path'
+import { meleeFrame, meleePath, type MeleeVariant } from '../../../packages/render-2.5d/src/melee-path'
 import { loadRoomTiles } from '../src/room/tiles'
 
 const tiles = await loadRoomTiles()
@@ -28,6 +28,17 @@ const previews = ([0, 1, 2] as MeleeVariant[]).flatMap(variant => styles.map(sty
 function reset() { for (const p of previews) { p.fx.clear(); p.born = -Infinity; p.count = 0 } }
 document.querySelectorAll('select, input').forEach(input => input.addEventListener('change', reset))
 document.getElementById('restart')!.addEventListener('click', reset)
+const timeline = document.getElementById('timeline') as HTMLInputElement
+let frozenPhase = 0.35
+select('frame').addEventListener('change', () => {
+  if (select('frame').value !== 'custom') frozenPhase = Number(select('frame').value)
+  timeline.value = String(frozenPhase)
+})
+timeline.addEventListener('input', () => {
+  frozenPhase = Number(timeline.value)
+  select('frame').value = 'custom'; select('playback').value = 'freeze'
+  reset()
+})
 function sprite(ctx: CanvasRenderingContext2D, tile: number, p: Projection, point: { x: number; y: number }) {
   const art = tiles.tile(tile), atlas = art && tiles.atlas(art.atlas)
   if (!art || !(atlas instanceof HTMLImageElement)) return
@@ -47,7 +58,7 @@ function frame(ms: number) {
       if (!checked('random')) fx.strokes.at(-1)!.variant = variant
       preview.born = now; preview.count++
     }
-    const time = freeze ? preview.born + Number(select('frame').value) * meleeTiming(style).duration : now
+    const time = freeze ? preview.born + frozenPhase * meleeTiming(style).duration : now
     fx.tick(scene, time)
     const p: Projection = { x: target.x / 2, y: target.y / 2 - 0.15, width: 360, height: 266, scale: reach === 2 ? 64 : 82, tilt: Number(select('tilt').value) * Math.PI / 180 }
     ctx.clearRect(0, 0, 360, 266); ctx.imageSmoothingEnabled = false
@@ -67,13 +78,26 @@ function frame(ms: number) {
     const anchors = { from: incoming ? b : a, to: incoming ? a : b }
     const cross = project(p, anchors.to.x, anchors.to.y + 0.3)
     ctx.fillStyle = '#58615e'; ctx.fillRect(cross.x - 3, cross.y - p.scale * 0.42, 7, 1); ctx.fillRect(cross.x, cross.y - p.scale * 0.42 - 3, 1, 7)
+    if (checked('guides')) {
+      const origin = project(p, anchors.from.x, anchors.from.y + 0.3)
+      const end = project(p, anchors.to.x, anchors.to.y + 0.3)
+      const basis = meleeFrame(to.x - from.x, (to.y - from.y) * groundDepth(p.tilt))
+      const { path } = meleePath(style, fx.strokes.at(-1)?.variant ?? variant, (end.x - origin.x) / p.scale, (end.y - origin.y) / p.scale, hit, basis)
+      ctx.save(); ctx.translate(origin.x, origin.y - p.scale * 0.42)
+      ctx.strokeStyle = '#b88a54'; ctx.setLineDash([2, 4]); ctx.beginPath()
+      for (let i = 0; i <= 40; i++) { const q = path(i / 40); ctx.lineTo(q.x * p.scale, q.y * p.scale) }
+      ctx.stroke(); ctx.setLineDash([])
+      const guard = path(0)
+      ctx.fillStyle = '#e9aa65'; ctx.fillRect(guard.x * p.scale - 2, guard.y * p.scale - 2, 5, 5)
+      ctx.restore()
+    }
     for (const stroke of fx.strokes) drawMelee(ctx, p, { ...stroke, ...anchors }, time, { weight: Number(select('weight').value), trail: Number(select('trail').value) })
     const current = fx.strokes.at(-1)
     preview.caption.querySelector('span')!.textContent = names[style][current?.variant ?? variant]
     preview.canvas.dataset.swings = String(preview.count)
     preview.canvas.dataset.variant = String(current?.variant ?? variant)
   }
-  document.getElementById('status')!.textContent = `27 previews · ${freeze ? `Frozen at ${Math.round(Number(select('frame').value) * 100)}%` : `${previews[0].count} swings per preview`} · Contact stays at 42% for every gesture. Dungeon preview: /testbed/dungeon.html`
+  document.getElementById('status')!.textContent = `27 previews · ${freeze ? `Frozen at ${Math.round(frozenPhase * 100)}%` : `${previews[0].count} swings per preview`} · Contact stays at 42% for every gesture. Dungeon preview: /testbed/dungeon.html`
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)

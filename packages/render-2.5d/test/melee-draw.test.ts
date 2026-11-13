@@ -68,10 +68,38 @@ describe('pixel-art melee gestures', () => {
     }
   })
 
+  it('shows solid artwork from windup through follow-through, including misses', () => {
+    for (const style of styles) for (const hit of [true, false]) for (const age of [0.08, 0.25, 0.42, 0.55]) {
+      const runs = frame(style, age, { hit })
+      expect(runs.length, `${style} at ${age}`).toBeGreaterThan(0)
+      expect(runs.every(r => r.alpha === 1), `${style} at ${age}`).toBe(true)
+      expect(new Set(runs.map(r => r.colour)).size).toBeGreaterThanOrEqual(5)
+    }
+  })
+
+  it('keeps the weapon orientation when its rendered target anchor moves off-axis', () => {
+    const runs = frame('staff', 0.08, { heading: { x: 1, y: 0 }, to: { x: 0, y: 1 } })
+      .filter(r => r.colour === '#805c42')
+    const width = Math.max(...runs.map(r => r.x + r.width)) - Math.min(...runs.map(r => r.x))
+    const height = Math.max(...runs.map(r => r.y)) - Math.min(...runs.map(r => r.y)) + 1
+    expect(width).toBeGreaterThan(height * 2)
+  })
+
+  it('gives the whip a solid body rather than a single-pixel dotted line', () => {
+    const runs = frame('lash', 0.42)
+    // The centre of its eastbound sweep must cover a visible patch at native
+    // 32px tile size. Count actual occupied pixels, not overlapping draw calls.
+    const body = new Set<string>()
+    for (const r of runs) for (let x = r.x; x < r.x + r.width; x++) {
+      if (x >= 9 && x <= 21 && r.y <= -8) body.add(`${x},${r.y}`)
+    }
+    expect(body.size).toBeGreaterThan(55)
+  })
+
   it('tunes weight and trail without moving contact, and keeps oversized misses clear', () => {
     expect(area(frame('slash', 0.4, {}, { weight: 1.5 }))).toBeGreaterThan(area(frame('slash', 0.4, {}, { weight: 0.6 })))
     expect(area(frame('reap', 0.4, {}, { trail: 1.4 }))).toBeGreaterThan(area(frame('reap', 0.4, {}, { trail: 0.4 })))
-    for (const style of styles) for (const variant of variants) for (const [x, y] of [[1, 0], [0, -1], [-1, 1]]) {
+    for (const style of styles) for (const variant of variants) for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1], [2, 0]]) {
       const tx = x * 32, ty = Math.floor(y * groundDepth(projection.tilt) * 32)
       for (const weight of [0.6, 1.5]) {
         expect(covers(frame(style, 0.42001, { to: { x, y }, variant }, { weight }), tx, ty), `${style} contact at weight ${weight}`).toBe(true)

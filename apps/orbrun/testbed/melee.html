@@ -13,11 +13,12 @@
     figcaption { padding: 9px 12px; text-transform: capitalize; display: flex; justify-content: space-between } figcaption span { color: #858c90; font-size: 12px }
     canvas { display: block; width: 100%; aspect-ratio: 1.35; image-rendering: pixelated }
     footer { padding: 0 24px 24px; color: #858c90 } a { color: #b8cdd1 }
+    @media (max-width: 650px) { main { grid-template-columns: 1fr !important } nav { gap: 8px } }
     @media (max-width: 1000px) { main { grid-template-columns: repeat(3, minmax(180px, 1fr)) } }
   </style>
 </head>
 <body>
-  <header><h1>Melee gestures</h1><p>Nine weapon families, three gestures each. Tune weight, trail and actor movement live. The small cross marks contact; the trail follows the sprite lunge and recoil.</p></header>
+  <header><h1>Melee gestures</h1><p>Nine weapon families, three gestures each. Tune weight, trail and actor movement live. Scrub the timeline or show motion guides to inspect the shared guard and attack path.</p></header>
   <nav>
     <label>Direction <select id="direction"><option value="1,0">East</option><option value="1,1">Southeast</option><option value="0,1">South</option><option value="-1,1">Southwest</option><option value="-1,0">West</option><option value="-1,-1">Northwest</option><option value="0,-1">North</option><option value="1,-1">Northeast</option></select></label>
     <label>Reach <select id="reach"><option value="1">Adjacent</option><option value="2">Two cells</option></select></label>
@@ -28,7 +29,9 @@
     <label>Trail <select id="trail"><option value="0.4">Short</option><option value="1" selected>Standard</option><option value="1.4">Long</option></select></label>
     <label>Movement <select id="motion"><option value="0">Planted</option><option value="0.35">Subtle</option><option value="1" selected>Full</option></select></label>
     <label>Playback <select id="playback"><option value="900">Loop</option><option value="160">Spam · 160 ms</option><option value="100">Spam · 100 ms</option><option value="freeze">Freeze</option></select></label>
-    <label>Frame <select id="frame"><option value="0.35">Swing</option><option value="0.08">Windup</option><option value="0.42001">Contact</option><option value="0.55">Follow-through</option><option value="0.72">Recovery</option><option value="0.95">Settled</option></select></label>
+    <label>Frame <select id="frame"><option value="0.35">Swing</option><option value="0.08">Windup</option><option value="0.42001">Contact</option><option value="0.55">Follow-through</option><option value="0.72">Recovery</option><option value="0.95">Settled</option><option value="custom">Scrub</option></select></label>
+    <label>Timeline <input id="timeline" type="range" min="0.01" max="0.99" step="0.01" value="0.35"></label>
+    <label><input id="guides" type="checkbox">Motion guides</label>
     <label><input id="hit" type="checkbox" checked>Hit</label>
     <label><input id="incoming" type="checkbox">Incoming</label>
     <label><input id="random" type="checkbox">Random variations</label>

@@ -1,8 +1,9 @@
 import { impactStrength, meleeTiming } from '@orbrun/scene'
 import type { MeleeStroke } from './effects.js'
-import { project, type Projection } from './projection.js'
+import { groundDepth, project, type Projection } from './projection.js'
 import type { Context2d } from './tiles.js'
-import { meleePath } from './melee-path.js'
+import { meleeFrame, meleePath } from './melee-path.js'
+import { meleeArt } from './melee-art.js'
 
 interface Point { x: number; y: number }
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
@@ -54,114 +55,83 @@ function ribbon(ctx: Context2d, path: (t: number) => Point, start: number, end: 
     edge.push({ x: p.x + nx * w * 0.38, y: p.y + ny * w * 0.38 })
   }
   const silhouette = [...outer, ...inner.reverse()]
-  polygon(ctx, silhouette.map(p => ({ x: p.x + 1 / 32, y: p.y + 1 / 32 })), colours[0], alpha * 0.8)
-  polygon(ctx, silhouette, colours[1], alpha * 0.65)
+  for (const [x, y] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+    polygon(ctx, silhouette.map(p => ({ x: p.x + x / 32, y: p.y + y / 32 })), colours[0], alpha)
+  }
+  polygon(ctx, silhouette, colours[1], alpha)
   polygon(ctx, [...outer, ...edge.reverse()], colours[2], alpha)
   polygon(ctx, [...outer, ...rim.reverse()], colours[3], alpha)
 }
 
 export interface MeleeAppearance { weight?: number; trail?: number }
 
-/** Upright stamps deliberately never track a changing tangent. The old rotating
- * heads read like tumbling weapons; these read as a few hand-drawn smear frames. */
-function stamp(ctx: Context2d, points: Point[], colours: readonly string[], alpha: number) {
-  polygon(ctx, points.map(p => ({ x: p.x + 1 / 32, y: p.y + 1 / 32 })), colours[0], alpha)
-  polygon(ctx, points, colours[2], alpha)
-  const centre = points.reduce((c, p) => ({ x: c.x + p.x / points.length, y: c.y + p.y / points.length }), { x: 0, y: 0 })
-  polygon(ctx, points.map(p => ({ x: centre.x + (p.x - centre.x) * 0.55, y: centre.y + (p.y - centre.y) * 0.55 - 1 / 32 })), colours[3], alpha)
+/** Draw authored texels in the SAME frame as the path. The orientation is fixed
+ * for the whole swing; only the anchor moves. Scan conversion keeps diagonal
+ * pixels sharp without continuously rotating or filtering a Canvas sprite. */
+function weapon(ctx: Context2d, style: MeleeStroke['style'], tip: Point, frame: ReturnType<typeof meleeFrame>, size: number,
+  colours: readonly string[], alpha: number) {
+  const inks: Record<string, string> = { o: colours[0], d: colours[1], m: colours[2], h: colours[3], g: '#c6a46b', w: '#805c42' }
+  const texel = size / 32
+  for (const pixel of meleeArt[style]) {
+    const points = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([x, y]) => {
+      const q = frame((pixel.x + x - 0.5) * texel, (pixel.y + y - 0.5) * texel)
+      return { x: tip.x + q.x, y: tip.y + q.y }
+    })
+    polygon(ctx, points, inks[pixel.ink], alpha)
+  }
 }
 
-/** Travel uses the projected cells; silhouettes stay upright on the tile grid.
- * Each family has its own silhouette, trail envelope and recovery. */
+/** Common chest-height origin, fixed attack frame, continuous guard-to-contact
+ * motion. Opacity is held through the strike and only fades during recovery. */
 export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, now: number, appearance: MeleeAppearance = {}) {
   const age = (now - stroke.born) / stroke.duration
   if (age <= 0 || age >= 1 || p.scale <= 0) return
   const from = project(p, stroke.from.x, stroke.from.y + 0.3)
   const to = project(p, stroke.to.x, stroke.to.y + 0.3)
-  const dx = (to.x - from.x) / p.scale, dy = (to.y - from.y) / p.scale, reach = Math.hypot(dx, dy)
-  if (reach < 0.01) return
+  const dx = (to.x - from.x) / p.scale, dy = (to.y - from.y) / p.scale
+  if (Math.hypot(dx, dy) < 0.01) return
   const style = stroke.style, strength = impactStrength(stroke.intensity)
   const weight = Number.isFinite(appearance.weight) ? Math.max(0.6, Math.min(1.5, appearance.weight!)) : 1
   const trail = Number.isFinite(appearance.trail) ? Math.max(0.4, Math.min(1.4, appearance.trail!)) : 1
   const contact = meleeTiming(style).contact / stroke.duration
-  const windup = style === 'stab' ? 0.24 : style === 'cleave' || style === 'crush' ? 0.22 : 0.16
   const recovery = clamp((age - contact) / (1 - contact))
-  const advance = clamp((age - windup) / (contact - windup)) ** (style === 'lash' ? 3 : 2)
-  const launch = style === 'crush' ? 0.55 : 0
-  // Arrest the strike after contact. Stabs withdraw along the same line;
-  // sweeping weapons have a short follow-through, never an orbit.
+  const windup = 0.16
+  const advance = clamp((age - windup) / (contact - windup)) ** 1.5
   const retract = style === 'stab' || style === 'thrust' || style === 'unarmed'
-  const progress = age < contact ? launch + (1 - launch) * advance
-    : retract ? 1 - smooth(recovery) * 0.42 : 1 + (1 - launch) * 0.14 * (1 - Math.exp(-12 * recovery))
-  const fade = smooth(advance / 0.12) * (1 - smooth(recovery / (style === 'stab' ? 0.5 : 0.8))) * (stroke.hit ? 1 : 0.48)
+  const progress = age < windup ? 0.12 * smooth(age / windup)
+    : age < contact ? 0.12 + 0.88 * advance
+    : retract ? 1 - smooth(recovery) * 0.65 : 1 + 0.12 * smooth(recovery / 0.55)
+  const opacity = smooth(age / 0.035) * (1 - smooth((recovery - 0.35) / 0.5))
+  if (opacity <= 0) return
   const colours = palettes[stroke.tone ?? 'physical']
-  const { path } = meleePath(style, stroke.variant, dx, dy, stroke.hit)
-  const size = weight * (0.8 + strength * 0.3)
-  const tail = { slash: 0.58, cleave: 0.32, reap: 0.72, staff: 0.35, lash: 0.85, crush: 0.22, thrust: 0.68, stab: 0.25, unarmed: 0.16 }[style]
-    * trail * (1 - smooth(recovery / 0.8))
-  const tip = path(progress)
-  // Fixed attack-axis basis, not a rotating frame sampled from the curve.
-  const ux = dx / reach, uy = dy / reach
-  const at = (along: number, across: number): Point => ({ x: tip.x + ux * along - uy * across, y: tip.y + uy * along + ux * across })
-  const upright = (x: number, y: number): Point => ({ x: tip.x + x * size, y: tip.y + y * size })
-  const strokeRibbon = (width: number, alpha = 1, curve = path) => ribbon(ctx, curve, Math.max(launch, progress - tail), progress, width * size, colours, fade * alpha)
+  const heading = stroke.heading
+  const frame = heading ? meleeFrame(heading.x, heading.y * groundDepth(p.tilt)) : meleeFrame(dx, dy)
+  const { path } = meleePath(style, stroke.variant, dx, dy, stroke.hit, frame)
+  const size = weight * (1 + strength * 0.2)
+  const tail = { slash: 0.65, cleave: 0.48, reap: 0.75, staff: 0.48, lash: 0.9, crush: 0.18, thrust: 0.65, stab: 0.3, unarmed: 0.25 }[style]
+    * trail * (1 - smooth((recovery - 0.2) / 0.65))
+  const tip = path(progress), start = Math.max(0, progress - tail)
+  const width = { slash: 0.18, cleave: 0.25, reap: 0.23, staff: 0.14, lash: 0.16, crush: 0.16, thrust: 0.075, stab: 0.1, unarmed: 0.1 }[style] * size
+  const material = stroke.tone && stroke.tone !== 'physical' ? colours
+    : style === 'lash' ? ['#29212b', '#78513f', '#cfab73', '#fff1ce']
+    : style === 'staff' ? ['#29212b', '#785a42', '#c8a77a', '#fff1ce'] : colours
 
   ctx.save()
   ctx.translate(Math.round(from.x), Math.round(from.y - p.scale * 0.42))
   ctx.scale(p.scale / 32, p.scale / 32)
-  if (age < windup) {
-    // Heavy blows show a held anticipation chip, not a spinning glint.
-    if (style === 'crush' || style === 'cleave' || style === 'reap') {
-      const q = path(style === 'crush' ? launch * smooth(age / windup) : 0.35)
-      const w = 0.055 * size * Math.sin(age / windup * Math.PI)
-      polygon(ctx, [{ x: q.x - w, y: q.y - w }, { x: q.x + w, y: q.y - w }, { x: q.x + w, y: q.y + w }, { x: q.x - w, y: q.y + w }], colours[2], 0.6)
+  ribbon(ctx, path, start, progress, width, material, opacity)
+  if (style === 'lash') {
+    // A solid braided body, with diagonal brass stitches instead of faint,
+    // disconnected dots. Keep the backing ribbon continuous underneath.
+    for (let i = 1; i < 9; i++) {
+      const q = path(start + (progress - start) * i / 9)
+      const stitch = [[-0.025, -0.045], [0.02, -0.045], [0.06, 0.045], [0.015, 0.045]].map(([x, y]) => {
+        const r = frame(x * size, y * size)
+        return { x: q.x + r.x, y: q.y + r.y }
+      })
+      polygon(ctx, stitch, i % 2 ? material[3] : material[1], opacity)
     }
-  } else if (style === 'slash' || style === 'reap') {
-    // Sword: one clean crescent. Polearm: a wider hooked outer cutting edge.
-    strokeRibbon(style === 'reap' ? 0.15 : 0.11)
-    if (style === 'reap') {
-      const inset = (t: number) => { const q = path(t); return { x: q.x * 0.82, y: q.y * 0.82 } }
-      strokeRibbon(0.025, 0.45, inset)
-    }
-  } else if (style === 'cleave') {
-    strokeRibbon(0.19, 0.7)
-    const hand = dx < 0 ? -1 : 1
-    stamp(ctx, [upright(-0.23 * hand, -0.3), upright(0.08 * hand, -0.21), upright(0.16 * hand, -0.05),
-      upright(0.07 * hand, 0.015), upright(-0.11 * hand, -0.02)], colours, fade)
-  } else if (style === 'crush') {
-    // A broad, square hammer smear drops vertically, with two broken speed marks.
-    strokeRibbon(0.065, 0.35)
-    stamp(ctx, [upright(-0.13, -0.22), upright(0.1, -0.22), upright(0.15, -0.15),
-      upright(0.15, 0.01), upright(-0.12, 0.01), upright(-0.16, -0.07)], colours, fade)
-    for (const x of [-0.2, 0.2]) polygon(ctx, [upright(x, -0.42), upright(x + 0.025, -0.42), upright(x + 0.025, -0.25), upright(x, -0.2)], colours[1], fade * 0.65)
-  } else if (style === 'thrust' || style === 'stab') {
-    // Spear: long central shaft and leaf tip. Knife: a short triangular jab.
-    strokeRibbon(style === 'thrust' ? 0.028 : 0.045, 0.75)
-    const length = style === 'thrust' ? 0.3 : 0.16, w = (style === 'thrust' ? 0.065 : 0.085) * size
-    stamp(ctx, [at(0.025, -0.025), at(0.025, 0.025), at(-length * size, w), at(-length * size * 0.72, 0), at(-length * size, -w)], colours, fade)
-  } else if (style === 'staff') {
-    // A straight baton crosses the target; two separated wood-coloured smears
-    // carry the sweep without making the staff look like a sword crescent.
-    const wood = stroke.tone && stroke.tone !== 'physical' ? colours : ['#302b2c', '#79634b', '#b6a079', '#e7d4a2']
-    ribbon(ctx, path, Math.max(0, progress - tail), Math.max(0, progress - 0.08), 0.035 * size, wood, fade * 0.5)
-    stamp(ctx, [at(-0.07 * size, -0.24 * size), at(0.015, -0.24 * size), at(0.015, 0.24 * size), at(-0.07 * size, 0.24 * size)], wood, fade)
-  } else if (style === 'lash') {
-    // A flexible, segmented lash uncoils into a fine tip. Its wave collapses
-    // at contact so it always touches the same authoritative target.
-    const lash = (t: number) => {
-      const q = path(t), wave = Math.sin(t * Math.PI * 3) * Math.sin(Math.PI * clamp(t)) * (1 - advance) * 0.16
-      return { x: q.x - uy * wave, y: q.y + ux * wave }
-    }
-    for (let i = 0; i < 7; i++) {
-      const end = progress - tail * i / 7, start = Math.max(0, end - tail * 0.12)
-      ribbon(ctx, lash, start, end, (0.025 + i * 0.004) * size, colours, fade * (1 - i * 0.07))
-    }
-    stamp(ctx, [at(0.015, 0), at(-0.11 * size, 0.035 * size), at(-0.075 * size, -0.035 * size)], colours, fade)
-  } else {
-    // Knuckles: compact, upright stepped block, a short jab and no long blade.
-    strokeRibbon(0.035, 0.3)
-    stamp(ctx, [upright(-0.11, -0.09), upright(0.04, -0.09), upright(0.08, -0.04),
-      upright(0.08, 0.06), upright(-0.07, 0.06), upright(-0.12, 0.01)], colours, fade)
   }
+  weapon(ctx, style, tip, frame, size, material, opacity)
   ctx.restore()
 }

@@ -3,7 +3,7 @@ import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, melee
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 import type { MeleeVariant } from './melee-path.js'
 
-export interface MeleeStroke extends MeleeAttack { born: number; duration: number; variant: MeleeVariant }
+export interface MeleeStroke extends MeleeAttack { born: number; duration: number; variant: MeleeVariant; heading?: { x: number; y: number } }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
 export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray }
@@ -186,7 +186,8 @@ export class DungeonEffects {
     this.meleeVariants.delete(key)
     this.meleeVariants.set(key, variant)
     if (this.meleeVariants.size > 64) this.meleeVariants.delete(this.meleeVariants.keys().next().value!)
-    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration, variant })
+    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration, variant,
+      heading: { x: attack.to.x - attack.from.x, y: attack.to.y - attack.from.y } })
     this.strokes = this.strokes.slice(-12)
     if (attack.hit) {
       const effect = { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity }

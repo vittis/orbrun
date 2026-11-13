@@ -1,0 +1,117 @@
+import type { MeleeAttack } from '@orbrun/scene'
+
+/** Hand-authored 32-texel artwork, pointing right. The rightmost column at the
+ * middle row is contact. o outline, d shade, m metal, h highlight, g brass,
+ * w leather/wood. Rotation is applied once in the shared attack frame, then
+ * scan-converted back to the tile grid: no Canvas filtering or spinning. */
+const patterns: Record<MeleeAttack['style'], string[]> = {
+  slash: [
+    '....oo..............',
+    '....ogo........oooo.',
+    '....ogo...oooohhhmmo',
+    'ooooggoooohhhhhmmhho',
+    'owwwggmmmmmmmmmmmhhm',
+    'ooooggoodddddddddmmo',
+    '....ogo.ooooooooooo.',
+    '....ogo.............',
+    '....oo..............',
+  ],
+  stab: [
+    '...oo........',
+    '...ogo..oooo.',
+    'oooggoohhhmmo',
+    'owwggmmmmhhhm',
+    'oooggodddmmo.',
+    '...ogo.oooo..',
+    '...oo........',
+  ],
+  thrust: [
+    '..........oo.......',
+    '..........omo......',
+    '..........ohmoooo..',
+    'ooooooooooohhhhhmmo',
+    'owwgwgwgggmmmmmmhhm',
+    'ooooooooooodddmmmmo',
+    '..........omdoooo..',
+    '..........odo......',
+    '..........oo.......',
+  ],
+  cleave: [
+    '........oooo...',
+    '.......ohhmmo..',
+    '......ohhmmddo.',
+    '.....ohhmmdddo.',
+    '.....ohmmggddmo',
+    'oooooogggggmmmo',
+    'owwgwggggggmhhm',
+    'oooooogggggmmmo',
+    '.....ohmmggddmo',
+    '.....ohhmmdddo.',
+    '......ohhmmddo.',
+    '.......ohhmmo..',
+    '........oooo...',
+  ],
+  reap: [
+    '......ooooooooo...',
+    '.....ohhhhhhhhmoo.',
+    '.....ohmmmmmmmddmo',
+    '......ooommdddddmo',
+    '.........omddggdmo',
+    'ooooooooooggggmmmo',
+    'owwgwgwgggggggmhhm',
+    'ooooooooooggggmmmo',
+    '.........omddggdmo',
+    '.........omddddmo.',
+    '.........ommddmo..',
+    '..........ommoo...',
+    '...........oo.....',
+  ],
+  crush: [
+    '........oo.....',
+    '.......ohmo....',
+    '......oommooo..',
+    '.....ohhhmddmo.',
+    '.....ohmgmgdmo.',
+    'oooooohmgggmmmo',
+    'owwgwggmgmgmhhm',
+    'oooooommgggmmmo',
+    '.....ommgmgdmo.',
+    '.....oddddddmo.',
+    '......ooddooo..',
+    '.......odmo....',
+    '........oo.....',
+  ],
+  lash: [
+    '.......oo....',
+    '......ohmo...',
+    'ooooooogmmoo.',
+    'owgwgwgmmhhhm',
+    'ooooooogmmoo.',
+    '......odmo...',
+    '.......oo....',
+  ],
+  staff: [
+    '.oooooooooooooooooo.',
+    'ogghwwgwwgwwgwwhhggo',
+    'ogghwwgwwgwwgwwhhggm',
+    'oggdwwdwwdwwdwwddggo',
+    '.oooooooooooooooooo.',
+  ],
+  unarmed: [
+    '.....ooooo...',
+    '....ohmhmmo..',
+    '...ohmdmdmmo.',
+    'ooooommmmmhmo',
+    'owwggmmmmmhhm',
+    'owwggmmmddhmo',
+    'ooooomddmmmo.',
+    '....ommmmoo..',
+    '.....oooo....',
+  ],
+}
+
+export const meleeArt = Object.fromEntries(Object.entries(patterns).map(([style, rows]) => {
+  const contactX = Math.max(...rows.map(row => row.length)) - 1, contactY = Math.floor(rows.length / 2)
+  const pixels = rows.flatMap((row, y) => [...row].flatMap((ink, x) => ink === '.' ? [] : [{ x: x - contactX, y: y - contactY, ink }]))
+  return [style, pixels]
+})) as Record<MeleeAttack['style'], { x: number; y: number; ink: string }[]>

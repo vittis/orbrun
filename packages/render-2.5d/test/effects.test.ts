@@ -80,6 +80,17 @@ describe('bounded dungeon combat presentation', () => {
     }
   })
 
+  it('captures attack heading once, independently of mutable actor anchors', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    const movingAttack = { ...attack, from: { x: 0, y: 0 }, to: { x: 1, y: 0 } }
+    fx.melee(scene, movingAttack, 1)
+    movingAttack.to.y = 1
+    fx.observe({ ...scene, billboards: [{ ...target, y: 1 }] }, 1.1, true)
+    expect(fx.strokes[0].heading).toEqual({ x: 1, y: 0 })
+    expect(fx.strokes[0].to).toEqual({ x: 1, y: 0 })
+  })
+
   it('can plant actors or reduce their motion without changing strike timing', () => {
     const scene = world(), fx = new DungeonEffects()
     fx.melee(scene, attack, 1)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeleeAttack } from '@orbrun/scene'
-import { meleePath, type MeleeVariant } from '../src/melee-path.js'
+import { meleeFrame, meleePath, type MeleeVariant } from '../src/melee-path.js'
 import { groundDepth } from '../src/projection.js'
 
 const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
@@ -18,6 +18,28 @@ describe('anchored melee paths', () => {
       // Position and velocity both continue through contact; no reversal or pop.
       expect(after.x - dx).toBeCloseTo(dx - before.x, 6)
       expect(after.y - dy).toBeCloseTo(dy - before.y, 6)
+    }
+  })
+
+  it('uses the same guard for every family and variation, even as the target moves', () => {
+    for (const [x, y] of directions) {
+      const frame = meleeFrame(x, y), guard = frame(0.14, 0)
+      for (const style of styles) for (const variant of variants) for (const hit of [true, false]) {
+        expect(meleePath(style, variant, x, y, hit, frame).path(0)).toEqual(guard)
+        expect(meleePath(style, variant, x + 0.25, y - 0.15, hit, frame).path(0)).toEqual(guard)
+      }
+    }
+  })
+
+  it('rotates planar swings in one frame without direction-dependent angle corrections', () => {
+    for (const style of styles.filter(s => s !== 'crush' && s !== 'cleave')) for (const variant of variants) {
+      const east = meleePath(style, variant, 1, 0, true).path
+      const north = meleePath(style, variant, 0, -1, true).path
+      for (const time of [0, 0.1, 0.3, 0.6, 1, 1.1]) {
+        const a = east(time), b = north(time)
+        expect(b.x).toBeCloseTo(a.y)
+        expect(b.y).toBeCloseTo(-a.x)
+      }
     }
   })
 
