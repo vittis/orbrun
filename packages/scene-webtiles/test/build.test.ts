@@ -190,6 +190,27 @@ describe('buildScene on a recorded level', () => {
     expect(standard.kind).toBe('feature')
     expect(standard.stance).toBe('upright')
   })
+  it('stands ruined columns and similar wall-category props on the floor without a masonry block', () => {
+    const st = fixtureState()
+    const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
+    for (const name of ['DNGN_CRUMBLED_COLUMN', 'DNGN_CRUMBLED_COLUMN_1', 'DNGN_CRUMBLED_COLUMN_5',
+      'DEPTHS_COLUMN', 'DEPTHS_CRUMBLED_COLUMN', 'DNGN_GRANITE_STATUE', 'DNGN_STATUE_IRON',
+      'DNGN_ORCISH_IDOL', 'DNGN_GRAVESTONE', 'DNGN_NECROPOLIS_GRAVESTONE', 'DNGN_ZONGULDROK_SHRINE', 'DNGN_TREE']) {
+      const art = gd.dngn.id(name)!
+      expect(art, name).toBeDefined()
+      for (const mf of [gd.enums.MF_WALL, gd.enums.MF_MAP_WALL] as number[]) {
+        st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, mf, g: '#', t: { ...floor.t, bg: art } })
+        const prop = buildScene(st, gd).cells.get(cellKey(floor.x, floor.y))!
+        expect(prop.kind, name).toBe('feature')
+        expect(prop.occluder, name).toBe(false)
+        expect(prop.floorTile, name).toBe(floor.t!.flv?.f ?? art)
+        expect(prop.featureTile, name).toBe(art)
+        expect(prop.wallTile, name).toBeUndefined()
+        expect(prop.stance, name).toBe('upright')
+        expect(prop.freestanding, name).toBe(true)
+      }
+    }
+  })
   it('gives an open door in a north–south gate the horizontal pieces its faces show, as a closed one has', () => {
     const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!

@@ -248,6 +248,10 @@ function beaconFor(feature: Feature | undefined): 'down' | 'up' | 'portal' | und
  * turn; what is built in turns with the ground it is part of.
  */
 const BUILT_IN = /DOOR|GATE|RUNELIGHT|STAIR|HATCH/
+// Vaults can dress blocking terrain in a freestanding prop's artwork. Its
+// minimap category still says wall, but extruding the transparent sprite's
+// square gives columns, ruins and statues an artificial solid pedestal.
+const TERRAIN_PROP = /(?:^|_)(?:STATUE|IDOL|COLUMN|PILLAR|GRAVESTONE|SARCOPHAGUS|SHRINE|TREE|MANGROVE)(?:_|$)/
 export function standsFree(name: string | undefined, feature: Feature | undefined): boolean {
   if (stanceFor(name, feature) !== 'upright') return false
   if (feature && (feature.type === 'door' || feature.type === 'stairs' || feature.type === 'hatch')) return false
@@ -531,7 +535,7 @@ function buildCell(mc: MapCell, gd: Gamedata): SceneCell | undefined {
     const f = classifyFeature(name, glyph, mc.mf, MF)
     // a vault wall dressed in feature art (the Bailey keeps' `stone_smooth_wall_beogh`, wizlab_golubria's
     // `dngn_dimension_edge`): the name alone says `other`, and the minimap says wall
-    if (wallTerrain && (!f || f.type === 'other')) {
+    if (wallTerrain && (!f || f.type === 'other') && !TERRAIN_PROP.test(name || '')) {
       base.kind = 'wall'
       base.occluder = true
       base.wallTile = bgIdx
