@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.92 — 2026-11-13
+
+- Added a collapsible Tune panel at the left-center of the game screen with every View and Combat setting.
+- Adjust sliders, small −/+ buttons and selectors while watching the dungeon. Changes apply immediately and share the normal saved preferences and reset controls.
+- Keyboard and controller focus stays inside the controls; Escape closes them without sending a gameplay command. The panel scrolls to fit phones and short windows.
+
 ## 0.3.91 — 2026-11-13
 
 - Confirmed misses show a small grey air-slip; hits that explicitly deal no damage show a muted contact glint. Both use shaded pixel art, follow the recipient and share melee contact timing without blood or damage flashes.
