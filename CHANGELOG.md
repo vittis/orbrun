@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.107 — 2026-11-13
+
+- Confirmed character level gains now strike a gold level seal into view, with a brief impact, ember shards and an automatic fade. The popup stays clear of HUD panes, never intercepts input, and uses a static presentation with Still or reduced motion.
+- Loaded characters and duplicate updates do not trigger a celebration. Rapid gains show the latest confirmed level; death, disconnects and run changes clear the popup.
+
 ## 0.3.106 — 2026-11-13
 
 - Confirmed hits with an identified venom weapon now include poison bubbles and vapour in hit/death splatter, including lethal strikes that send no separate poison-status sentence.
