@@ -45,6 +45,39 @@ if (lane !== 'all' && !lanes.includes(lane)) throw new Error(`Unknown raster lan
 const run = (name: string) => lane === 'all' || lane === name
 const failures: unknown[] = []
 let checks = 0
+// Camera limits must reach the raster and picking paths, not just the settings label.
+if (run('tiles')) for (const [width, height, dpr] of [[390, 600, 1], [1280, 720, 2]]) {
+  for (const degrees of [25, 85]) for (const zoom of [0.25, 3]) {
+    const canvas = document.createElement('canvas')
+    const r = new Render25d({ tilt: degrees, zoom, animate: false })
+    r.mount(canvas)
+    r.resize(width, height, dpr)
+    r.setTiles(source)
+    const scene = emptyScene()
+    // Keep samples away from the deliberate fog fade at the known-map boundary.
+    for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) scene.cells.set(cellKey(x, y), cell(x, y))
+    r.setScene(scene)
+    r.render(0)
+    const tilt = degrees * Math.PI / 180
+    const scale = Math.min(width / 18, height / (18 * Math.sin(tilt) * 1.25 + 2), 64) * zoom
+    const ctx = canvas.getContext('2d')!
+    const samples = [[0, 0], [1, 0], [0, 1], [0, 1.6]].map(([x, y]) => {
+      const px = width / 2 + x * scale, py = height / 2 + y * scale * Math.sin(tilt) * 1.25
+      const pixel = ctx.getImageData(Math.floor(px * dpr), Math.floor(py * dpr), 1, 1).data
+      const projected = r.project(x, y)
+      return { x, y, white: pixel[0] === 255 && pixel[1] === 255 && pixel[2] === 255,
+        projected: Math.abs(projected.x - px) < 0.001 && Math.abs(projected.y - py) < 0.001,
+        picked: r.pick(px, py) === cellKey(Math.round(x), Math.round(y)) }
+    })
+    checks++
+    if (samples.some(s => !s.white || !s.projected || !s.picked) || r.animating) {
+      failures.push({ kind: 'camera range raster/picking', width, height, dpr, degrees, zoom, samples })
+    }
+    r.destroy()
+    canvas.width = 0; canvas.height = 0
+    await fixtureYield(lane)
+  }
+}
 if (run('tiles')) for (const [viewWidth, viewHeight] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of [false, true]) {
   for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) for (const wall of [false, true]) {
     await fixtureYield(lane)

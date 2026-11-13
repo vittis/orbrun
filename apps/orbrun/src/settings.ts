@@ -70,8 +70,8 @@ export const defaultSettings: Settings = {
  */
 type NumericSetting = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings]
 const numericDomains: Record<NumericSetting, { min: number; max: number; integer?: boolean; auto?: boolean }> = {
-  depthTilt: { min: 35, max: 65 },
-  depthZoom: { min: 0.8, max: 1.4 },
+  depthTilt: { min: 25, max: 85 },
+  depthZoom: { min: 0.25, max: 3 },
   depthMovementDuration: { min: 0.04, max: 0.25 },
   meleeBumpStrength: { min: 0, max: 2 },
   meleeBumpSnap: { min: 0, max: 1 },
