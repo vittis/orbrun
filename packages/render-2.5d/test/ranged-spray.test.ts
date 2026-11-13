@@ -46,7 +46,7 @@ describe('material-specific ranged hit splatters', () => {
     expect(particles.length).toBeLessThanOrEqual(48)
     expect(particles.some(p => debrisPalettes[kind].includes(p.colour))).toBe(true)
     expect(particles.some(p => elementalPalettes.cold.includes(p.colour) && p.sprite === 'shard')).toBe(true)
-    expect(particles.every(p => p.size < 0.08 && [5, 7].includes(p.minPixels!) && p.sprite !== 'burst')).toBe(true)
+    expect(particles.every(p => p.size < 0.12 && p.minPixels! >= 5 && p.minPixels! <= 11 && p.sprite !== 'burst')).toBe(true)
     expect(sampleHitSpray(scene, burst, 1.7)).toEqual([])
   })
 

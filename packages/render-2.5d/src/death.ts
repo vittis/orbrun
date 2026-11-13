@@ -137,6 +137,7 @@ export class DungeonDeaths {
           y: y - Math.round(vy * 0.045 * Math.exp(-elapsed * drag) * 64) / 64,
           size: size * 0.75, alpha: alpha * 0.7 })
       }
+      const poolStart = particles.length
       // Pools are irregular stamps, with separate flecks; no circular decals.
       if ((gory || liquid) && t > 0.04) for (let i = 0; i < poolCount; i++) {
         const a = random() * Math.PI * 2, reach = (i === 0 ? 0 : 0.15 + random() * 0.48) * poolScale
@@ -151,10 +152,12 @@ export class DungeonDeaths {
           angle, stretch: i === 0 ? 1.25 : 1,
           alpha: Math.max(0, Math.min(1, (duration - t) / 0.45)), colour, sprite: 'splat', ground: true })
       }
-      particles.push(...sampleElementalSpray(scene, b, b.direction, b.height, b.tone ?? 'physical', b.intensity,
-        b.seed, t, true, gore, outward, variation))
-      // Bound both body and elemental debris, including trails and floor stamps.
-      if (particles.length - start > 192) particles.splice(start + 192)
+      const elemental = sampleElementalSpray(scene, b, b.direction, b.height, b.tone ?? 'physical', b.intensity,
+        b.seed, t, true, gore, outward, variation)
+      // Keep floor splatter and the elemental signature at maximum gore.
+      const excess = Math.max(0, particles.length - start + elemental.length - 192)
+      if (excess) particles.splice(Math.max(start, poolStart - excess), excess)
+      particles.push(...elemental)
     }
     return particles
   }

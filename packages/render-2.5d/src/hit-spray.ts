@@ -65,7 +65,8 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
       y: y - Math.round(vy * 0.04 * Math.exp(-elapsed * 2.2) * 64) / 64,
       size: size * 0.65, minPixels: 5, alpha: alpha * 0.65 })
   }
-  particles.push(...sampleElementalSpray(scene, origin, spray.direction, spray.height, burst.kind, burst.intensity,
-    spray.seed, t, false, gore, outward, variation))
-  return particles.slice(0, 96)
+  const elemental = sampleElementalSpray(scene, origin, spray.direction, spray.height, burst.kind, burst.intensity,
+    spray.seed, t, false, gore, outward, variation)
+  // Reserve room for the element even at maximum gore; retain one bounded burst.
+  return [...particles.slice(0, 96 - elemental.length), ...elemental]
 }

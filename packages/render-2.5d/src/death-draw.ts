@@ -14,6 +14,7 @@ export class DeathArt {
     const key = `${particle.sprite}:${particle.colour.join(',')}:${turn}:${fade}`
     let stamp = this.cache.get(key)
     if (!stamp) {
+      const luminous = ['lightning', 'lightningFork', 'cinder', 'glint', 'frost'].includes(particle.sprite)
       const n = DEATH_TEXELS
       stamp = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(n, n)
         : Object.assign(document.createElement('canvas'), { width: n, height: n })
@@ -23,7 +24,7 @@ export class DeathArt {
         for (let x = 0; x < n; x++) {
           const shade = Number(row[x])
           if (!shade || fade / 16 <= deathDither(x, y)) continue
-          ink.fillStyle = `rgb(${deathPixelColour(shade, particle.colour).join(',')})`
+          ink.fillStyle = `rgb(${deathPixelColour(shade, particle.colour, luminous).join(',')})`
           const rx = turn === 0 ? x : turn === 1 ? y : turn === 2 ? n - 1 - x : n - 1 - y
           const ry = turn === 0 ? y : turn === 1 ? n - 1 - x : turn === 2 ? n - 1 - y : x
           ink.fillRect(rx, ry, 1, 1)
