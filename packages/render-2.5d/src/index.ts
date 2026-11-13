@@ -28,7 +28,7 @@ export interface Render25dOptions {
   zoom?: number
   /** Animated atmosphere, automatically disabled by the app for reduced motion. */
   animate?: boolean
-  /** Rolling cloud banks behind unknown terrain; gameplay opts in. */
+  /** Black starfield and feathered exploration edges; gameplay opts in. */
   unexploredFog?: boolean
   /** Tween confirmed movement; still/reduced-motion mode also disables this. */
   movement?: boolean
@@ -348,7 +348,7 @@ export class Render25d implements MapRenderer {
       return { ...roof, height: ground.y + ground.height - roof.y }
     }) : []
     if (this.opts.unexploredFog && this.scene.playerOnLevel
-      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, this.scene.atmosphere, fogGeometry) && this.opts.animate) this.active = true
+      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, fogGeometry) && this.opts.animate) this.active = true
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
     for (const cell of cells) {
@@ -554,8 +554,10 @@ export class Render25d implements MapRenderer {
   /** Neutral, world-anchored mist behind known geometry; uses no hidden map data.
    * Static wisps also preserve still mode and let an idle scene sleep. */
   private unexploredFog(ctx: Context2d, p: Projection, time: number) {
-    ctx.fillStyle = '#010202'
+    const starfield = this.opts.unexploredFog && this.scene.playerOnLevel
+    ctx.fillStyle = starfield ? '#000' : '#010202'
     ctx.fillRect(0, 0, this.width, this.height)
+    if (starfield) return
     const sy = groundDepth(p.tilt), step = 4
     const left = Math.floor((p.x - this.width / p.scale / 2) / step) * step - step
     const right = p.x + this.width / p.scale / 2 + step

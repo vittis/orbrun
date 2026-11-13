@@ -1,5 +1,5 @@
 import { Render25d } from '@orbrun/render-2.5d'
-import { cellKey, emptyScene, type Atmosphere, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, type SceneCell } from '@orbrun/scene'
 import { captures, equalPixels, fixtureComplete, fixtureStart, fixtureYield, releaseCanvas } from './fixture'
 import { fittedScale } from '../../../packages/render-2.5d/src/projection'
 import { wallRoof } from '../../../packages/render-2.5d/src/wall-depth'
@@ -21,7 +21,7 @@ function metrics(a: Uint8ClampedArray, b?: Uint8ClampedArray) {
   }
   luminance.sort((a, b) => a - b)
   return { low: luminance[Math.floor(luminance.length * 0.05)], high: luminance[Math.floor(luminance.length * 0.95)],
-    delta: delta / luminance.length, changed: changed / luminance.length, black: black / luminance.length }
+    delta: delta / luminance.length, changed: changed / luminance.length, black: black / luminance.length, peak: luminance.at(-1)! }
 }
 for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], [900, 600, 85, 1.25]]) {
   const assert = (name: string, pass: boolean, detail?: unknown) => { checks++; if (!pass) failures.push({ name, width, tilt, dpr, detail }) }
@@ -38,16 +38,16 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   const fog = () => ctx.getImageData(0, 0, Math.floor(canvas.width * 0.25), canvas.height).data
   r.render(0); const still = image(), terrain = center()
   const contrast = metrics(fog())
-  assert('unexplored space stays mostly black with restrained visible wisps', contrast.black >= 0.75 && contrast.high >= 10 && contrast.high <= 28, contrast)
+  assert('black void has sparse crisp stars without cloud cover', contrast.black >= 0.99 && contrast.black < 0.99995 && contrast.peak >= 20, contrast)
   r.render(60)
-  assert('Still freezes mist and motes and sleeps', equalPixels(still, image()) && !r.animating)
+  assert('Still freezes stars and the frontier and sleeps', equalPixels(still, image()) && !r.animating)
   r.setOptions({ unexploredFog: false }); r.render(0)
   assert('toggle removes atmosphere without altering explored ground', !equalPixels(still, image()) && equalPixels(terrain, center()) && !r.animating)
   r.setOptions({ unexploredFog: true, animate: true }); r.render(0)
   const animated = image(), fogStart = fog()
   r.render(1.5)
   const shortMotion = metrics(fog(), fogStart), beforeStep = fog()
-  assert('clouds visibly roll within 1.5 seconds', shortMotion.delta >= 1 && shortMotion.changed >= 0.15, shortMotion)
+  assert('star movement remains minimal over 1.5 seconds', shortMotion.delta > 0 && shortMotion.delta < 0.1 && shortMotion.changed < 0.01, shortMotion)
   r.render(1.5 + 1 / 120)
   const smooth = metrics(fog(), beforeStep)
   assert('motion stays smooth between consecutive frames', smooth.delta < 0.75, smooth)
@@ -64,6 +64,8 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   scene.revision++; r.setScene(scene, 0); r.render(0)
   const q = r.project(5, 0)
   assert('hidden terrain and actors never affect fog or picking', equalPixels(beforeHidden, image()) && r.pick(q.x, q.y) === null)
+  const uniform = image(); scene.levelKey = 'Lair:2'; scene.revision++; r.setScene(scene, 0); r.render(0)
+  assert('one starfield is retained across branch and level identities', equalPixels(uniform, image()))
   if (captures) {
     const preview = document.createElement('canvas'); preview.width = canvas.width; preview.height = canvas.height
     preview.getContext('2d')!.drawImage(canvas, 0, 0)
@@ -79,34 +81,6 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   r.destroy(); releaseCanvas(canvas)
   await fixtureYield('fog')
 }
-
-// Theme changes reuse the renderer and its fog buffers, as real branch changes do.
-const canvas = document.createElement('canvas'), r = new Render25d({ unexploredFog: true, animate: false })
-r.mount(canvas); r.resize(640, 480, 1)
-const scene = { ...emptyScene(), playerOnLevel: true }
-scene.cells.set(cellKey(0, 0), { x: 0, y: 0, kind: 'floor', visibility: 'visible', occluder: false, flags: { water: false, lava: false } } as SceneCell)
-const themes: Atmosphere[] = ['stone', 'earth', 'verdant', 'marsh', 'sea', 'frost', 'embers', 'spectral', 'arcane', 'chaos', 'holy']
-const fingerprints = new Set<string>()
-for (const atmosphere of themes) {
-  scene.atmosphere = atmosphere; scene.revision++; r.setScene(scene, 0); r.render(0)
-  const ctx = canvas.getContext('2d')!, first = ctx.getImageData(0, 0, 160, 480).data
-  const rgb = [0, 0, 0]
-  for (let i = 0; i < first.length; i += 4) for (let c = 0; c < 3; c++) rgb[c] += first[i + c]
-  const fingerprint = rgb.map(v => (v / (160 * 480)).toFixed(2)).join(',')
-  const unique = !fingerprints.has(fingerprint); fingerprints.add(fingerprint)
-  r.render(50)
-  const frozen = ctx.getImageData(0, 0, 160, 480).data
-  checks++
-  if (!unique || !equalPixels(first, frozen) || r.animating) failures.push({ name: 'distinct branch mood freezes in Still', atmosphere, rgb: fingerprint })
-  r.setOptions({ animate: true }); r.render(0)
-  const start = ctx.getImageData(0, 0, 160, 480).data
-  r.render(1.5)
-  const motion = metrics(ctx.getImageData(0, 0, 160, 480).data, start)
-  checks++
-  if (motion.delta < 0.5 || motion.changed < 0.05 || !r.animating) failures.push({ name: 'branch wisps move without filling the darkness', atmosphere, motion })
-  r.setOptions({ animate: false })
-}
-r.destroy(); releaseCanvas(canvas)
 
 // Independent white/blue art makes the exploration feather observable on both
 // flat ground and raised wall faces, without relying on a hand-authored image.

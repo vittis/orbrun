@@ -1,7 +1,6 @@
 import { MapFeature, MenuFlag, MouseMode, UiState, mapKey, type CellTiles, type GameState, type MapCell, type Monster } from '@orbrun/webtiles'
 import { verifyEnums, type Gamedata, type FlagWord } from '@orbrun/gamedata'
 import { decorateLiving } from './living.js'
-import { branchAtmosphere } from './atmosphere.js'
 import {
   cellKey,
   type Billboard,
@@ -322,7 +321,6 @@ export function buildScene(state: GameState, gd: Gamedata, opts: BuildOptions = 
     cells: new Map(),
   }
   scene.levelKey = `${state.player.place}:${state.player.depth}`
-  scene.atmosphere = branchAtmosphere(state.player.place)
   const prev = opts.previous
   const was = prev && builtFrom.get(prev)
   // the previous build stands for this state and gamedata, nothing global changed, and the reducer says what moved
