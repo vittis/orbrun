@@ -54,6 +54,6 @@ In Cloudflare Workers → dcss-client → Deployments, select a previously verif
 
 ## Release records
 
-Current source baseline: **0.3.68** / `cloudflare-online-v1.65`. [Release record](releases/0.3.68.md) contains the verified source/build/deployment identities and production evidence. Release commit `858964a`, automatic Workers Build and branch/main CI all succeeded.
+Current source baseline: **0.3.69** / `cloudflare-online-v1.66`. [Release record](releases/0.3.69.md) contains verified source/build/deployment identities and production evidence. Release commit `070f829`, automatic Workers Build and clean-install branch/main CI all succeeded.
 
-Previous verified release: [0.3.67 — Dungeon-only simplification](releases/0.3.67.md). Its final evidence is included in this release source.
+Previous verified releases: [0.3.68 — Baseline stabilization](releases/0.3.68.md) and [0.3.67 — Dungeon-only simplification](releases/0.3.67.md). Their final evidence is included in this release source.
