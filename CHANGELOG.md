@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.88 — 2026-11-13
+
+- Mutual melee attacks lunge about half as far at contact, easing smoothly through staggered counterattacks to reduce overlap.
+- Combat settings now adjust in 5% steps, including bump strength, snap, gore and outward spray.
+- Added Hit bump speed from 50% to 200%, defaulting to 100%. Lunges and flinches share the adjusted contact clock with hit flashes and sprays; game turns and input remain unchanged.
+
 ## 0.3.87 — 2026-11-13
 
 - Fine-tune Dungeon tilt in 5° steps from 35° to 65° and Dungeon zoom in 5% steps from 80% to 140% using the existing arrows, keyboard or gamepad controls.

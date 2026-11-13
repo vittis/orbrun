@@ -316,6 +316,8 @@ export type { HitEffect } from './hits.js'
 export type { DeathEffect, DeathKind, DeathParticle } from './death.js'
 
 export interface CombatBump {
+  /** Local presentation rate captured at receipt; never changes server timing. */
+  speed?: number
   from: { x: number; y: number }
   to: { x: number; y: number }
   hit: boolean

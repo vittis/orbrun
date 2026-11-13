@@ -207,13 +207,13 @@ export class DungeonEffects {
     if (!scene.playerOnLevel || !visible(scene, attack.from) || !visible(scene, attack.to) || distance < 0.5 || distance > 2.9) return false
     // Multiple reports for a cleave/brand must not stack the same bump.
     if (this.bumps.some(s => s.fromId === attack.fromId && s.toId === attack.toId && s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
-    this.bumps.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: bumpTiming().duration })
+    this.bumps.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: bumpTiming(attack.speed).duration })
     this.bumps = this.bumps.slice(-12)
     if (attack.hit) {
       const effect = { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity }
       const target = this.target(scene, effect, now)
       const spray = target ? this.sprayFor(target, { x: attack.to.x - attack.from.x, y: attack.to.y - attack.from.y }, 'melee') : undefined
-      this.spell(scene, effect, now + bumpTiming().contact, 'melee', spray)
+      this.spell(scene, effect, now + bumpTiming(attack.speed).contact, 'melee', spray)
     }
     return true
   }
@@ -230,7 +230,22 @@ export class DungeonEffects {
       const attacker = bump.fromId ? id === bump.fromId : b.x === bump.from.x && b.y === bump.from.y
       const target = bump.hit && (bump.toId ? id === bump.toId : b.x === bump.to.x && b.y === bump.to.y)
       if (!attacker && !target) continue
-      const pose = bumpPose(now - bump.born, bumpSnap)
+      const pose = bumpPose(now - bump.born, bumpSnap, bump.speed)
+      let opposition = 0
+      if (attacker && pose.lunge > 0) {
+        for (const other of this.bumps) {
+          const reverseSource = bump.toId && other.fromId ? bump.toId === other.fromId
+            : bump.to.x === other.from.x && bump.to.y === other.from.y
+          const reverseTarget = bump.fromId && other.toId ? bump.fromId === other.toId
+            : bump.from.x === other.to.x && bump.from.y === other.to.y
+          if (other === bump || !reverseSource || !reverseTarget) continue
+          opposition = Math.max(opposition, bumpPose(now - other.born, bumpSnap, other.speed).lunge)
+        }
+        // Both bodies meet halfway. Use the opposing pose rather than a flag,
+        // so staggered attacks enter and leave this shorter motion smoothly.
+        const peak = bumpPose(bumpTiming().contact, bumpSnap).lunge
+        pose.lunge *= 1 - 0.5 * Math.min(1, opposition / peak)
+      }
       const kick = attacker ? pose.lunge : pose.recoil * (0.6 + impactStrength(bump.intensity) * 0.4)
       const motion = attacker ? lunge : recoil
       motion.x += dx / length * kick; motion.y += dy / length * kick

@@ -180,6 +180,9 @@ const MESSAGE_LINES_MIN = 2
 export const MESSAGE_LINES_MAX = 20
 export const MESSAGE_LINES: readonly number[] = [MESSAGE_LINES_AUTO, ...Array.from({ length: MESSAGE_LINES_MAX - MESSAGE_LINES_MIN + 1 }, (_, i) => MESSAGE_LINES_MIN + i)]
 
+// Five percentage points per step; integer construction avoids floating drift.
+const percentSteps = (min: number, max: number) => Array.from({ length: (max - min) / 5 + 1 }, (_, i) => (min + i * 5) / 100)
+
 /** Every row, whatever is offered; `SETTING_ROWS` is what the player sees. */
 export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   // View
@@ -191,12 +194,13 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('View', 'Dungeon move easing', 'depthMovementEasing', ['ease-out', 'smooth', 'linear'], 'Snappy starts immediately and settles gently. Smooth eases in and out. Linear keeps a constant speed. All land exactly on the grid.', v => ({ 'ease-out': 'Snappy', smooth: 'Smooth', linear: 'Linear' })[v], s => s.depthAnimate === false || !s.depthMovement),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
   // Combat
-  row('Combat', 'Hit bump strength', 'meleeBumpStrength', [0, 0.5, 1, 1.5, 1.75, 2], 'Amount of attacker bump and target recoil. Off keeps both planted. Actual cells never change.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
-  row('Combat', 'Hit bump snap', 'meleeBumpSnap', [0, 0.5, 1], 'Soft eases into the bump. Crunchy kicks quickly, holds briefly, then settles. Does not pause play.', v => v === 0 ? 'Soft' : v === 1 ? 'Crunchy' : 'Firm', s => s.depthAnimate === false || s.meleeBumpStrength === 0),
-  row('Combat', 'Hit gore', 'hitGore', [0, 0.5, 1, 1.25, 1.5, 2], 'Blood and debris in each hit burst. Higher levels add droplets and heavier splashes. Off keeps body bumps and hit flashes.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
-  row('Combat', 'Death gore', 'deathGore', [0, 0.5, 1, 1.25, 1.5, 2], 'Death burst density, chunks and floor splatter. Bloodless creatures keep their own material. Off hides death debris.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
-  row('Combat', 'Hit outward spray', 'hitSprayOutward', [0, 0.25, 0.35, 0.5, 0.75, 1], 'Share of hit particles sprayed in all directions. The rest follow the hit direction. 0% is fully directional; 100% spreads all around.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.hitGore === 0),
-  row('Combat', 'Death outward spray', 'deathSprayOutward', [0, 0.25, 0.35, 0.5, 0.75, 1], 'Share of death particles sprayed in all directions. The rest follow the killing blow. Independent of hit spray and gore density.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.deathGore === 0),
+  row('Combat', 'Hit bump strength', 'meleeBumpStrength', percentSteps(0, 200), 'Amount of attacker bump and target recoil. Off keeps both planted. Actual cells never change.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Hit bump speed', 'meleeBumpSpeed', percentSteps(50, 200), 'Speed of the lunge and flinch. 50% is slower, 100% is normal, 200% is faster. Hit feedback stays aligned with contact; game turns and input are unchanged.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.meleeBumpStrength === 0),
+  row('Combat', 'Hit bump snap', 'meleeBumpSnap', percentSteps(0, 100), 'Soft eases into the bump. Crunchy kicks quickly, holds briefly, then settles. Does not pause play.', v => v === 0 ? 'Soft (0%)' : v === 1 ? 'Crunchy (100%)' : v === 0.5 ? 'Firm (50%)' : Math.round(v * 100) + '%', s => s.depthAnimate === false || s.meleeBumpStrength === 0),
+  row('Combat', 'Hit gore', 'hitGore', percentSteps(0, 200), 'Blood and debris in each hit burst. Higher levels add droplets and heavier splashes. Off keeps body bumps and hit flashes.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Death gore', 'deathGore', percentSteps(0, 200), 'Death burst density, chunks and floor splatter. Bloodless creatures keep their own material. Off hides death debris.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Hit outward spray', 'hitSprayOutward', percentSteps(0, 100), 'Share of hit particles sprayed in all directions. The rest follow the hit direction. 0% is fully directional; 100% spreads all around.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.hitGore === 0),
+  row('Combat', 'Death outward spray', 'deathSprayOutward', percentSteps(0, 100), 'Share of death particles sprayed in all directions. The rest follow the killing blow. Independent of hit spray and gore density.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.deathGore === 0),
   // Controls
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface
