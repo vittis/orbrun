@@ -125,7 +125,7 @@ describe('combat contact timing', () => {
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: false, speed }), 1)
     expect(renderer.deflect).toHaveBeenCalledTimes(2)
     for (const actorId of ['player', 'id:1']) expect(renderer.deflect).toHaveBeenCalledWith(
-      expect.objectContaining({ actorId, outcome: 'no-damage' }), 1 + bumpTiming(speed).contact)
+      expect.objectContaining({ actorId, outcome: 'block' }), 1 + bumpTiming(speed).contact)
     expect(renderer.hit).not.toHaveBeenCalled()
     expect(renderer.impact).not.toHaveBeenCalled()
     expect(renderer.spell).not.toHaveBeenCalled()
@@ -176,4 +176,27 @@ it('keeps reciprocal player, enemy and ally hits on the same contact clock', () 
   for (const id of ['player', 'id:1', 'id:2']) {
     expect(renderer.hit).toHaveBeenCalledWith(expect.objectContaining({ actorId: id }), 1 + bumpTiming().contact)
   }
+})
+
+
+it('preserves block, miss, armor and blood from separate attackers in one receipt', () => {
+  const { scene, renderer } = harness()
+  scene.billboards = [
+    { x: 1, y: 0, id: 1, name: 'goblin', kind: 'monster', tile: 1, height: 1 },
+    { x: -1, y: 0, id: 2, name: 'orc', kind: 'monster', tile: 1, height: 1 },
+  ]
+  scene.cells.set(cellKey(-1, 0), { ...scene.cells.get(cellKey(1, 0))!, x: -1 })
+  const state = initialState(); state.player.hp_max = 30
+  const feedback = new CombatFeedback(state); feedback.flush(scene)
+  const text = "You block the goblin's attack. The orc misses you. The goblin hits you! The orc hits you but does no damage."
+  const msg = { msg: 'msgs', messages: [{ text, turn: 5 }] }
+  reduce(state, msg); feedback.observe(state, msg)
+  presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), undefined, 1000, true)
+  expect(vi.mocked(renderer.deflect!).mock.calls.map(([effect]) => effect.outcome)).toEqual(['block', 'miss', 'no-damage'])
+  expect(renderer.hit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ actorId: 'player' }), 1 + bumpTiming().contact)
+  // Appended-line replacement must not replay the same three popups.
+  const append = { msg: 'msgs', rollback: 1, messages: [{ text: text + ' The orc misses you.', turn: 5 }] }
+  reduce(state, append); feedback.observe(state, append)
+  presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), undefined, 1100, true)
+  expect(renderer.deflect).toHaveBeenCalledTimes(4)
 })

@@ -439,6 +439,7 @@ export class Render25d implements MapRenderer {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
       else if (entry.burst) {
+        if (entry.burst.outcome) continue // Popups draw above scenery after ordinary world art.
         ctx.save(); ctx.beginPath()
         for (let y = Math.round(entry.y) - 1; y <= Math.round(entry.y) + 1; y++) for (let x = Math.round(entry.x) - 1; x <= Math.round(entry.x) + 1; x++) {
           const cell = this.scene.cells.get(cellKey(x, y))
@@ -465,6 +466,12 @@ export class Render25d implements MapRenderer {
     this.dungeonExposure(ctx, p, cells)
 
     if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
+
+    // Screen-facing feedback for visible recipients stays readable over nearby
+    // walls, and separate slots never mask a simultaneous blood spray.
+    for (const entry of standing) if (entry.burst?.outcome && this.inFrame(p, entry)) {
+      drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y })
+    }
 
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {

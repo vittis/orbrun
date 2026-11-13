@@ -4,14 +4,18 @@ import type { Context2d } from './tiles.js'
 import { impactStrength } from '@orbrun/scene'
 import type { ImpactArt } from './impact-draw.js'
 import type { ImpactKind } from './impact-art.js'
+import { deflectionPose } from './deflection-pose.js'
 /** Shaded tile-scale contact art, shared by missiles and direct spell effects. */
 export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst, now: number, art: ImpactArt, dpr: number, position = burst) {
   const age = (now - burst.born) / burst.duration
   if (age < 0 || age >= 1) return
   const q = project(p, position.x, position.y + (burst.actorId ? 0.3 : 0.22))
   if (burst.outcome) {
-    art.draw(ctx, burst.outcome, age, Math.floor(burst.born * 1000), 0.25,
-      q.x + (burst.outcome === 'miss' ? p.scale * 0.2 : 0), q.y - p.scale * 0.62, p.scale, dpr)
+    const pose = deflectionPose(age, burst.popupSlot)
+    // Hold the readable pixel silhouette while the popup itself tweens/fades.
+    art.draw(ctx, burst.outcome, Math.min(age, 0.4), Math.floor(burst.born * 1000), 0.25,
+      q.x + p.scale * pose.x, q.y - p.scale * ((burst.actorHeight ?? 1) + pose.lift),
+      p.scale * pose.scale, dpr, pose.squash, false, undefined, pose.opacity)
     return
   }
   const kind = burst.material === 'sand' && burst.kind === 'earth' ? 'sand' : burst.kind

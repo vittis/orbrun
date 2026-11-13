@@ -23,7 +23,7 @@ for (const kind of Object.keys(IMPACT_PALETTES) as ImpactKind[]) {
     const after = ctx.getImageData(0, 0, 224, 224).data
     let pixels = 0
     for (let i = 0; i < after.length; i += 4) if (Math.abs(after[i] - before[i]) + Math.abs(after[i + 1] - before[i + 1]) + Math.abs(after[i + 2] - before[i + 2]) > 8) pixels++
-    const outcome = kind === 'miss' || kind === 'no-damage'
+    const outcome = kind === 'miss' || kind === 'block' || kind === 'no-damage'
     const passed = phase === 'expired' ? pixels === 0 : outcome ? pixels > (phase === 'remnants' ? 25 : 500) && pixels < 1800 : pixels > 25
     checks.push({ kind, phase, pixels, passed })
     await fixtureYield(`${kind}:${phase}`)

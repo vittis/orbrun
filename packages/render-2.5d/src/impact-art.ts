@@ -2,12 +2,13 @@ import type { SpellEffect } from '@orbrun/scene'
 import { DEATH_ART, deathDither } from './death-art.js'
 import type { Context2d } from './tiles.js'
 
-export type ImpactKind = SpellEffect['kind'] | 'sand' | 'water' | 'miss' | 'no-damage'
+export type ImpactKind = SpellEffect['kind'] | 'sand' | 'water' | 'miss' | 'block' | 'no-damage'
 type Palette = readonly [string, string, string, string, string]
 /** Outline, shade, body, lit edge, hot core: the same small ramps as tile art. */
 export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
   miss: ['#18232e', '#39596d', '#81afc5', '#c2e4ed', '#f0fcff'],
-  'no-damage': ['#29212a', '#766044', '#b79960', '#efcf87', '#fff1c4'],
+  block: ['#29212a', '#766044', '#b79960', '#efcf87', '#fff1c4'],
+  'no-damage': ['#242632', '#505d70', '#8c9baa', '#c3d0d6', '#f0f2e5'],
   physical: ['#25242b', '#56565b', '#94958d', '#d2d3bd', '#fff1ce'],
   earth: ['#302b2b', '#645044', '#9d8060', '#c6aa7b', '#ead6a5'],
   sand: ['#39302a', '#796247', '#b39869', '#d8bd88', '#f0dcaa'],
@@ -29,10 +30,17 @@ export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
 const SMOKE: Palette = ['#25232b', '#39303a', '#57434a', '#7e5b51', '#a77b5f']
 const ART = {
   slip: ['00000011100', '00011333110', '00133211100', '01321000000', '13210000000', '01100000000'],
-  miss: [
-    '0111000001110', '1353100013531', '1345310135431', '0134531354310',
-    '0013454543100', '0001345431000', '0000134310000', '0001345431000',
-    '0013454543100', '0134531354310', '1345310135431', '1353100013531', '0111000001110',
+  dodge: [
+    '00000000011110000', '00000000135531000', '00000000134431000', '00000000013310000',
+    '00000000001100000', '00000000134411000', '00000001345443100', '00000013443134410',
+    '00000134431013310', '00001344310001100', '00013444310000000', '00134413431000000',
+    '01343101343100000', '13431000134310000', '13310000013431000', '01100000001111000',
+  ],
+  breastplate: [
+    '0111000001110', '1343111113431', '1454311134541', '1455431345541',
+    '0145543455410', '0144545454410', '0143455543410', '0143454543410',
+    '0143454543410', '0143455543410', '0143434343410', '0144333334410',
+    '0014444444100', '0001111111000',
   ],
   guard: [
     '00011111000', '01145554110', '14543334541', '14321112341',
@@ -107,19 +115,17 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
   const count = 6 + Math.round(strength * 6), physical = kind === 'physical' || kind === 'earth' || kind === 'sand'
   ctx.globalAlpha = 1
   if (kind === 'miss') {
-    // The crossed strike reads as a miss even in a single frame. A passing
-    // whiff stays to its side, rather than radiating out like a damage impact.
-    stamp(ctx, 'miss', 2 + expand * 2, -expand * 2, colours, 0, 1, fade)
-    stamp(ctx, 'slip', -10 + expand * 2, -5, colours, 0, 0.8, fade * 0.85)
-    stamp(ctx, 'slip', -11 + expand * 2, 3, colours, 0, 0.65, fade * 0.75)
+    // A leaning, sidestepping figure leaves a passing slash behind it.
+    stamp(ctx, 'dodge', 3 + expand * 2, -1, colours, 0, 1, fade)
+    stamp(ctx, 'slip', -9, -5, colours, 0, 0.9, fade)
+    stamp(ctx, 'slip', -11, 2, colours, 0, 0.7, fade * 0.85)
     return
   }
-  if (kind === 'no-damage') {
-    // A strong shield silhouette distinguishes harmless contact from a miss.
-    stamp(ctx, 'guard', 0, 0, colours, 0, 1, fade)
+  if (kind === 'block' || kind === 'no-damage') {
+    stamp(ctx, kind === 'block' ? 'guard' : 'breastplate', 0, 0, colours, 0, 1, fade)
     for (let i = 0; i < 3; i++) {
       const angle = -Math.PI * 0.85 + i * Math.PI * 0.35
-      stamp(ctx, 'spark', Math.cos(angle) * (8 + expand * 4), Math.sin(angle) * (8 + expand * 4),
+      stamp(ctx, 'spark', Math.cos(angle) * (9 + expand * 3), Math.sin(angle) * (9 + expand * 3),
         colours, i === 1 ? 0 : 1, 0.65, fade * 0.9)
     }
     return
@@ -171,7 +177,7 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
 
 /** Ash, chips, frost and puddles live on the floor after the contact flash. */
 export function paintImpactResidue(ctx: Context2d, kind: ImpactKind, age: number, seed = 0) {
-  if (age < 0 || age >= 1 || kind === 'miss' || kind === 'no-damage') return
+  if (age < 0 || age >= 1 || kind === 'miss' || kind === 'block' || kind === 'no-damage') return
   ctx.globalAlpha = 1
   const colours = kind === 'fire' ? SMOKE : IMPACT_PALETTES[kind]
   const fade = (1 - age) ** 1.3

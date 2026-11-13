@@ -333,7 +333,7 @@ export interface DeflectionEffect {
   y: number
   actorId?: string
   turn?: number
-  outcome: 'miss' | 'no-damage'
+  outcome: 'miss' | 'block' | 'no-damage'
 }
 
 /** Confirmed spell/ability feedback, independent of projectile artwork or damage. */

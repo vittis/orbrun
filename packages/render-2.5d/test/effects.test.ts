@@ -536,13 +536,12 @@ describe('bounded dungeon combat presentation', () => {
 
 
 describe('confirmed misses and harmless contact', () => {
-  it.each(['miss', 'no-damage'] as const)('%s follows its actor, waits for contact, deduplicates and expires without damage art', outcome => {
+  it.each(['miss', 'block', 'no-damage'] as const)('%s follows its actor, waits for contact and expires without damage art', outcome => {
     const fx = new DungeonEffects(), scene = world()
     scene.billboards = [{ ...target, id: 7 }]
     fx.observe(scene, 0, true)
     const effect = { x: 1, y: 0, actorId: 'id:7', turn: 3, outcome }
     expect(fx.deflect(scene, effect, 1.055)).toBe(true)
-    expect(fx.deflect(scene, effect, 1.06)).toBe(false)
     expect(fx.visibleBursts(1.04)).toEqual([])
     expect(fx.visibleBursts(1.08)).toMatchObject([{ outcome }])
     expect(fx.visibleBursts(1.08)[0].spray).toBeUndefined()
@@ -551,7 +550,7 @@ describe('confirmed misses and harmless contact', () => {
     fx.tick(scene, 1.1)
     expect(fx.visibleBursts(1.1)).toMatchObject([{ actorId: 'id:7', x: 2 }])
     expect(fx.visibleBursts(1.3)).toMatchObject([{ outcome }])
-    fx.tick(scene, 1.5)
+    fx.tick(scene, 1.8)
     expect(fx.bursts).toEqual([])
   })
 
@@ -572,15 +571,34 @@ describe('confirmed misses and harmless contact', () => {
     if (['hidden', 'missing', 'wall', 'remote', 'death'].includes(mode)) expect(fx.deflect(scene, effect, 1.03)).toBe(false)
   })
 
-  it.each([true, false])('gives same-turn damage ownership regardless of report order (cue first: %s)', cueFirst => {
+  it.each([true, false])('stacks every outcome alongside blood regardless of receipt order (popups first: %s)', cueFirst => {
     const fx = new DungeonEffects(), scene = world()
-    scene.billboards = [{ ...target, id: 7 }]
-    fx.observe(scene, 0, true)
-    const cue = () => fx.deflect(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4, outcome: 'no-damage' }, 1)
+    scene.billboards = [{ ...target, id: 7 }]; fx.observe(scene, 0, true)
+    const cue = () => { for (const outcome of ['block', 'miss', 'no-damage', 'miss'] as const)
+      fx.deflect(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4, outcome }, 1) }
     const hit = () => fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4 }, 1)
     if (cueFirst) { cue(); hit() } else { hit(); cue() }
-    expect(fx.visibleBursts(1.05)).toHaveLength(1)
-    expect(fx.visibleBursts(1.05)[0].outcome).toBeUndefined()
-    expect(fx.visibleBursts(1.05)[0].spray).toBeDefined()
+    const visible = fx.visibleBursts(1.1)
+    expect(visible.filter(b => b.outcome).map(b => b.outcome)).toEqual(['block', 'miss', 'no-damage', 'miss'])
+    expect(new Set(visible.filter(b => b.outcome).map(b => b.popupSlot)).size).toBe(4)
+    expect(visible.filter(b => b.spray)).toHaveLength(1)
+  })
+
+  it('bounds popup history without moving surviving slots or evicting blood', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, id: 7 }]; fx.observe(scene, 0, true)
+    fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4 }, 1)
+    const cue = (now: number) => fx.deflect(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4, outcome: 'miss' }, now)
+    cue(1)
+    cue(1.3)
+    const survivor = fx.visibleBursts(1.4).find(b => b.born === 1.3)!
+    fx.tick(scene, 1.73); cue(1.73)
+    expect(survivor.popupSlot).toBe(1)
+    expect(fx.visibleBursts(1.74).filter(b => b.outcome).map(b => b.popupSlot)).toEqual([1, 0])
+    fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: 5 }, 1.74)
+    for (let i = 0; i < 40; i++) cue(1.74)
+    expect(fx.visibleBursts(1.75).filter(b => b.outcome)).toHaveLength(6)
+    expect(new Set(fx.visibleBursts(1.75).filter(b => b.outcome).map(b => b.popupSlot)).size).toBe(6)
+    expect(fx.visibleBursts(1.75).some(b => b.spray)).toBe(true)
   })
 })

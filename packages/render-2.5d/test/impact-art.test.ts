@@ -30,8 +30,8 @@ describe('shared shaded pixel impact art', () => {
     expect(new Set(['physical', 'earth', 'sand', 'fire', 'cold', 'electric', 'poison', 'air', 'drain', 'heal', 'teleport'].map(k => shape(k as ImpactKind))).size).toBe(11)
     expect(area(frame('physical', 0.3, false, 1))).toBeGreaterThan(area(frame('physical', 0.3, false, 0.25)))
   })
-  it('keeps miss and shield silhouettes readable and distinct from damaging impacts', () => {
-    for (const kind of ['miss', 'no-damage'] as const) {
+  it('keeps dodge, shield and armor silhouettes readable and distinct from damaging impacts', () => {
+    for (const kind of ['miss', 'block', 'no-damage'] as const) {
       expect(area(frame(kind, 0.15))).toBeGreaterThan(100)
       expect(area(frame(kind, 0.4))).toBeGreaterThan(100)
       expect(area(frame(kind, 0.15))).toBeLessThan(area(frame('physical', 0.15)))
@@ -40,7 +40,7 @@ describe('shared shaded pixel impact art', () => {
   })
   it('dissolves shaded floor remnants and removes them completely', () => {
     for (const kind of kinds) {
-      if (kind === 'miss' || kind === 'no-damage') { expect(frame(kind, 0, true)).toEqual([]); continue }
+      if (kind === 'miss' || kind === 'block' || kind === 'no-damage') { expect(frame(kind, 0, true)).toEqual([]); continue }
       expect(area(frame(kind, 0, true))).toBeGreaterThan(0)
       expect(area(frame(kind, 0.9, true))).toBeLessThan(area(frame(kind, 0, true)))
       expect(frame(kind, 1, true)).toEqual([])

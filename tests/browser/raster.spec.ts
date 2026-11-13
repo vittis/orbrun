@@ -52,6 +52,17 @@ test('shaded impact art includes readable miss and zero-damage symbols with comp
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(76)
+  expect(report.checks).toBe(80)
+  expect(report.failures, JSON.stringify(report)).toEqual([])
+})
+
+test('shield, dodge and armor popups coexist with blood, tween and expire', async ({ page }) => {
+  await page.goto('/testbed/deflection-checks.html')
+  await expect.poll(async () => {
+    try { return (await result(page)).status } catch { return 'loading' }
+  }).toMatch(/complete|error/)
+  const report = await result(page)
+  expect(report.status, JSON.stringify(report)).toBe('complete')
+  expect(report.checks).toBe(20)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })

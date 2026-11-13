@@ -7,8 +7,8 @@ export class ImpactArt {
   private cache = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
 
   draw(ctx: Context2d, kind: ImpactKind, age: number, seed: number, strength: number,
-    x: number, y: number, scale: number, dpr: number, squash = 1, residue = false, direction?: number) {
-    if (age < 0 || age >= 1 || scale <= 0) return
+    x: number, y: number, scale: number, dpr: number, squash = 1, residue = false, direction?: number, opacity = 1) {
+    if (age < 0 || age >= 1 || scale <= 0 || opacity <= 0) return
     const frame = Math.min(15, Math.floor(age * 16)), variant = ((Math.floor(seed) % 8) + 8) % 8
     const power = strength < 0.45 ? 0 : strength > 0.8 ? 2 : 1
     const facing = direction === undefined ? undefined : Math.round(direction / (Math.PI / 4))
@@ -26,7 +26,7 @@ export class ImpactArt {
       this.cache.set(key, image)
     }
     const width = Math.round(scale * 2 * dpr) / dpr, height = Math.round(width * squash * dpr) / dpr
-    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1
+    ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = Math.min(1, opacity)
     ctx.drawImage(image, Math.round((x - width / 2) * dpr) / dpr, Math.round((y - height / 2) * dpr) / dpr, width, height)
     ctx.restore()
   }
