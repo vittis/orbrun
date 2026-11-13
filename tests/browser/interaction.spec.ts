@@ -87,7 +87,7 @@ for (const touch of [false, true]) {
       expect(bounds.bottom).toBeLessThanOrEqual(bounds.height)
       await quick.getByRole('tab', { name: 'View', exact: true }).click()
       await quick.getByRole('button', { name: 'Reset view', exact: true }).click()
-      expect(await quick.evaluate(el => el.contains(document.activeElement))).toBe(true)
+      await expect(quick.getByRole('tab', { name: 'View', exact: true })).toBeFocused()
       await expect.poll(async () => (await result(page)).appliedDungeonOptions).toMatchObject({ tilt: 50, zoom: 1, meleeBumpStrength: 1.05 })
       await page.getByRole('button', { name: 'Open level map', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')

@@ -44,10 +44,12 @@ describe('quick View and Combat settings', () => {
     expect(control('meleeBumpSpeed').disabled).toBe(true)
     expect(control('exploreDelay').disabled).toBe(true)
     const reset = panel.root.querySelector<HTMLButtonElement>('#quick-settings-view .quick-settings-reset')!
+    reset.focus()
     reset.click()
     expect(getSettings()).toMatchObject({ depthTilt: 50, depthAnimate: 'auto', hitGore: 1.5, uiScale: 1.15 })
     expect(control('meleeBumpSpeed').disabled).toBe(false)
     expect(reset.disabled).toBe(true)
+    expect(document.activeElement).toBe(panel.root.querySelector('[role="tab"][aria-selected="true"]'))
   })
 
   it('rejects invalid or disabled direct values and refreshes after the full settings screen changes', () => {
