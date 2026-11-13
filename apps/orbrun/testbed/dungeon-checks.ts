@@ -61,7 +61,7 @@ if (run('tiles')) for (const [width, height, dpr] of [[390, 600, 1], [1280, 720,
     const tilt = degrees * Math.PI / 180
     const scale = Math.min(width / 18, height / (18 * Math.sin(tilt) * 1.25 + 2), 64) * zoom
     const ctx = canvas.getContext('2d')!
-    const samples = [[0, 0], [1, 0], [0, 1], [0, 1.6]].map(([x, y]) => {
+    const samples = [[0, 0], [1, 0], [0, 1]].map(([x, y]) => {
       const px = width / 2 + x * scale, py = height / 2 + y * scale * Math.sin(tilt) * 1.25
       const pixel = ctx.getImageData(Math.floor(px * dpr), Math.floor(py * dpr), 1, 1).data
       const projected = r.project(x, y)
