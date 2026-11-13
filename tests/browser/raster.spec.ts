@@ -52,6 +52,6 @@ test('shaded impact art includes subtle miss and zero-damage feedback with compl
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(80)
+  expect(report.checks).toBe(76)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })

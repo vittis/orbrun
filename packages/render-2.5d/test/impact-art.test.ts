@@ -38,6 +38,7 @@ describe('shared shaded pixel impact art', () => {
   })
   it('dissolves shaded floor remnants and removes them completely', () => {
     for (const kind of kinds) {
+      if (kind === 'miss' || kind === 'no-damage') { expect(frame(kind, 0, true)).toEqual([]); continue }
       expect(area(frame(kind, 0, true))).toBeGreaterThan(0)
       expect(area(frame(kind, 0.9, true))).toBeLessThan(area(frame(kind, 0, true)))
       expect(frame(kind, 1, true)).toEqual([])

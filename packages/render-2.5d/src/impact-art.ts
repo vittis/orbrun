@@ -157,7 +157,7 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
 
 /** Ash, chips, frost and puddles live on the floor after the contact flash. */
 export function paintImpactResidue(ctx: Context2d, kind: ImpactKind, age: number, seed = 0) {
-  if (age < 0 || age >= 1) return
+  if (age < 0 || age >= 1 || kind === 'miss' || kind === 'no-damage') return
   ctx.globalAlpha = 1
   const colours = kind === 'fire' ? SMOKE : IMPACT_PALETTES[kind]
   const fade = (1 - age) ** 1.3
