@@ -10,6 +10,10 @@ const known = (cell?: SceneCell): cell is SceneCell => !!cell && cell.visibility
 
 /** Keep each connected wall row level, including passage junctions and corners. */
 export function wallHeight(scene: Scene, cell: SceneCell) {
+  // A corridor cutaway only helps in front of the player. Applying it beside
+  // or behind them turns exposed wall ends into flat slabs for no clearance
+  // benefit. Keep the whole row raised there, including its joined corners.
+  if (scene.playerOnLevel && cell.y <= scene.player.y) return WALL_HEIGHT
   const connected = (x: number) => {
     const wall = scene.cells.get(cellKey(x, cell.y))
     return known(wall) && wall.occluder

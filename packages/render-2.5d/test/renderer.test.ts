@@ -73,6 +73,7 @@ describe('picking and visibility', () => {
       cell(0, 0, { kind: 'wall', occluder: true }),
       cell(1, -1, { kind: 'wall', occluder: true, visibility }),
       cell(1, 0, { kind: 'wall', occluder: true, visibility }))
+    scene.player.y = -1
     const p = { x: 0, y: 0, width: 900, height: 700, scale: 42, tilt: Math.PI / 4 }
     const side = scene.cells.get(cellKey(1, -1))!
     const south = scene.cells.get(cellKey(1, 0))!
@@ -124,6 +125,7 @@ describe('picking and visibility', () => {
       return cell(x, y, y === 0 || y === -1 && i === 1 || y === -2 && i === 0
         ? { kind: 'wall', occluder: true } : {})
     })))
+    scene.player.y = -1
     // Match a mixed stone/glass run ending in a corner and widened passage.
     scene.cells.get(cellKey(2 * direction, 0))!.wallStyle = 'transparent'
     const { r } = renderer()
@@ -146,12 +148,40 @@ describe('picking and visibility', () => {
   it.each(['gap', 'unseen', 'unknown'] as const)('stops the cutaway at a %s', boundary => {
     const scene = sceneOf(...[-2, -1, 0].flatMap(y => [0, 1, 2].map(x =>
       cell(x, y, y === 0 || y === -2 && x === 0 ? { kind: 'wall', occluder: true } : {}))))
+    scene.player.y = -1
     const target = scene.cells.get(cellKey(2, 0))!
     expect(wallHeight(scene, target)).toBe(0.08)
     if (boundary === 'gap') scene.cells.delete(cellKey(1, 0))
     if (boundary === 'unseen') scene.cells.get(cellKey(1, 0))!.visibility = 'unseen'
     if (boundary === 'unknown') scene.cells.get(cellKey(1, 0))!.kind = 'unknown'
     expect(wallHeight(scene, target)).toBe(WALL_HEIGHT)
+  })
+
+  it.each([-1, 1])('keeps wall ends beside the player raised in direction %s, reserving cutaways for the foreground', direction => {
+    const cells = [-2, -1, 0, 1].flatMap(y => [0, 1, 2, 3].map(i =>
+      cell(i * direction, y, i > 0 && (y === -2 || y === 0 || y === 1 && i > 1)
+        ? { kind: 'wall', occluder: true } : {})))
+    const scene = sceneOf(...cells)
+    const end = scene.cells.get(cellKey(direction, 0))!
+    const { r } = renderer()
+    r.setOptions({ animate: false })
+    for (const visibility of ['visible', 'remembered'] as const) {
+      for (const c of scene.cells.values()) c.visibility = visibility
+      for (const playerY of [0, 1]) {
+        scene.player.y = playerY
+        scene.revision++; r.setScene(scene); r.render(0)
+        for (const x of [1, 2, 3]) expect(wallHeight(scene, scene.cells.get(cellKey(x * direction, 0))!)).toBe(WALL_HEIGHT)
+        const roof = r.project(end.x, end.y - 0.4, WALL_HEIGHT)
+        expect(r.pick(roof.x, roof.y)).toBe(cellKey(end.x, end.y))
+      }
+      // Entering the northern passage still exposes its floor and low roof.
+      scene.player.y = -1
+      scene.revision++; r.setScene(scene); r.render(0)
+      expect(wallHeight(scene, end)).toBe(0.08)
+      const passage = r.project(end.x, -0.65)
+      expect(r.pick(passage.x, passage.y)).toBe(cellKey(end.x, -1))
+    }
+    r.destroy()
   })
 
   it.each([30, 35, 50, 65, 75])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
