@@ -533,3 +533,53 @@ describe('bounded dungeon combat presentation', () => {
     }
   })
 })
+
+
+describe('confirmed misses and harmless contact', () => {
+  it.each(['miss', 'no-damage'] as const)('%s follows its actor, waits for contact, deduplicates and expires without damage art', outcome => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, id: 7 }]
+    fx.observe(scene, 0, true)
+    const effect = { x: 1, y: 0, actorId: 'id:7', turn: 3, outcome }
+    expect(fx.deflect(scene, effect, 1.055)).toBe(true)
+    expect(fx.deflect(scene, effect, 1.06)).toBe(false)
+    expect(fx.visibleBursts(1.04)).toEqual([])
+    expect(fx.visibleBursts(1.08)).toMatchObject([{ outcome }])
+    expect(fx.visibleBursts(1.08)[0].spray).toBeUndefined()
+    expect(fx.hits.active).toBe(false)
+    scene.billboards[0].x = 2
+    fx.tick(scene, 1.1)
+    expect(fx.visibleBursts(1.1)).toMatchObject([{ actorId: 'id:7', x: 2 }])
+    fx.tick(scene, 1.4)
+    expect(fx.bursts).toEqual([])
+  })
+
+  it.each(['hidden', 'missing', 'wall', 'remote', 'death', 'still', 'level'] as const)('suppresses or clears contact cues for %s', mode => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, id: 7 }]
+    fx.observe(scene, 0, true)
+    const effect = { x: 1, y: 0, actorId: 'id:7', outcome: 'miss' as const }
+    fx.deflect(scene, effect, 1)
+    if (mode === 'hidden') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+    if (mode === 'missing') scene.billboards = []
+    if (mode === 'wall') { fx.clear(); scene.cells.get(cellKey(1, 0))!.occluder = true }
+    if (mode === 'remote') scene.playerOnLevel = false
+    if (mode === 'death') fx.death(scene, { ...effect, kind: 'flesh', direction: { x: 1, y: 0 }, height: 1 }, 1.01)
+    if (mode === 'level') scene.levelKey = 'D:2'
+    fx.observe(scene, 1.02, mode !== 'still')
+    expect(fx.visibleBursts(1.02)).toEqual([])
+    if (['hidden', 'missing', 'wall', 'remote', 'death'].includes(mode)) expect(fx.deflect(scene, effect, 1.03)).toBe(false)
+  })
+
+  it.each([true, false])('gives same-turn damage ownership regardless of report order (cue first: %s)', cueFirst => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [{ ...target, id: 7 }]
+    fx.observe(scene, 0, true)
+    const cue = () => fx.deflect(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4, outcome: 'no-damage' }, 1)
+    const hit = () => fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: 4 }, 1)
+    if (cueFirst) { cue(); hit() } else { hit(); cue() }
+    expect(fx.visibleBursts(1.05)).toHaveLength(1)
+    expect(fx.visibleBursts(1.05)[0].outcome).toBeUndefined()
+    expect(fx.visibleBursts(1.05)[0].spray).toBeDefined()
+  })
+})

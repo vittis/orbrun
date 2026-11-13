@@ -327,6 +327,15 @@ export interface CombatBump {
   intensity?: HitIntensity
 }
 
+/** Explicit unsuccessful attack; never inferred from unchanged HP. */
+export interface DeflectionEffect {
+  x: number
+  y: number
+  actorId?: string
+  turn?: number
+  outcome: 'miss' | 'no-damage'
+}
+
 /** Confirmed spell/ability feedback, independent of projectile artwork or damage. */
 export interface SpellEffect {
   x: number
@@ -352,6 +361,7 @@ export interface MapRenderer {
   /** A confirmed visible impact, in cell coordinates and monotonic seconds. */
   impact?(x: number, y: number, strength: number, now: number): void
   hit?(effect: import('./hits.js').HitEffect, now: number): void
+  deflect?(effect: DeflectionEffect, now: number): void
   bump?(attack: CombatBump, now: number): void
   spell?(effect: SpellEffect, now: number): void
   death?(effect: import('./death.js').DeathEffect, now: number): void
