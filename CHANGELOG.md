@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.118 — 2026-11-13
+
+- Stars in unexplored space now use soft circular falloff, slight color and brightness differences, and gentle curved drift. Added a handful of faint, slowly rotating curls while keeping the background black.
+- Added View → Unexplored atmosphere. Turn it off to remove stars and curls while retaining the smooth exploration transition. Its preference persists independently of the master fog setting and supports Still/reduced motion.
+
 ## 0.3.117 — 2026-11-13
 
 - Simplified unexplored fog to a black background with small, crisp stars and minimal smooth movement. The same starfield is used throughout the dungeon.
