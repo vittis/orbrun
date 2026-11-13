@@ -74,12 +74,12 @@ export class DungeonDeaths {
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
       const random = debrisRandom(b.seed)
-      const density = (0.75 + random() * 0.55) * 0.72, energy = (0.75 + random() * 0.6) * 0.62
+      const density = (0.75 + random() * 0.55) * 0.72, energy = (0.75 + random() * 0.6) * 0.8
       const liftScale = (0.85 + random() * 0.25) * 0.85, sizeScale = (0.85 + random() * 0.3) * 0.87
       const distribution = Math.floor(random() * 3) // Broad, narrow, or split forward fans.
       const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
         + (random() - 0.5) * 0.6
-      const spread = 0.65 + random() * 1.2, width = 0.6 + random() * 0.5
+      const spread = 0.9 + random() * 1.4, width = 0.8 + random() * 0.5
       const push = (0.65 + random() * 0.7) * 0.9, originSpread = (0.03 + random() * 0.1) * 0.65
       const poolCount = 3 + Math.floor(random() * 4), poolScale = (0.8 + random() * 0.4) * 0.7
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
@@ -88,10 +88,15 @@ export class DungeonDeaths {
         alpha: 1 - t / 0.12, colour: palette[1], sprite: 'burst', ground: false })
       const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
       const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
+      const splashCount = Math.ceil(count / 3), splashPhase = random() * Math.PI * 2
       for (let i = 0; i < count; i++) {
         const large = i < chunks
-        const angle = heading + (random() - 0.5) * spread * (distribution === 0 ? 1.2 : 1)
-          + (distribution === 2 ? i % 2 ? 0.35 : -0.35 : 0)
+        // Interleave chunks and flecks around the body in jittered sectors.
+        // The rest retain the killing blow's forward fan and directional push.
+        const splash = i % 3 === 0
+        const angle = splash ? splashPhase + (Math.floor(i / 3) + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
+          : heading + (random() - 0.5) * spread * (distribution === 0 ? 1.2 : 1)
+            + (distribution === 2 ? i % 2 ? 0.35 : -0.35 : 0)
         const speed = (large ? 1.2 + random() * 1.6 : 1.6 + random() * 2.5) * energy * (leafy || airy ? 0.65 : 1)
         const weight = b.kind === 'stone' ? 1.35 : leafy ? 0.7 : 1
         const lift = (0.65 + random() * 1.65) * liftScale / weight, z0 = b.height * (0.18 + random() * 0.38)
@@ -100,11 +105,12 @@ export class DungeonDeaths {
         const originAngle = random() * Math.PI * 2, originRadius = Math.sqrt(random()) * originSpread
         // A brisk launch with enough travel and residue to read the hit direction.
         const elapsed = Math.floor(t * 1.15 * 60) / 60
-        const drag = large ? 3.8 : 4.6, drift = (1 - Math.exp(-elapsed * drag)) / drag
+        const drag = large ? 3.2 : 3.8, drift = (1 - Math.exp(-elapsed * drag)) / drag
         const swirl = airy ? elapsed * 1.6 : 0
-        const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * width
-        const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * (gory ? 1.3 : 0.8) * push
-        const vy = Math.sin(heading) * along + Math.cos(heading) * across + b.direction.y * (gory ? 1.3 : 0.8) * push
+        const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * (splash ? 1 : width)
+        const directionalPush = splash ? 0 : (gory ? 1.3 : 0.8) * push
+        const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * directionalPush
+        const vy = Math.sin(heading) * along + Math.cos(heading) * across + b.direction.y * directionalPush
         const x = b.x + Math.round((Math.cos(originAngle) * originRadius + vx * drift) * 64) / 64
         const y = b.y + Math.round((Math.sin(originAngle) * originRadius + vy * drift) * 64) / 64
         const gravity = 4 * weight
