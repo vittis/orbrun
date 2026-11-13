@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.87 — 2026-11-13
+
+- Fine-tune Dungeon tilt in 5° steps from 35° to 65° and Dungeon zoom in 5% steps from 80% to 140% using the existing arrows, keyboard or gamepad controls.
+- Existing camera defaults and saved custom preferences are preserved.
+
 ## 0.3.86 — 2026-11-13
 
 - Enemies and allies now lunge on confirmed visible melee attacks, including misses and fully absorbed blows.

@@ -35,6 +35,32 @@ describe('what is written down', () => {
 describe('Dungeon presentation', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
+  it.each([
+    ['Dungeon tilt', 'depthTilt', 50, 55, 45, 42.5, 45, 40],
+    ['Dungeon zoom', 'depthZoom', 1, 1.05, 0.95, 1.12, 1.15, 1.1],
+  ] as const)('adjusts %s in fine steps and preserves custom saved values until adjusted', (label, key, initial, next, previous, custom, above, below) => {
+    const setting = row(label)
+    const onchange = vi.fn()
+    const panel = settingsPanel('View', { onchange })
+    const control = panel.rows.find(r => r.dataset.focus === `setting:${label}`)!
+    control.querySelector<HTMLElement>('.arrow:last-child')!.click()
+    expect(getSettings()[key]).toBe(next)
+    expect(control.querySelector('.val')!.textContent).toBe(settingValue(setting))
+    expect(onchange).toHaveBeenCalledTimes(1)
+    control.querySelector<HTMLElement>('.arrow:first-child')!.click()
+    expect(getSettings()[key]).toBe(initial)
+    control.dispatchEvent(new CustomEvent('adjust', { detail: -1 }))
+    expect(getSettings()[key]).toBe(previous)
+    for (const [direction, expected] of [[1, above], [-1, below]]) {
+      saveSettings({ ...getSettings(), [key]: custom })
+      expect(getSettings()[key]).toBe(custom)
+      adjustSetting(setting, direction)
+      expect(getSettings()[key]).toBe(expected)
+    }
+    resetGroup('View')
+    expect(getSettings()[key]).toBe(initial)
+  })
+
   it('persists movement options, gates them in still mode, and resets the View defaults', () => {
     saveSettings({ ...defaultSettings })
     expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')

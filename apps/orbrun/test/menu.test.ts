@@ -2299,7 +2299,7 @@ describe('the front end: settings and marks', () => {
     expect(value('Dungeon tilt')).toBe('50°')
     while (focused(screen) !== 'setting:Dungeon tilt') press(screen, 'j')
     press(screen, 'l')
-    expect(value('Dungeon tilt')).toBe('65°')
+    expect(value('Dungeon tilt')).toBe('55°')
     press(screen, 'h')
     expect(value('Dungeon tilt')).toBe('50°')
     // back at the default, so it is not written down at all: a default we move later moves for this player too
