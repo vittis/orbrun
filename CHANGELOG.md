@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.113 — 2026-11-13
+
+- Added brief opening and closing fades for inventory, spell lists, descriptions, prompts and client menus. Content and navigation updates retain their presentation clock, while closing windows release focus and input immediately.
+- Added subtle list hover feedback and smoother control, settings-panel and backdrop transitions. Rows and pixel-art tiles keep their positions and scale; Still and reduced motion skip UI transitions.
+- Removed the browser focus outline around the game canvas when control returns from a settings panel, while preserving keyboard play and focus indicators on controls.
+- Preserved the concurrent unexplored-fog and level-up snapshot-clock changes from main.
+
 ## 0.3.112 — 2026-11-13
 
 - Added soft, cool mist and sparse drifting motes behind unexplored dungeon terrain. Slow world-anchored motion adds atmosphere while keeping explored terrain and gameplay markers clear.
