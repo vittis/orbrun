@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.71 — 2026-11-12
+
+- Make melee strikes more pronounced with opaque, outlined weapon artwork, thicker trails and a solid braided whip.
+- Use one common guard and continuous attack path, with weapon orientation fixed when each swing begins.
+- Add timeline scrubbing and motion guides to the melee preview, including a narrow layout.
+
 ## 0.3.70 — 2026-11-12
 
 - Give nine melee weapon families distinct pixel-art gestures, with upright silhouettes, short follow-through and withdrawing thrusts.

@@ -4,7 +4,7 @@ Orbrun is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.org/) We
 
 [Play or watch](https://dcss-client.vittis.workers.dev/). The hosted build supports online play on the bundled public servers. Offline play and custom servers are development capabilities and are unavailable in this deployment.
 
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.67) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.68) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
 
 ## Getting started
 
