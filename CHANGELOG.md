@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.78 — 2026-11-12
+
+- Remove all weapon VFX, trails, swing artwork/variations, their preview and obsolete Combat controls.
+- Keep one consistent body bump for all melee weapons, with Hit bump strength and Soft / Firm / Crunchy snap settings. Strength Off plants both actors; old weapon preferences no longer affect bumps.
+- Preserve ordinary blood/material hit splashes, confirmed damage, and the concurrent native spell and terrain-lighting fixes.
+
 ## 0.3.77 — 2026-11-12
 
 - Keep native spell artwork and brief entry/exit fades; remove stacked spell light pools, added cloud deformation/particles and cloud floor residue. Spell overlays no longer change nearby terrain lighting masks or slide between cloud cells.
