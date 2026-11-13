@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.109 — 2026-11-13
+
+- Reworked the level-up popup into crisp bitmap lettering over ragged blood-red pixels, hanging drips and bone chips. It follows the rendered character just above their head, including camera motion and resizing.
+- The native level-gain announcement now triggers the popup immediately, before the stat-improvement choice. A delayed XL update never repeats it; history, duplicate announcements and unrelated message channels stay excluded. Still/reduced motion retain a static pixel stamp.
+
 ## 0.3.108 — 2026-11-13
 
 - Searing Ray now mixes flame into hit and death splatter. Audited stable/trunk spell, ability and projectile classifications, including Fulsome Fusillade's individual substances, Magic Dart, crystal/stone/metal projectiles, steam, Sirocco and destruction abilities.

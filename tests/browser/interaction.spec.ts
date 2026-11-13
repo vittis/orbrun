@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
-type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
+type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
 test('level gain celebrates without intercepting input, respects motion, and expires', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -29,6 +29,8 @@ test('level gain celebrates without intercepting input, respects motion, and exp
   const frames = (await result(page)).totalFrames
   await page.waitForTimeout(350)
   expect((await result(page)).totalFrames).toBe(frames)
+  await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.destroy())
+  expect((await result(page)).destroyed).toBe(true)
 })
 
 test('level announcement appears before answering the stat choice and follows the rendered character', async ({ page }) => {

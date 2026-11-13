@@ -118,8 +118,8 @@ const snapshot = () => {
   const player = scene.billboards.find(b => b.kind === 'player')!
   const feet = renderer.projectBillboard(player)
   const scale = renderer.project(scene.player.x + 1, scene.player.y).x - renderer.project(scene.player.x, scene.player.y).x
-  const rect = document.querySelector('canvas.view')!.getBoundingClientRect()
-  const playerProjection = { x: rect.left + feet.x, y: rect.top + feet.y, scale }
+  const rect = document.querySelector('canvas.view')?.getBoundingClientRect()
+  const playerProjection = { x: (rect?.left ?? 0) + feet.x, y: (rect?.top ?? 0) + feet.y, scale }
   return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, xl: state.player.xl, playerProjection, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
 }
 const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
