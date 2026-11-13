@@ -2,11 +2,16 @@
 
 Notable changes to Orbrun, newest first.
 
-## 0.3.75 — 2026-11-12
+## 0.3.76 — 2026-11-12
 
 - Show melee swings only for player attacks, with one consistent gesture per weapon family and a shorter version for misses.
 - Give axes a broad directional sweep and thrusts a straight approach; remove randomized variations from the game and preview.
 - Make target hit bumps stronger and faster, with adjustable strength and Soft / Firm / Crunchy snap under Combat settings.
+
+## 0.3.75 — 2026-11-12
+
+- Make confirmed melee and ranged impacts splash naturally around the contact point, with a smaller all-direction spray and a stronger forward majority.
+- Vary splash angles and speed while preserving material artwork, hit timing, visibility clipping and Still/reduced-motion behavior.
 
 ## 0.3.74 — 2026-11-12
 

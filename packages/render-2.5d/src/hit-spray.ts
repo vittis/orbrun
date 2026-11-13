@@ -14,7 +14,7 @@ export interface HitSpray {
   origin?: { x: number; y: number }
 }
 
-/** Readable directional splatters using the same material art as deaths. */
+/** Directional splatters with a loose impact splash, using the death material art. */
 export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }): DeathParticle[] {
   const spray = burst.spray, t = now - burst.born
   if (!spray || t < 0 || t >= burst.duration) return []
@@ -24,19 +24,24 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
   const energy = 0.95 + random() * 0.65, spread = 0.55 + random() * 0.85
   const heading = Math.atan2(spray.direction.y, spray.direction.x) + (random() - 0.5) * 0.2
   const z0 = spray.height * (0.35 + random() * 0.25), scatter = 0.015 + random() * 0.035
+  const splashCount = Math.max(3, Math.round(count * 0.35)), splashPhase = random() * Math.PI * 2
   const airy = spray.kind === 'spirit' || spray.kind === 'fire'
   const liquid = ['flesh', 'insect', 'slime', 'water'].includes(spray.kind)
   const particles: DeathParticle[] = []
   for (let i = 0; i < count; i++) {
-    const a = heading + (random() - 0.5) * spread
-    const speed = (1.5 + random() * 1.3) * energy * (0.7 + strength * 0.4)
+    // Jittered sectors keep a small splash around the whole contact point,
+    // even at low particle counts. Most debris still follows the hit direction.
+    const splash = i < splashCount
+    const a = heading + (splash ? splashPhase + (i + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
+      : (random() - 0.5) * spread)
+    const speed = (splash ? 0.9 + random() * 1.1 : 1.5 + random() * 1.3) * energy * (0.7 + strength * 0.4)
     const lift = 0.15 + random() * 0.5, size = (0.032 + random() * 0.03) * Math.sqrt(spray.height)
     const lateral = (random() - 0.5) * scatter, vertical = (random() - 0.5) * scatter
     const spin = (random() - 0.5) * 10, lifetime = burst.duration * (0.75 + random() * 0.25)
     const elapsed = Math.floor(t * 60) / 60, drift = (1 - Math.exp(-elapsed * 2.2)) / 2.2
     const vx = Math.cos(a) * speed, vy = Math.sin(a) * speed
-    const x = origin.x + Math.round((spray.direction.x * 0.14 + lateral + vx * drift) * 64) / 64
-    const y = origin.y + Math.round((spray.direction.y * 0.14 + vertical + vy * drift) * 64) / 64
+    const x = origin.x + Math.round((lateral + vx * drift) * 64) / 64
+    const y = origin.y + Math.round((vertical + vy * drift) * 64) / 64
     const z = airy ? z0 + elapsed * 0.2 : z0 + lift * elapsed - 5 * elapsed * elapsed
     const ground = z <= 0.018 && liquid
     const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
