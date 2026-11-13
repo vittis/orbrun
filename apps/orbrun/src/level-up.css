@@ -1,4 +1,4 @@
-/* A low-resolution blood-and-bone stamp above the character's rendered head. */
+/* Smooth lettering and a small ember burst above the rendered character. */
 .level-up {
   position: absolute;
   z-index: 2;
@@ -10,8 +10,6 @@
 .level-up-art {
   position: absolute;
   display: block;
-  /* Whole source pixels at an integer enlargement; no glow or filtered scaling. */
-  image-rendering: pixelated;
   translate: -50% -100%;
 }
 .level-up-announcement {

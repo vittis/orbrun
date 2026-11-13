@@ -57,8 +57,8 @@ describe('--more-- on the message pane', () => {
 /**
  * On the HUD the pane stays as WebTiles prints it: the bare more row, no
  * button on it and nothing framed. A ring around the pane read as a focused
- * panel, the thing A would open. What says "stopped" is the scrim over the
- * world under the pane.
+ * panel, the thing A would open. The more row indicates the pause while
+ * the world keeps its normal brightness.
  */
 describe('the more row on the HUD', () => {
   const grids: GridHost[] = []
@@ -75,30 +75,28 @@ describe('the more row on the HUD', () => {
     grids.push(grid)
     const cells = gameSplit(grid.grid, 7)
     hud.layout(grid, cells, cells.clear, { stats: false, sidebar: false, messages: false })
-    const inner = hud as unknown as { renderMessages(st: GameState, spectating: boolean): void; messages: HTMLElement; scrim: HTMLElement }
+    const inner = hud as unknown as { renderMessages(st: GameState, spectating: boolean): void; messages: HTMLElement }
     inner.renderMessages(st, spectating)
     return inner
   }
 
-  it('prints the bare more row and puts the pause vignette under the pane', () => {
-    for (const { messages, scrim } of [render(), render(true)]) {
+  it('prints the bare more row without a pause vignette', () => {
+    for (const { messages } of [render(), render(true)]) {
       expect(messages.classList.contains('more')).toBe(true)
       const row = messages.querySelector('.line.more')!
       expect(row.textContent).toBe('--more--')
       expect(row.querySelector('svg, kbd, .chip')).toBeNull()
-      expect(scrim.classList.contains('on')).toBe(true)
-      expect(scrim.nextElementSibling).toBe(messages)
+      expect(document.querySelector('.more-scrim')).toBeNull()
     }
     expect(render().messages.classList.contains('dismissable')).toBe(true)
     expect(render(true).messages.classList.contains('dismissable')).toBe(false)
   })
 
-  it('lifts the scrim and empties the row once the more is gone', () => {
+  it('empties the row once the more is gone', () => {
     const st = initialState()
     for (const f of fixture.frames.slice(0, 4)) for (const m of f.msgs) reduce(st, m as never)
-    const { messages, scrim } = render(false, st)
+    const { messages } = render(false, st)
     expect(messages.classList.contains('more')).toBe(false)
     expect(messages.querySelector('.line.more')?.childElementCount).toBe(0)
-    expect(scrim.classList.contains('on')).toBe(false)
   })
 })

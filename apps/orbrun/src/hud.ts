@@ -405,8 +405,6 @@ export class Hud {
   private holdShown = false
   /** the message pane (game.html `#message_pane`) as rows on the grid (grid/messages.ts), the `--more--` row last */
   private messages = h('div', { class: 'messages' })
-  /** the scrim over the world while a `--more--` is pending (renderMessages): under the message pane and the bar, over everything else */
-  private scrim = h('div', { class: 'more-scrim' })
   private actionbar = h('div', { class: 'actionbar' })
   /** the pad's standing menu buttons along the view's last row (renderMenus) */
   private menubar = h('div', { class: 'menubar', hidden: true })
@@ -508,7 +506,7 @@ export class Hud {
   constructor(host: HTMLElement, hooks: HudHooks) {
     this.hooks = hooks
     this.root = h('div', { class: 'hud' })
-    this.root.append(this.stats, this.sidebar, this.statuses, this.actionPanel, this.scrim, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
+    this.root.append(this.stats, this.sidebar, this.statuses, this.actionPanel, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
     this.sidebar.append(this.minimapCanvas, this.monsters, this.sidebarFoot)
     this.statuses.append(this.statusCanvas)
     this.statusR2d.mount(this.statusCanvas)
@@ -573,7 +571,6 @@ export class Hud {
       this.portraitPre = undefined
     }
     this.messages.hidden = hidden.messages
-    this.scrim.hidden = hidden.messages
     const at = host.px(free)
     this.freePx = { left: at.left, top: at.top, width: at.width, height: at.height }
     for (const bar of [this.actionbar, this.menubar]) bar.style.maxHeight = cells.stackedDesktop ? at.height + 'px' : ''
@@ -1457,10 +1454,8 @@ export class Hud {
    * is a bare line under the messages in the page's white, and so is the
    * more row here (styles.css `.messages`). A ring around the pane read as a
    * focused panel, the thing A would open, and a tag on the row read as a
-   * control; both said the wrong thing. What says "stopped" is the world
-   * under the pane: it goes behind a lighter cousin of the pause menu's
-   * vignette (`.more-scrim`), eased in and out, until the player answers,
-   * and the pane stays as it was.
+   * control; both said the wrong thing. The more row and the action bar
+   * indicate the pause; the dungeon keeps its normal brightness.
    * Nothing moves to the middle of the view, so the player's eye stays on
    * the log it was already reading.
    *
@@ -1479,7 +1474,6 @@ export class Hud {
     this.messages.classList.toggle('attention', state.messages.more || state.messages.textCursor)
     this.messages.classList.toggle('more', state.messages.more)
     this.messages.classList.toggle('dismissable', state.messages.more && !spectating)
-    this.scrim.classList.toggle('on', state.messages.more)
   }
 
   /** The bar's prompt chips by button, so a hold can light one without a rebuild (showHold). */

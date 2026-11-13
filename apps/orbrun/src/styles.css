@@ -2588,7 +2588,7 @@ canvas.minimap.hidden,
    stands the pane on the black page, here it lies bare over the view with its text
    shadowed instead. A pending --more-- changes nothing on the pane, as in WebTiles: no
    ring, no tag, no colour of its own (a ring read as a focused panel, a tag as a
-   control); the world under the pane says "stopped" instead, a lighter pause vignette (.more-scrim). */
+   control). The more row and action bar indicate the pause without dimming the world. */
 .messages {
   overflow: hidden;
   background: transparent;
@@ -2606,24 +2606,6 @@ canvas.minimap.hidden,
 .hud.touch > .messages {
   pointer-events: none;
 }
-/* the world stops while the more is pending: everything under the message pane
-   and the bar (the map, the stats, the sidebar) goes behind a lighter cousin of the
-   pause menu's vignette (the rule beside .popup.sysmenu, below): the same shape and
-   tint, still in colour, but no blur and half the depth, and it eases in and out
-   rather than snapping, because a --more-- comes every few turns of a fight where
-   a pause comes once. The pane stays as it was. Takes no pointer, so the panes
-   under it still do. */
-.hud > .more-scrim {
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(3, 2, 6, 0.25), rgba(3, 2, 6, 0.55));
-  opacity: 0;
-  transition: opacity 400ms ease-out;
-}
-.hud > .more-scrim.on {
-  opacity: 1;
-}
-
 .messages input.text {
   background: #111;
   border: 1px solid #666;
@@ -3585,7 +3567,7 @@ canvas.minimap.hidden,
 
 /* prompt card: yes/no and multi-choice prompts in the middle of the view, the lead-up
    lines above the question, one chip per answer wearing the button that fires it
-   (a --more-- has no card: the pane prints its bare more row and the world goes behind the pause vignette, .more-scrim) */
+   (a --more-- has no card: the pane prints its bare more row over the unchanged world) */
 .prompt-card {
   position: absolute;
   inset: 0;
@@ -4448,10 +4430,10 @@ canvas.minimap.hidden,
   inset: 0 calc(-1 * var(--touch-right, 0px)) calc(-1 * var(--touch-bottom, 0px)) 0;
   z-index: -1;
 }
-/* the pause menu takes the screen: the world dims and blurs behind it (a pending --more-- has a lighter cousin, .more-scrim) */
+/* Menus dim and blur the world uniformly, without darkening the corners. */
 .overlay-stack:has(> .popup.sysmenu)::before,
 .overlay-stack.dim::before {
-  background: radial-gradient(ellipse at center, rgba(3, 2, 6, 0.5), rgba(3, 2, 6, 0.86));
+  background: rgba(3, 2, 6, 0.5);
   backdrop-filter: blur(3px) saturate(0.7);
   -webkit-backdrop-filter: blur(3px) saturate(0.7);
   animation: dim-in 220ms ease both;

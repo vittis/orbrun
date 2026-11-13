@@ -17,7 +17,7 @@ test('level gain celebrates without intercepting input, respects motion, and exp
   await expect(popup).toHaveAttribute('data-level', '4')
   expect(await popup.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none')
   await expect(popup).toHaveClass(/still/)
-  expect(await popup.locator('canvas').evaluate(el => getComputedStyle(el).imageRendering)).toBe('pixelated')
+  expect(await popup.locator('canvas').evaluate(el => getComputedStyle(el).imageRendering)).toBe('auto')
   expect(await page.locator(':focus').count()).toBe(0)
   // On can animate the world; native reduced motion still keeps this popup static.
   await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
@@ -68,25 +68,82 @@ test('level announcement appears before answering the stat choice and follows th
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.runFor(200)
   await checkAnchor()
-  // The pixel art contains actual dark and bright blood, with opaque source pixels.
+  // Smooth lettering retains readable warm highlights and antialiased edges.
   const pixels = await popup.locator('canvas').evaluate(canvas => {
-    const data = (canvas as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 120, 60).data
-    let blood = 0, bone = 0, partial = 0
+    const art = canvas as HTMLCanvasElement
+    const data = art.getContext('2d')!.getImageData(0, 0, art.width, art.height).data
+    let warm = 0, partial = 0
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] !== 0 && data[i + 3] !== 255) partial++
-      if (data[i + 3] && data[i] > 70 && data[i] > data[i + 1] * 2) blood++
-      if (data[i + 3] && data[i] > 190 && data[i + 1] > 150 && data[i + 2] < data[i]) bone++
+      if (data[i + 3] > 128 && data[i] > 190 && data[i + 1] > 150 && data[i + 2] < data[i]) warm++
     }
-    return { blood, bone, partial }
+    return { warm, partial }
   })
-  expect(pixels.blood).toBeGreaterThan(100)
-  expect(pixels.bone).toBeGreaterThan(100)
-  expect(pixels.partial).toBe(0)
+  expect(pixels.warm).toBeGreaterThan(50)
+  expect(pixels.partial).toBeGreaterThan(100)
   await page.clock.runFor(3000)
   await expect(popup).toBeHidden()
   await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'player', xl: 6 }))
   await page.clock.runFor(100)
   await expect(popup).toBeHidden()
+})
+
+test('level-up embers rise, then disappear with Still and native reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  await page.clock.install()
+  await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'player', xl: 4 }))
+  const embers = () => page.locator('.level-up-art').evaluate(canvas => {
+    const art = canvas as HTMLCanvasElement, dpr = art.width / art.clientWidth
+    const data = art.getContext('2d')!.getImageData(0, 0, art.width, art.height).data
+    let count = 0, ySum = 0
+    for (let y = 0; y < art.height; y++) for (let x = 0; x < art.width; x++) {
+      if (x / dpr >= 80 && x / dpr <= 160 && y / dpr >= 55) continue // exclude lettering
+      const i = (y * art.width + x) * 4
+      if (data[i + 3] > 40 && data[i] > 170 && data[i + 1] > 80) { count++; ySum += y / dpr }
+    }
+    return { count, y: count ? ySum / count : 0 }
+  })
+  await page.clock.runFor(250)
+  const first = await embers()
+  expect(first.count).toBeGreaterThan(5)
+  await page.clock.runFor(300)
+  const later = await embers()
+  expect(later.count).toBeGreaterThan(5)
+  expect(later.y).toBeLessThan(first.y - 3)
+  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
+  await page.clock.runFor(100)
+  expect((await embers()).count).toBe(0)
+  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.clock.runFor(100)
+  expect((await embers()).count).toBe(0)
+})
+
+test('message pauses preserve dungeon brightness and menus have no corner vignette', async ({ page }) => {
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  const corner = { x: 30, y: 130, width: 40, height: 40 }
+  const before = await page.screenshot({ clip: corner })
+  await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
+    fixture.receive({ msg: 'msgs', more: true, messages: [{ text: 'You have reached level 3!', channel: 11 }] })
+    fixture.receive({ msg: 'input_mode', mode: 5 })
+  })
+  await expect(page.locator('.messages .line.more')).toHaveText('--more--')
+  await expect(page.locator('.more-scrim')).toHaveCount(0)
+  expect(await page.screenshot({ clip: corner })).toEqual(before)
+  await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
+    fixture.receive({ msg: 'msgs', more: false })
+    fixture.receive({ msg: 'input_mode', mode: 1 })
+  })
+  await expect(page.locator('.messages')).not.toHaveClass(/\bmore\b/)
+  await page.keyboard.press('F5')
+  await expect(page.locator('.popup.sysmenu')).toBeVisible()
+  expect(await page.locator('.overlay-stack').evaluate(el => getComputedStyle(el, '::before').backgroundImage)).toBe('none')
+  await expect.poll(() => page.locator('.overlay-stack').evaluate(el => getComputedStyle(el, '::before').backgroundColor)).toBe('rgba(3, 2, 6, 0.5)')
 })
 
 for (const touch of [false, true]) {
