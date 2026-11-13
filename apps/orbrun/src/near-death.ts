@@ -4,8 +4,9 @@ import { h } from './dom'
 import './near-death.css'
 
 const LOW_HP = 0.3
-const FADE_MS = 2800
+const FADE_MS = 5600
 const ATTACK_MS = 160
+const HOLD_MS = 600
 const snapshot = (state: GameState) => ({
   hp: state.player.hp, max: state.player.hp_max,
   place: `${state.player.place}:${state.player.depth}`,
@@ -71,7 +72,9 @@ export class NearDeath {
       const t = age / ATTACK_MS
       return this.startOpacity + (1 - this.startOpacity) * t * t * (3 - 2 * t)
     }
-    return Math.pow(1 - (age - ATTACK_MS) / (FADE_MS - ATTACK_MS), 2)
+    const fadeStart = ATTACK_MS + HOLD_MS
+    if (age < fadeStart) return 1
+    return Math.pow(1 - (age - fadeStart) / (FADE_MS - fadeStart), 2)
   }
 
   render(now: number, visible: boolean, reducedMotion: boolean) {
