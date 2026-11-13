@@ -387,7 +387,7 @@ describe('picking and visibility', () => {
     }
   })
 
-  it('does not keep rendering for offscreen melee or removed native spell artwork', () => {
+  it('does not keep rendering for offscreen melee or expired spell residue', () => {
     const { r } = renderer()
     const scene = sceneOf(cell(0, 0), cell(100, 100), cell(101, 100))
     r.setScene(scene, 0)
@@ -399,7 +399,7 @@ describe('picking and visibility', () => {
     r.setScene({ ...scene, revision: 1, billboards: [bolt] }, 2)
     r.setScene({ ...scene, revision: 2, billboards: [] }, 2.1)
     r.render(3)
-    expect(r.animating).toBe(false)
+    expect(r.animating).toBe(true)
     r.render(5)
     expect(r.animating).toBe(false)
   })
@@ -434,6 +434,7 @@ describe('picking and visibility', () => {
       r.setScene({ ...scene, revision: 1, billboards: [moved] }, 1)
       r.render(1.03)
       expect(r.projectBillboard(moved)).toEqual(r.project(1, 0))
+      r.setOptions({ animate: false })
       expect(r.animating).toBe(false)
       r.destroy()
     }
@@ -584,7 +585,7 @@ describe('picking and visibility', () => {
     r.render(0)
     // One terrain glyph and one fallback cloud glyph, not two copies of the cloud.
     expect(ctx.fillText).toHaveBeenCalledTimes(2)
-    expect(r.animating).toBe(false)
+    expect(r.animating).toBe(true)
   })
 })
 

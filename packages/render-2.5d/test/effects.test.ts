@@ -390,16 +390,16 @@ describe('bounded dungeon combat presentation', () => {
     expect({ ...fx.bumps[0], born: 0 }).toEqual(first)
   })
 
-  it('does not add synthetic floor residue after native cloud artwork disappears', () => {
+  it('retains one fading floor residue after an emitting cloud disappears', () => {
     const fx = new DungeonEffects(), scene = world()
     scene.billboards = [{ ...spell(), kind: 'cloud' }]
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, revision: 1 }, 0.1, true)
     expect(fx.traces).toHaveLength(0)
     fx.observe({ ...scene, billboards: [], revision: 2 }, 0.2, true)
-    expect(fx.traces).toHaveLength(0)
+    expect(fx.traces).toHaveLength(1)
     fx.observe({ ...scene, billboards: [], revision: 3 }, 1, true)
-    expect(fx.traces).toHaveLength(0)
+    expect(fx.traces[0].born).toBe(0.2)
     fx.tick(scene, 3.1)
     expect(fx.traces).toHaveLength(0)
   })

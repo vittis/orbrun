@@ -13,16 +13,23 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
-  it.each(['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const)('%s death debris travels predominantly outward along the hit', kind => {
+  it.each(['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const)('%s death debris spreads around the origin while favoring the hit direction', kind => {
     const scene = room()
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]]) {
+    for (const id of [1, 7, 19]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]]) {
       const length = Math.hypot(dx, dy), direction = { x: dx / length, y: dy / length }
       const fx = new DeathEffects()
-      fx.observe(scene, true); fx.spawn(scene, { ...death(kind, 7), direction }, 1)
-      const particles = fx.sample(scene, 1.25)
+      fx.observe(scene, true); fx.spawn(scene, { ...death(kind, id), direction }, 1)
+      const launch = fx.sample(scene, 1).filter(p => p.sprite !== 'burst')
+      expect(launch.every(p => Math.hypot(p.x, p.y) < 0.1)).toBe(true)
+      const particles = fx.sample(scene, 1.25).filter(p => !p.ground)
       const travel = particles.map(p => p.x * direction.x + p.y * direction.y)
+      const lateral = particles.map(p => p.y * direction.x - p.x * direction.y)
       expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.12)
-      expect(travel.filter(d => d > 0).length / travel.length).toBeGreaterThan(0.75)
+      expect(travel.filter(d => d > 0).length / travel.length).toBeGreaterThan(0.6)
+      expect(Math.min(...travel)).toBeLessThan(-0.12)
+      expect(Math.max(...travel)).toBeGreaterThan(0.3)
+      expect(Math.min(...lateral)).toBeLessThan(-0.12)
+      expect(Math.max(...lateral)).toBeGreaterThan(0.12)
     }
   })
 
@@ -36,7 +43,7 @@ describe('enemy death presentation', () => {
         for (const age of [0.15, 0.3, 0.6, 0.9, 1.5, 2.4]) {
           const particles = fx.sample(scene, 1 + age)
           if (age === 0.3 || age === 0.9) expect(particles.length).toBeGreaterThan(0)
-          expect(particles.every(p => Math.hypot(p.x, p.y) <= 1.3)).toBe(true)
+          expect(particles.every(p => Math.hypot(p.x, p.y) <= 1.8)).toBe(true)
         }
         expect(fx.sample(scene, 3.81)).toEqual([])
         expect(fx.active).toBe(false)

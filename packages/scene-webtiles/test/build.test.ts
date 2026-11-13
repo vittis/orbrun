@@ -177,7 +177,7 @@ describe('buildScene on a recorded level', () => {
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!
     for (const name of ['STONE_SMOOTH_WALL_BEOGH', 'DNGN_DIMENSION_EDGE']) {
       const art = gd.dngn.id(name)!
-      st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, g: '#', t: { ...floor.t, bg: art } })
+      st.map.cells.set(cellKey(floor.x, floor.y), { ...floor, mf: gd.enums.MF_WALL as number, g: '#', t: { ...floor.t, bg: art } })
       const wall = buildScene(st, gd).cells.get(cellKey(floor.x, floor.y))!
       expect(wall.kind, name).toBe('wall')
       expect(wall.occluder, name).toBe(true)
