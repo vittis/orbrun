@@ -4,6 +4,7 @@ import { drawMelee } from '../../../packages/render-2.5d/src/melee-draw'
 import { groundDepth, project, type Projection } from '../../../packages/render-2.5d/src/projection'
 import { meleeFrame, meleePath, type MeleeVariant } from '../../../packages/render-2.5d/src/melee-path'
 import { loadRoomTiles } from '../src/room/tiles'
+import { Render25d } from '@orbrun/render-2.5d'
 
 const tiles = await loadRoomTiles()
 const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
@@ -25,7 +26,13 @@ const previews = ([0, 1, 2] as MeleeVariant[]).flatMap(variant => styles.map(sty
   figure.append(caption, canvas); document.getElementById('gestures')!.append(figure)
   return { style, variant, caption, canvas, ctx: canvas.getContext('2d')!, fx: new DungeonEffects(), born: -Infinity, count: 0 }
 }))
-function reset() { for (const p of previews) { p.fx.clear(); p.born = -Infinity; p.count = 0 } }
+const live = new Render25d()
+live.mount(document.querySelector<HTMLCanvasElement>('#live-view')!)
+live.resize(1200, 700, 1); live.setTiles(tiles)
+function reset() {
+  for (const p of previews) { p.fx.clear(); p.born = -Infinity; p.count = 0 }
+  live.setOptions({ animate: false }); live.setOptions({ animate: true })
+}
 document.querySelectorAll('select, input').forEach(input => input.addEventListener('change', reset))
 document.getElementById('restart')!.addEventListener('click', reset)
 const timeline = document.getElementById('timeline') as HTMLInputElement
@@ -50,6 +57,8 @@ function frame(ms: number) {
   const target = { x: dx * reach, y: dy * reach }, incoming = checked('incoming'), hit = checked('hit')
   const from = incoming ? target : { x: 0, y: 0 }, to = incoming ? { x: 0, y: 0 } : target
   const freeze = select('playback').value === 'freeze'
+  live.setOptions({ tilt: Number(select('tilt').value), center: { x: target.x / 2, y: target.y / 2 },
+    meleeWeight: Number(select('weight').value), meleeTrail: Number(select('trail').value), meleeMotion: Number(select('motion').value) })
   for (const preview of previews) {
     const { ctx, fx, style, variant } = preview
     if (now - preview.born >= (freeze ? Infinity : Number(select('playback').value) / 1000) || !Number.isFinite(preview.born)) {
@@ -57,8 +66,17 @@ function frame(ms: number) {
         tone: select('tone').value as DamageType, intensity: select('strength').value as HitIntensity }, now)
       if (!checked('random')) fx.strokes.at(-1)!.variant = variant
       preview.born = now; preview.count++
+      if (style === select('live-weapon').value && variant === 0) {
+        live.setScene({ ...scene, revision: preview.count, billboards: [
+          { x: 0, y: 0, kind: 'player', tile: 4519, height: 1 },
+          { ...target, id: 'enemy', kind: 'monster', tile: 7189, height: 1 },
+        ] }, now)
+        live.melee({ from, to, style, hit, fromId: incoming ? 'id:enemy' : 'player', toId: incoming ? 'player' : 'id:enemy',
+          tone: select('tone').value as DamageType, intensity: select('strength').value as HitIntensity }, now)
+      }
     }
     const time = freeze ? preview.born + frozenPhase * meleeTiming(style).duration : now
+    if (style === select('live-weapon').value && variant === 0) live.render(time)
     fx.tick(scene, time)
     const p: Projection = { x: target.x / 2, y: target.y / 2 - 0.15, width: 360, height: 266, scale: reach === 2 ? 64 : 82, tilt: Number(select('tilt').value) * Math.PI / 180 }
     ctx.clearRect(0, 0, 360, 266); ctx.imageSmoothingEnabled = false

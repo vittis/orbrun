@@ -340,6 +340,14 @@ describe('combat updates', () => {
     text('You slash the goblin for 5! You slash the goblin for 7! You hit the invisible orc for 9!')
     expect(feedback.flush(scene).map(p => p.x)).toEqual([1, 2])
   })
+  it.each(['You hit the goblin!', 'You miss the goblin.'])('keeps a minotaur headbutt on the preceding target after %s', attack => {
+    const { feedback, text } = harness()
+    const scene = world(goblin(1, 1), goblin(2, -1))
+    text(`${attack} You headbutt the goblin! You hit the goblin!`)
+    const events = feedback.flush(scene)
+    expect(events.map(e => e.actorId)).toEqual(['id:1', 'id:1', 'id:2'])
+    expect(events[1]).toMatchObject({ auxiliary: true, kind: 'hit', x: 1, y: 0 })
+  })
   it('discards pending combat on level changes and session resets', () => {
     const { feedback, scene, send, text } = harness()
     text('You hit the goblin for 5.')

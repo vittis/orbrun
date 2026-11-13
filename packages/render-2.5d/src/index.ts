@@ -420,16 +420,15 @@ export class Render25d implements MapRenderer {
       if (!this.inFrame(p, stroke.from) && !this.inFrame(p, stroke.to)) continue
       if (this.opts.meleeEffects || this.opts.meleeMotion > 0) this.active = true
       if (!this.opts.meleeEffects) continue
-      ctx.save(); ctx.beginPath()
-      for (const cell of cells) if (cell.visibility === 'visible') {
-        const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-        ctx.rect(rect.x, rect.y - s, rect.width, rect.height + s)
-      }
+      // Like upright actor art, a swing can overhang its visible cells. A
+      // floor-shaped scissor cuts off wide blades and makes misses look like
+      // misdirected half-swings. Acceptance/tick already require BOTH combat
+      // endpoints to remain visible; drawing the overhang reveals no terrain.
       const from = stroke.fromId && this.scene.billboards.find(b => combatActorId(b) === stroke.fromId)
       const to = stroke.toId && this.scene.billboards.find(b => combatActorId(b) === stroke.toId)
-      ctx.clip(); drawMelee(ctx, p, { ...stroke,
+      drawMelee(ctx, p, { ...stroke,
         from: from ? this.actorPosition(from, now) : stroke.from,
-        to: to ? this.actorPosition(to, now) : stroke.to }, now, { weight: this.opts.meleeWeight, trail: this.opts.meleeTrail }); ctx.restore()
+        to: to ? this.actorPosition(to, now) : stroke.to }, now, { weight: this.opts.meleeWeight, trail: this.opts.meleeTrail })
       this.active = true
     }
     this.impactRipples(ctx, p, time)

@@ -18,6 +18,9 @@ export function meleeStyle(weapon: string | undefined): MeleeAttack['style'] | n
 /** Confirmed combat evidence drives melee gestures. */
 export function meleeFor(event: CombatEvent, scene: Scene, weapon: string | undefined): MeleeAttack | null {
   if (!event.melee || event.brandOnly || event.player || event.x === undefined || event.y === undefined) return null
+  // Horns/feet/teeth are not a second swing of the wielded weapon. Keep their
+  // confirmed damage feedback, without inventing another axe direction.
+  if (event.auxiliary && weapon) return null
   const style = meleeStyle(weapon)
   if (!style) return null
   const distance = Math.max(Math.abs(event.x - scene.player.x), Math.abs(event.y - scene.player.y))

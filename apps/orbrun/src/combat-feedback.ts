@@ -14,6 +14,8 @@ export interface CombatEvent {
   player?: boolean
   /** A confirmed player melee attempt; kept separate from spell/brand damage. */
   melee?: boolean
+  /** Explicit natural follow-up, such as a minotaur's headbutt. */
+  auxiliary?: boolean
   /** A weapon brand's extra sentence, which can recolor the preceding hit. */
   followup?: boolean
   brandOnly?: boolean
@@ -55,9 +57,11 @@ export function combatText(text: string): CombatEvent[] {
       m = /^You (?:clumsily )?([\w-]+) (.+?)(?:[.!]+)$/.exec(s)
       let target: string | undefined
       let melee = false
+      let auxiliary = false
       if (m && attacks.test(m[1])) {
         target = m[2]
         melee = !/^(?:smite|burn|freeze|electrocute|drain|blast)$/i.test(m[1])
+        auxiliary = /^(?:headbutt|kick|bite|peck|tail-slap|constrict|squeeze)$/i.test(m[1])
       }
       else if ((m = /^(?:The|Your) .+? (?:hits?|pierces?|strikes?|burns?|engulfs?|freezes?|skewers?) (.+?)[.!]+$/.exec(s))) target = m[1]
       else if (!/\b(?:resists?|no damage)\b/i.test(s)) {
@@ -75,7 +79,7 @@ export function combatText(text: string): CombatEvent[] {
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
       const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
-      out.push({ kind: 'hit', amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), followup, brandOnly: followup, melee })
+      out.push({ kind: 'hit', amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), followup, brandOnly: followup, melee, ...(auxiliary ? { auxiliary: true } : {}) })
     }
   }
   return out
@@ -214,6 +218,7 @@ export class CombatFeedback {
     const used = new Set<string>()
     const slain = new Set<string>()
     const lastHit = new Map<string, Billboard>()
+    const lastMelee = new Map<string, { actor: Billboard; turn?: number }>()
     const killedNames = new Set(pending.filter(p => p.kind === 'kill').map(p => bare(p.target ?? '')))
     const changed = (b: Billboard) => {
       const id = actorKey(b), was = before.get(id), now = after.get(id)
@@ -232,10 +237,13 @@ export class CombatFeedback {
         || (event.kind === 'hit' || event.kind === 'kill' ? deathEvidence(b) - deathEvidence(a) : 0)
         || (event.kind === 'hit' || event.kind === 'kill' ? changed(b) - changed(a) : 0)
         || Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
-      const b = event.kind === 'kill' ? lastHit.get(wanted) ?? matches[0] : matches[0]
+      const previous = lastMelee.get(wanted)
+      const followupTarget = (event.auxiliary || event.followup) && previous?.turn === event.turn ? previous?.actor : undefined
+      const b = event.kind === 'kill' ? lastHit.get(wanted) ?? matches[0] : followupTarget ?? matches[0]
       if (!b) return []
       const id = actorKey(b)
       used.add(id)
+      if (event.melee && !event.auxiliary) lastMelee.set(wanted, { actor: b, turn: event.turn })
       if (event.kind === 'hit') lastHit.set(wanted, b)
       if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id) }
       return [{ ...event, actorId: id, x: b.x, y: b.y,

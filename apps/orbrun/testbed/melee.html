@@ -13,6 +13,7 @@
     figcaption { padding: 9px 12px; text-transform: capitalize; display: flex; justify-content: space-between } figcaption span { color: #858c90; font-size: 12px }
     canvas { display: block; width: 100%; aspect-ratio: 1.35; image-rendering: pixelated }
     footer { padding: 0 24px 24px; color: #858c90 } a { color: #b8cdd1 }
+    .live { margin: 0 24px 20px } .live canvas { aspect-ratio: 12 / 7 }
     @media (max-width: 650px) { main { grid-template-columns: 1fr !important } nav { gap: 8px } }
     @media (max-width: 1000px) { main { grid-template-columns: repeat(3, minmax(180px, 1fr)) } }
   </style>
@@ -22,7 +23,7 @@
   <nav>
     <label>Direction <select id="direction"><option value="1,0">East</option><option value="1,1">Southeast</option><option value="0,1">South</option><option value="-1,1">Southwest</option><option value="-1,0">West</option><option value="-1,-1">Northwest</option><option value="0,-1">North</option><option value="1,-1">Northeast</option></select></label>
     <label>Reach <select id="reach"><option value="1">Adjacent</option><option value="2">Two cells</option></select></label>
-    <label>Tilt <select id="tilt"><option>45</option><option>30</option><option>60</option></select></label>
+    <label>Tilt <select id="tilt"><option selected>50</option><option>45</option><option>30</option><option>60</option></select></label>
     <label>Tone <select id="tone"><option>physical</option><option>fire</option><option>cold</option><option>electric</option><option>poison</option><option>acid</option><option>magic</option></select></label>
     <label>Strength <select id="strength"><option>solid</option><option>light</option><option>heavy</option></select></label>
     <label>Weight <select id="weight"><option value="0.6">60%</option><option value="1" selected>100%</option><option value="1.5">150%</option></select></label>
@@ -37,6 +38,10 @@
     <label><input id="random" type="checkbox">Random variations</label>
     <button id="restart">Restart</button>
   </nav>
+  <figure class="live">
+    <figcaption><label>Dungeon renderer <select id="live-weapon"><option value="cleave">Axes</option><option value="slash">Long blades</option><option value="stab">Short blades</option><option value="thrust">Spears &amp; tridents</option><option value="reap">Bladed polearms</option><option value="crush">Maces &amp; clubs</option><option value="lash">Whips</option><option value="staff">Staves</option><option value="unarmed">Unarmed</option></select></label><span>Live drawing path · random gestures · controls above apply</span></figcaption>
+    <canvas id="live-view" width="1200" height="700" aria-label="Melee in the live dungeon renderer"></canvas>
+  </figure>
   <main id="gestures"></main>
   <footer id="status">Loading tile art…</footer>
   <script type="module" src="./melee.ts"></script>

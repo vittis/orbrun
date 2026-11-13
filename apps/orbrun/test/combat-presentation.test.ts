@@ -15,6 +15,17 @@ function harness() {
 }
 
 describe('combat contact timing', () => {
+  it('keeps minotaur headbutt damage without drawing another axe, including retaliation', () => {
+    const { scene, renderer } = harness()
+    const placed = (text: string) => combatText(text).map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
+    presentCombat(renderer, scene, placed('You hit the goblin! You headbutt the goblin!'), [], [], '+0 war axe', 1000, true)
+    expect(renderer.melee).toHaveBeenCalledTimes(1)
+    expect(renderer.melee).toHaveBeenCalledWith(expect.objectContaining({ style: 'cleave', to: { x: 1, y: 0 } }), 1)
+    expect(renderer.hit).toHaveBeenCalledTimes(2)
+    presentCombat(renderer, scene, placed('You furiously retaliate! You headbutt the goblin!'), [], [], '+0 war axe', 2000, true)
+    expect(renderer.melee).toHaveBeenCalledTimes(1)
+    expect(renderer.hit).toHaveBeenCalledTimes(3)
+  })
   it.each(['long sword', 'mace', 'battleaxe'])('spawns death VFX immediately for %s and ranged kills, respecting Still mode', weapon => {
     const { scene, renderer } = harness()
     const death = deathFor({ kind: 'monster', id: 1, name: 'jelly', tile: 1, height: 0.8, x: 1, y: 0 }, scene.player)
