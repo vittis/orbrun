@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.82 — 2026-11-13
+
+- Stop Djinni spell previews and HP casting costs from triggering the player hit animation. Only confirmed incoming melee/spell damage messages trigger hit feedback; HP expenditure alone does not.
+- Preserve incoming hits when casting and enemy damage occur together, regardless of whether HP or combat messages arrive first.
+
 ## 0.3.81 — 2026-11-13
 
 - Keep flying, breathing, swaying and wounded poses continuous across confirmed steps, turns and artwork updates.
