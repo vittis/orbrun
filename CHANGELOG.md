@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.116 — 2026-11-13
+
+- Toned down unexplored fog to mostly black space with sparse, restrained branch-colored wisps.
+- Replaced sharp exploration intersections with a shared, softly rounded feather across ground, raised roofs and wall faces. The feather moves gently while actors and gameplay markers remain clear, and wisps fade back to black near the boundary.
+- Retained all branch moods, the existing fog toggle, Still/reduced motion and fully explored viewport sleep behavior. Reuse the bounded geometry mask while the scene and camera remain unchanged.
+
 ## 0.3.115 — 2026-11-13
 
 - Replaced barely visible fog circles with a pronounced, continuous veil of rolling smoke, layered billows and curling blue-violet folds. Motion is visible within a moment and stays behind explored terrain.
