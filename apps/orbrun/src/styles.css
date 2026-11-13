@@ -5128,3 +5128,80 @@ canvas.minimap.hidden,
   max-width: none;
   transform: translateY(var(--popup-y));
 }
+
+/* Quick View/Combat tuning stays beside the dungeon, below modal overlays. */
+.quick-settings {
+  position: absolute;
+  z-index: 19;
+  left: max(8px, env(safe-area-inset-left));
+  top: 50%;
+  height: calc(100% - 24px);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  color: #ddd5c0;
+  font: 13px/1.35 system-ui, sans-serif;
+}
+.quick-settings button, .quick-settings select {
+  color: inherit;
+  background: #24231f;
+  border: 1px solid #625b46;
+  border-radius: 5px;
+  font: inherit;
+  cursor: pointer;
+  min-height: 36px;
+}
+.quick-settings button:hover:not(:disabled) { background: #393426; }
+.quick-settings :is(button, input, select):focus-visible { outline: 2px solid #eac96d; outline-offset: 2px; }
+.quick-settings button:disabled, .quick-settings select:disabled { cursor: default; opacity: 0.45; }
+.quick-settings-toggle {
+  pointer-events: auto;
+  width: 44px;
+  min-height: 60px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px #0009;
+}
+.quick-settings-toggle span:first-child { font-size: 24px; line-height: 1; }
+.quick-settings-toggle span:last-child { font-size: 11px; }
+.quick-settings-panel {
+  width: min(300px, calc(100vw - 76px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: 100%;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 16, 0.97);
+  border: 1px solid #625b46;
+  border-radius: 8px;
+  box-shadow: 0 5px 24px #000a;
+  overflow: hidden;
+}
+.quick-settings [hidden] { display: none; }
+.quick-settings-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; }
+.quick-settings-panel header strong { color: #eac96d; font-size: 15px; }
+.quick-settings-panel header button { width: 36px; font-size: 22px; }
+.quick-settings-tabs { display: flex; gap: 6px; padding: 0 10px 10px; }
+.quick-settings-tabs button { flex: 1; }
+.quick-settings-tabs button[aria-selected='true'] { color: #ffe49a; border-color: #eac96d; background: #393426; }
+.quick-settings-page { overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 10px; min-height: 0; }
+.quick-setting { padding: 9px 0; border-top: 1px solid #ffffff14; }
+.quick-setting-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.quick-setting-label label { min-width: 0; }
+.quick-setting-label output { color: #ffe49a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.quick-setting.off .quick-setting-label { opacity: 0.5; }
+.quick-setting-range { display: flex; align-items: center; gap: 8px; }
+.quick-setting-range button { flex: 0 0 36px; font-size: 19px; }
+.quick-setting-range input { min-width: 0; width: 100%; margin: 0; accent-color: #eac96d; cursor: pointer; }
+.quick-setting-range input:disabled { cursor: default; opacity: 0.4; }
+.quick-setting select { width: 100%; padding: 4px 6px; }
+.quick-settings-reset { width: 100%; margin-top: 10px; }
+.quick-settings-hint { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) {
+  .quick-settings button, .quick-settings select { min-height: 44px; }
+  .quick-setting-range button { flex-basis: 40px; }
+  .quick-setting-range input { height: 32px; }
+}

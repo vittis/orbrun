@@ -7,7 +7,7 @@ import { Render2d } from '@orbrun/render-2d'
 import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
 import type { GamepadInput } from '../src/gamepad'
 import type { MapRenderer, SceneCursor } from '@orbrun/scene'
-import { defaultSettings } from '../src/settings'
+import { defaultSettings, getSettings, saveSettings, type Settings } from '../src/settings'
 import type { Session, SessionEvent } from '../src/session'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
@@ -26,12 +26,13 @@ const session = { state, scene, gamedata: null, loading: false, watching: false,
   on: (fn: (e: SessionEvent) => void) => { listeners.add(fn); return () => listeners.delete(fn) },
   flushScene: () => false, send: (msg: unknown) => sent.push(msg), deviceRc: () => null,
 } as unknown as Session
-let settings = { ...defaultSettings, hints: 'off' as const }, active: MapRenderer, created = 0, destroyed = 0
+let settings: Settings = { ...defaultSettings, hints: 'off' }, active: MapRenderer, created = 0, destroyed = 0
+saveSettings(settings)
 let presentation = 'dungeon', cursor: SceneCursor | null = null
 let appliedDungeonOptions: Parameters<Render25d['setOptions']>[0] | null = null
 const screen = new GameScreen(document.getElementById('app')!, session, {
   gamepad: { kind: 'xbox', isHeld: () => false, virtualRelease() {} } as unknown as GamepadInput,
-  settings: () => settings, onSystem: () => {}, settingsPanel: () => ({ el: document.createElement('div'), rows: [] }),
+  settings: () => (settings = getSettings()), onSystem: () => {}, settingsPanel: () => ({ el: document.createElement('div'), rows: [] }),
   renderer: mode => {
     presentation = mode
     appliedDungeonOptions = null
@@ -76,7 +77,7 @@ document.getElementById('close')!.onclick = () => {
 document.getElementById('target')!.onclick = () => {
   send({ msg: 'input_mode', mode: MouseMode.TARGET }); send({ msg: 'cursor', id: 0, loc: { x: 11, y: 3 } })
 }
-document.getElementById('settings')!.onclick = () => { settings = { ...settings, depthTilt: settings.depthTilt === 50 ? 65 : 50, depthZoom: settings.depthZoom === 1 ? 1.2 : 1 }; screen.applySettings() }
-document.getElementById('still')!.onclick = () => { settings = { ...settings, depthAnimate: settings.depthAnimate === false ? 'auto' : false }; screen.applySettings() }
+document.getElementById('settings')!.onclick = () => { saveSettings({ ...settings, depthTilt: settings.depthTilt === 50 ? 65 : 50, depthZoom: settings.depthZoom === 1 ? 1.2 : 1 }); screen.applySettings() }
+document.getElementById('still')!.onclick = () => { saveSettings({ ...settings, depthAnimate: settings.depthAnimate === false ? 'auto' : false }); screen.applySettings() }
 const timer = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify({ presentation, appliedDungeonOptions, renderer: active.constructor.name, cursor, created, destroyed, canvases: document.querySelectorAll('canvas.view').length, tilt: settings.depthTilt, zoom: settings.depthZoom, still: settings.depthAnimate === false, sent: sent.slice(-8) }) }, 100)
 window.addEventListener('pagehide', () => { clearInterval(timer); screen.destroy() }, { once: true })

@@ -238,7 +238,14 @@ export function adjustSetting(r: SettingRow, d: number, onchange?: () => void): 
   const cur = s[key]
   const i = values.indexOf(cur)
   const n = i >= 0 || typeof cur !== 'number' ? values[((((i < 0 ? 0 : i) + d) % values.length) + values.length) % values.length] : offStop(values as readonly number[], cur, d)
-  ;(s as unknown as Record<string, unknown>)[key] = n
+  return chooseSetting(r, n, onchange)
+}
+
+/** Choose an offered value directly, sharing persistence and disabled-state rules with arrows. */
+export function chooseSetting(r: SettingRow, value: unknown, onchange?: () => void): string {
+  const s = getSettings()
+  if (rowOff(r, s) || !(r.values as readonly unknown[]).includes(value)) return settingValue(r, s)
+  ;(s as unknown as Record<string, unknown>)[r.key] = value
   saveSettings(s)
   document.documentElement.style.setProperty('--ui-scale', String(s.uiScale))
   onchange?.()

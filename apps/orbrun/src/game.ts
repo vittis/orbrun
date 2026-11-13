@@ -33,6 +33,7 @@ import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
+import { QuickSettings } from './quick-settings'
 
 /** Cap dungeon pixels per CSS pixel to keep the pixel art crisp. */
 const VIEW_MAX_DPR = 1
@@ -121,6 +122,7 @@ export class GameScreen {
   private hud: Hud
   private chat: Chat
   private overlays: Overlays
+  private quickSettings?: QuickSettings
   private hooks: GameHooks
   private ctx: Context
   /** frame timing readout (perf.ts), on with `?perf` */
@@ -374,6 +376,7 @@ export class GameScreen {
       gamedata: () => this.session.gamedata,
       watching: () => this.session.watching,
       onClientOverlayChange: () => {
+        this.quickSettings?.close()
         this.tapArmed.clear()
         this.holding = null
         this.needsRender = true
@@ -500,6 +503,12 @@ export class GameScreen {
     this.onDocContextMenu = this.onDocContextMenu.bind(this)
     document.addEventListener('contextmenu', this.onDocContextMenu, true)
     this.attachPointer(this.canvas)
+    this.quickSettings = new QuickSettings(() => this.applySettings(), () => this.canvas.focus({ preventScroll: true }))
+    this.quickSettings.root.addEventListener('focusin', () => {
+      this.inputActed()
+      this.mapPan = { x: 0, y: 0 }
+    })
+    this.root.append(this.quickSettings.root)
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
     this.relayout(true)
     this.wake()
@@ -707,6 +716,7 @@ export class GameScreen {
     }
     this.relayout(true)
     this.needsRender = true
+    this.quickSettings?.refresh()
   }
 
   /** The settings, read from storage once and kept until `applySettings` says they changed. */
@@ -1209,7 +1219,7 @@ export class GameScreen {
   /** Fire the hold half of any tap-or-hold button that has been down for HOLD_MS, without waiting for release. */
   private fireHolds(now: number) {
     this.holding = null
-    if (this.chat.capturing || this.overlays.hasClientOverlay) {
+    if (this.chat.capturing || this.overlays.hasClientOverlay || this.quickSettings?.owns(document.activeElement)) {
       this.tapArmed.clear()
       return
     }
@@ -1235,6 +1245,7 @@ export class GameScreen {
   pad(ev: PadEvent) {
     if (this.destroyed) return
     this.wake()
+    if (this.quickSettings?.pad(ev)) return
     // a press, a stick or the d-pad is the pad speaking; a stick settling back to centre is not
     if (isPadActivity(ev)) this.inputFrom('pad')
     if (this.chat.capturing) {
@@ -1457,6 +1468,7 @@ export class GameScreen {
   private onKeyDown(ev: KeyboardEvent) {
     this.wake()
     const target = ev.target as HTMLElement | null
+    if (this.quickSettings?.owns(target)) return
     // a key typed into a field is still the keyboard speaking (a server prompt's on-screen keyboard goes away for it)
     this.inputFrom('keyboard')
     if (target && isTextEntry(target)) return
@@ -1553,6 +1565,7 @@ export class GameScreen {
   }
 
   private attachPointer(c: HTMLCanvasElement) {
+    c.tabIndex = -1
     c.addEventListener('contextmenu', (ev) => ev.preventDefault())
     c.addEventListener('pointerdown', (ev) => {
       this.inputFrom(ev.pointerType === 'touch' ? 'touch' : 'pointer')
@@ -1660,6 +1673,7 @@ export class GameScreen {
    * view, nor the pad.
    */
   back() {
+    if (this.quickSettings?.open) { this.quickSettings.close(); return }
     if (this.ctx.mode === 'command' && !this.session.watching && !this.overlays.hasClientOverlay && !this.chat.capturing) {
       this.runner.send(cm.input('S'))
       return
@@ -1760,6 +1774,9 @@ export class GameScreen {
     const touch = ev.pointerType === 'touch'
     if (touch) this.inputFrom('touch')
     const t = ev.target instanceof Element ? ev.target : null
+    if (this.quickSettings?.owns(t)) return
+    // Returning to the dungeon leaves the panel open, but gives gameplay its input back.
+    if (this.quickSettings?.owns(document.activeElement)) this.canvas.focus({ preventScroll: true })
     if (t?.closest('.touchbar')) return
     if (touch && this.overlays.hasClientOverlay && !this.session.watching) {
       // inside a panel, on the on-screen keyboard or in the chat, the press is theirs
