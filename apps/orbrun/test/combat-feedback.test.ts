@@ -542,19 +542,65 @@ describe('visible creature melee sources', () => {
     expect(feedback.takeSpells()).toEqual([])
   })
 
-  it.each(['hidden', 'ambiguous', 'far', 'spell', 'projectile', 'unknown'])(
+  it.each([false, true])('distributes identical attackers across confirmed attempts, including appended packets (flush between=%s)', between => {
+    const { feedback, text } = harness()
+    const scene = world(goblin(2, -1), goblin(1, 1), goblin(3, 4))
+    feedback.flush(scene)
+    text('The goblin hits you!')
+    const events = between ? feedback.flush(scene) : []
+    // Reordering composition must not change which actor gets the next attempt.
+    scene.billboards.reverse()
+    text('The goblin hits you! The goblin misses you.', 1)
+    events.push(...feedback.flush(scene))
+    expect(events.map(e => bumpFor(e, scene, 'shortbow'))).toMatchObject([
+      { fromId: 'id:1', toId: 'player', hit: true },
+      { fromId: 'id:2', toId: 'player', hit: false },
+    ])
+    text('The goblin hits you! The goblin misses you.', 1)
+    expect(feedback.flush(scene)).toEqual([])
+    text("You block the goblin's attack.")
+    expect(bumpFor(feedback.flush(scene)[0], scene, undefined)).toMatchObject({ fromId: 'id:1', hit: false })
+    expect(feedback.takeSpells()).toEqual([])
+  })
+
+  it('starts fresh source allocation on the next turn and after leaving the level', () => {
+    const { feedback, text, send } = harness()
+    const scene = world(goblin(1, 1), goblin(2, -1))
+    feedback.flush(scene)
+    const attack = () => {
+      text('The goblin hits you!')
+      return feedback.flush(scene)[0].source?.actorId
+    }
+    expect(attack()).toBe('id:1')
+    send({ msg: 'player', turn: 101 })
+    expect(attack()).toBe('id:1')
+    feedback.flush({ ...scene, playerOnLevel: false })
+    feedback.flush(scene)
+    expect(attack()).toBe('id:1')
+  })
+
+  it('does not allocate melee sources across ambiguous recipients', () => {
+    const { feedback, text } = harness()
+    const scene = world(goblin(1, 1), goblin(2, -1), {
+      ...goblin(3, 0), y: 1, name: 'orc', ref: { id: 3, name: 'orc' }, attitude: 'friendly',
+    })
+    feedback.flush(scene)
+    text('Your orc hits the goblin!')
+    expect(bumpFor(feedback.flush(scene)[0], scene, undefined)).toBeNull()
+  })
+
+  it.each(['hidden', 'far', 'spell', 'projectile', 'unknown'])(
     'does not guess a melee source for %s evidence', mode => {
       const { feedback, text } = harness()
       const scene = world(goblin(1, mode === 'far' ? 2 : 1))
       if (mode === 'hidden') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
-      if (mode === 'ambiguous') scene.billboards.push({ ...goblin(2), y: 0 })
       feedback.flush(scene)
       text(mode === 'spell' ? 'The goblin smites you!' : mode === 'projectile' ? 'The bolt of fire hits you!'
         : mode === 'unknown' ? 'Something hits you!' : 'The goblin hits you!')
       const events = feedback.flush(scene)
       expect(events).toMatchObject([{ kind: 'hurt', player: true }])
       expect(bumpFor(events[0], scene, undefined)).toBeNull()
-      if (['hidden', 'ambiguous', 'far'].includes(mode)) {
+      if (['hidden', 'far'].includes(mode)) {
         text("You block the goblin's attack.")
         const blocks = feedback.flush(scene)
         expect(blocks).toMatchObject([{ kind: 'block', player: true }])

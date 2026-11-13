@@ -16,6 +16,43 @@ function harness() {
 }
 
 describe('combat contact timing', () => {
+  it.each(['hit', 'miss', 'block', 'no-damage'])('bumps all four surrounding attackers with identical hobgoblins (%s)', outcome => {
+    const { scene, renderer } = harness()
+    scene.billboards = [
+      { id: 1, name: 'orc', x: 0, y: -1, kind: 'monster', tile: 1, height: 1 },
+      { id: 2, name: 'goblin', x: -1, y: 0, kind: 'monster', tile: 1, height: 1 },
+      { id: 3, name: 'hobgoblin', x: -1, y: -1, kind: 'monster', tile: 1, height: 1 },
+      { id: 4, name: 'hobgoblin', x: 1, y: -1, kind: 'monster', tile: 1, height: 1 },
+      { id: 5, name: 'hobgoblin', x: 3, y: 0, kind: 'monster', tile: 1, height: 1 },
+      { id: 6, name: 'hobgoblin', x: 1, y: 0, kind: 'monster', tile: 1, height: 1 },
+    ]
+    for (const b of scene.billboards) scene.cells.set(cellKey(b.x, b.y), {
+      ...scene.cells.get(cellKey(0, 0))!, x: b.x, y: b.y, visibility: b.id === 6 ? 'remembered' : 'visible',
+    })
+    const state = initialState()
+    state.player.hp_max = 30
+    const feedback = new CombatFeedback(state)
+    feedback.flush(scene)
+    const sentences = {
+      hit: 'The hobgoblin hits you!', miss: 'The hobgoblin misses you.',
+      block: "You block the hobgoblin's attack.", 'no-damage': 'The hobgoblin hits you but does no damage.',
+    }
+    const msg = { msg: 'msgs', messages: [{ text: `The orc hits you! The goblin hits you! ${sentences[outcome]} ${sentences[outcome]}`, turn: 101 }] }
+    reduce(state, msg); feedback.observe(state, msg)
+    const events = feedback.flush(scene)
+    expect(events).toHaveLength(4)
+    const spells = feedback.takeSpells()
+    presentCombat(renderer, scene, events, spells, 'shortbow', 1000, true)
+    expect(renderer.bump).toHaveBeenCalledTimes(4)
+    expect(vi.mocked(renderer.bump!).mock.calls.map(([b]) => b.fromId)).toEqual(['id:1', 'id:2', 'id:3', 'id:4'])
+    expect(renderer.hit).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
+    expect(renderer.impact).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
+    expect(renderer.deflect).toHaveBeenCalledTimes(outcome === 'hit' ? 0 : 2)
+    expect(renderer.spell).not.toHaveBeenCalled()
+    presentCombat(renderer, scene, events, spells, 'shortbow', 2000, false)
+    expect(renderer.bump).toHaveBeenCalledTimes(4)
+  })
+
   it('keeps minotaur headbutt damage without drawing another axe, including retaliation', () => {
     const { scene, renderer } = harness()
     const placed = (text: string) => combatText(text).map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
