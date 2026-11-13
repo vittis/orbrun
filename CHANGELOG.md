@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.115 — 2026-11-13
+
+- Replaced barely visible fog circles with a pronounced, continuous veil of rolling smoke, layered billows and curling blue-violet folds. Motion is visible within a moment and stays behind explored terrain.
+- Fog now adapts to the confirmed dungeon branch: earthy dust, verdant Lair mist, marsh vapour, sea haze, icy clouds, sulphurous smoke, spectral mist, arcane fog, Abyss turbulence and a soft sacred haze. Each mood has its own palette, flow speed, curl and shape.
+- Kept the existing Unexplored fog setting, Still/reduced motion, hidden-information boundary and fully explored viewport sleep behavior. The fog uses a bounded reusable raster instead of per-frame particle stamps.
+
 ## 0.3.114 — 2026-11-13
 
 - Removed artificial square wall bases beneath ruined columns, statues, idols, gravestones and related scenery. Their original silhouettes now stand directly on the floor with soft ground shadows for depth.
