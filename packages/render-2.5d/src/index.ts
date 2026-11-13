@@ -340,9 +340,15 @@ export class Render25d implements MapRenderer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
     this.unexploredFog(ctx, p, time)
-    if (this.opts.unexploredFog && this.scene.playerOnLevel
-      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, this.scene.atmosphere) && this.opts.animate) this.active = true
     const cells = this.cells.filter(c => this.inFrame(p, c))
+    const fogGeometry = this.opts.unexploredFog ? cells.map(cell => {
+      const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
+      if (!cell.occluder) return ground
+      const roof = wallRoof(this.scene, p, cell, this.dpr)
+      return { ...roof, height: ground.y + ground.height - roof.y }
+    }) : []
+    if (this.opts.unexploredFog && this.scene.playerOnLevel
+      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, this.scene.atmosphere, fogGeometry) && this.opts.animate) this.active = true
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
     for (const cell of cells) {
@@ -682,6 +688,14 @@ export class Render25d implements MapRenderer {
   }
 
   private frontierFog(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
+    if (this.opts.unexploredFog && this.scene.playerOnLevel && this.unexploredAtmosphere.hasBoundary) {
+      for (const cell of cells) {
+        const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
+        const roof = cell.occluder ? wallRoof(this.scene, p, cell, this.dpr) : ground
+        this.unexploredAtmosphere.shade(ctx, { ...roof, height: ground.y + ground.height - roof.y })
+      }
+      return
+    }
     for (const cell of cells) {
       const rect = cell.occluder ? wallRoof(this.scene, p, cell, this.dpr) : planeRect(p, cell.x, cell.y, 0, this.dpr)
       for (const [dx, dy, turn] of [[0,-1,0],[1,0,Math.PI/2],[0,1,Math.PI],[-1,0,-Math.PI/2]]) {

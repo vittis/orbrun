@@ -1,15 +1,19 @@
 import { Render25d } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type Atmosphere, type SceneCell } from '@orbrun/scene'
 import { captures, equalPixels, fixtureComplete, fixtureStart, fixtureYield, releaseCanvas } from './fixture'
+import { fittedScale } from '../../../packages/render-2.5d/src/projection'
+import { wallRoof } from '../../../packages/render-2.5d/src/wall-depth'
 
 fixtureStart('fog-checks')
 let checks = 0
 const failures: unknown[] = []
 function metrics(a: Uint8ClampedArray, b?: Uint8ClampedArray) {
   const luminance: number[] = []
-  let delta = 0, changed = 0
+  let delta = 0, changed = 0, black = 0
   for (let i = 0; i < a.length; i += 4) {
-    luminance.push((a[i] + a[i + 1] + a[i + 2]) / 3)
+    const value = (a[i] + a[i + 1] + a[i + 2]) / 3
+    luminance.push(value)
+    if (value <= 8) black++
     if (b) {
       const difference = (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3
       delta += difference; if (difference >= 3) changed++
@@ -17,7 +21,7 @@ function metrics(a: Uint8ClampedArray, b?: Uint8ClampedArray) {
   }
   luminance.sort((a, b) => a - b)
   return { low: luminance[Math.floor(luminance.length * 0.05)], high: luminance[Math.floor(luminance.length * 0.95)],
-    delta: delta / luminance.length, changed: changed / luminance.length }
+    delta: delta / luminance.length, changed: changed / luminance.length, black: black / luminance.length }
 }
 for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], [900, 600, 85, 1.25]]) {
   const assert = (name: string, pass: boolean, detail?: unknown) => { checks++; if (!pass) failures.push({ name, width, tilt, dpr, detail }) }
@@ -34,7 +38,7 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   const fog = () => ctx.getImageData(0, 0, Math.floor(canvas.width * 0.25), canvas.height).data
   r.render(0); const still = image(), terrain = center()
   const contrast = metrics(fog())
-  assert('cloud folds remain perceptible in normal darkness', contrast.high >= 45 && contrast.high - contrast.low >= 20, contrast)
+  assert('unexplored space stays mostly black with restrained visible wisps', contrast.black >= 0.75 && contrast.high >= 10 && contrast.high <= 28, contrast)
   r.render(60)
   assert('Still freezes mist and motes and sleeps', equalPixels(still, image()) && !r.animating)
   r.setOptions({ unexploredFog: false }); r.render(0)
@@ -88,7 +92,7 @@ for (const atmosphere of themes) {
   const ctx = canvas.getContext('2d')!, first = ctx.getImageData(0, 0, 160, 480).data
   const rgb = [0, 0, 0]
   for (let i = 0; i < first.length; i += 4) for (let c = 0; c < 3; c++) rgb[c] += first[i + c]
-  const fingerprint = rgb.map(v => Math.round(v / (160 * 480))).join(',')
+  const fingerprint = rgb.map(v => (v / (160 * 480)).toFixed(2)).join(',')
   const unique = !fingerprints.has(fingerprint); fingerprints.add(fingerprint)
   r.render(50)
   const frozen = ctx.getImageData(0, 0, 160, 480).data
@@ -99,8 +103,61 @@ for (const atmosphere of themes) {
   r.render(1.5)
   const motion = metrics(ctx.getImageData(0, 0, 160, 480).data, start)
   checks++
-  if (motion.delta < 1 || !r.animating) failures.push({ name: 'branch fog has perceptible motion', atmosphere, motion })
+  if (motion.delta < 0.5 || motion.changed < 0.05 || !r.animating) failures.push({ name: 'branch wisps move without filling the darkness', atmosphere, motion })
   r.setOptions({ animate: false })
 }
 r.destroy(); releaseCanvas(canvas)
+
+// Independent white/blue art makes the exploration feather observable on both
+// flat ground and raised wall faces, without relying on a hand-authored image.
+const atlas = document.createElement('canvas'); atlas.width = 64; atlas.height = 32
+const ink = atlas.getContext('2d')!; ink.fillStyle = '#fff'; ink.fillRect(0, 0, 32, 32)
+ink.fillStyle = '#147aff'; ink.fillRect(32, 0, 32, 32)
+for (const tilt of [25, 50, 85]) for (const dpr of [1, 2]) for (const wall of [false, true]) {
+  const canvas = document.createElement('canvas'), r = new Render25d({ tilt, unexploredFog: true, animate: false })
+  const scene = { ...emptyScene(), playerOnLevel: true }
+  for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) scene.cells.set(cellKey(x, y), {
+    x, y, kind: wall && x === 2 && y === 0 ? 'wall' : 'floor', visibility: 'visible', occluder: wall && x === 2 && y === 0,
+    floorTile: 1, wallTile: 1, flags: { water: false, lava: false },
+  } as SceneCell)
+  r.mount(canvas); r.resize(640, 480, dpr)
+  r.setTiles({ tile: id => ({ atlas: 'art', sx: id === 2 ? 32 : 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }), atlas: () => atlas, atlasNames: () => ['art'] })
+  r.setScene(scene, 0); r.render(0)
+  const scale = fittedScale(640, 480, tilt * Math.PI / 180)
+  const p = { x: 0, y: 0, width: 640, height: 480, tilt: tilt * Math.PI / 180, scale }
+  const ctx = canvas.getContext('2d')!, edgeX = r.project(2.5, 0).x
+  const roof = wallRoof(scene, p, scene.cells.get(cellKey(2, 0))!, dpr)
+  const sampleY = wall ? (roof.y + roof.height + r.project(2, 0.5).y) / 2 : r.project(2, 0).y
+  const pixel = (x: number, y: number) => ctx.getImageData(Math.floor(x * dpr), Math.floor(y * dpr), 1, 1).data
+  const profile = () => Array.from({ length: Math.ceil(scale) + 1 }, (_, i) => pixel(edgeX - scale * 0.8 + i, sampleY)[0])
+  const assert = (name: string, pass: boolean, detail?: unknown) => { checks++; if (!pass) failures.push({ name, tilt, dpr, wall, detail }) }
+  const ramp = profile(), darkest = Math.min(...ramp), brightest = Math.max(...ramp)
+  const jump = Math.max(...ramp.slice(1).map((v, i) => Math.abs(v - ramp[i])))
+  assert('frontier fades continuously to black on ground and raised faces', brightest > 45 && darkest < brightest * 0.1 && jump < brightest * 0.3 && new Set(ramp).size >= 6, { ramp, jump })
+  const inset = 0.3, mid = pixel(r.project(2.5 - inset, 0).x, r.project(0, 1.5).y)[0]
+  const corner = pixel(r.project(2.5 - inset, 0).x, r.project(0, 2.5 - inset).y)[0]
+  assert('the shared feather rounds outer corners instead of outlining squares', corner < mid * 0.85, { corner, mid })
+  r.setOptions({ animate: true }); r.render(0)
+  const before = profile(); r.render(3)
+  const after = profile()
+  assert('the feather moves gently without changing explored interior', before.some((v, i) => Math.abs(v - after[i]) >= 1) && Math.abs(before[0] - after[0]) <= 1, { before, after })
+  r.setOptions({ animate: false })
+  scene.billboards = [{ x: 2, y: 1, kind: 'monster', tile: 2, height: 1, life: { motion: 'still' } }]
+  scene.revision++; r.setScene(scene, 0); r.render(0)
+  const actor = r.project(2, 1.3), actorX = actor.x + scale * 0.35, actorY = actor.y - scale * 0.45
+  const fogActor = pixel(actorX, actorY)
+  r.setOptions({ unexploredFog: false }); r.render(0)
+  assert('confirmed actors stay clear of the boundary veil', fogActor[2] > fogActor[0] * 2 && equalPixels(fogActor, pixel(actorX, actorY)), { fogActor: [...fogActor], plainActor: [...pixel(actorX, actorY)] })
+  r.setOptions({ unexploredFog: true })
+  scene.billboards = []; scene.revision++; r.setScene(scene, 0); r.render(0)
+  const oldEdge = pixel(r.project(2.4, 0).x, r.project(0, 0).y)[0]
+  scene.cells.set(cellKey(3, 0), { ...scene.cells.get(cellKey(1, 0))!, x: 3 })
+  scene.revision++; r.setScene(scene, 0); r.render(0)
+  const revealed = pixel(r.project(2.4, 0).x, r.project(0, 0).y)[0]
+  r.resize(800, 600, dpr); r.render(0)
+  const resized = pixel(r.project(2.4, 0).x, r.project(0, 0).y)[0]
+  assert('exploration and resize update the feather with the geometry', revealed > oldEdge * 1.5 && resized > 80, { oldEdge, revealed, resized })
+  r.destroy(); releaseCanvas(canvas)
+  await fixtureYield('fog-boundary')
+}
 fixtureComplete({ checks, failures })

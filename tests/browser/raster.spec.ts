@@ -12,14 +12,14 @@ test('ruined columns and similar wall-category props keep floor-supported silhou
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-test('rolling branch fog has visible contrast and motion while respecting visibility and Still', async ({ page }) => {
+test('restrained branch wisps and a dynamic feathered frontier respect visibility and Still', async ({ page }) => {
   await page.goto('/testbed/fog-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(52)
+  expect(report.checks).toBe(112)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
