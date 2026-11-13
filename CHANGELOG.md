@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.72 — 2026-11-12
+
+- Add quick, material-specific entrance effects for Ice Thorns, Fulminant Prism, clouds and stationary spell explosions.
+- Keep Flame Wave's expanding explosion cells anchored instead of joining them into moving projectile paths.
+- Preserve confirmed visibility, Still/reduced motion and ordinary projectile travel; add deterministic spawn lifecycle and browser raster checks.
+
 ## 0.3.71 — 2026-11-12
 
 - Make melee strikes more pronounced with opaque, outlined weapon artwork, thicker trails and a solid braided whip.
