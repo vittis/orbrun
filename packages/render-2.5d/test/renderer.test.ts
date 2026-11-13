@@ -268,7 +268,7 @@ describe('picking and visibility', () => {
       expect(rect.y + rect.height / 2).toBeCloseTo(body.y + footOffset - scale / 2)
       expect(art).not.toHaveBeenCalled()
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
-      expect(spray.mock.calls.length).toBeLessThanOrEqual(26)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
       const sourceX = (body.x - r.project(0, 0).x) / scale
       expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && Math.abs(c[3].x - sourceX) < 0.08)).toBe(true)
       expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
@@ -299,8 +299,18 @@ describe('picking and visibility', () => {
       r.render(contact + 0.03)
       expect(art).not.toHaveBeenCalled()
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
-      expect(spray.mock.calls.length).toBeLessThanOrEqual(26)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
       expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      const normalCount = spray.mock.calls.length
+      spray.mockClear(); r.setOptions({ hitGore: 2, deathGore: 0 }); r.render(contact + 0.03)
+      expect(spray.mock.calls.length).toBeGreaterThan(normalCount)
+      spray.mockClear(); r.setOptions({ hitGore: 0, deathGore: 2 }); r.render(contact + 0.03)
+      expect(spray).not.toHaveBeenCalled()
+      r.death({ actorId: 'id:7', x: 1, y: 0, height: 1, kind: 'flesh', direction: { x: 1, y: 0 } }, contact)
+      r.render(contact + 0.03)
+      expect(spray.mock.calls.length).toBeGreaterThan(normalCount)
+      spray.mockClear(); r.setOptions({ deathGore: 0 }); r.render(contact + 0.03)
+      expect(spray).not.toHaveBeenCalled()
       r.render(contact + 0.8)
       expect(r.animating).toBe(false)
     } finally { art.mockRestore(); spray.mockRestore(); r.destroy() }

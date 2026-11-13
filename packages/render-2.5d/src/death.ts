@@ -13,7 +13,7 @@ export interface DeathParticle {
 }
 
 export const debrisPalettes: Record<DeathKind, readonly (readonly [number, number, number])[]> = {
-  flesh: [[159, 25, 39], [198, 51, 57], [114, 18, 32]],
+  flesh: [[139, 19, 31], [173, 30, 40], [98, 14, 26]],
   bone: [[231, 220, 177], [168, 157, 125], [255, 244, 211]],
   slime: [[132, 206, 55], [190, 236, 86], [61, 133, 49]],
   stone: [[152, 143, 128], [205, 193, 163], [94, 97, 106]],
@@ -61,7 +61,9 @@ export class DungeonDeaths {
     return true
   }
 
-  sample(scene: Scene, now: number): DeathParticle[] {
+  sample(scene: Scene, now: number, gore = 1): DeathParticle[] {
+    gore = Number.isFinite(gore) ? Math.max(0, Math.min(2, gore)) : 1
+    if (gore === 0) { this.clear(); return [] }
     this.bursts = this.bursts.filter(b => now - b.born < durations[b.kind] && scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible')
     const particles: DeathParticle[] = []
     for (const b of this.bursts) {
@@ -74,18 +76,18 @@ export class DungeonDeaths {
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
       const random = debrisRandom(b.seed)
-      const density = (0.75 + random() * 0.55) * 0.72, energy = (0.75 + random() * 0.6) * 0.8
-      const liftScale = (0.85 + random() * 0.25) * 0.85, sizeScale = (0.85 + random() * 0.3) * 0.87
+      const density = (0.75 + random() * 0.55) * 1.12 * gore, energy = (0.75 + random() * 0.6) * 0.95
+      const liftScale = (0.85 + random() * 0.25) * 0.85, sizeScale = (0.85 + random() * 0.3) * (0.95 + gore * 0.1)
       const distribution = Math.floor(random() * 3) // Broad, narrow, or split forward fans.
       const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
         + (random() - 0.5) * 0.6
       const spread = 0.9 + random() * 1.4, width = 0.8 + random() * 0.5
       const push = (0.65 + random() * 0.7) * 0.9, originSpread = (0.03 + random() * 0.1) * 0.65
-      const poolCount = 3 + Math.floor(random() * 4), poolScale = (0.8 + random() * 0.4) * 0.7
+      const poolCount = Math.ceil((3 + Math.floor(random() * 4)) * gore), poolScale = (0.8 + random() * 0.4) * (0.8 + gore * 0.15)
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
       if (t < 0.12) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.24 + Math.floor(t * 35) * 0.045) * sizeScale,
         angle: Math.round(heading / (Math.PI / 2)) * Math.PI / 2, stretch: width,
-        alpha: 1 - t / 0.12, colour: palette[1], sprite: 'burst', ground: false })
+        alpha: 1 - t / 0.12, colour: palette[1], sprite: gory || liquid ? 'splat' : 'burst', ground: false })
       const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
       const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
       const splashCount = Math.ceil(count / 3), splashPhase = random() * Math.PI * 2
@@ -104,7 +106,7 @@ export class DungeonDeaths {
         const spin = (random() - 0.5) * 14, fade = 0.8 + random() * 0.2
         const originAngle = random() * Math.PI * 2, originRadius = Math.sqrt(random()) * originSpread
         // A brisk launch with enough travel and residue to read the hit direction.
-        const elapsed = Math.floor(t * 1.15 * 60) / 60
+        const elapsed = Math.floor(t * 1.4 * 60) / 60
         const drag = large ? 3.2 : 3.8, drift = (1 - Math.exp(-elapsed * drag)) / drag
         const swirl = airy ? elapsed * 1.6 : 0
         const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * (splash ? 1 : width)

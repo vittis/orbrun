@@ -104,7 +104,9 @@ function play(kind: string) {
     if (kind === 'kill') renderer.setOptions({ animate: false })
     renderer.setOptions({ animate: !reduced,
       meleeBumpStrength: Number((document.getElementById('bump-strength') as HTMLSelectElement).value),
-      meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value) })
+      meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value),
+      hitGore: Number((document.getElementById('hit-gore') as HTMLSelectElement).value),
+      deathGore: Number((document.getElementById('death-gore') as HTMLSelectElement).value) })
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)

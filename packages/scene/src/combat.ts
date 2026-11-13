@@ -18,21 +18,23 @@ export const impactStrength = (intensity: HitIntensity = 'light') => intensity =
 
 /** A single body-bump clock, independent of weapon type. Times are seconds. */
 export function bumpTiming() {
-  const duration = 0.32
-  return { duration, contact: duration * 0.42 }
+  return { duration: 0.24, contact: 0.055 }
 }
 
 /** Anticipation, contact and recovery; the defender moves only after contact. */
 export function bumpPose(elapsed: number, bumpSnap = 1) {
   const { duration, contact } = bumpTiming()
-  const age = elapsed / duration, impact = (elapsed - contact) / (duration - contact)
-  const lunge = age < 0 || age >= 1 ? 0 : age < 0.16 ? -0.025 * Math.sin(age / 0.16 * Math.PI)
-    : elapsed < contact ? 0.15 * ((age - 0.16) / (0.42 - 0.16)) ** 2 : 0.15 * (1 - impact) ** 2
-  // A fast kick, brief compression, then a clean settle. This is visual pose
-  // only: never pause input, the renderer clock, or confirmed server movement.
+  if (elapsed < 0 || elapsed >= duration) return { lunge: 0, recoil: 0 }
   const snap = Number.isFinite(bumpSnap) ? Math.max(0, Math.min(1, bumpSnap)) : 1
-  const rise = 0.25 - snap * 0.19, hold = snap * 0.1
-  const recoil = impact < 0 || impact >= 1 ? 0 : 0.16 * (impact < rise
+  const impact = (elapsed - contact) / (duration - contact)
+  const windup = 0.012, hold = 0.08 + snap * 0.12
+  const recovery = Math.max(0, (impact - hold) / (1 - hold))
+  const lunge = elapsed < windup ? -0.025 * Math.sin(elapsed / windup * Math.PI)
+    : elapsed < contact ? (0.18 + snap * 0.04) * ((elapsed - windup) / (contact - windup)) ** 2
+      : (0.18 + snap * 0.04) * (1 - recovery) ** 3
+  // Visual compression only: input and authoritative movement never pause.
+  const rise = 0.22 - snap * 0.19
+  const recoil = impact < 0 ? 0 : (0.17 + snap * 0.07) * (impact < rise
     ? 1 - (1 - impact / rise) ** 3
     : impact < rise + hold ? 1 : (1 - (impact - rise - hold) / (1 - rise - hold)) ** 3)
   return { lunge, recoil }

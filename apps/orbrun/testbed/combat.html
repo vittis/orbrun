@@ -21,14 +21,16 @@
   <header>
     <h1>Orbrun / Combat feedback</h1>
     <label>View <select id="projection"><option value="2.5d">Dungeon 2.5D</option><option value="2d">Tiles 2D</option></select></label>
-    <label>Bump strength <select id="bump-strength"><option value="0">Off</option><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option></select></label>
+    <label>Bump strength <select id="bump-strength"><option value="0">Off</option><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
     <label>Bump snap <select id="bump-snap"><option value="0">Soft</option><option value="0.5">Firm</option><option value="1" selected>Crunchy</option></select></label>
+    <label>Hit gore <select id="hit-gore"><option value="0">Off</option><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
+    <label>Death gore <select id="death-gore"><option value="0">Off</option><option value="0.5">50%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
     <label>Target material <select id="death-kind"><option>goblin</option><option>skeleton</option><option>jelly</option><option>stone golem</option><option>phantom</option><option>fire elemental</option><option>ice beast</option><option>thorn hunter</option><option>hornet</option><option>water elemental</option></select></label>
     <button data-effect="light">Light hit</button><button data-effect="solid">Solid hit</button><button data-effect="hit">Heavy hit</button><button data-effect="dart">Magic Dart</button><button data-effect="incoming">Enemy melee</button><button data-effect="miss">Miss</button><button data-effect="fire">Fire</button><button data-effect="cold">Cold</button><button data-effect="kill">Kill</button><button data-effect="hurt">Hurt</button><button data-effect="status">Poison</button><button data-effect="heal">Heal</button>
     <button data-effect="armor">Enemy armor</button><button data-effect="incomingArmor">Player armor</button><button data-effect="dodge">Player dodge</button>
     <label><input type="checkbox" id="reduced"> Reduced motion</label>
     <label><input type="checkbox" id="paused"> Freeze effects</label>
-    <label>Attack frame <input id="effect-age" type="range" min="0" max="99" value="42" aria-label="Frozen attack progress"></label>
+    <label>Attack frame <input id="effect-age" type="range" min="0" max="99" value="23" aria-label="Frozen attack progress"></label>
     <label>Death frame <select id="death-age"><option value="0">First frame</option><option value="60">Impact</option><option value="450">Spray</option><option value="1100">Remains</option><option value="3500">Fading</option><option value="5500">Expired</option></select></label>
   </header>
   <main id="dungeon"></main>

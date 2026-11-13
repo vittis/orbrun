@@ -176,7 +176,7 @@ describe('bounded dungeon combat presentation', () => {
       fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: i }, contact)
       fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: i, kind: 'fire' }, contact)
       expect(fx.visibleBursts(contact - 0.001)).toEqual([])
-      expect(fx.visibleBursts(contact)).toMatchObject([{ born: contact, duration: 0.65, spray: { kind: 'slime', source: 'melee' } }])
+      expect(fx.visibleBursts(contact)).toMatchObject([{ born: contact, duration: 0.3, spray: { kind: 'slime', source: 'melee' } }])
       expect(fx.bursts).toHaveLength(1)
     }
   })
@@ -368,7 +368,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.bumps).toHaveLength(1)
     for (let i = 0; i < 100; i++) fx.bump(scene, attack, 2 + i * 0.1)
     expect(fx.bumps.length).toBeLessThanOrEqual(12)
-    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.28)
+    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.44)
     scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     fx.tick(scene, 12)
     expect(fx.bumps).toHaveLength(0)

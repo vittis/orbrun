@@ -23,7 +23,7 @@ import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from
  */
 const SETTING_GROUPS = [
   ['View', 'Dungeon tilt, zoom, animation and movement.'],
-  ['Combat', 'Attack and hit bumps.'],
+  ['Combat', 'Body impact, blood and material bursts.'],
   ['Controls', 'What the keys, the d-pad and the sticks do.'],
   ['Interface', 'What the HUD shows around the view, and how big it is.'],
 ] as const
@@ -191,8 +191,10 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('View', 'Dungeon move easing', 'depthMovementEasing', ['ease-out', 'smooth', 'linear'], 'Snappy starts immediately and settles gently. Smooth eases in and out. Linear keeps a constant speed. All land exactly on the grid.', v => ({ 'ease-out': 'Snappy', smooth: 'Smooth', linear: 'Linear' })[v], s => s.depthAnimate === false || !s.depthMovement),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
   // Combat
-  row('Combat', 'Hit bump strength', 'meleeBumpStrength', [0, 0.5, 1, 1.5], 'Amount of attacker bump and target recoil. Off keeps both planted. Actual cells never change.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Hit bump strength', 'meleeBumpStrength', [0, 0.5, 1, 1.5, 2], 'Amount of attacker bump and target recoil. Off keeps both planted. Actual cells never change.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
   row('Combat', 'Hit bump snap', 'meleeBumpSnap', [0, 0.5, 1], 'Soft eases into the bump. Crunchy kicks quickly, holds briefly, then settles. Does not pause play.', v => v === 0 ? 'Soft' : v === 1 ? 'Crunchy' : 'Firm', s => s.depthAnimate === false || s.meleeBumpStrength === 0),
+  row('Combat', 'Hit gore', 'hitGore', [0, 0.5, 1, 1.5, 2], 'Blood and debris in each hit burst. Higher levels add droplets and heavier splashes. Off keeps body bumps and hit flashes.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Death gore', 'deathGore', [0, 0.5, 1, 1.5, 2], 'Death burst density, chunks and floor splatter. Bloodless creatures keep their own material. Off hides death debris.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
   // Controls
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface

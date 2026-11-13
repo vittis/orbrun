@@ -23,7 +23,20 @@ function setup(name = 'orc') {
   return { scene, fx }
 }
 
-describe('subtle directional melee sprays', () => {
+describe('snappy directional melee sprays', () => {
+  it('bursts at early contact, scales gore density and expires quickly at every level', () => {
+    const { scene, fx } = setup()
+    fx.bump(scene, { ...attack, intensity: 'heavy' }, 1)
+    const burst = fx.bursts[0]
+    expect(contact - 1).toBeLessThan(0.07)
+    const sample = (gore: number, age = 0.06) => sampleHitSpray(scene, burst, contact + age, undefined, gore)
+    expect(sample(0)).toEqual([])
+    expect(sample(2).length).toBeGreaterThan(sample(1).length)
+    expect(sample(1).length).toBeGreaterThan(sample(0.5).length)
+    expect(sample(2).length).toBeLessThanOrEqual(96)
+    for (const gore of [0.5, 1, 2]) expect(sample(gore, 0.31)).toEqual([])
+  })
+
   it.each(materials)('gives %s its own body material without a generic contact flash', (name, kind, sprite) => {
     const { scene, fx } = setup(name)
     fx.bump(scene, attack, 1)
@@ -32,15 +45,15 @@ describe('subtle directional melee sprays', () => {
     expect(sampleHitSpray(scene, burst, contact - 0.001)).toEqual([])
     const particles = sampleHitSpray(scene, burst, contact)
     expect(particles.length).toBeGreaterThanOrEqual(8)
-    expect(particles.length).toBeLessThanOrEqual(26)
-    expect(particles.every(p => p.sprite === sprite && p.size < 0.08 && [5, 8].includes(p.minPixels!) && !p.ground && p.z > 0.2)).toBe(true)
+    expect(particles.length).toBeLessThanOrEqual(48)
+    expect(particles.every(p => p.sprite === sprite && p.size < 0.08 && [5, 7].includes(p.minPixels!) && !p.ground && p.z > 0.2)).toBe(true)
     expect(particles.every(p => debrisPalettes[kind].includes(p.colour))).toBe(true)
-    expect(particles.every(p => Math.hypot(p.x, p.y) < 0.04)).toBe(true)
+    expect(particles.every(p => Math.hypot(p.x, p.y) < 0.15)).toBe(true)
     expect(sampleHitSpray(scene, burst, contact + 0.7)).toEqual([])
     const death = new DungeonDeaths()
     death.observe(scene, true)
     death.spawn(scene, { actorId: 'id:7', kind, x: 0, y: 0, height: 0.8, direction: { x: 1, y: 0 } }, contact)
-    expect(death.sample(scene, contact).some(p => p.sprite === 'burst')).toBe(true)
+    expect(death.sample(scene, contact).some(p => p.sprite === (['flesh', 'insect', 'slime', 'water'].includes(kind) ? 'splat' : 'burst'))).toBe(true)
   })
 
   it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])('splashes around contact while favouring the hit direction (%i, %i)', (dx, dy) => {
@@ -88,7 +101,7 @@ describe('subtle directional melee sprays', () => {
     fx.spell(scene, { x: 0, y: 0, actorId: 'id:7', kind: 'fire' }, contact)
     fx.spell(scene, { x: 0, y: 0, kind: 'physical' }, contact, 'generic')
     expect(fx.bursts).toHaveLength(1)
-    expect(fx.bursts[0]).toMatchObject({ born: contact, duration: 0.65, kind: 'fire', spray: { kind: 'bone' } })
+    expect(fx.bursts[0]).toMatchObject({ born: contact, duration: 0.3, kind: 'fire', spray: { kind: 'bone' } })
     expect(fx.bursts[0].spray).toBe(spray)
   })
 

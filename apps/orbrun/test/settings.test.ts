@@ -58,6 +58,13 @@ describe('settings storage boundary', () => {
     expect(getSettings().hints).toBe(hints)
   })
 
+  it('persists independent hit and death gore levels without losing existing motion preferences', () => {
+    saveSettings({ ...defaultSettings, hitGore: 0, deathGore: 1.5, meleeBumpSnap: 0.5 })
+    expect(getSettings()).toMatchObject({ hitGore: 0, deathGore: 1.5, meleeBumpSnap: 0.5 })
+    saveSettings({ ...getSettings(), hitGore: 2 })
+    expect(getSettings()).toMatchObject({ hitGore: 2, deathGore: 1.5, meleeBumpSnap: 0.5 })
+  })
+
   it('validates booleans and unions on both read and write', () => {
     const invalid = { depthAnimate: 'yes', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
@@ -71,7 +78,7 @@ describe('settings storage boundary', () => {
   })
 })
 
-const numericKeys = ['depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
+const numericKeys = ['hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
 describe('numeric preference validation', () => {
   it.each(numericKeys)('rejects invalid %s values on read and write', name => {
     for (const value of [null, true, '12', {}, [], NaN, Infinity, -Infinity]) {
@@ -86,6 +93,7 @@ describe('numeric preference validation', () => {
   })
 
   it.each([
+    ['hitGore', -1, 0], ['hitGore', 99, 2], ['deathGore', -1, 0], ['deathGore', 99, 2],
     ['depthTilt', -10, 35], ['depthTilt', 100, 65],
     ['depthZoom', 0, 0.8], ['depthZoom', 2, 1.4],
     ['depthMovementDuration', 0, 0.04], ['depthMovementDuration', 1, 0.25],

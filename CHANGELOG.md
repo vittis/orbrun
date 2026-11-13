@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.84 — 2026-11-13
+
+- Melee hits land earlier with a stronger body bump, a brief impact hold and a sharp recoil. Hit flashes and material sprays share the new contact timing.
+- Hit sprays are shorter, faster and denser. Blood uses dark, rounded droplets and irregular splashes instead of pointed, bright fragments; deaths throw heavier bursts and leave richer floor splatter.
+- Combat settings now include independent Hit gore and Death gore levels from Off to 200%, plus bump strength up to 200%. Still/reduced motion and confirmed visibility remain respected.
+
 ## 0.3.83 — 2026-11-13
 
 - Continue raised side-wall tops into lowered foreground corners, removing the dark internal step at the join while preserving corridor clearance and exposed wall faces.

@@ -218,7 +218,7 @@ export class DungeonEffects {
       x += dx / length * kick * bumpStrength; y += dy / length * kick * bumpStrength
     }
     // Rapid actions never accumulate more than a small fraction of a cell.
-    const limit = Math.max(1, Math.hypot(x, y) / 0.28)
+    const limit = Math.max(1, Math.hypot(x, y) / 0.44)
     return { x: x / limit, y: y / limit }
   }
 

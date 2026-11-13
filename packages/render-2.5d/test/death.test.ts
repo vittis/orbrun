@@ -13,6 +13,17 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it('scales death gore independently, caps maximum debris and clears an active death when disabled', () => {
+    const scene = room(), fx = new DeathEffects()
+    fx.observe(scene, true); fx.spawn(scene, death(), 1)
+    expect(fx.sample(scene, 1.1, 2).length).toBeGreaterThan(fx.sample(scene, 1.1, 1).length)
+    expect(fx.sample(scene, 1.1, 1).length).toBeGreaterThan(fx.sample(scene, 1.1, 0.5).length)
+    expect(fx.sample(scene, 1.1, 2).length).toBeLessThanOrEqual(192)
+    expect(fx.sample(scene, 1.1, 999)).toEqual(fx.sample(scene, 1.1, 2))
+    expect(fx.sample(scene, 1.1, 0)).toEqual([])
+    expect(fx.active).toBe(false)
+  })
+
   it.each(['flesh', 'bone', 'slime', 'stone', 'spirit', 'fire', 'ice', 'plant', 'insect', 'water'] as const)('%s death debris spreads around the origin while favoring the hit direction', kind => {
     const scene = room()
     for (const id of [1, 7, 19]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]]) {
@@ -39,7 +50,7 @@ describe('enemy death presentation', () => {
       for (const height of [0.35, 0.8, 1.4]) for (let id = 1; id <= 24; id++) {
         const fx = new DeathEffects()
         fx.observe(scene, true); fx.spawn(scene, { ...death(kind, id), height }, 1)
-        expect(fx.sample(scene, 1).length).toBeLessThanOrEqual(56)
+        expect(fx.sample(scene, 1).length).toBeLessThanOrEqual(96)
         for (const age of [0.15, 0.3, 0.6, 0.9, 1.5, 2.4]) {
           const particles = fx.sample(scene, 1 + age)
           if (age === 0.3 || age === 0.9) expect(particles.length).toBeGreaterThan(0)
@@ -62,7 +73,7 @@ describe('enemy death presentation', () => {
         const spray = fx.sample(scene, 1.2).filter(p => !p.ground && p.sprite !== 'burst')
         counts.add(launch.length)
         expect(launch.length).toBeGreaterThan(10)
-        expect(launch.length).toBeLessThan(56)
+        expect(launch.length).toBeLessThan(96)
         // Mean displacement measures energy; lateral/forward spread measures shape.
         travel.add(Math.round(spray.reduce((sum, p) => sum + Math.hypot(p.x, p.y), 0) / spray.length * 100))
         const lateral = spray.reduce((sum, p) => sum + p.y * p.y, 0)
@@ -94,7 +105,7 @@ describe('enemy death presentation', () => {
     fx.observe(scene, true)
     fx.spawn(scene, death(), now)
     const particles = fx.sample(scene, now)
-    expect(particles.some(p => p.sprite === 'burst' && p.alpha === 1)).toBe(true)
+    expect(particles.some(p => p.sprite === 'splat' && p.alpha === 1)).toBe(true)
     expect(particles.some(p => p.sprite === 'gib' && p.alpha === 1)).toBe(true)
     expect(fx.coversImpact(0, 0, now)).toBe(true)
   })
@@ -161,7 +172,7 @@ describe('enemy death presentation', () => {
     fx.observe(scene, true); fx.spawn(scene, death(), 1)
     const spray = fx.sample(scene, 1.2)
     expect(spray.length).toBeGreaterThan(20)
-    expect(spray.length).toBeLessThanOrEqual(56)
+    expect(spray.length).toBeLessThanOrEqual(96)
     expect(spray.filter(p => p.sprite === 'gib').length).toBeGreaterThanOrEqual(3)
     expect(spray.some(p => p.sprite === 'drop' && !p.ground && p.z > 0.2)).toBe(true)
     expect(spray.some(p => p.ground && p.sprite === 'splat' && p.size >= 0.16)).toBe(true)

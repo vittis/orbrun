@@ -320,10 +320,10 @@ describe('Hit bump preferences', () => {
     for (const key of ['meleeEffects', 'meleeMotion', 'meleeWeight', 'meleeTrail']) expect(s).not.toHaveProperty(key)
     saveSettings(s)
     expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
-    expect(settingGroups().find(g => g.group === 'Combat')!.rows.map(r => r.key)).toEqual(['meleeBumpStrength', 'meleeBumpSnap'])
+    expect(settingGroups().find(g => g.group === 'Combat')!.rows.map(r => r.key)).toEqual(expect.arrayContaining(['meleeBumpStrength', 'meleeBumpSnap', 'hitGore', 'deathGore']))
   })
   it('clamps malformed or out-of-range bump tuning', () => {
     store.set('orbrun.settings', JSON.stringify({ meleeBumpStrength: 99, meleeBumpSnap: -1 }))
-    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0 })
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 2, meleeBumpSnap: 0 })
   })
 })
