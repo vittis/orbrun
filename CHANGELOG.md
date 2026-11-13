@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.111 — 2026-11-13
+
+- Level-up feedback now uses smooth, understated lettering with a small rising burst of warm embers and a soft 1.8-second fade. It remains above the character and triggers before stat selection; Still/reduced motion show a static label.
+- Removed the shadow overlay during message pauses. System menus and modal backdrops use an even tint instead of darkening the corners.
+
 ## 0.3.110 — 2026-11-13
 
 - Made magic death splatter a little shorter and less intense: a 0.65-second maximum instead of 0.8 seconds, about 12% fewer particles, slightly softer opacity and a quicker fade. Retained purple glints, body splatter and per-spawn variation.

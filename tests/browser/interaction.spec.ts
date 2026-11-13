@@ -97,13 +97,16 @@ test('level-up embers rise, then disappear with Still and native reduced motion'
   const embers = () => page.locator('.level-up-art').evaluate(canvas => {
     const art = canvas as HTMLCanvasElement, dpr = art.width / art.clientWidth
     const data = art.getContext('2d')!.getImageData(0, 0, art.width, art.height).data
-    let count = 0, ySum = 0
+    const points: { x: number; y: number }[] = []
     for (let y = 0; y < art.height; y++) for (let x = 0; x < art.width; x++) {
       if (x / dpr >= 80 && x / dpr <= 160 && y / dpr >= 55) continue // exclude lettering
       const i = (y * art.width + x) * 4
-      if (data[i + 3] > 40 && data[i] > 170 && data[i + 1] > 80) { count++; ySum += y / dpr }
+      if (data[i + 3] > 40 && data[i] > 170 && data[i + 1] > 80) points.push({ x: x / dpr, y: y / dpr })
     }
-    return { count, y: count ? ySum / count : 0 }
+    // Track the outermost ember, so motes entering/leaving the text mask cannot bias its motion.
+    const left = Math.min(...points.map(p => p.x))
+    const edge = points.filter(p => p.x <= left + 3)
+    return { count: points.length, y: edge.length ? edge.reduce((sum, p) => sum + p.y, 0) / edge.length : 0 }
   })
   await page.clock.runFor(250)
   const first = await embers()
