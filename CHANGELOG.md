@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.70 — 2026-11-12
+
+- Give nine melee weapon families distinct pixel-art gestures, with upright silhouettes, short follow-through and withdrawing thrusts.
+- Add Combat settings for weapon effects, stroke weight, trail length and actor lunge/recoil; expand the melee preview to 27 gestures.
+- Preserve 0.3.69's removal of floating combat text and its streamlined verification workflow.
+
 ## 0.3.69 — 2026-11-12
 
 - Remove floating combat popups, their setting, font/icons and dedicated engine patches while preserving world combat and spell effects.
