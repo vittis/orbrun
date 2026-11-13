@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.89 — 2026-11-13
+
+- Expanded Dungeon tilt to 25°–85° and zoom to 25%–300%, keeping 5°/5% adjustment steps.
+- Updated saved-setting validation and renderer limits together so every offered value takes effect.
+
 ## 0.3.88 — 2026-11-13
 
 - Mutual melee attacks lunge about half as far at contact, easing smoothly through staggered counterattacks to reduce overlap.

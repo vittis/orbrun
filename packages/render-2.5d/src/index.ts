@@ -21,9 +21,9 @@ export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
 
 export interface Render25dOptions {
-  /** Camera elevation above the ground, in degrees. */
+  /** Camera elevation above the ground, clamped to 25–85 degrees. */
   tilt?: number
-  /** 1 fits the full field of view; higher values trade coverage for detail. */
+  /** 0.25–3; 1 fits the full field of view, higher values trade coverage for detail. */
   zoom?: number
   /** Animated atmosphere, automatically disabled by the app for reduced motion. */
   animate?: boolean
@@ -89,8 +89,8 @@ export class Render25d implements MapRenderer {
 
   setOptions(options: Render25dOptions) {
     Object.assign(this.opts, options)
-    this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(30, Math.min(75, this.opts.tilt)) : 50
-    this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.6, Math.min(1.6, this.opts.zoom)) : 1
+    this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(25, Math.min(85, this.opts.tilt)) : 50
+    this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.25, Math.min(3, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     for (const [key, min, max] of [['meleeBumpStrength', 0, 2], ['meleeBumpSnap', 0, 1], ['hitGore', 0, 2], ['deathGore', 0, 2]] as const) {
