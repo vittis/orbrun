@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { creatureLife, tileLight, tileMotion, projectileAppearance } from '../src/living.js'
+import { creatureLife, tileLight, tileMotion, projectileAppearance, spawnAppearance } from '../src/living.js'
 import { livingPose, type Billboard } from '@orbrun/scene'
 import type { FlagWord } from '@orbrun/gamedata'
 
 const monster: Billboard = { x: 1, y: 0, kind: 'monster', tile: 1, height: 0.6, attitude: 'hostile' }
 describe('server tile semantics for atmosphere', () => {
+  it('recognises spawned terrain, prism charge variants, clouds and explicit area artwork', () => {
+    expect(spawnAppearance('DNGN_ICE_THORNS_2')).toEqual({ kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' })
+    expect(spawnAppearance('MONS_FULMINANT_PRISM_3')).toEqual(spawnAppearance('MONS_FULMINANT_PRISM'))
+    expect(spawnAppearance('CLOUD_COLD_2')).toMatchObject({ kind: 'cold', style: 'cloud' })
+    expect(spawnAppearance('BOLT_ICEBLAST_1')).toMatchObject({ kind: 'cold', style: 'burst' })
+    for (const name of ['BOLT_FLAME', 'BOLT_DEFAULT_RED', 'BOLT_FROST', 'MONS_ORC', 'DNGN_FLOOR_NORMAL']) expect(spawnAppearance(name)).toBeUndefined()
+  })
   it.each([
     ['BOLT_SANDBLAST', 'sand'], ['BOLT_SANDBLAST_2', 'sand'], ['BOLT_STONE_ARROW', 'stone'],
     ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],

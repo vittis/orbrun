@@ -1,4 +1,4 @@
-import type { Billboard, SceneCell, TileLife, TileLight, LifeMotion, ProjectileAppearance } from '@orbrun/scene'
+import type { Billboard, SceneCell, TileLife, TileLight, LifeMotion, ProjectileAppearance, SpawnAppearance } from '@orbrun/scene'
 import type { Gamedata, FlagWord } from '@orbrun/gamedata'
 import type { GameState, MapCell } from '@orbrun/webtiles'
 
@@ -76,6 +76,20 @@ export function projectileAppearance(name: string, variants?: number): Projectil
   return appearance('magic', glow?.colour ?? [194, 177, 218], /^BOLT_DEFAULT_|^BOLT_(?:DRAIN|SHADOW|NEGATIVE|FORCE_BOLT)/.test(name))
 }
 
+/** Server tile identities, including trunk terrain, rather than selected spells. */
+export function spawnAppearance(name: string): SpawnAppearance | undefined {
+  const family = name.toUpperCase().replace(/ /g, '_').replace(/_\d+$/, '')
+  if (/_GONE|_EXPIRED|_INACTIVE/.test(family)) return
+  if (/ICE_THORN|FROZEN_RAMPART/.test(family)) return { kind: 'cold', style: 'crystal', family }
+  if (/FULMINANT_PRISM|BATTLESPHERE|SPELLFORGED_SERVITOR|BALL_LIGHTNING/.test(family)) return { kind: /LIGHTNING/.test(family) ? 'electric' : 'magic', style: 'summon', family }
+  const style = /^CLOUD_/.test(family) ? 'cloud' : /^BOLT_(?:FIRE_STORM|ICEBLAST|IGNITE_POISON|FULSOME_)/.test(family) ? 'burst' : undefined
+  if (!style) return
+  const kind = /COLD|FREEZ|ICE|FROST/.test(family) ? 'cold' : /FIRE|FLAME|IGNITE/.test(family) ? 'fire'
+    : /MEPHITIC|POISON/.test(family) ? 'poison' : /ACID/.test(family) ? 'acid'
+    : /ELEC|STORM/.test(family) ? 'electric' : /MAGIC|CHAOS|TLOC|MUTAGEN/.test(family) ? 'magic' : 'air'
+  return { kind, style, family }
+}
+
 export function creatureLife(name: string, flags: FlagWord, b: Billboard, tileName = name): TileLife {
   const n = name.toUpperCase().replace(/ /g, '_')
   // tileidx_monster also sets FLYING to suppress water clipping for these
@@ -108,7 +122,7 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
   const lights = light ? [light] : []
   if (t?.halo || t?.sanctuary) lights.push({ colour: [255, 236, 190], radius: 2.2, power: 0.18, pulse: 'slow' })
   if (t?.orb_glow || t?.disjunct || t?.quad_glow) lights.push({ colour: [220, 100, 255], radius: 2.4, power: 0.25, pulse: 'slow' })
-  cell.life = { motion: cell.flags.lava ? 'lava' : cell.flags.water ? 'water' : tileMotion(name), lights }
+  cell.life = { motion: cell.flags.lava ? 'lava' : cell.flags.water ? 'water' : tileMotion(name), lights, spawn: spawnAppearance(name) }
   for (const b of billboards) {
     const tileName = gd.main.baseName(b.tile) ?? gd.player.baseName(b.tile) ?? ''
     if (b.kind === 'monster') {
@@ -120,6 +134,7 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
       b.life = { motion: b.kind === 'cloud' ? 'cloud' : b.kind === 'player' ? 'breath' : tileMotion(tileName), lights: glow ? [glow] : undefined,
         projectile: b.kind === 'projectile' ? projectileAppearance(gd.main.name(b.tile) ?? tileName, gd.modules.main.tile_count(gd.main.id(tileName) ?? b.tile)) : undefined }
     }
+    if (b.kind === 'monster' || b.kind === 'cloud' || b.kind === 'projectile') b.life.spawn = spawnAppearance(tileName)
     if (b.kind === 'player') {
       const hp = state.player.hp / Math.max(1, state.player.hp_max)
       const status = state.player.status.map(s => `${s.light ?? ''} ${s.text ?? ''}`).join(' ')
