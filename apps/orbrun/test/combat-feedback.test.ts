@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { cellKey, emptyScene, type Billboard } from '@orbrun/scene'
+import { bumpFor } from '../src/bump-effects'
 import { CombatFeedback, combatText } from '../src/combat-feedback'
 import { readFileSync } from 'node:fs'
 
@@ -72,7 +73,7 @@ describe('combat sentences', () => {
     'The goblin hits you with a +0 club but does no damage.',
     'The goblin bites you but does no damage.',
   ])('does not create outgoing damage from an incoming no-damage sentence: %s', text => {
-    expect(combatText(text)).toEqual([])
+    expect(combatText(text).every(e => e.kind === 'hurt' && e.player && e.amount === 0)).toBe(true)
   })
 
   it('keeps patched-server exact Ice Thorns damage exact and ignores crumbling terrain', () => {
@@ -107,7 +108,7 @@ describe('combat sentences', () => {
     expect(combatText('The bolt hits the goblin!')[0]).toMatchObject({ tone: 'physical' })
   })
   it('distinguishes misses, shield blocks and kills from hits', () => {
-    expect(combatText('You barely miss the goblin. The goblin closely misses you. You block the goblin\'s attack. You kill the goblin!').map(p => p.kind)).toEqual(['miss', 'kill'])
+    expect(combatText('You barely miss the goblin. The goblin closely misses you. You block the goblin\'s attack. You kill the goblin!').map(p => p.kind)).toEqual(['miss', 'miss', 'kill'])
     expect(combatText('The goblin blocks your attack.')).toEqual([])
     expect(combatText('The arrow misses the goblin.')).toEqual([])
   })
@@ -131,10 +132,8 @@ describe('combat sentences', () => {
   })
 
   it.each([
-    'The goblin misses you.',
     'You block the arrow.',
     'The bolt of fire hits you for 0 damage.',
-    'The goblin hits you but does no damage.',
     'Casting: Magic Dart (safe; 1% risk of failure)',
     'You miscast Magic Dart.',
     'You feel sick.',
@@ -252,7 +251,7 @@ describe('combat updates', () => {
     events.push(...feedback.flush(scene))
     expect(events).toMatchObject([{ kind: 'hurt', player: true, amount: undefined }])
     text('The goblin hits you! The goblin misses you.', 1)
-    expect(feedback.flush(scene)).toEqual([])
+    expect(feedback.flush(scene)).toMatchObject([{ kind: 'miss', player: true, melee: true }])
   })
   it('ignores initial history and stat baselines, including spectating mid-combat', () => {
     const state = initialState(), feedback = new CombatFeedback(state), scene = world(goblin())
@@ -492,5 +491,69 @@ describe('one event per reported attack', () => {
     expect(feedback.flush(next)).toEqual([])
     text('You hit the goblin for 8!')
     expect(feedback.flush(next)).toMatchObject([{ amount: 8, }])
+  })
+})
+
+
+describe('visible creature melee sources', () => {
+  it.each(['The goblin hits you!', 'The goblin misses you.', 'The goblin hits you but does no damage.'])(
+    'resolves incoming attempts without consulting the player weapon: %s', sentence => {
+      const { feedback, scene, text } = harness()
+      text(sentence)
+      const events = feedback.flush(scene)
+      expect(events).toHaveLength(1)
+      expect(bumpFor(events[0], scene, 'shortbow')).toMatchObject({
+        from: { x: 1, y: 0 }, fromId: 'id:1', to: { x: 0, y: 0 }, toId: 'player',
+        hit: sentence === 'The goblin hits you!',
+      })
+    })
+
+  it('resolves allies attacking enemies and enemies attacking allies', () => {
+    const { feedback, text } = harness()
+    const ally: Billboard = { ...goblin(2, 2), name: 'orc', ref: { id: 2, name: 'orc' }, attitude: 'friendly' }
+    const scene = world(goblin(), ally)
+    feedback.flush(scene)
+    text('Your orc hits the goblin! The goblin bites your orc.')
+    const events = feedback.flush(scene)
+    expect(events.map(e => bumpFor(e, scene, 'shortbow'))).toMatchObject([
+      { fromId: 'id:2', toId: 'id:1', hit: true },
+      { fromId: 'id:1', toId: 'id:2', hit: true },
+    ])
+    expect(feedback.takeSpells()).toEqual([]) // Contact owns the material spray.
+  })
+
+  it.each(['hidden', 'ambiguous', 'far', 'spell', 'projectile', 'unknown'])(
+    'does not guess a melee source for %s evidence', mode => {
+      const { feedback, text } = harness()
+      const scene = world(goblin(1, mode === 'far' ? 2 : 1))
+      if (mode === 'hidden') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+      if (mode === 'ambiguous') scene.billboards.push({ ...goblin(2), y: 0 })
+      feedback.flush(scene)
+      text(mode === 'spell' ? 'The goblin smites you!' : mode === 'projectile' ? 'The bolt of fire hits you!'
+        : mode === 'unknown' ? 'Something hits you!' : 'The goblin hits you!')
+      const events = feedback.flush(scene)
+      expect(events).toMatchObject([{ kind: 'hurt', player: true }])
+      expect(bumpFor(events[0], scene, undefined)).toBeNull()
+    })
+
+  it('keeps player follow-ups on their target when an ally hits an identically named enemy', () => {
+    const { feedback, text } = harness()
+    const ally: Billboard = { ...goblin(3, 4), name: 'stone giant', ref: { id: 3, name: 'stone giant' }, attitude: 'friendly' }
+    const scene = world(goblin(1, 1), goblin(2, 3), ally)
+    feedback.flush(scene)
+    text('You hit the goblin! Your stone giant hits the goblin! You headbutt the goblin!')
+    const events = feedback.flush(scene)
+    expect(events.map(e => e.actorId)).toEqual(['id:1', 'id:2', 'id:1'])
+    expect(bumpFor(events[1], scene, undefined)).toMatchObject({ fromId: 'id:3', toId: 'id:2', hit: true })
+  })
+
+  it('allows explicitly reported reach and expires source identity on leaving the level', () => {
+    const { feedback, text } = harness()
+    const scene = world(goblin(1, 2))
+    feedback.flush(scene)
+    text('The goblin hits you from afar!')
+    expect(bumpFor(feedback.flush(scene)[0], scene, undefined)).toMatchObject({ fromId: 'id:1', toId: 'player' })
+    text('The goblin hits you!')
+    expect(feedback.flush({ ...scene, playerOnLevel: false })).toEqual([])
   })
 })

@@ -230,7 +230,8 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.offset(target, contact - 0.001)).toEqual({ x: 0, y: 0 })
     const at = contact + 0.02
     const crunchy = fx.offset(target, at, 1, 1).x
-    expect(crunchy).toBeGreaterThan(0.14)
+    expect(crunchy).toBeGreaterThan(0.025)
+    expect(crunchy).toBeLessThanOrEqual(0.04)
     expect(fx.offset(target, at, 1, 0).x).toBeLessThan(crunchy)
     expect(fx.offset(target, at, 0.5, 1).x).toBeCloseTo(crunchy / 2)
     expect(fx.offset(target, at, 1.5, 1).x).toBeCloseTo(crunchy * 1.5)
@@ -370,17 +371,36 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.offset(player, 2.1).x).toBeGreaterThan(0)
   })
 
-  it('rejects enemy melee with or without actor IDs, including enemies on the player cell', () => {
+  it('animates reciprocal attacks with small flinches and no cancellation or cell changes', () => {
     const fx = new DungeonEffects(), scene = world()
-    fx.observe(scene, 0, true)
-    for (const fromId of [undefined, 'id:7']) {
-      expect(fx.bump(scene, { ...attack, from: attack.to, to: attack.from, fromId, toId: 'player' }, 1)).toBe(false)
+    fx.bump(scene, { ...attack, fromId: 'player', toId: 'id:7' }, 1)
+    expect(fx.bump(scene, { ...attack, from: attack.to, to: attack.from, fromId: 'id:7', toId: 'player' }, 1)).toBe(true)
+    for (let elapsed = 0.02; elapsed < bumpTiming().duration; elapsed += 0.005) {
+      const a = fx.offset(player, 1 + elapsed), b = fx.offset({ ...target, id: 7 }, 1 + elapsed)
+      expect(a.x).toBeGreaterThanOrEqual(0)
+      expect(b.x).toBeLessThanOrEqual(0)
+      expect(a.x).toBeCloseTo(-b.x)
+      expect(1 + b.x - a.x).toBeGreaterThan(0.55)
     }
-    expect(fx.bump(scene, { ...attack, fromId: 'id:7' }, 1)).toBe(false)
-    expect(fx.bumps).toEqual([])
-    expect(fx.bursts).toEqual([])
-    expect(fx.offset(player, 1.1)).toEqual({ x: 0, y: 0 })
-    expect(fx.offset(target, 1.1)).toEqual({ x: 0, y: 0 })
+    expect(player.x).toBe(0); expect(target.x).toBe(1)
+    expect(fx.offset({ ...target, id: 8 }, 1.08)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('blends cleaves and rapid attacks without multiplying displacement or introducing a jump', () => {
+    const scene = world(), single = new DungeonEffects(), multi = new DungeonEffects()
+    single.bump(scene, attack, 1)
+    multi.bump(scene, attack, 1)
+    multi.bump(scene, { ...attack, to: { x: 2, y: 0 } }, 1)
+    expect(multi.offset(player, 1.08)).toEqual(single.offset(player, 1.08))
+    const before = multi.offset(player, 1.1)
+    multi.bump(scene, attack, 1.1)
+    expect(multi.offset(player, 1.1)).toEqual(before)
+    for (let at = 1; at < 1.35; at += 0.001) {
+      const offset = multi.offset(player, at, 2)
+      expect(Math.hypot(offset.x, offset.y)).toBeLessThanOrEqual(0.320001)
+      const next = multi.offset(player, at + 0.001, 2)
+      expect(Math.hypot(next.x - offset.x, next.y - offset.y)).toBeLessThan(0.035)
+    }
   })
 
   it('deduplicates rapid reports, caps history and motion, and refuses hidden targets', () => {

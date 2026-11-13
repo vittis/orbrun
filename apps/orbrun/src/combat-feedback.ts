@@ -11,8 +11,12 @@ export interface CombatEvent {
   x?: number
   y?: number
   player?: boolean
-  /** A confirmed player melee attempt; kept separate from spell/brand damage. */
+  /** A confirmed melee attempt; kept separate from spell/brand damage. */
   melee?: boolean
+  /** Message source, resolved conservatively to a visible actor before motion. */
+  sourceName?: string
+  source?: { x: number; y: number; actorId: string }
+  reaching?: boolean
   /** Explicit natural follow-up, such as a minotaur's headbutt. */
   auxiliary?: boolean
   /** A weapon brand's extra sentence, which can recolor the preceding hit. */
@@ -42,6 +46,9 @@ function toneOf(s: string): DamageType {
 // HP is also spent on spells/abilities (notably Djinni casting), and previews
 // can change it too. Only explicit incoming results establish a player hit.
 const incomingStrike = /^(?!You\b).+? (?:hits?|bites?|claws?|pecks?|stings?|kicks?|headbutts?|gores?|tramples?|mauls?|constricts?|crushes?|tentacle-slaps?|tail-slaps?|pummels?|bashes?|punches?|slaps?|touches?|strikes?|pierces?|skewers?|engulfs?|burns?|scorches?|freezes?|chills?|electrocutes?|smites?|blasts?|lashes?) you(?:[.!]+| (?:with|for|but) .+[.!]+)$/
+// Physical attack grammar only. Spell/projectile subjects may match, but cannot
+// produce a bump unless they resolve to one visible, adjacent creature.
+const creatureStrike = /^(?!You\b)(.+?) (hits?|bites?|claws?|pecks?|stings?|kicks?|headbutts?|gores?|tramples?|mauls?|crushes?|tentacle-slaps?|tail-slaps?|pummels?|bashes?|punches?|slaps?|touches?|strikes?|pierces?|skewers?|lashes?|(?:barely |closely |completely )?miss(?:es)?) (.+?)[.!]+$/
 const incomingSpell = /^You are (?:smitten|burned|burnt|scorched|frozen|electrocuted|blasted|engulfed in .+|struck by .+|blasted with .+)[.!]+$|^Pain shoots through your body[.!]+$|^Your mind is blasted[.!]+$/
 
 /** Parse confirmed outcomes for effect strength and actor matching. */
@@ -50,6 +57,18 @@ export function combatText(text: string): CombatEvent[] {
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
     const s = sentence.trim()
     let m: RegExpExecArray | null
+    const strike = creatureStrike.exec(s)
+    if (strike && !/^(?:The|Your) (?:(?:bolt|puff)(?: of .+)?|arrow|slug|stone|sling bullet|magic dart|ice thorns)$/.test(strike[1])) {
+      const target = strike[3].replace(/(?: from afar| with | using | for | but |, | like | into ).*$/, '').trim()
+      const player = target === 'you'
+      const miss = /miss/.test(strike[2])
+      const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
+      const amount = /\bno damage\b/.test(s) ? 0 : number ? Number(number[1]) : undefined
+      out.push({ kind: miss ? 'miss' : player ? 'hurt' : 'hit', ...(player ? { player: true } : { target }),
+        sourceName: strike[1], reaching: /\bfrom afar\b/.test(s), amount, tone: toneOf(s),
+        intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
+      continue
+    }
     if (incomingStrike.test(s) || incomingSpell.test(s)) {
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const amount = number ? Number(number[1]) : undefined
@@ -175,7 +194,7 @@ export class CombatFeedback {
           this.cues.push(...spellText(fresh))
           for (const parsed of combatText(fresh)) {
             const event = { ...parsed, turn }
-            const hit = event.followup && event.amount === undefined ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
+            const hit = event.followup && event.amount === undefined ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.sourceName && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
             if (hit) { hit.tone = event.tone; hit.followup = true }
             else this.pending.push(event)
           }
@@ -221,26 +240,46 @@ export class CombatFeedback {
       const id = actorKey(b), was = before.get(id), now = after.get(id)
       return was && now ? Math.max(0, woundRank(now.damage) - woundRank(was.damage)) : 0
     }
+    const named = (b: Billboard, name: string) => {
+      const ref = b.ref as { name?: string; plural?: string } | undefined
+      return (!/^your /i.test(name) || b.attitude === 'friendly')
+        && [b.name, ref?.name, ref?.plural].some(n => n && bare(plain(n)) === bare(name))
+    }
+    const meleePair = (event: CombatEvent) => {
+      if (!event.sourceName) return undefined
+      const sources = [...after.values()].filter(b => named(b, event.sourceName!))
+      const targets = event.player ? [undefined] : [...candidates.values()].filter(b => named(b, event.target ?? ''))
+      const pairs = sources.flatMap(source => targets.flatMap(target => {
+        const position = target ?? scene.player
+        const distance = Math.max(Math.abs(source.x - position.x), Math.abs(source.y - position.y))
+        return distance >= 1 && distance <= (event.reaching ? 2 : 1)
+          ? [{ source, target }] : []
+      }))
+      // Resolve the pair together, never by distance to the player. Identical
+      // nearby creatures are ambiguous; ordinary hit feedback remains intact.
+      return pairs.length === 1 ? pairs[0] : undefined
+    }
     const resolved: CombatEvent[] = pending.flatMap(event => {
+      const pair = meleePair(event)
+      if (pair) event = { ...event, melee: true, source: { x: pair.source.x, y: pair.source.y, actorId: actorKey(pair.source) } }
       if (event.player) return [event]
       const wanted = bare(event.target ?? '')
       const deathEvidence = (b: Billboard) => killedNames.has(wanted) && deathCandidates.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
       const pool = event.kind === 'kill' || event.kind === 'hit' && killedNames.has(wanted) ? deathCandidates : candidates
       const matches = [...pool.values()].filter(b => {
         if (event.kind === 'kill' && slain.has(actorKey(b))) return false
-        const ref = b.ref as { name?: string; plural?: string } | undefined
-        return [b.name, ref?.name, ref?.plural].some(n => n && bare(plain(n)) === wanted)
+        return named(b, event.target ?? '')
       }).sort((a, b) => Number(used.has(actorKey(a))) - Number(used.has(actorKey(b)))
         || (event.kind === 'hit' || event.kind === 'kill' ? deathEvidence(b) - deathEvidence(a) : 0)
         || (event.kind === 'hit' || event.kind === 'kill' ? changed(b) - changed(a) : 0)
         || Math.hypot(a.x - scene.player.x, a.y - scene.player.y) - Math.hypot(b.x - scene.player.x, b.y - scene.player.y))
       const previous = lastMelee.get(wanted)
       const followupTarget = (event.auxiliary || event.followup) && previous?.turn === event.turn ? previous?.actor : undefined
-      const b = event.kind === 'kill' ? lastHit.get(wanted) ?? matches[0] : followupTarget ?? matches[0]
+      const b = event.kind === 'kill' ? lastHit.get(wanted) ?? matches[0] : pair?.target ?? followupTarget ?? matches[0]
       if (!b) return []
       const id = actorKey(b)
       used.add(id)
-      if (event.melee && !event.auxiliary) lastMelee.set(wanted, { actor: b, turn: event.turn })
+      if (event.melee && !event.sourceName && !event.auxiliary) lastMelee.set(wanted, { actor: b, turn: event.turn })
       if (event.kind === 'hit') lastHit.set(wanted, b)
       if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id) }
       return [{ ...event, actorId: id, x: b.x, y: b.y,

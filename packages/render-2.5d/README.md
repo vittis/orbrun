@@ -106,13 +106,14 @@ and picking regions.
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.
 - `effects.ts` keeps bounded melee and spell histories on the existing frame
-  clock. Confirmed `MeleeAttack` events identify attacker and defender, with a
-  wind-up, directional lunge, contact and recovery for sword, thrust, axe, blunt
-  or unarmed gestures. Shared timing aligns recoil, bursts, ripples and popups
-  with contact; missed and fully absorbed hits do not create recoil or sparks.
+  clock. Confirmed `CombatBump` events identify player, enemy and ally attackers
+  and defenders. A shared wind-up, lunge and recovery blends overlapping attacks
+  without stacking displacement. Small receiver flinches preserve counterattack
+  direction. Contact aligns hit flashes, sprays and ripples; missed and fully
+  absorbed hits lunge without recoil or damage effects.
   Qualitative light/solid/heavy strength scales contact effects without inferring
   an HP amount. Physical and elemental hits use distinct shapes and colors. The app resolves these from combat
-  feedback and the wielded inventory item, independently of popup settings.
+  feedback and visible actor identities; player attacks also respect the wielded item.
   Disappearing transient spell lights leave faint fire, frost, electrical or
   magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
   Confirmed `SpellEffect` events also produce upright, depth-sorted bursts for

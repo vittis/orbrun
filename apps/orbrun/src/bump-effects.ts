@@ -1,9 +1,18 @@
 import { type CombatBump, type Scene } from '@orbrun/scene'
 import type { CombatEvent } from './combat-feedback'
 
-/** Confirmed player contact drives body motion and the ordinary hit splash. */
+/** Confirmed melee contact drives body motion and the ordinary hit splash. */
 export function bumpFor(event: CombatEvent, scene: Scene, weapon: string | undefined): CombatBump | null {
-  if (!event.melee || event.brandOnly || event.player || event.x === undefined || event.y === undefined) return null
+  if (!event.melee || event.brandOnly) return null
+  if (event.sourceName) {
+    if (!event.source) return null
+    const to = event.player ? scene.player : event
+    if (to.x === undefined || to.y === undefined) return null
+    return { from: { x: event.source.x, y: event.source.y }, to: { x: to.x, y: to.y },
+      fromId: event.source.actorId, toId: event.player ? 'player' : event.actorId,
+      hit: event.kind !== 'miss' && event.amount !== 0, tone: event.tone, intensity: event.intensity }
+  }
+  if (event.player || event.x === undefined || event.y === undefined) return null
   // Auxiliary damage keeps its normal feedback without a second weapon bump.
   if (event.auxiliary && weapon) return null
   if (/\b(?:bow|longbow|shortbow|crossbow|arbalest|sling|hand cannon)\b/i.test(weapon ?? '')) return null

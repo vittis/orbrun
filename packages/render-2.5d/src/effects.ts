@@ -203,13 +203,10 @@ export class DungeonEffects {
   }
 
   bump(scene: Scene, attack: CombatBump, now: number) {
-    const playerAttack = attack.fromId ? attack.fromId === 'player'
-      : attack.from.x === scene.player.x && attack.from.y === scene.player.y
-    if (!playerAttack) return false
     const distance = Math.hypot(attack.to.x - attack.from.x, attack.to.y - attack.from.y)
     if (!scene.playerOnLevel || !visible(scene, attack.from) || !visible(scene, attack.to) || distance < 0.5 || distance > 2.9) return false
     // Multiple reports for a cleave/brand must not stack the same bump.
-    if (this.bumps.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
+    if (this.bumps.some(s => s.fromId === attack.fromId && s.toId === attack.toId && s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
     this.bumps.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: bumpTiming().duration })
     this.bumps = this.bumps.slice(-12)
     if (attack.hit) {
@@ -224,19 +221,33 @@ export class DungeonEffects {
   offset(b: Billboard, now: number, bumpStrength = 1, bumpSnap = 1) {
     let x = 0, y = 0
     if (b.lying || b.scenery || b.life?.held || b.kind !== 'monster' && b.kind !== 'player') return { x, y }
+    const id = combatActorId(b)
+    const lunge = { x: 0, y: 0, weight: 0, peak: 0 }, recoil = { x: 0, y: 0, weight: 0, peak: 0 }
     for (const bump of this.bumps) {
       const age = (now - bump.born) / bump.duration
       if (age < 0 || age >= 1) continue
       const dx = bump.to.x - bump.from.x, dy = bump.to.y - bump.from.y, length = Math.hypot(dx, dy)
-      const id = combatActorId(b)
       const attacker = bump.fromId ? id === bump.fromId : b.x === bump.from.x && b.y === bump.from.y
       const target = bump.hit && (bump.toId ? id === bump.toId : b.x === bump.to.x && b.y === bump.to.y)
+      if (!attacker && !target) continue
       const pose = bumpPose(now - bump.born, bumpSnap)
-      const kick = attacker ? pose.lunge : target ? pose.recoil * (0.6 + impactStrength(bump.intensity) * 0.4) : 0
-      x += dx / length * kick * bumpStrength; y += dy / length * kick * bumpStrength
+      const kick = attacker ? pose.lunge : pose.recoil * (0.6 + impactStrength(bump.intensity) * 0.4)
+      const motion = attacker ? lunge : recoil
+      motion.x += dx / length * kick; motion.y += dy / length * kick
+      motion.weight += Math.abs(kick); motion.peak = Math.max(motion.peak, Math.abs(kick))
     }
-    // Rapid actions never accumulate more than a small fraction of a cell.
-    const limit = Math.max(1, Math.hypot(x, y) / 0.44)
+    // Blend cleaves and rapid reports instead of adding their displacement.
+    // New impulses enter at zero weight, so ongoing motion stays continuous.
+    for (const motion of [lunge, recoil]) {
+      const scale = motion.weight > 0 ? motion.peak / motion.weight : 0
+      motion.x *= scale; motion.y *= scale
+    }
+    // A counterattacking body keeps its intention; incoming hits add a tiny
+    // flinch instead of cancelling the lunge or pushing it into another cell.
+    const flinch = 1 - 0.8 * Math.min(1, Math.hypot(lunge.x, lunge.y) / 0.18)
+    x = (lunge.x + recoil.x * flinch) * bumpStrength
+    y = (lunge.y + recoil.y * flinch) * bumpStrength
+    const limit = Math.max(1, Math.hypot(x, y) / 0.32)
     return { x: x / limit, y: y / limit }
   }
 

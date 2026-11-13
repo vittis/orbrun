@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, bumpTiming, type MapRenderer,  } from '@orbrun/scene'
 import { deathFor } from '../src/death-effects'
-import { combatText } from '../src/combat-feedback'
+import { CombatFeedback, combatText } from '../src/combat-feedback'
+import { initialState, reduce } from '@orbrun/webtiles'
 import { presentCombat } from '../src/combat-presentation'
 
 function harness() {
@@ -111,4 +112,24 @@ describe('combat contact timing', () => {
     presentCombat(renderer, scene, events, [], 'long sword', 1000, mode !== 'still')
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1)
   })
+})
+
+
+it('keeps reciprocal player, enemy and ally hits on the same contact clock', () => {
+  const { scene, renderer } = harness()
+  scene.billboards = [
+    { x: 1, y: 0, id: 1, name: 'goblin', kind: 'monster', tile: 1, height: 1 },
+    { x: 2, y: 0, id: 2, name: 'orc', attitude: 'friendly', kind: 'monster', tile: 1, height: 1 },
+  ]
+  const state = initialState()
+  state.player.hp_max = 30
+  const feedback = new CombatFeedback(state)
+  feedback.flush(scene)
+  const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!' }] }
+  reduce(state, msg); feedback.observe(state, msg)
+  presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), 'mace', 1000, true)
+  expect(renderer.bump).toHaveBeenCalledTimes(4)
+  for (const id of ['player', 'id:1', 'id:2']) {
+    expect(renderer.hit).toHaveBeenCalledWith(expect.objectContaining({ actorId: id }), 1 + bumpTiming().contact)
+  }
 })

@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.86 — 2026-11-13
+
+- Enemies and allies now lunge on confirmed visible melee attacks, including misses and fully absorbed blows.
+- Receivers make a small flinch instead of being pushed away. Simultaneous attacks and cleaves blend smoothly, keeping counterattacks readable without stacking displacement.
+- Preserved contact timing, confirmed actor identity, Still/reduced motion and server-owned positions.
+
 ## 0.3.85 — 2026-11-13
 
 - Added 175% hit bump strength and 125% hit/death gore options.

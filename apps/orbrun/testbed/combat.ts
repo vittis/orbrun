@@ -15,7 +15,7 @@ scene.playerOnLevel = true
 scene.billboards.push(
   { x: 11, y: 5, tile: 4519, kind: 'player', height: 1 },
   { x: 11, y: 4, tile: 7189, kind: 'monster', height: 0.8, attitude: 'hostile', name: 'goblin', ref: { id: 1, name: 'goblin' } },
-  { x: 13, y: 4, tile: 7114, kind: 'monster', height: 1, attitude: 'hostile', name: 'orc', ref: { id: 2, name: 'orc' } },
+  { x: 12, y: 4, tile: 7114, kind: 'monster', height: 1, attitude: 'friendly', name: 'orc', ref: { id: 2, name: 'orc' } },
 )
 const state = initialState()
 Object.assign(state.player, { hp: 30, hp_max: 30, xl: 3, place: 'Dungeon', depth: 1 })
@@ -84,6 +84,8 @@ function play(kind: string) {
     kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
     incoming: 'The goblin hits you with a +0 club!', dodge: 'The goblin misses you.',
+    ally: 'Your orc hits the goblin!',
+    exchange: 'You slash the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!',
   }
   if (kind === 'hurt' || kind === 'incoming') {
     Object.assign(state.player, { hp: 30 })
