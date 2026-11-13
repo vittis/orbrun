@@ -3,7 +3,7 @@ import type { MeleeAttack } from '@orbrun/scene'
 import { meleePath, type MeleeVariant } from '../src/melee-path.js'
 import { groundDepth } from '../src/projection.js'
 
-const styles: MeleeAttack['style'][] = ['slash', 'thrust', 'cleave', 'crush', 'unarmed']
+const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
 const variants: MeleeVariant[] = [0, 1, 2]
 const directions = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
 

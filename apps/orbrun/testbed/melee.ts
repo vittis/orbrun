@@ -6,9 +6,10 @@ import type { MeleeVariant } from '../../../packages/render-2.5d/src/melee-path'
 import { loadRoomTiles } from '../src/room/tiles'
 
 const tiles = await loadRoomTiles()
-const styles: MeleeAttack['style'][] = ['slash', 'thrust', 'cleave', 'crush', 'unarmed']
-const names = { slash: ['Forehand', 'Backhand', 'Rising cut'], thrust: ['Low line', 'Centre line', 'High line'],
+const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
+const names = { stab: ['Low jab', 'Straight jab', 'High jab'], reap: ['Hooking sweep', 'Reverse sweep', 'Draw sweep'], lash: ['Snap', 'Backlash', 'Uncoil'], staff: ['Baton sweep', 'Backhand sweep', 'Cross strike'], slash: ['Forehand', 'Backhand', 'Diagonal cut'], thrust: ['Low line', 'Centre line', 'High line'],
   cleave: ['Wide chop', 'Reverse chop', 'Draw cut'], crush: ['Right hammer', 'Left hammer', 'Overhead'], unarmed: ['Jab', 'Cross', 'Hook'] }
+const labels: Record<MeleeAttack['style'], string> = { slash: 'Long blades', stab: 'Short blades', thrust: 'Spears & tridents', cleave: 'Axes', reap: 'Bladed polearms', crush: 'Maces & clubs', lash: 'Whips', staff: 'Staves', unarmed: 'Unarmed' }
 const select = (id: string) => document.getElementById(id) as HTMLSelectElement
 const checked = (id: string) => (document.getElementById(id) as HTMLInputElement).checked
 const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'melee-preview' }
@@ -18,7 +19,7 @@ for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) scene.cells.set(cell
 })
 const previews = ([0, 1, 2] as MeleeVariant[]).flatMap(variant => styles.map(style => {
   const figure = document.createElement('figure'), caption = document.createElement('figcaption'), canvas = document.createElement('canvas')
-  caption.append(document.createTextNode(style), Object.assign(document.createElement('span'), { textContent: names[style][variant] }))
+  caption.append(document.createTextNode(labels[style]), Object.assign(document.createElement('span'), { textContent: names[style][variant] }))
   canvas.width = 360; canvas.height = 266
   canvas.setAttribute('aria-label', `${style} ${names[style][variant]}`)
   figure.append(caption, canvas); document.getElementById('gestures')!.append(figure)
@@ -58,7 +59,7 @@ function frame(ms: number) {
     const player = { x: 0, y: 0, kind: 'player' as const, tile: 4519, height: 1 }
     const enemy = { ...target, id: 'enemy', kind: 'monster' as const, tile: 7189, height: 1 }
     const offset = (actor: typeof player | typeof enemy) => {
-      const q = fx.offset(actor, time)
+      const q = fx.offset(actor, time, Number(select('motion').value))
       return { x: actor.x + q.x, y: actor.y + q.y }
     }
     const a = offset(player), b = offset(enemy)
@@ -66,13 +67,13 @@ function frame(ms: number) {
     const anchors = { from: incoming ? b : a, to: incoming ? a : b }
     const cross = project(p, anchors.to.x, anchors.to.y + 0.3)
     ctx.fillStyle = '#58615e'; ctx.fillRect(cross.x - 3, cross.y - p.scale * 0.42, 7, 1); ctx.fillRect(cross.x, cross.y - p.scale * 0.42 - 3, 1, 7)
-    for (const stroke of fx.strokes) drawMelee(ctx, p, { ...stroke, ...anchors }, time)
+    for (const stroke of fx.strokes) drawMelee(ctx, p, { ...stroke, ...anchors }, time, { weight: Number(select('weight').value), trail: Number(select('trail').value) })
     const current = fx.strokes.at(-1)
     preview.caption.querySelector('span')!.textContent = names[style][current?.variant ?? variant]
     preview.canvas.dataset.swings = String(preview.count)
     preview.canvas.dataset.variant = String(current?.variant ?? variant)
   }
-  document.getElementById('status')!.textContent = `15 previews · ${freeze ? `Frozen at ${Math.round(Number(select('frame').value) * 100)}%` : `${previews[0].count} swings per preview`} · Contact stays at 42% for every gesture. Dungeon preview: /testbed/dungeon.html`
+  document.getElementById('status')!.textContent = `27 previews · ${freeze ? `Frozen at ${Math.round(Number(select('frame').value) * 100)}%` : `${previews[0].count} swings per preview`} · Contact stays at 42% for every gesture. Dungeon preview: /testbed/dungeon.html`
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)

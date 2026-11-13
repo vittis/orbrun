@@ -8,7 +8,7 @@
     header { padding: 20px 24px 12px } h1 { margin: 0 0 8px; font-size: 22px; color: #fff1ce } p { margin: 0; color: #969b9c }
     nav { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 24px 20px; align-items: center }
     label { display: flex; gap: 6px; align-items: center } select, button { background: #25272b; color: #e5dfcb; border: 1px solid #44474a; padding: 6px; border-radius: 4px }
-    main { display: grid; grid-template-columns: repeat(5, minmax(180px, 1fr)); gap: 10px; padding: 0 24px 24px }
+    main { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 10px; padding: 0 24px 24px }
     figure { margin: 0; border: 1px solid #303337; background: #1b1d20; border-radius: 6px; overflow: hidden }
     figcaption { padding: 9px 12px; text-transform: capitalize; display: flex; justify-content: space-between } figcaption span { color: #858c90; font-size: 12px }
     canvas { display: block; width: 100%; aspect-ratio: 1.35; image-rendering: pixelated }
@@ -17,13 +17,16 @@
   </style>
 </head>
 <body>
-  <header><h1>Melee gestures</h1><p>Three gestures per style. The small cross marks contact; the trail follows the sprite lunge and recoil.</p></header>
+  <header><h1>Melee gestures</h1><p>Nine weapon families, three gestures each. Tune weight, trail and actor movement live. The small cross marks contact; the trail follows the sprite lunge and recoil.</p></header>
   <nav>
     <label>Direction <select id="direction"><option value="1,0">East</option><option value="1,1">Southeast</option><option value="0,1">South</option><option value="-1,1">Southwest</option><option value="-1,0">West</option><option value="-1,-1">Northwest</option><option value="0,-1">North</option><option value="1,-1">Northeast</option></select></label>
     <label>Reach <select id="reach"><option value="1">Adjacent</option><option value="2">Two cells</option></select></label>
     <label>Tilt <select id="tilt"><option>45</option><option>30</option><option>60</option></select></label>
     <label>Tone <select id="tone"><option>physical</option><option>fire</option><option>cold</option><option>electric</option><option>poison</option><option>acid</option><option>magic</option></select></label>
     <label>Strength <select id="strength"><option>solid</option><option>light</option><option>heavy</option></select></label>
+    <label>Weight <select id="weight"><option value="0.6">60%</option><option value="1" selected>100%</option><option value="1.5">150%</option></select></label>
+    <label>Trail <select id="trail"><option value="0.4">Short</option><option value="1" selected>Standard</option><option value="1.4">Long</option></select></label>
+    <label>Movement <select id="motion"><option value="0">Planted</option><option value="0.35">Subtle</option><option value="1" selected>Full</option></select></label>
     <label>Playback <select id="playback"><option value="900">Loop</option><option value="160">Spam · 160 ms</option><option value="100">Spam · 100 ms</option><option value="freeze">Freeze</option></select></label>
     <label>Frame <select id="frame"><option value="0.35">Swing</option><option value="0.08">Windup</option><option value="0.42001">Contact</option><option value="0.55">Follow-through</option><option value="0.72">Recovery</option><option value="0.95">Settled</option></select></label>
     <label><input id="hit" type="checkbox" checked>Hit</label>

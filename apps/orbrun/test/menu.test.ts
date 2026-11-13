@@ -2271,7 +2271,7 @@ describe('the front end: settings and marks', () => {
   it('uses the shared front-end controls without changing the in-game settings panel', () => {
     const { screen } = make()
     pick(screen, 'Settings')
-    pick(screen, 'View')
+    pick(screen, 'Combat')
     expect(screen.root.querySelector('.menu-actions [data-focus="back"]')).not.toBeNull()
     const row = screen.root.querySelector<HTMLElement>('[data-focus="setting:Combat popups"]')!
     expect(row.classList.contains('item')).toBe(true)
@@ -2281,7 +2281,7 @@ describe('the front end: settings and marks', () => {
     expect(row.querySelector('.val')?.textContent).toBe('Off')
     // The same setting changes once, not once for the arrow and again for the row.
     expect(JSON.parse(localStorage.getItem('orbrun.settings')!).combatPopups).toBe(false)
-    const inGame = settingsPanel('View')
+    const inGame = settingsPanel('Combat')
     expect(inGame.el.querySelector('.front-setting, .item, .marker')).toBeNull()
     expect(inGame.el.querySelector('.hotkey')).not.toBeNull()
   })
@@ -2291,7 +2291,7 @@ describe('the front end: settings and marks', () => {
     pick(screen, 'Settings')
     expect(screen.view).toBe('settings')
     // a row per group, each its own page; the Gamepad controls sheet is on the Controls page
-    expect(labels(screen)).toEqual(['Back', 'View', 'Controls', 'Interface'])
+    expect(labels(screen)).toEqual(['Back', 'View', 'Combat', 'Controls', 'Interface'])
     expect(focused(screen)).toBe('settings:View')
     pick(screen, 'View')
     expect(screen.view).toBe('settings-group')
@@ -2339,6 +2339,7 @@ describe('the front end: settings and marks', () => {
     expect(focused(screen)).toBe('settings')
     pad(screen, 'A')
     expect(screen.view).toBe('settings')
+    press(screen, 'ArrowDown')
     press(screen, 'ArrowDown')
     press(screen, 'ArrowDown')
     const row = focused(screen)

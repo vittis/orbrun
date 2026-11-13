@@ -7,8 +7,10 @@ describe('confirmed melee presentation', () => {
   it.each([
     [undefined, 'unarmed'], ['a +2 long sword of flaming', 'slash'], ['a broad axe', 'cleave'],
     ['a +3 battleaxe', 'cleave'], ['an eveningstar', 'crush'],
-    ['a +0 demon trident', 'thrust'], ['a quick blade', 'thrust'], ['a giant spiked club', 'crush'],
-    ['a +2 halberd of flaming', 'cleave'], ['a glaive', 'cleave'], ['a bardiche', 'cleave'], ['a scythe', 'cleave'],
+    ['a +0 demon trident', 'thrust'], ['a quick blade', 'stab'], ['a giant spiked club', 'crush'],
+    ['a +2 halberd of flaming', 'reap'], ['a glaive', 'reap'], ['a bardiche', 'reap'], ['a scythe', 'reap'],
+    ['a rapier', 'stab'], ['a dagger', 'stab'], ['a short sword', 'stab'], ['a demon whip', 'lash'], ['a scourge', 'lash'],
+    ['a staff of fire', 'staff'], ['a quarterstaff', 'staff'], ['a lajatang', 'staff'],
     ['a +9 arbalest', null], ['a sling', null],
   ] as const)('varies gestures for %s', (weapon, style) => expect(meleeStyle(weapon)).toBe(style))
 

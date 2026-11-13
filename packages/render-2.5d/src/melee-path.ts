@@ -7,16 +7,24 @@ export type MeleeVariant = 0 | 1 | 2
  * guard, hits (dx,dy) at t=1, then continues along the contact tangent. Camera
  * foreshortening belongs to the travel axis, never to the weapon silhouette. */
 export function meleePath(style: MeleeAttack['style'], variant: MeleeVariant, dx: number, dy: number, hit: boolean) {
-  const reach = Math.hypot(dx, dy), ux = dx / reach, uy = dy / reach
+  const reach = Math.hypot(dx, dy) || 1, ux = dx / reach, uy = dy / reach
   const side = variant === 1 ? -1 : 1
   const local = (forward: number, across: number): MeleePoint => ({ x: ux * forward - uy * across, y: uy * forward + ux * across })
   let start: MeleePoint, a: MeleePoint, b: MeleePoint, guard: MeleePoint | undefined
   const end = { x: dx, y: dy }
   if (style === 'slash' || style === 'cleave') {
-    const arc = style === 'cleave' ? 0.95 : 0.62
-    start = local(Math.min(reach * 0.18, 0.24), -side * 0.18)
-    a = local(reach * (variant === 2 ? 0.3 : 0.48), -side * arc)
-    b = local(reach * (variant === 2 ? 0.82 : 1.06), -side * arc * 0.8)
+    // Authored upright cuts: reflect left/right instead of rotating the whole
+    // silhouette around the ground axis (which flips northbound blows).
+    const hand = (dx < -0.01 ? -1 : 1) * side
+    const heavy = style === 'cleave'
+    start = local(Math.min(reach * 0.18, 0.24), -side * 0.12)
+    a = { x: dx * 0.35 - hand * (heavy ? 0.5 : 0.32), y: dy * 0.35 - (heavy ? variant === 2 ? 0.9 : 1.05 : 0.72) }
+    b = { x: dx - hand * (heavy ? 0.32 : 0.4), y: dy - (heavy ? 0.65 : variant === 2 ? 0.18 : 0.38) }
+  } else if (style === 'reap' || style === 'staff' || style === 'lash') {
+    const arc = style === 'reap' ? 0.95 : style === 'lash' ? 0.85 : 0.4
+    start = local(0.12, -side * 0.16)
+    a = local(reach * 0.25, -side * arc)
+    b = local(reach * (variant === 2 ? 0.85 : 1.02), -side * arc * 0.7)
   } else if (style === 'crush') {
     // Keep the final control point ABOVE the target. Rotating an
     // overhead arc with the ground axis makes northbound blows turn upward.
@@ -25,9 +33,9 @@ export function meleePath(style: MeleeAttack['style'], variant: MeleeVariant, dx
     start = { x: dx * 0.7 + (variant === 2 ? 0 : side * 0.16), y: dy - (variant === 2 ? 0.9 : 0.75) }
     a = { x: dx + (variant === 2 ? 0 : side * 0.2), y: start.y + 0.12 }
     b = { x: dx + (variant === 2 ? 0 : side * 0.12), y: dy - 0.35 }
-  } else if (style === 'thrust') {
+  } else if (style === 'thrust' || style === 'stab') {
     start = local(Math.min(reach * 0.16, 0.22), (variant - 1) * 0.13)
-    a = local(reach * 0.4, (variant - 1) * 0.1)
+    a = local(reach * (style === 'stab' ? 0.65 : 0.4), (variant - 1) * 0.1)
     b = local(reach * 0.76, 0)
   } else {
     const hook = variant === 2 ? 0.42 : side * 0.12

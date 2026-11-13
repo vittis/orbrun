@@ -197,7 +197,7 @@ export class DungeonEffects {
     return true
   }
 
-  offset(b: Billboard, now: number) {
+  offset(b: Billboard, now: number, motion = 1) {
     let x = 0, y = 0
     if (b.lying || b.scenery || b.life?.held || b.kind !== 'monster' && b.kind !== 'player') return { x, y }
     for (const stroke of this.strokes) {
@@ -213,7 +213,7 @@ export class DungeonEffects {
     }
     // Rapid actions never accumulate more than a small fraction of a cell.
     const limit = Math.max(1, Math.hypot(x, y) / 0.18)
-    return { x: x / limit, y: y / limit }
+    return { x: x / limit * motion, y: y / limit * motion }
   }
 
   tick(scene: Scene, now: number) {

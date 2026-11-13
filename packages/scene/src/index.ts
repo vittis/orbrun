@@ -318,7 +318,7 @@ export type { DeathEffect, DeathKind, DeathParticle } from './death.js'
 export interface MeleeAttack {
   from: { x: number; y: number }
   to: { x: number; y: number }
-  style: 'slash' | 'thrust' | 'cleave' | 'crush' | 'unarmed'
+  style: 'slash' | 'stab' | 'thrust' | 'cleave' | 'reap' | 'crush' | 'lash' | 'staff' | 'unarmed'
   hit: boolean
   fromId?: string
   toId?: string

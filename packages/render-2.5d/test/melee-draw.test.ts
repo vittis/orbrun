@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { meleeTiming, type MeleeAttack } from '@orbrun/scene'
-import { drawMelee } from '../src/melee-draw.js'
+import { drawMelee, type MeleeAppearance } from '../src/melee-draw.js'
 import { groundDepth, type Projection } from '../src/projection.js'
 import type { MeleeStroke } from '../src/effects.js'
 import type { Context2d } from '../src/tiles.js'
 import type { MeleeVariant } from '../src/melee-path.js'
 import * as impacts from '../src/impact-art.js'
 
-const styles: MeleeAttack['style'][] = ['slash', 'thrust', 'cleave', 'crush', 'unarmed']
+const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
 const variants: MeleeVariant[] = [0, 1, 2]
 const projection: Projection = { x: 0, y: 0, width: 640, height: 480, scale: 32, tilt: Math.PI / 4 }
 interface Run { x: number; y: number; width: number; alpha: number; colour: string }
-function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeStroke> = {}) {
+function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeStroke> = {}, appearance: MeleeAppearance = {}) {
   const runs: Run[] = []
   // Capture weapon texels in attacker-local coordinates.
   let offset = { x: 0, y: 0 }
@@ -23,7 +23,7 @@ function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeS
     fillRect(x: number, y: number, width: number) { runs.push({ x: x + offset.x, y: y + offset.y, width, alpha: this.globalAlpha, colour: this.fillStyle }) },
   }
   const stroke: MeleeStroke = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style, variant: 0, hit: true, born: 0, duration: meleeTiming(style).duration, ...options }
-  drawMelee(ctx as unknown as Context2d, projection, stroke, age * stroke.duration)
+  drawMelee(ctx as unknown as Context2d, projection, stroke, age * stroke.duration, appearance)
   return runs
 }
 const area = (runs: Run[]) => runs.reduce((sum, r) => sum + r.width * r.alpha, 0)
@@ -65,6 +65,18 @@ describe('pixel-art melee gestures', () => {
       const runs = frame(style, i / 100, { hit, variant, intensity: 'heavy', to: { x: -1, y: -1 } })
       expect(runs.every(r => [r.x, r.y, r.width].every(Number.isInteger)
         && Math.abs(r.x) < 100 && Math.abs(r.y) < 100 && r.width > 0 && r.alpha > 0 && r.alpha <= 1)).toBe(true)
+    }
+  })
+
+  it('tunes weight and trail without moving contact, and keeps oversized misses clear', () => {
+    expect(area(frame('slash', 0.4, {}, { weight: 1.5 }))).toBeGreaterThan(area(frame('slash', 0.4, {}, { weight: 0.6 })))
+    expect(area(frame('reap', 0.4, {}, { trail: 1.4 }))).toBeGreaterThan(area(frame('reap', 0.4, {}, { trail: 0.4 })))
+    for (const style of styles) for (const variant of variants) for (const [x, y] of [[1, 0], [0, -1], [-1, 1]]) {
+      const tx = x * 32, ty = Math.floor(y * groundDepth(projection.tilt) * 32)
+      for (const weight of [0.6, 1.5]) {
+        expect(covers(frame(style, 0.42001, { to: { x, y }, variant }, { weight }), tx, ty), `${style} contact at weight ${weight}`).toBe(true)
+        expect(covers(frame(style, 0.42001, { to: { x, y }, variant, hit: false, intensity: 'heavy' }, { weight }), tx, ty), `${style} miss at weight ${weight}`).toBe(false)
+      }
     }
   })
 

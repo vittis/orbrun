@@ -58,7 +58,7 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
-  it.each(['slash', 'thrust', 'cleave', 'crush', 'unarmed'] as const)('keeps %s gesture variations on the existing material-spray contact clock', style => {
+  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('keeps %s gesture variations on the existing material-spray contact clock', style => {
     const scene = world(), fx = new DungeonEffects()
     scene.billboards = [player, { ...target, id: 7, name: 'jelly' }]
     fx.observe(scene, 0, true)
@@ -78,6 +78,16 @@ describe('bounded dungeon combat presentation', () => {
       expect(fx.visibleBursts(contact)).toMatchObject([{ born: contact, duration: 0.65, spray: { kind: 'slime', source: 'melee' } }])
       expect(fx.bursts).toHaveLength(1)
     }
+  })
+
+  it('can plant actors or reduce their motion without changing strike timing', () => {
+    const scene = world(), fx = new DungeonEffects()
+    fx.melee(scene, attack, 1)
+    const time = 1 + meleeTiming('slash').contact
+    expect(fx.offset(player, time).x).toBeGreaterThan(0)
+    expect(fx.offset(player, time, 0)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(player, time, 0.35).x).toBeCloseTo(fx.offset(player, time).x * 0.35)
+    expect(fx.strokes[0].born).toBe(1)
   })
 
   it('interpolates one head along the native path without guessing another impact', () => {
@@ -237,7 +247,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.melee(scene, attack, 12)).toBe(false)
   })
 
-  it.each(['slash', 'thrust', 'cleave', 'crush', 'unarmed'] as const)('chooses %s variations once per accepted swing without consecutive repeats', style => {
+  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('chooses %s variations once per accepted swing without consecutive repeats', style => {
     const random = vi.spyOn(Math, 'random').mockReturnValue(0)
     try {
       const fx = new DungeonEffects(), scene = world(), swing = { ...attack, style, fromId: 'player' }

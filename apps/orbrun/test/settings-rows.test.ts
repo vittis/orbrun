@@ -33,11 +33,11 @@ describe('what is written down', () => {
   it('offers combat popups in every view and persists the off switch', () => {
     const effects = row('Combat popups')
     expect(getSettings().combatPopups).toBe(true)
-    expect(effects.group).toBe('View')
+    expect(effects.group).toBe('Combat')
     adjustSetting(effects, 1)
     expect(getSettings().combatPopups).toBe(false)
     expect(settingValue(effects)).toBe('Off')
-    resetGroup('View')
+    resetGroup('Combat')
     expect(getSettings().combatPopups).toBe(true)
   })
 
@@ -283,7 +283,7 @@ describe('what left and right do', () => {
    */
   it('lays every offered row out in one of the groups, each with its own line', () => {
     const groups = settingGroups()
-    expect(groups.map((g) => g.group)).toEqual(['View', 'Controls', 'Interface'])
+    expect(groups.map((g) => g.group)).toEqual(['View', 'Combat', 'Controls', 'Interface'])
     for (const g of groups) {
       expect(g.hint.length).toBeGreaterThan(0)
       expect(g.rows.length).toBeGreaterThan(0)
@@ -383,5 +383,23 @@ describe('Dungeon-only settings migration', () => {
     expect(getSettings()).toEqual(defaultSettings)
     for (const label of ['Projection', 'Hands', 'Field of view', 'Camera height', 'Camera angle', 'Nearby', 'Predictive movement', 'Keyboard left/right', 'Gamepad left/right', 'Swipe to turn', 'Look sensitivity', 'Invert look']) expect(SETTING_ROWS.some(r => r.label === label)).toBe(false)
     for (const label of ['Dungeon tilt', 'Dungeon zoom', 'Dungeon animation']) expect(rowOff(row(label))).toBe(false)
+  })
+})
+
+
+describe('Melee preferences', () => {
+  beforeEach(() => store.clear())
+  it('persists tuning, disables unavailable controls, and resets just combat', () => {
+    saveSettings({ ...defaultSettings, meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0 })
+    expect(rowOff(row('Melee weight'), { ...defaultSettings, meleeEffects: false })).toBe(true)
+    expect(rowOff(row('Melee trail'), { ...defaultSettings, depthAnimate: false })).toBe(true)
+    expect(rowOff(row('Melee movement'), { ...defaultSettings, meleeEffects: false })).toBe(false)
+    resetGroup('Combat')
+    expect(getSettings()).toMatchObject({ meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, depthZoom: 1.2 })
+  })
+  it('normalizes malformed or out-of-range saved tuning', () => {
+    store.set('orbrun.settings', JSON.stringify({ meleeWeight: 99, meleeTrail: -1, meleeMotion: 4, meleeEffects: 'off' }))
+    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 1, meleeEffects: true })
   })
 })

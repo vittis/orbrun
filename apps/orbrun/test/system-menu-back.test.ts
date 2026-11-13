@@ -65,7 +65,7 @@ describe('the pause menu', () => {
     ov.clientOverlayInput('select')
     // the settings are the groups, each its own page under a Back, as the Gamepad sheet is
     expect(host.querySelector('.sysmenu')).toBeNull()
-    expect(groupRows()).toEqual(['View', 'Controls', 'Interface', 'Back'])
+    expect(groupRows()).toEqual(['View', 'Combat', 'Controls', 'Interface', 'Back'])
     while (groupFocused() !== 'View') ov.clientOverlayInput('next')
     ov.clientOverlayInput('select')
     expect(host.querySelector('.settings-panel')).toBeTruthy()

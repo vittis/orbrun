@@ -18,7 +18,7 @@ export const impactStrength = (intensity: HitIntensity = 'light') => intensity =
 
 /** Seconds on the renderer clock. All melee feedback shares this contact point. */
 export function meleeTiming(style: MeleeAttack['style']) {
-  const duration = style === 'crush' || style === 'cleave' ? 0.4 : 0.32
+  const duration = style === 'crush' || style === 'cleave' ? 0.4 : style === 'reap' ? 0.44 : style === 'stab' || style === 'unarmed' ? 0.26 : style === 'lash' ? 0.36 : 0.32
   return { duration, contact: duration * 0.42 }
 }
 

@@ -5,9 +5,13 @@ import type { CombatPopup } from './combat-feedback'
 export function meleeStyle(weapon: string | undefined): MeleeAttack['style'] | null {
   if (!weapon) return 'unarmed'
   if (/\b(?:bow|longbow|shortbow|crossbow|arbalest|sling|hand cannon|triple crossbow)\b/i.test(weapon)) return null
-  if (/\b(?:spear|trident|lance|rapier|dagger|quick blade)\b/i.test(weapon)) return 'thrust'
-  if (/\b(?:axe|battleaxe|executioner|halberd|glaive|bardiche|scythe)\b/i.test(weapon)) return 'cleave'
-  if (/\b(?:mace|flail|club|hammer|morningstar|eveningstar|whip|scourge|staff|quarterstaff)\b/i.test(weapon)) return 'crush'
+  if (/\b(?:rapier|dagger|quick blade|short sword)\b/i.test(weapon)) return 'stab'
+  if (/\b(?:spear|trident|lance)\b/i.test(weapon)) return 'thrust'
+  if (/\b(?:halberd|glaive|bardiche|scythe)\b/i.test(weapon)) return 'reap'
+  if (/\b(?:axe|battleaxe|executioner)\b/i.test(weapon)) return 'cleave'
+  if (/\b(?:whip|scourge)\b/i.test(weapon)) return 'lash'
+  if (/\b(?:staff|quarterstaff|lajatang)\b/i.test(weapon)) return 'staff'
+  if (/\b(?:mace|flail|club|hammer|morningstar|eveningstar)\b/i.test(weapon)) return 'crush'
   return 'slash'
 }
 

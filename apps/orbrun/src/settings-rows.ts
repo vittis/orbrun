@@ -23,6 +23,7 @@ import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from
  */
 const SETTING_GROUPS = [
   ['View', 'Dungeon tilt, zoom, animation and movement.'],
+  ['Combat', 'Weapon effects, trails and combat movement.'],
   ['Controls', 'What the keys, the d-pad and the sticks do.'],
   ['Interface', 'What the HUD shows around the view, and how big it is.'],
 ] as const
@@ -188,8 +189,13 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('View', 'Dungeon movement', 'depthMovement', [true, false], 'Smooth confirmed movement for entities and the following camera. Still mode also disables movement.', v => v ? 'Tween' : 'Instant', s => s.depthAnimate === false),
   row('View', 'Dungeon move duration', 'depthMovementDuration', [0.06, 0.08, 0.1, 0.14, 0.18, 0.25], 'Time per move. Shorter feels snappier; longer makes each step easier to follow. Fast travel retargets immediately without queuing moves.', v => Math.round(v * 1000) + ' ms', s => s.depthAnimate === false || !s.depthMovement),
   row('View', 'Dungeon move easing', 'depthMovementEasing', ['ease-out', 'smooth', 'linear'], 'Snappy starts immediately and settles gently. Smooth eases in and out. Linear keeps a constant speed. All land exactly on the grid.', v => ({ 'ease-out': 'Snappy', smooth: 'Smooth', linear: 'Linear' })[v], s => s.depthAnimate === false || !s.depthMovement),
-  row('View', 'Combat popups', 'combatPopups', [true, false], 'Confirmed damage numbers, player HP changes, hit strength and damage type, misses, blocks, healing and status changes. Unknown enemy damage uses visual cues. Respects reduced motion.', v => v ? 'On' : 'Off'),
   row('View', 'Explore delay (per step)', 'exploreDelay', EXPLORE_DELAYS, exploreHint, (v) => (v < 0 ? 'Instant' : v + ' ms'), () => !!exploreGame && (exploreGame.online || rcPacesExplore(exploreGame.rc))),
+  // Combat
+  row('Combat', 'Melee effects', 'meleeEffects', [true, false], 'Distinct pixel-art gestures for each weapon family in Dungeon. Still mode disables them.', v => v ? 'On' : 'Off', s => s.depthAnimate === false),
+  row('Combat', 'Melee weight', 'meleeWeight', [0.6, 0.8, 1, 1.25, 1.5], 'Thickness of weapon strokes and size of their silhouettes.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || !s.meleeEffects),
+  row('Combat', 'Melee trail', 'meleeTrail', [0.4, 0.7, 1, 1.4], 'Short trails make strikes crisp; longer trails emphasize the swing.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || !s.meleeEffects),
+  row('Combat', 'Melee movement', 'meleeMotion', [0, 0.35, 0.65, 1], 'Amount of attacker lunge and defender recoil. Zero keeps actors planted while weapon effects play.', v => v === 0 ? 'Planted' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
+  row('Combat', 'Combat popups', 'combatPopups', [true, false], 'Confirmed damage numbers, player HP changes, hit strength and damage type, misses, blocks, healing and status changes. Unknown enemy damage uses visual cues. Respects reduced motion.', v => v ? 'On' : 'Off'),
   // Controls
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface
