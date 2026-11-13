@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.83 — 2026-11-13
+
+- Continue raised side-wall tops into lowered foreground corners, removing the dark internal step at the join while preserving corridor clearance and exposed wall faces.
+- Check mirrored corners, remembered terrain, unknown boundaries and water edges, including real-pixel coverage across tilt, zoom, filtering and display density.
+
 ## 0.3.82 — 2026-11-13
 
 - Stop Djinni spell previews and HP casting costs from triggering the player hit animation. Only confirmed incoming melee/spell damage messages trigger hit feedback; HP expenditure alone does not.
