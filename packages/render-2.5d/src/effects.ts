@@ -1,12 +1,13 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
+import { atmosphereScene, nativeSpellArt } from './spell-presentation.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
 export interface BodyBump extends CombatBump { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -24,6 +25,8 @@ export class DungeonEffects {
   bumps: BodyBump[] = []
   traces: SpellTrace[] = []
   bursts: SpellBurst[] = []
+  private nativeCells = new Set<ReturnType<typeof cellKey>>()
+  private nativeUntil = new Map<ReturnType<typeof cellKey>, number>()
   private flashes = new Map<ReturnType<typeof cellKey>, string>()
   private spells = new Map<string, SpellSample>()
   private shots = new Map<string, ProjectileSample>()
@@ -48,6 +51,10 @@ export class DungeonEffects {
       this.spawns.observe(scene, now, continuing)
       this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now), b => this.spawns.stationary(b))
     }
+    for (const [key, until] of this.nativeUntil) if (now >= until) this.nativeUntil.delete(key)
+    for (const key of this.nativeCells) this.nativeUntil.set(key, now + PROJECTILE_EXPOSURE)
+    this.nativeCells = new Set(scene.billboards.filter(b => this.nativeArea(b) && visible(scene, b)).map(b => cellKey(b.x, b.y)))
+    for (const cell of scene.cells.values()) if (cell.life?.spawn && cell.visibility === 'visible') this.nativeCells.add(cellKey(cell.x, cell.y))
     const flashes = new Map<ReturnType<typeof cellKey>, string>()
     if (animate && scene.playerOnLevel) for (const cell of scene.cells.values()) {
       const f = cell.flash
@@ -64,7 +71,7 @@ export class DungeonEffects {
     }
     this.flashes = flashes
     // Native overlays own projectile artwork; they never invent hit locations.
-    const nonProjectiles = { ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }
+    const nonProjectiles = atmosphereScene(scene)
     const next = new Map<string, SpellSample>(emittersFor(nonProjectiles).filter(s => s.transient).map(source => [signature(source), { source }]))
     const current = new Set<string>()
     if (animate && scene.playerOnLevel) for (const billboard of scene.billboards) {
@@ -148,7 +155,9 @@ export class DungeonEffects {
       const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.requested) < 0.2
       return sameTarget && sameResult
     })
+    const nativeArtwork = !utility(placed.kind) && (this.nativeCovers(scene, effect, now) || this.nativeCovers(scene, placed, now))
     if (existing) {
+      existing.nativeArtwork ||= nativeArtwork
       // Explicit results replace colour guesses and generic damage. One owner,
       // one clock: another report cannot start a differently coloured second hit.
       const intensity = impactStrength(placed.intensity) > impactStrength(existing.intensity) ? placed.intensity : existing.intensity
@@ -170,7 +179,7 @@ export class DungeonEffects {
       return false
     }
     const duration = spray ? HIT_SPRAY_DURATION : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
-    this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray })
+    this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray, nativeArtwork })
     this.bursts = this.bursts.slice(-48)
     return true
   }
@@ -213,11 +222,22 @@ export class DungeonEffects {
     return { x: x / limit, y: y / limit }
   }
 
+  private nativeArea(b: Billboard) {
+    return nativeSpellArt(b) && (b.kind !== 'projectile' || this.spawns.stationary(b))
+  }
+
+  private nativeCovers(scene: Scene, p: { x: number; y: number }, now: number) {
+    return (this.nativeUntil.get(cellKey(p.x, p.y)) ?? -Infinity) > now
+      || scene.billboards.some(b => this.nativeArea(b) && b.x === p.x && b.y === p.y)
+      || !!scene.cells.get(cellKey(p.x, p.y))?.life?.spawn
+  }
+
   tick(scene: Scene, now: number) {
     this.spawns.tick(scene, now)
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
+      if (!['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
       if (burst.contact) {
         burst.born = Math.max(burst.requested, burst.contact.time())
         const direction = burst.contact.direction()
@@ -238,7 +258,7 @@ export class DungeonEffects {
   visibleBursts(now: number) {
     const current = new Map<string, SpellBurst>()
     for (const burst of this.bursts) {
-      if (now < burst.born || now - burst.born >= burst.duration) continue
+      if (now < burst.born || now - burst.born >= burst.duration || burst.nativeArtwork && !burst.spray && burst.source !== 'melee') continue
       const key = burst.actorId ?? `cell:${burst.x},${burst.y}`
       const previous = current.get(key)
       if (!previous || burst.born >= previous.born) current.set(key, burst)
@@ -246,5 +266,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.nativeCells.clear(); this.nativeUntil.clear(); this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

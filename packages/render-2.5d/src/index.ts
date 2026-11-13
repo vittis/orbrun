@@ -16,6 +16,7 @@ import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
+import { atmosphereScene, nativeSpellArt } from './spell-presentation.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -118,7 +119,7 @@ export class Render25d implements MapRenderer {
     this.revision = scene.revision
     this.visibility.observe(scene, now, this.opts.animate)
     this.arrival.observe(scene, now, this.opts.animate)
-    this.life.observe({ ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }, now)
+    this.life.observe(atmosphereScene(scene), now)
     this.effects.observe(scene, now, this.opts.animate)
     this.deaths.observe(scene, this.opts.animate)
     // Never render effects or entities in unseen cells, even if a producer supplies them.
@@ -134,7 +135,7 @@ export class Render25d implements MapRenderer {
       if (cell && cell.visibility !== 'unseen' && cell.kind !== 'unknown') this.standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 + (billboard.kind === 'cloud' ? 0.1 : 0) })
     }
     this.standing.sort((a, b) => a.depth - b.depth || a.cell.x - b.cell.x)
-    this.movement.observe({ ...scene, billboards: this.standing.flatMap(entry => entry.billboard ? [entry.billboard] : []) }, this.opts.center ?? scene.player, now, {
+    this.movement.observe({ ...scene, billboards: this.standing.flatMap(entry => entry.billboard && entry.billboard.kind !== 'cloud' && entry.billboard.kind !== 'projectile' ? [entry.billboard] : []) }, this.opts.center ?? scene.player, now, {
       enabled: this.opts.animate && this.opts.movement, duration: this.opts.movementDuration, easing: this.opts.movementEasing,
     })
   }
@@ -173,6 +174,7 @@ export class Render25d implements MapRenderer {
   }
 
   private actorPosition(b: Billboard, now: number) {
+    if (b.kind === 'cloud' || b.kind === 'projectile') return { x: b.x, y: b.y }
     const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now, this.opts.meleeBumpStrength, this.opts.meleeBumpSnap) : { x: 0, y: 0 }
     return { x: pos.x + offset.x, y: pos.y + offset.y }
   }
@@ -201,8 +203,8 @@ export class Render25d implements MapRenderer {
     } }
   }
 
-  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1) {
-    return this.tiles.draw(ctx, layers, x, y, size, this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell),
+  private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1, illuminate = true) {
+    return this.tiles.draw(ctx, layers, x, y, size, this.light(), this.darkness(cell), cell.flash, illuminate ? this.surfaceLighting(cell) : undefined,
       { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 }, rasterScale)
   }
 
@@ -315,9 +317,6 @@ export class Render25d implements MapRenderer {
     }
     this.life.tick(now)
     const emitters = this.life.emitters(now)
-    if (this.opts.animate) for (const shot of [...this.effects.projectiles(now), ...this.effects.spawns.overlays(this.scene, now)]) {
-      for (const light of shot.life?.lights ?? []) emitters.push({ ...light, x: Math.round(shot.x), y: Math.round(shot.y) })
-    }
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
       cell => cell.visibility === 'visible' || this.visibility.moving(cell, now))
     this.hits = []
@@ -441,7 +440,7 @@ export class Render25d implements MapRenderer {
     }
 
     // Keep the old faint stair/crystal motes even when they emit no light.
-    const ornaments: Emitter[] = cells.filter(c => c.visibility === 'visible' && ['crystal', 'up', 'down'].includes(c.life?.motion ?? '') && !c.life?.lights?.length)
+    const ornaments: Emitter[] = cells.filter(c => c.visibility === 'visible' && !c.life?.spawn && ['crystal', 'up', 'down'].includes(c.life?.motion ?? '') && !c.life?.lights?.length)
       .map(c => ({ x: c.x, y: c.y, colour: [198, 222, 255], radius: 1, power: 0 }))
     this.emitterParticles(ctx, p, [...emitters, ...ornaments], time)
     if (this.opts.animate && this.opts.meleeBumpStrength > 0 && this.effects.bumps.some(b =>
@@ -726,15 +725,15 @@ export class Render25d implements MapRenderer {
       return
     }
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
-    const cloud = b.kind === 'cloud'
+    const cloud = b.kind === 'cloud', native = nativeSpellArt(b)
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const breathing = creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
-    const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
+    const breathing = !native && creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
+    const pose = livingPose(life, b.x, b.y, time, !native && this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
     const opacity = position.fade ?? (this.opts.animate && visible ? this.effects.spawns.entrance(b, time) : 1)
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
     const wound = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(b.damage ?? 'uninjured')
-    if (creature && !b.lying && wound > 0 && visible && !life.held && life.motion !== 'still') {
+    if (!native && creature && !b.lying && wound > 0 && visible && !life.held && life.motion !== 'still') {
       const strain = wound / 5, phase = b.x * 2.31 + b.y * 1.73
       pose.angle -= strain * 0.035
       pose.sy -= strain * 0.025
@@ -744,7 +743,7 @@ export class Render25d implements MapRenderer {
         pose.x += Math.sin(time * 0.85 + phase) * strain * 0.007
       }
     }
-    if (visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
+    if (!native && visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
     const q = project(p, position.x, position.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre.
     // Preserve those authored proportions without scaling by billboard height.
@@ -759,8 +758,8 @@ export class Render25d implements MapRenderer {
     // Breathing filters an integer-enlarged sprite, keeping solid pixel centres
     // while easing row transitions. Explicit smooth scaling uses the atlas directly.
     const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
-    ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || breathing
-    ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1) * opacity
+    ctx.imageSmoothingEnabled = this.opts.filterScaling || breathing
+    ctx.globalAlpha = (b.alpha ?? 1) * opacity
     const brightness = this.opts.animate && visible ? this.effects.hits.brightness(combatActorId(b), time) : 1
     if (brightness > 1) {
       if (typeof ctx.filter === 'string') ctx.filter = `brightness(${brightness})`
@@ -781,7 +780,7 @@ export class Render25d implements MapRenderer {
       ctx.rotate(pose.angle)
       ctx.scale(pose.sx, pose.sy)
       ctx.translate(-size / 2, 0)
-      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y }, rasterScale)) {
+      if (!this.tile(ctx, b.layers ?? [{ tile: b.tile }], cell, 0, -size - (cloud ? s * 0.15 : 0), size, { x, y }, rasterScale, !native)) {
         ctx.globalAlpha *= 1 - this.darkness(cell)
         ctx.fillStyle = b.kind === 'player' ? '#fff0ba' : '#e5c4ae'
         ctx.font = `${size * 0.75}px monospace`

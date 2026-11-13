@@ -390,18 +390,36 @@ describe('bounded dungeon combat presentation', () => {
     expect({ ...fx.bumps[0], born: 0 }).toEqual(first)
   })
 
-  it('leaves one trace when a confirmed spell disappears, with no refresh on unrelated updates', () => {
+  it('does not add synthetic floor residue after native cloud artwork disappears', () => {
     const fx = new DungeonEffects(), scene = world()
     scene.billboards = [{ ...spell(), kind: 'cloud' }]
     fx.observe(scene, 0, true)
     fx.observe({ ...scene, revision: 1 }, 0.1, true)
     expect(fx.traces).toHaveLength(0)
     fx.observe({ ...scene, billboards: [], revision: 2 }, 0.2, true)
-    expect(fx.traces).toHaveLength(1)
+    expect(fx.traces).toHaveLength(0)
     fx.observe({ ...scene, billboards: [], revision: 3 }, 1, true)
-    expect(fx.traces[0].born).toBe(0.2)
+    expect(fx.traces).toHaveLength(0)
     fx.tick(scene, 3.1)
     expect(fx.traces).toHaveLength(0)
+  })
+
+  it.each(['before', 'after'] as const)('lets native explosions own art when a result arrives %s the overlay, preserving confirmed hit spray', order => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.billboards = [target]
+    fx.observe(scene, 0, true)
+    if (order === 'before') fx.spell(scene, { x: 1, y: 0, kind: 'fire' }, 1)
+    scene.billboards.push({ ...spell(), life: { spawn: { style: 'burst', kind: 'fire', family: 'BOLT_FIRE_STORM' } } })
+    fx.observe(scene, 1.01, true)
+    if (order === 'after') fx.spell(scene, { x: 1, y: 0, kind: 'fire' }, 1.02)
+    expect(fx.visibleBursts(1.1)).toEqual([])
+    scene.billboards = [target]
+    fx.observe(scene, 1.03, true)
+    expect(fx.visibleBursts(1.11)).toEqual([])
+    fx.hit(scene, { x: 1, y: 0, intensity: 'solid' }, 1.04)
+    fx.tick(scene, 1.15)
+    expect(fx.visibleBursts(1.15)).toHaveLength(1)
+    expect(fx.visibleBursts(1.15)[0].spray).toBeDefined()
   })
 
   it('clears histories across levels, still mode, remote maps, and loss of visibility', () => {
