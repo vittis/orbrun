@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.81 — 2026-11-13
+
+- Keep flying, breathing, swaying and wounded poses continuous across confirmed steps, turns and artwork updates.
+- Smooth hover displacement between pixels and change animation speed without resetting its phase.
+- Preserve the concurrent spell-terrain, spell-atmosphere and wider death-splatter fixes.
+
 ## 0.3.80 — 2026-11-13
 
 - Add an all-direction burst of death debris from the body alongside the killing blow’s directional spray.
