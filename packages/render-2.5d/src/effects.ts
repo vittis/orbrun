@@ -1,6 +1,6 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
-import { atmosphereScene, nativeSpellArt } from './spell-presentation.js'
+import { nativeSpellArt } from './spell-presentation.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
@@ -71,7 +71,7 @@ export class DungeonEffects {
     }
     this.flashes = flashes
     // Native overlays own projectile artwork; they never invent hit locations.
-    const nonProjectiles = atmosphereScene(scene)
+    const nonProjectiles = { ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }
     const next = new Map<string, SpellSample>(emittersFor(nonProjectiles).filter(s => s.transient).map(source => [signature(source), { source }]))
     const current = new Set<string>()
     if (animate && scene.playerOnLevel) for (const billboard of scene.billboards) {

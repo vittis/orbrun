@@ -8,7 +8,18 @@ test('native spell tiles fade without deformation, settle and respect visibility
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(274)
+  expect(report.checks).toBe(80)
+  expect(report.failures, JSON.stringify(report)).toEqual([])
+})
+
+test('spell glyph and artwork updates preserve terrain with lighting and VFX enabled', async ({ page }) => {
+  await page.goto('/testbed/spell-terrain-checks.html')
+  await expect.poll(async () => {
+    try { return (await result(page)).status } catch { return 'loading' }
+  }, { timeout: 75_000 }).toMatch(/complete|error/)
+  const report = await result(page)
+  expect(report.status, JSON.stringify(report)).toBe('complete')
+  expect(report.checks).toBe(240)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 

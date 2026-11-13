@@ -12,7 +12,7 @@ export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(6, source
 type ActorPosition = (b: Billboard) => { x: number; y: number }
 export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?: TileSource | null, position?: ActorPosition) {
   const cell = scene.cells.get(cellKey(source.x, source.y))
-  const billboard = scene.billboards.find(b => !nativeSpellArt(b) && b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
+  const billboard = scene.billboards.find(b => b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
   if (!billboard && cell?.occluder) {
     const z = wallHeight(scene, cell)
     const roof = planeRect(p, cell.x, cell.y, z, 1)

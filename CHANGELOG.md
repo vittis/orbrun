@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.79 — 2026-11-12
+
+- Fix Flame Wave and other explosion glyphs briefly turning floors into raised walls. Transparent/decorative walls also retain their shape beneath spell, cloud and actor glyphs; terrain categories now decide wall geometry.
+- Restore the earlier spell lighting, particles, cloud motion/opacity, residues and impact styling. Keep native fades, fixed area/cloud positions and duplicate-effect suppression.
+- Add protocol-to-raster checks for the glyph-only frame before artwork, visible effects and clearing, with lighting/VFX enabled and Still mode.
+
 ## 0.3.78 — 2026-11-12
 
 - Remove all weapon VFX, trails, swing artwork/variations, their preview and obsolete Combat controls.

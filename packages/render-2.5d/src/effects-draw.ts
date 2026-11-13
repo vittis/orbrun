@@ -12,7 +12,7 @@ export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst,
   const kind = burst.material === 'sand' && burst.kind === 'earth' ? 'sand' : burst.kind
   const strength = burst.intensity ? impactStrength(burst.intensity) : 0.6
   art.draw(ctx, kind, age, burst.x * 11 + burst.y * 23 + Math.floor(burst.born * 1000), strength,
-    q.x, q.y - p.scale * (burst.actorId ? 0.5 : 0.4), p.scale * (0.4 + strength * 0.15), dpr, 1, false)
+    q.x, q.y - p.scale * (burst.actorId ? 0.5 : 0.4), p.scale * (0.85 + strength * 0.25), dpr, 1, false)
 }
 
 /** Dithered floor remnants replace the old vector arcs and tiny square motes. */
