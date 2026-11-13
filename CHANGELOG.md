@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.114 — 2026-11-13
+
+- Removed artificial square wall bases beneath ruined columns, statues, idols, gravestones and related scenery. Their original silhouettes now stand directly on the floor with soft ground shadows for depth.
+- Preserved actual wall rendering, server-authoritative terrain and visibility, flat supporting maps, and Still/reduced motion. Added scene-classification and real-browser raster regressions.
+
 ## 0.3.113 — 2026-11-13
 
 - Added brief opening and closing fades for inventory, spell lists, descriptions, prompts and client menus. Content and navigation updates retain their presentation clock, while closing windows release focus and input immediately.
