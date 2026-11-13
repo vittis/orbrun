@@ -35,11 +35,12 @@ export function profileRandom(random: () => number, variation: number) {
 export function sampleElementalSpray(scene: Scene, origin: { x: number; y: number }, direction: { x: number; y: number },
   height: number, kind: SpellEffect['kind'], intensity: HitIntensity | undefined, seed: number,
   age: number, death: boolean, gore: number, outward: number, variation: number): DeathParticle[] {
-  const element = sprayElement(kind), duration = death ? element === 'electric' ? 0.55 : 0.8 : 0.3
+  const element = sprayElement(kind), magicDeath = death && element === 'magic'
+  const duration = death ? element === 'electric' ? 0.55 : magicDeath ? 0.65 : 0.8 : 0.3
   if (!element || gore <= 0 || age < 0 || age >= duration) return []
   const random = debrisRandom(seed ^ 0x7f4a7c15), profile = profileRandom(random, variation)
   const strength = 0.8 + impactStrength(intensity) * 0.4
-  const count = Math.min(death ? 40 : 28, Math.round((death ? 24 : 13) * gore * strength * (0.8 + profile() * 0.4)))
+  const count = Math.min(death ? 40 : 28, Math.round((death ? magicDeath ? 21 : 24 : 13) * gore * strength * (0.8 + profile() * 0.4)))
   const energy = (0.8 + profile() * 0.4) * strength, size = 0.8 + profile() * 0.4
   const heading = Math.atan2(direction.y, direction.x), radial = Math.round(count * outward), phase = random() * Math.PI * 2
   const electric = element === 'electric', fire = element === 'fire', cold = element === 'cold', magic = element === 'magic'
@@ -59,10 +60,10 @@ export function sampleElementalSpray(scene: Scene, origin: { x: number; y: numbe
     const ground = liquid && z <= 0.018
     const cell = scene.cells.get(cellKey(Math.round(x), Math.round(y)))
     const lifetime = duration * (0.75 + random() * 0.25)
-    const fade = Math.max(0, Math.min(1, (lifetime - age) / (death ? 0.22 : 0.07)))
+    const fade = Math.max(0, Math.min(1, (lifetime - age) / (death ? magicDeath ? 0.15 : 0.22 : 0.07)))
     // Small, local discharges reroute on an age clock, never on render cadence.
     const discharge = Math.floor(age * 18 + i * 0.7)
-    const alpha = fade * (electric && discharge % 3 === 0 ? 0.65 : 1)
+    const alpha = fade * (magicDeath ? 0.9 : electric && discharge % 3 === 0 ? 0.65 : 1)
     const particleSize = (0.04 + random() * 0.025) * size * Math.sqrt(height) * (major ? 1.4 : 1) * (ground ? 1.8 : 1)
     const sprite: DeathSprite = ground ? 'splat' : electric ? discharge % 2 ? 'lightning' : 'lightningFork'
       : fire ? 'cinder' : cold ? major ? 'frost' : 'shard'

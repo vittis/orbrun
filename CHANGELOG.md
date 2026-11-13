@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.110 — 2026-11-13
+
+- Made magic death splatter a little shorter and less intense: a 0.65-second maximum instead of 0.8 seconds, about 12% fewer particles, slightly softer opacity and a quicker fade. Retained purple glints, body splatter and per-spawn variation.
+
 ## 0.3.109 — 2026-11-13
 
 - Reworked the level-up popup into crisp bitmap lettering over ragged blood-red pixels, hanging drips and bone chips. It follows the rendered character just above their head, including camera motion and resizing.
