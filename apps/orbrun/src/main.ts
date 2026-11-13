@@ -71,6 +71,7 @@ let lastBeat = Date.now()
 /** when the page was last hidden */
 let hiddenAt = 0
 document.documentElement.style.setProperty('--ui-scale', String(getSettings().uiScale))
+document.documentElement.dataset.uiMotion = getSettings().depthAnimate === false ? 'still' : 'auto'
 /**
  * What a character's tab title ends in, so a game in progress reads as "orbrun the Chiller | Vine Stalker - Orbrun".
  * Nothing in a window of its own: an installed app's title bar puts the app's name in front already.

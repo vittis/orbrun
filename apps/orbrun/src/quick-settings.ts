@@ -58,6 +58,7 @@ export class QuickSettings {
   owns(target: EventTarget | null): boolean { return target instanceof Node && this.root.contains(target) }
 
   private show() {
+    this.panel.inert = false
     this.panel.hidden = false
     this.toggle.setAttribute('aria-expanded', 'true')
     this.toggle.setAttribute('aria-label', 'Close quick settings')
@@ -67,6 +68,7 @@ export class QuickSettings {
 
   close() {
     const focused = this.owns(document.activeElement)
+    this.panel.inert = true
     this.panel.hidden = true
     this.toggle.setAttribute('aria-expanded', 'false')
     this.toggle.setAttribute('aria-label', 'Open quick settings')

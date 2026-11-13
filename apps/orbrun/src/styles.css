@@ -28,6 +28,8 @@
   --menu-hover-in: 60ms;
   /* a chosen screen is on the glass before the hand leaves the mouse: the move reads, it does not wait */
   --frame-in: 140ms;
+  --ui-feedback: 90ms;
+  --ui-panel: 130ms;
   --panel: rgba(8, 10, 14, 0.78);
   --panel-border: rgba(255, 255, 255, 0.12);
   --accent: #ffd45c;
@@ -2267,6 +2269,8 @@ a.item.beside {
   touch-action: none;
   cursor: crosshair;
   display: block;
+  /* Returning keyboard control from a panel focuses the canvas; the playfield has no focus frame. */
+  outline: none;
   /* The view draws one pixel per CSS pixel whatever the display's density
      (game.ts `viewDpr`), so on a HiDPI screen the compositor is the thing that
      scales it up. Left to itself it does that smoothly, which softens every
@@ -3256,6 +3260,16 @@ canvas.minimap.hidden,
   z-index: 20;
 }
 
+/* Retired windows keep their geometry for a brief fade, outside the live stack. */
+.ui-exit {
+  position: absolute;
+  inset: 0;
+}
+.ui-exit,
+.ui-exit * {
+  pointer-events: none !important;
+}
+
 /*
  * A popup hangs from the top of the screen, as WebTiles' do (style.css
  * .ui-popup: align-items start, .ui-popup-outer margin 50px, 20px when the
@@ -3473,6 +3487,33 @@ canvas.minimap.hidden,
   cursor: pointer;
 }
 
+/* Feedback changes paint only: dense inventory/spell rows never move under the pointer. */
+.popup li.selectable,
+.popup li.row:not(.off),
+.popup .more .more-hot,
+.popup .actions span[data-hotkey],
+.popup .footer.pane-switch,
+.crt .crt-hot,
+.newgame .button,
+.prompt-card .chip {
+  border-radius: 3px;
+  transition: background-color var(--ui-feedback) ease, outline-color var(--ui-feedback) ease, box-shadow var(--ui-feedback) ease;
+}
+
+@media (hover: hover) {
+  .popup li.selectable:not(.off):not(.hovered):not(.focused):hover,
+  .popup li.row:not(.off):not(.focused):not(.hovered):hover,
+  .popup .actions span[data-hotkey]:not(.focused):hover,
+  .popup .footer.pane-switch:not(.focused):hover,
+  .newgame .button:not(.selected):not(.focused):hover {
+    background-color: rgba(255, 212, 92, 0.09);
+    box-shadow: inset 2px 0 rgba(255, 212, 92, 0.55);
+  }
+  .popup li.selectable.preselected:not(.hovered):not(.focused):hover {
+    background-color: rgba(60, 120, 255, 0.28);
+  }
+}
+
 .popup li.hovered {
   background: rgba(255, 212, 92, 0.2);
   outline: 1px solid rgba(255, 212, 92, 0.6);
@@ -3584,7 +3625,6 @@ canvas.minimap.hidden,
   max-width: min(94vw, 48rem);
   pointer-events: auto;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
-  animation: frame-in 160ms ease both;
 }
 .prompt-card .text {
   white-space: pre-wrap;
@@ -4370,16 +4410,8 @@ canvas.minimap.hidden,
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 30px 90px rgba(0, 0, 0, 0.75);
   min-width: 26rem;
-  animation: popup-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
-/* a fade only, and nothing held once it is over (`backwards`): a scale here had Chrome keep the popup drawn at the
-   animation's scale long after it ended, then draw it again at its own whenever it pleased (a focus change, a quiet
-   page), so the icons in it changed under the player */
-@keyframes popup-in {
-  from {
-    opacity: 0;
-  }
-}
+/* WindowTransitions owns opening/closing, so server rebuilds never replay an entrance. */
 /* corner marks */
 .popup.ours::before,
 .popup.ours::after {
@@ -4429,6 +4461,9 @@ canvas.minimap.hidden,
   position: absolute;
   inset: 0 calc(-1 * var(--touch-right, 0px)) calc(-1 * var(--touch-bottom, 0px)) 0;
   z-index: -1;
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 /* Menus dim and blur the world uniformly, without darkening the corners. */
 .overlay-stack:has(> .popup.sysmenu)::before,
@@ -4436,18 +4471,12 @@ canvas.minimap.hidden,
   background: rgba(3, 2, 6, 0.5);
   backdrop-filter: blur(3px) saturate(0.7);
   -webkit-backdrop-filter: blur(3px) saturate(0.7);
-  animation: dim-in 220ms ease both;
-}
-@keyframes dim-in {
-  from {
-    opacity: 0;
-  }
 }
 /* the pack, X's actions and the character overview stand on the world dimmed, as WebTiles' popups stand on its .ui-popup-overlay:
    flat and unblurred, lighter than the pause menu, and eased rather than animated in, so a turn from one
    tab to the next (crawl's menu gone a moment before the next is up) never flashes the world bright */
 .overlay-stack::before {
-  transition: background-color 160ms ease;
+  transition: background-color var(--ui-panel) ease, backdrop-filter var(--ui-panel) ease;
 }
 .overlay-stack:has(> .popup.paged-pack)::before,
 .overlay-stack:has(> .popup.action-tabs)::before,
@@ -4457,7 +4486,7 @@ canvas.minimap.hidden,
 /* a popup with another stacked over it (an item described over the pack) darkens, so the eye goes to the one on top;
    WebTiles leaves the one under at full strength */
 .overlay-stack > .popup {
-  transition: filter 160ms ease;
+  transition: filter var(--ui-panel) ease;
 }
 .overlay-stack > .popup:not([data-client]):has(~ .popup:not(.hidden)) {
   filter: brightness(0.4) saturate(0.6);
@@ -4471,7 +4500,6 @@ canvas.minimap.hidden,
  */
 .popup.menu.game {
   min-width: 26rem;
-  animation: popup-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 .menu.game .title {
   color: #fff;
@@ -5161,8 +5189,14 @@ canvas.minimap.hidden,
   border-radius: 8px;
   box-shadow: 0 5px 24px #000a;
   overflow: hidden;
+  opacity: 1;
+  transition: opacity var(--ui-panel) ease, display var(--ui-panel) allow-discrete;
 }
 .quick-settings [hidden] { display: none; }
+.quick-settings-panel[hidden] { opacity: 0; }
+@starting-style {
+  .quick-settings-panel { opacity: 0; }
+}
 .quick-settings-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; }
 .quick-settings-panel header strong { color: #eac96d; font-size: 15px; }
 .quick-settings-panel header button { width: 36px; font-size: 22px; }
@@ -5182,6 +5216,39 @@ canvas.minimap.hidden,
 .quick-setting select { width: 100%; padding: 4px 6px; }
 .quick-settings-reset { width: 100%; margin-top: 10px; }
 .quick-settings-hint { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Consistent, quiet feedback for supporting controls and front-end lists. */
+:is(.popup, .quick-settings, .chat) :is(button, select, input.text, input.chat_input),
+.menu .pack-tabs button,
+.frame.menu-frame table.roster tr.game,
+.frame.menu-frame table.roster tr.game td {
+  transition: color var(--ui-feedback) ease, background-color var(--ui-feedback) ease, border-color var(--ui-feedback) ease;
+}
+@media (hover: hover) {
+  .frame.menu-frame table.roster tr.game:not(.focused):not(:focus-visible):hover {
+    background-color: rgba(216, 180, 95, 0.06);
+  }
+}
+
+/* Still removes UI transitions too; OS reduced motion always takes precedence for UI. */
+[data-ui-motion='still'] {
+  --ui-feedback: 0s;
+  --ui-panel: 0s;
+  --frame-in: 0s;
+  --menu-hover-in: 0s;
+}
+[data-ui-motion='still'] .menu .pack-tabs .tab-lean.settle {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-feedback: 0s;
+    --ui-panel: 0s;
+  }
+  .prompt-card {
+    animation: none;
+  }
+}
 @media (pointer: coarse) {
   .quick-settings button, .quick-settings select { min-height: 44px; }
   .quick-setting-range button { flex-basis: 40px; }

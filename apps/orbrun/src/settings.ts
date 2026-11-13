@@ -126,6 +126,7 @@ export function getSettings(): Settings {
 /** Persist normalized non-default preferences without touching accounts or saves. */
 export function saveSettings(settings: Settings) {
   const s = normalizeSettings(settings)
+  if (typeof document !== 'undefined') document.documentElement.dataset.uiMotion = s.depthAnimate === false ? 'still' : 'auto'
   const out: Partial<Settings> = {}
   for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
     if (s[key] !== defaultSettings[key]) (out as Record<string, unknown>)[key] = s[key]

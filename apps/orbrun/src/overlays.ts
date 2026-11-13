@@ -29,6 +29,7 @@ import { fits, menuColumns } from './menu-columns'
 import { consoleHtml } from './console-text'
 import { attachSwipe } from './swipe'
 import { TabLean } from './tab-lean'
+import { WindowTransitions } from './ui-motion'
 import { ACTION_TABS, actionNeighbour, actionTabOf, type ActionTabId } from './action-tabs'
 import type { Button, PadKind } from './gamepad'
 import { DEFAULT_YESNO, isFocusMode, promptLead, type Context, type Mode, type ParsedPrompt, type Switch } from './context'
@@ -742,10 +743,12 @@ export class Overlays {
 
   /** the tab strip leaning under a swipe that has not lifted yet (tab-lean.ts); game.ts leans it for a swipe beside the menu too */
   readonly tabLean: TabLean
+  private windows: WindowTransitions
 
   constructor(host: HTMLElement, hooks: OverlayHooks) {
     this.hooks = hooks
     this.root = h('div', { class: 'overlay-stack' })
+    this.windows = new WindowTransitions(this.root)
     host.append(this.root)
     this.root.addEventListener('pointermove', (ev) => this.pointerWakes(ev), { passive: true })
     // a click is the mouse speaking: the hover under it counts again, so a click straight after a key lands where the mouse is
@@ -834,10 +837,18 @@ export class Overlays {
     const oskWasUp = this.osk.visible && !!this.textTarget
     // remember where the reader was in the overlays about to be rebuilt
     this.memoScroll()
+    this.windows.retain([
+      ...state.menus.filter(m => !m.hidden && (m.tag !== 'prompt' || this.hooks.watching())),
+      ...state.ui.filter(p => !p.hidden),
+      ...(state.uiState === 1 && !state.menus.length && !state.ui.length ? ['crt'] : []),
+      ...(state.dialog ? ['dialog'] : []),
+      ...(state.textInput && !this.hooks.watching() ? ['text-input'] : []),
+      'client', 'prompt',
+    ])
     // remove server-driven overlays and rebuild
     for (const el of Array.from(this.root.children)) {
       const he = el as HTMLElement
-      if (he === this.promptEl) continue
+      if (he === this.promptEl || he.classList.contains('ui-exit')) continue
       if (!he.dataset.client || he.classList.contains('osk')) he.remove()
     }
     this.crtFitted = null
@@ -882,6 +893,7 @@ export class Overlays {
       if (m.hidden) el.classList.add('hidden')
       place(el, m['ui-centred'])
       this.root.append(el)
+      if (!m.hidden) this.windows.show(m, el)
     })
     if (!this.menuExtra) {
       this.gameMenuFor = null
@@ -892,11 +904,17 @@ export class Overlays {
       if (p.hidden) el.classList.add('hidden')
       place(el, p['ui-centred'])
       this.root.append(el)
+      if (!p.hidden) this.windows.show(p, el)
     })
-    if (state.uiState === 1 && menus.length === 0 && popups.length === 0) this.root.append(this.renderCrt(state))
+    if (state.uiState === 1 && menus.length === 0 && popups.length === 0) {
+      const el = this.renderCrt(state)
+      this.root.append(el)
+      this.windows.show('crt', el)
+    }
     if (state.dialog) {
       const el = h('div', { class: 'popup dialog-html', html: state.dialog })
       this.root.append(el)
+      this.windows.show('dialog', el)
       // show_dialog html: whatever buttons or links it carries are the choices.
       // client.js handle_dialog wires every `[data-key]` element to send that
       // key, and nothing else: the save-transfer question the launcher asks at
@@ -930,7 +948,11 @@ export class Overlays {
     const ti = state.textInput
     if (ti && !this.hooks.watching()) {
       if (ti.type === 'seed-selection' && this.seedInput) this.wireInput(this.seedInput, ti, true)
-      else this.root.append(this.renderTextInput(state))
+      else {
+        const el = this.renderTextInput(state)
+        this.root.append(el)
+        this.windows.show('text-input', el)
+      }
     }
     // a prompt of the server's comes with the on-screen keyboard up when the pad spoke last, so it has
     // its keys at once; the keyboard follows the field across rebuilds. After a physical keyboard or the
@@ -1196,7 +1218,7 @@ export class Overlays {
     const kbd = h('div', { class: 'more kbd-only' }, h('kbd', null, '←'), ' ', h('kbd', null, '→'), ' Tabs · ', h('kbd', null, 'Esc'), ' Back')
     const parts = [this.actionStrip(current), h('div', { class: 'body' }, h('p', { class: 'action-empty' }, text ?? '\u00a0')), kbd]
     // under way, it keeps the height of the menu it stands in for, so a turn from one full tab to the next never shrinks the frame between
-    const left = this.root.querySelector<HTMLElement>('.popup.menu.action-tabs:not([data-client])')
+    const left = this.root.querySelector<HTMLElement>(':scope > .popup.menu.action-tabs:not([data-client])')
     const o = this.clientOverlay
     const el = o?.kind === 'actions' ? o.el : h('div', { class: 'popup menu game action-tabs' })
     if (text !== null) el.style.minHeight = ''
@@ -2515,7 +2537,8 @@ export class Overlays {
     const sameScreen = !!screen && screen === this.promptScreen
     this.promptKey = key
     this.promptScreen = screen
-    this.promptEl?.remove()
+    if (!sameScreen) this.windows.close('prompt')
+    else this.promptEl?.remove()
     this.promptEl = null
     this.promptFocusables = []
     this.promptInitial = unlit ? -1 : 0
@@ -2554,6 +2577,7 @@ export class Overlays {
       el.append(rowEl)
     }
     this.root.append(el)
+    this.windows.show('prompt', el)
     this.promptEl = el
     // the same prompt drawn for another device: the cursor stays on the chip it was on
     if (sameScreen) this.nav.set(this.promptFocusables, 'prompt:' + screen, this.promptFocusOpts, this.promptInitial)
@@ -2766,8 +2790,14 @@ export class Overlays {
     return true
   }
 
-  /** Stop the timers still pending: a screen that is gone reports no scroll and scrolls nothing. */
+  /** A motion preference changed while windows were arriving or leaving. */
+  settleMotion() {
+    this.windows.settle()
+  }
+
+  /** Stop presentation and scroll work when the screen leaves. */
   destroy() {
+    this.windows.destroy()
     if (this.scrollTimer) clearTimeout(this.scrollTimer)
     this.scrollTimer = null
     if (this.scrollerTimer) clearTimeout(this.scrollerTimer)
@@ -2985,7 +3015,7 @@ export class Overlays {
     if (this.clientOverlay.kind === 'system' && !remember) this.systemAt = rowLabel(this.clientOverlay.items[this.clientOverlay.focus])
     else if (remember) this.choiceAt.set(remember, this.clientOverlay.focus)
     if (this.osk.input && this.clientOverlay.el.contains(this.osk.input)) this.osk.detach()
-    this.clientOverlay.el.remove()
+    this.windows.close('client')
     this.clientOverlay = null
     this.hooks.onClientOverlayChange()
   }
@@ -2994,6 +3024,7 @@ export class Overlays {
     this.closeClientOverlay()
     el.dataset.client = '1'
     this.root.append(el)
+    this.windows.show('client', el)
     this.clientOverlay = { kind, el, focus: 0, items, back }
     this.itemsTakeMouse(items)
     // a finger lights a row of the command lists first, since a row can spend a turn; Orbrun's

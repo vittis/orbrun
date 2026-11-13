@@ -60,7 +60,7 @@ describe('the Dungeon presentation lifecycle', () => {
   it('keeps a temporary map and its renderer when dungeon settings change', () => {
     const renderer = new Render2d()
     const screen = Object.assign(Object.create(GameScreen.prototype), {
-      renderer, presentation: 'flat-map', settingsCache: null, exploreDelay: null,
+      renderer, root: document.createElement('div'), presentation: 'flat-map', settingsCache: null, exploreDelay: null,
       settings: () => ({ ...defaultSettings }),
       grid: { setTextSize: vi.fn() }, textPx: () => 16, shrinkText: vi.fn(),
       hud: { setMinimapTiles: vi.fn() }, relayout: vi.fn(), setPresentation: vi.fn(), wake: vi.fn(),

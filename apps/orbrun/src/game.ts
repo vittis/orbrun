@@ -306,6 +306,7 @@ export class GameScreen {
     this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
     const st = hooks.settings()
+    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
     setExploreGame(rc === null ? { online: true } : { online: false, rc })
@@ -325,6 +326,7 @@ export class GameScreen {
     this.renderer = this.makeRenderer()
     const motionChanged = () => {
       this.reducedMotion = motionPreference?.matches ?? false
+      if (this.reducedMotion) this.overlays?.settleMotion()
       if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
       else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.reducedMotion })
       this.needsRender = true
@@ -710,6 +712,8 @@ export class GameScreen {
   applySettings() {
     this.settingsCache = null
     const st = this.settings()
+    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
+    if (st.depthAnimate === false || this.reducedMotion) this.overlays.settleMotion()
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()

@@ -3,6 +3,69 @@ import { test, result } from './fixtures'
 
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
+test('inventory transitions preserve live updates, stable hover targets, and immediate closing', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  const lifecycle = await page.evaluate(async () => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
+    const stack = document.querySelector<HTMLElement>('.overlay-stack')!
+    const change = (msg: Record<string, unknown>) => new Promise<void>(resolve => {
+      const observer = new MutationObserver(() => { observer.disconnect(); resolve() })
+      observer.observe(stack, { childList: true })
+      fixture.receive(msg)
+    })
+    await change({ msg: 'menu', tag: 'inventory', flags: 0, title: { text: 'Inventory' }, items: [
+      { text: 'a - a dagger', hotkeys: [97], level: 2 },
+      { text: 'b - a robe', hotkeys: [98], level: 2 },
+    ], total_items: 2 })
+    const first = stack.querySelector<HTMLElement>(':scope > .popup')!
+    const entrance = first.getAnimations()
+    const opened = { animations: entrance.length, duration: entrance[0]?.effect?.getTiming().duration, inert: first.inert }
+    entrance.forEach(animation => animation.finish())
+    await change({ msg: 'update_menu_items', chunk_start: 0, items: [{ text: 'a - a glowing dagger', hotkeys: [97], level: 2 }] })
+    const updated = stack.querySelector<HTMLElement>(':scope > .popup')!
+    return { opened, updated: { animations: updated.getAnimations().length, text: updated.textContent } }
+  })
+  expect(lifecycle.opened).toEqual({ animations: 1, duration: 130, inert: false })
+  expect(lifecycle.updated.animations).toBe(0)
+  expect(lifecycle.updated.text).toContain('glowing dagger')
+  const row = page.locator('.overlay-stack > .popup li.selectable').nth(1)
+  const before = await row.boundingBox()
+  await row.hover()
+  expect(await row.boundingBox()).toEqual(before)
+  await expect.poll(() => row.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+  const closed = await page.evaluate(async () => {
+    const stack = document.querySelector<HTMLElement>('.overlay-stack')!
+    await new Promise<void>(resolve => {
+      const observer = new MutationObserver(() => { observer.disconnect(); resolve() })
+      observer.observe(stack, { childList: true })
+      ;(window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'close_menu' })
+    })
+    const exit = stack.querySelector<HTMLElement>('.ui-exit')!
+    const retiring = exit.querySelector<HTMLElement>('.popup')!
+    return { live: stack.querySelectorAll(':scope > .popup').length, inert: exit.inert, hidden: exit.getAttribute('aria-hidden'),
+      pointerEvents: getComputedStyle(retiring).pointerEvents, duration: retiring.getAnimations()[0]?.effect?.getTiming().duration }
+  })
+  expect(closed).toEqual({ live: 0, inert: true, hidden: 'true', pointerEvents: 'none', duration: 90 })
+  await expect(page.locator('.ui-exit')).toHaveCount(0)
+})
+
+for (const preference of ['still', 'reduced'] as const) {
+  test(`UI windows skip motion with ${preference}, including explicit Dungeon animation On`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: preference === 'reduced' ? 'reduce' : 'no-preference' })
+    await page.goto(`/testbed/live-animation.html?native-motion=1&motion=${preference === 'still' ? 'still' : 'on'}`)
+    await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+    await page.keyboard.press('F5')
+    const menu = page.locator('.overlay-stack > .popup.sysmenu')
+    await expect(menu).toBeVisible()
+    expect(await menu.evaluate(el => el.getAnimations().length)).toBe(0)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.overlay-stack > .popup')).toHaveCount(0)
+    await expect(page.locator('.ui-exit')).toHaveCount(0)
+  })
+}
+
 test('level gain celebrates without intercepting input, respects motion, and expires', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
@@ -313,6 +376,8 @@ for (const touch of [false, true]) {
       await zoom.focus()
       await zoom.press('Escape')
       await expect(quick.getByRole('button', { name: 'Open quick settings', exact: true })).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('canvas.view')).toBeFocused()
+      await expect(page.locator('canvas.view')).toHaveCSS('outline-style', 'none')
       expect((await result(page)).sent).toEqual([])
       await page.locator('canvas.view').press('ArrowRight')
       await expect.poll(async () => JSON.stringify((await result(page)).sent)).toContain('"l"')
