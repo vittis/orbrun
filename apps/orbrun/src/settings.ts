@@ -9,6 +9,7 @@ export interface Settings {
   depthMovementDuration: number
   depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
   meleeBumpStrength: number
+  meleeBumpSpeed: number
   meleeBumpSnap: number
   hitGore: number
   deathGore: number
@@ -48,6 +49,7 @@ export const defaultSettings: Settings = {
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
   meleeBumpStrength: 1,
+  meleeBumpSpeed: 1,
   meleeBumpSnap: 1,
   hitGore: 1,
   deathGore: 1,
@@ -74,6 +76,7 @@ const numericDomains: Record<NumericSetting, { min: number; max: number; integer
   depthZoom: { min: 0.8, max: 1.4 },
   depthMovementDuration: { min: 0.04, max: 0.25 },
   meleeBumpStrength: { min: 0, max: 2 },
+  meleeBumpSpeed: { min: 0.5, max: 2 },
   meleeBumpSnap: { min: 0, max: 1 },
   hitGore: { min: 0, max: 2 },
   deathGore: { min: 0, max: 2 },

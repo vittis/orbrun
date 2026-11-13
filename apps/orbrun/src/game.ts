@@ -879,7 +879,7 @@ export class GameScreen {
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
         const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
-        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, animate)
+        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, animate, settings.meleeBumpSpeed)
       }
       this.renderer.render(now / 1000)
       rendered = true

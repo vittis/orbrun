@@ -57,12 +57,12 @@ describe('combat contact timing', () => {
     expect(renderer.death).toHaveBeenCalledExactlyOnceWith(death, 1)
   })
 
-  it('aligns the elemental burst and ripple with the body bump', () => {
+  it.each([0.5, 1, 2])('aligns elemental burst, flash and ripple with the body bump at %sx speed', speed => {
     const { scene, renderer } = harness()
     const events = combatText('You slash the goblin for 8!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
-    presentCombat(renderer, scene, events, [{ x: 1, y: 0, kind: 'fire' }], 'long sword', 1000, true)
-    const contact = bumpTiming().contact
-    expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: true }), 1)
+    presentCombat(renderer, scene, events, [{ x: 1, y: 0, kind: 'fire' }], 'long sword', 1000, true, speed)
+    const contact = 0.055 / speed
+    expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: true, speed }), 1)
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1 + contact)
     expect(renderer.hit).toHaveBeenCalledWith({ x: 1, y: 0, actorId: 'id:1', turn: undefined }, 1 + contact)
     expect(renderer.spell).toHaveBeenCalledWith({ x: 1, y: 0, kind: 'fire' }, 1 + contact)

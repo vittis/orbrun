@@ -95,3 +95,40 @@ for (const touch of [false, true]) {
   })
 }
 
+
+test('fine combat controls work in a narrow settings panel and persist across reload', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.goto('/settings/combat')
+  const row = (label: string) => page.locator(`[data-focus="setting:${label}"]`)
+  for (const label of ['Hit bump strength', 'Hit bump snap', 'Hit gore', 'Death gore']) {
+    await page.getByRole('button', { name: `${label} previous`, exact: true }).click()
+    await expect(row(label).locator('.val')).toHaveText('95%')
+  }
+  for (const label of ['Hit outward spray', 'Death outward spray']) {
+    await page.getByRole('button', { name: `${label} next`, exact: true }).click()
+    await expect(row(label).locator('.val')).toHaveText('40%')
+  }
+  await page.getByRole('button', { name: 'Hit bump speed next', exact: true }).click()
+  await expect(row('Hit bump speed').locator('.val')).toHaveText('105%')
+  await row('Hit bump speed').press('ArrowRight')
+  await expect(row('Hit bump speed').locator('.val')).toHaveText('110%')
+  await row('Hit bump speed').press('ArrowLeft')
+  await expect(row('Hit bump speed').locator('.val')).toHaveText('105%')
+  await page.reload()
+  await expect(row('Hit bump speed').locator('.val')).toHaveText('105%')
+  await expect(row('Hit bump snap').locator('.val')).toHaveText('95%')
+  await expect(row('Hit outward spray').locator('.val')).toHaveText('40%')
+  const bounds = await page.locator('.settings .row .value').evaluateAll(values => values.map(value => {
+    const rect = value.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, viewport: innerWidth }
+  }))
+  expect(bounds.length).toBe(7)
+  for (const rect of bounds) {
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+    expect(rect.right).toBeLessThanOrEqual(rect.viewport)
+  }
+  await page.getByText('Reset to defaults', { exact: true }).click()
+  await expect(row('Hit bump speed').locator('.val')).toHaveText('100%')
+  await expect(row('Hit outward spray').locator('.val')).toHaveText('35%')
+})

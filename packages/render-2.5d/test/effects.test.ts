@@ -380,10 +380,63 @@ describe('bounded dungeon combat presentation', () => {
       expect(a.x).toBeGreaterThanOrEqual(0)
       expect(b.x).toBeLessThanOrEqual(0)
       expect(a.x).toBeCloseTo(-b.x)
-      expect(1 + b.x - a.x).toBeGreaterThan(0.55)
+      expect(1 + b.x - a.x).toBeGreaterThan(0.77)
     }
     expect(player.x).toBe(0); expect(target.x).toBe(1)
     expect(fx.offset({ ...target, id: 8 }, 1.08)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('halves mutual contact travel in every heading, including misses and maximum strength', () => {
+    for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]) {
+      const scene = world(), fx = new DungeonEffects()
+      scene.cells.set(cellKey(x, y), { ...scene.cells.get(cellKey(0, 0))!, x, y })
+      const outgoing = { ...attack, to: { x, y }, fromId: 'player', toId: 'id:7', hit: false }
+      fx.bump(scene, outgoing, 1)
+      const contact = 1.055
+      const one = fx.offset(player, contact)
+      fx.bump(scene, { ...outgoing, from: { x, y }, to: { x: 0, y: 0 }, fromId: 'id:7', toId: 'player' }, 1)
+      const both = fx.offset(player, contact)
+      expect(both.x).toBeCloseTo(one.x / 2)
+      expect(both.y).toBeCloseTo(one.y / 2)
+      expect(Math.hypot(...Object.values(fx.offset(player, contact, 2)))).toBeCloseTo(0.22)
+    }
+  })
+
+  it('eases into staggered counterattacks and ignores another actor attacking elsewhere', () => {
+    const scene = world(), fx = new DungeonEffects()
+    const outgoing = { ...attack, fromId: 'player', toId: 'id:7', hit: false }
+    fx.bump(scene, outgoing, 1)
+    const before = fx.offset(player, 1.08)
+    fx.bump(scene, { ...outgoing, from: attack.to, to: attack.from, fromId: 'id:8', toId: 'player' }, 1.02)
+    expect(fx.offset(player, 1.08)).toEqual(before) // Same cell, different actor.
+    fx.bump(scene, { ...outgoing, from: attack.to, to: attack.from, fromId: 'id:7', toId: 'player', speed: 2 }, 1.08)
+    expect(fx.offset(player, 1.08)).toEqual(before)
+    for (let at = 1.08; at < 1.25; at += 0.001) {
+      const current = fx.offset(player, at), next = fx.offset(player, at + 0.001)
+      expect(Math.hypot(next.x - current.x, next.y - current.y)).toBeLessThan(0.01)
+    }
+  })
+
+  it.each([0.5, 1, 2])('scales lunge, recoil, contact spray and expiry together at %sx speed', speed => {
+    const scene = world(), fx = new DungeonEffects(), normal = new DungeonEffects()
+    scene.billboards = [player, { ...target, id: 7 }]
+    const stroke = { ...attack, speed, fromId: 'player', toId: 'id:7' }
+    fx.bump(scene, stroke, 1)
+    stroke.speed = 99 // Active motion keeps the rate captured at receipt.
+    normal.bump(scene, { ...stroke, speed: 1 }, 1)
+    for (const actor of scene.billboards) {
+      for (const elapsed of [0.006, 0.035, 0.055, 0.075, 0.15, 0.23]) {
+        const actual = fx.offset(actor, 1 + elapsed / speed), expected = normal.offset(actor, 1 + elapsed)
+        expect(actual.x).toBeCloseTo(expected.x)
+        expect(actual.y).toBeCloseTo(expected.y)
+      }
+    }
+    const contact = 1 + 0.055 / speed
+    expect(fx.visibleBursts(contact - 0.001)).toEqual([])
+    expect(fx.visibleBursts(contact)).toMatchObject([{ born: contact, spray: { source: 'melee' } }])
+    fx.tick(scene, 1 + 0.24 / speed + 0.001)
+    expect(fx.bumps).toHaveLength(0)
+    expect(fx.offset(player, 1 + 0.24 / speed)).toEqual({ x: 0, y: 0 })
   })
 
   it('blends cleaves and rapid attacks without multiplying displacement or introducing a jump', () => {

@@ -7,6 +7,17 @@ import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { presentCombat } from '../src/combat-presentation'
+import { ALL_SETTING_ROWS } from '../src/settings-rows'
+import { defaultSettings } from '../src/settings'
+
+for (const [id, key] of [
+  ['bump-strength', 'meleeBumpStrength'], ['bump-speed', 'meleeBumpSpeed'], ['bump-snap', 'meleeBumpSnap'],
+  ['hit-gore', 'hitGore'], ['death-gore', 'deathGore'], ['hit-outward', 'hitSprayOutward'], ['death-outward', 'deathSprayOutward'],
+] as const) {
+  const row = ALL_SETTING_ROWS.find(row => row.key === key)!
+  const select = document.getElementById(id) as HTMLSelectElement
+  for (const value of row.values) select.add(new Option(row.fmt(value), String(value), false, value === defaultSettings[key]))
+}
 
 const tiles = await loadRoomTiles()
 const { scene } = antechamberScene(tiles)
@@ -101,6 +112,7 @@ function play(kind: string) {
   }
   if (kind === 'heal') send({ msg: 'player', hp: state.player.hp + 7 })
   const now = performance.now()
+  const speed = Number((document.getElementById('bump-speed') as HTMLSelectElement).value)
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
   if (renderer instanceof Render25d) {
     if (kind === 'kill') renderer.setOptions({ animate: false })
@@ -114,9 +126,9 @@ function play(kind: string) {
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
-  presentCombat(renderer, scene, events, feedback.takeSpells(), undefined, now, !reduced)
+  presentCombat(renderer, scene, events, feedback.takeSpells(), undefined, now, !reduced, speed)
   attackAt = now
-  attackDuration = bumpTiming().duration * 1000
+  attackDuration = bumpTiming(speed).duration * 1000
   lastEffect = kind
   if (paused) freezeAt = frozenTime()
   wake()

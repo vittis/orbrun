@@ -17,17 +17,18 @@ export function hitIntensity(damage: number | undefined, punctuation = '.'): Hit
 export const impactStrength = (intensity: HitIntensity = 'light') => intensity === 'heavy' ? 1 : intensity === 'solid' ? 0.6 : 0.3
 
 /** A single body-bump clock, independent of weapon type. Times are seconds. */
-export function bumpTiming() {
-  return { duration: 0.24, contact: 0.055 }
+export function bumpTiming(speed = 1) {
+  const rate = Number.isFinite(speed) ? Math.max(0.5, Math.min(2, speed)) : 1
+  return { duration: 0.24 / rate, contact: 0.055 / rate }
 }
 
 /** Anticipation, contact and recovery; the defender moves only after contact. */
-export function bumpPose(elapsed: number, bumpSnap = 1) {
-  const { duration, contact } = bumpTiming()
+export function bumpPose(elapsed: number, bumpSnap = 1, speed = 1) {
+  const { duration, contact } = bumpTiming(speed)
   if (elapsed < 0 || elapsed >= duration) return { lunge: 0, recoil: 0 }
   const snap = Number.isFinite(bumpSnap) ? Math.max(0, Math.min(1, bumpSnap)) : 1
   const impact = (elapsed - contact) / (duration - contact)
-  const windup = 0.012, hold = 0.08 + snap * 0.12
+  const windup = duration * 0.05, hold = 0.08 + snap * 0.12
   const recovery = Math.max(0, (impact - hold) / (1 - hold))
   const smooth = (t: number) => t * t * (3 - 2 * t)
   const lunge = elapsed < windup ? -0.025 * Math.sin(elapsed / windup * Math.PI)
