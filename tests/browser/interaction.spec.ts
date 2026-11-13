@@ -36,7 +36,8 @@ test('level gain celebrates without intercepting input, respects motion, and exp
 test('level announcement appears before answering the stat choice and follows the rendered character', async ({ page }) => {
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
-  await page.clock.install()
+  await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
   await page.evaluate(() => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
     fixture.receive({ msg: 'player', xl: 5 })
@@ -92,7 +93,8 @@ test('level-up embers rise, then disappear with Still and native reduced motion'
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
-  await page.clock.install()
+  await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
   await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'player', xl: 4 }))
   const embers = () => page.locator('.level-up-art').evaluate(canvas => {
     const art = canvas as HTMLCanvasElement, dpr = art.width / art.clientWidth
