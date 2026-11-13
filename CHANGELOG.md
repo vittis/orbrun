@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.90 — 2026-11-13
+
+- Keep walls beside and behind the player fully raised, including exposed ends next to narrow passages. Corridor cutaways remain in front of the player, with matching wall picking, lighting and shadows.
+
 ## 0.3.89 — 2026-11-13
 
 - Expanded Dungeon tilt to 25°–85° and zoom to 25%–300%, keeping 5°/5% adjustment steps.
