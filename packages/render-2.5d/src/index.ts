@@ -727,14 +727,17 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud', native = nativeSpellArt(b)
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const breathing = !native && creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
-    const pose = livingPose(life, b.x, b.y, time, !native && this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
+    const animatedPose = !native && !b.lying && !life.held && this.opts.animate && visible && life.motion !== 'still'
+      && (!!life.motion || !!life.flying || !!life.weary || !!life.fleeing || !!life.wading)
+    const animation = this.movement.animation(b, time)
+    const pose = livingPose({ ...life, rate: 1 }, animation.x, animation.y, animation.time,
+      !native && this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
     const opacity = position.fade ?? (this.opts.animate && visible ? this.effects.spawns.entrance(b, time) : 1)
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
     const wound = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(b.damage ?? 'uninjured')
     if (!native && creature && !b.lying && wound > 0 && visible && !life.held && life.motion !== 'still') {
-      const strain = wound / 5, phase = b.x * 2.31 + b.y * 1.73
+      const strain = wound / 5, phase = animation.x * 2.31 + animation.y * 1.73
       pose.angle -= strain * 0.035
       pose.sy -= strain * 0.025
       if (this.opts.animate) {
@@ -743,22 +746,21 @@ export class Render25d implements MapRenderer {
         pose.x += Math.sin(time * 0.85 + phase) * strain * 0.007
       }
     }
-    if (!native && visible && life.motion && life.motion !== 'still' && !life.held) this.active = true
+    if (animatedPose) this.active = true
     const q = project(p, position.x, position.y + 0.3)
     // The atlas already encodes a rat's size relative to an ogre.
     // Preserve those authored proportions without scaling by billboard height.
     const size = s
-    const snap = (v: number) => Math.round(v * this.dpr) / this.dpr
-    // Snap only idle displacement: snapping the whole frame shifts the camera-
-    // centred player when half the fitted atlas size is a fractional pixel.
-    const x = q.x - size / 2 + snap(pose.x * s)
-    const foot = q.y - snap(pose.y * s)
+    // Preserve subpixel hover and sway; rounding these offsets creates a visible
+    // staircase even when the movement and camera curves are continuous.
+    const x = q.x - size / 2 + pose.x * s
+    const foot = q.y - pose.y * s
     const y = foot - size - (cloud ? s * 0.15 : 0)
     ctx.save()
-    // Breathing filters an integer-enlarged sprite, keeping solid pixel centres
+    // Idle motion filters an integer-enlarged sprite, keeping solid pixel centres
     // while easing row transitions. Explicit smooth scaling uses the atlas directly.
-    const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
-    ctx.imageSmoothingEnabled = this.opts.filterScaling || breathing
+    const rasterScale = animatedPose && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
+    ctx.imageSmoothingEnabled = this.opts.filterScaling || animatedPose
     ctx.globalAlpha = (b.alpha ?? 1) * opacity
     const brightness = this.opts.animate && visible ? this.effects.hits.brightness(combatActorId(b), time) : 1
     if (brightness > 1) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, bumpTiming, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, bumpTiming, type SceneCell, type TileLife } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
@@ -588,6 +588,78 @@ describe('picking and visibility', () => {
   })
 })
 
+describe('actor animation continuity', () => {
+  // Observe transforms at the sprite draw, excluding ground shadows and fog.
+  function spritePose(r: Render25d, ctx: Record<string, unknown>, time: number) {
+    let pose: number[][] | undefined
+    const draw = vi.spyOn(TileCache.prototype, 'draw').mockImplementation(() => {
+      pose = [vi.mocked(ctx.translate).mock.calls.slice(-3).flat(),
+        vi.mocked(ctx.rotate).mock.calls.at(-1)!, vi.mocked(ctx.scale).mock.calls.at(-1)!] as number[][]
+      return true
+    })
+    try { r.render(time) } finally { draw.mockRestore() }
+    expect(pose).toBeDefined()
+    return pose!
+  }
+
+  it.each(['breath', 'fly', 'float', 'serpent', 'ooze', 'undead', 'skitter'] as const)(
+    'keeps %s and wound poses continuous through steps, turns and mutable artwork updates', motion => {
+      const { r, ctx } = renderer()
+      const scene = sceneOf(...[-1, 0, 1, 2].flatMap(y => [-1, 0, 1, 2].map(x => cell(x, y))))
+      const actor = { kind: 'player' as const, x: 0, y: 0, tile: 2, height: 1,
+        damage: 'heavily_damaged' as const, life: { motion, rate: 0.8 } }
+      scene.billboards = [actor]
+      r.setScene(scene, 0)
+      const transforms = (time: number) => {
+        return spritePose(r, ctx, time)
+      }
+      for (const [x, y, time] of [[1, 0, 1], [1, 1, 1.04], [0, 1, 1.07], [0, 0, 1.3]]) {
+        const before = transforms(time)
+        actor.x = x; actor.y = y; actor.tile++
+        scene.player = { x, y }; scene.revision++
+        r.setScene(scene, time)
+        const after = transforms(time)
+        expect(after.map(values => values.length)).toEqual(before.map(values => values.length))
+        after.forEach((values, i) => values.forEach((value, j) => expect(value).toBeCloseTo(before[i][j] as number, 9)))
+      }
+      r.destroy()
+    })
+
+  it('changes animation speed without jumping phase, including long-running sessions', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0))
+    const actor = { kind: 'player' as const, x: 0, y: 0, tile: 2, height: 1, life: { motion: 'breath' as const, rate: 0.8 } }
+    scene.billboards = [actor]
+    r.setScene(scene, 10000)
+    const scale = (time: number) => {
+      return spritePose(r, ctx, time)[2][1]
+    }
+    const before = scale(10001)
+    actor.life.rate = 1.6; scene.revision++
+    r.setScene(scene, 10001)
+    expect(scale(10001)).toBeCloseTo(before, 10)
+    expect(Math.abs(scale(10001.001) - before)).toBeLessThan(0.0002)
+    expect(scale(10001.1)).not.toBeCloseTo(before, 4)
+  })
+
+  it('keeps hover displacement subpixel between frames and schedules flag-only flight', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0))
+    scene.billboards = [{ kind: 'player', x: 0, y: 0, tile: 2, height: 1, life: { flying: true } }]
+    r.setScene(scene, 0)
+    const foot = (time: number) => {
+      return spritePose(r, ctx, time)[0][1]
+    }
+    const a = foot(1), b = foot(1.001)
+    expect(Math.abs(b - a)).toBeGreaterThan(0)
+    expect(Math.abs(b - a)).toBeLessThan(0.01)
+    expect(r.animating).toBe(true)
+    r.setOptions({ animate: false })
+    expect(foot(2)).toBe(foot(3))
+    expect(r.animating).toBe(false)
+  })
+})
+
 describe('environmental lighting', () => {
   it('centres room-sized light pools on standing artwork rather than the cell beneath it', () => {
     const scene = sceneOf(cell(0, 0))
@@ -606,13 +678,13 @@ describe('environmental lighting', () => {
     expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
-  it('smooths breathing from crisp enlarged pixels and honours still mode and explicit smoothing', () => {
+  it.each<TileLife>([{ motion: 'breath' }, { motion: 'fly' }, { motion: 'serpent' }, { flying: true }])('smooths $motion idle poses from crisp enlarged pixels and honours still mode and explicit smoothing', life => {
     const { r } = renderer(), samples: { smooth: boolean; rasterScale: number }[] = []
     const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, _layers, _x, _y, _size, _light, _memory, _flash, _lighting, _sample, rasterScale = 1) => {
       samples.push({ smooth: ctx.imageSmoothingEnabled, rasterScale }); return true
     })
     const scene = sceneOf(cell(0, 0))
-    scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life: { motion: 'breath' } }]
+    scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life }]
     r.setScene(scene); r.setOptions({ animate: false, filterScaling: false }); r.render(1)
     r.setOptions({ animate: true }); r.render(2)
     r.setOptions({ filterScaling: true }); r.render(3)

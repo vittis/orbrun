@@ -71,6 +71,41 @@ export async function movementChecks(source: TileSource) {
       if (Math.abs((left + right + 1) / 2 - width * dpr / 2) > 1.5 || Math.abs(r.project(0, 0).x - (width / 2 - f * scale)) > 1e-6 ||
         picked !== cellKey(1, 0) || r.animating !== (elapsed < 0.1)) failures.push({ kind: 'following camera / steady player / picking / sleep', width, height, dpr, degrees, easing, elapsed, left, right, picked })
     }
+    // Compare real sprite pixels on both sides of a confirmed update at the
+    // same instant. A following camera cancels the glide, leaving only the
+    // actor's ongoing pose; changing grid cells must not change that pose.
+    const silhouette = () => {
+      const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+      let mass = 0, x = 0, y = 0
+      for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
+        const i = (py * canvas.width + px) * 4
+        // Match the synthetic blue sprite, excluding the blue-black fog.
+        const weight = pixels[i + 2] > 100 && pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3
+          ? pixels[i + 2] - Math.max(pixels[i], pixels[i + 1]) : 0
+        mass += weight; x += px * weight; y += py * weight
+      }
+      return { mass, x: x / mass, y: y / mass }
+    }
+    for (const motion of ['breath', 'fly'] as const) {
+      const walking = { ...scene, levelKey: motion, revision: 10, player: { x: 0, y: 0 },
+        billboards: [{ ...start.billboards[0], statusIcons: [], life: { motion, rate: 0.8 } }] }
+      r.setOptions({ center: walking.player }); r.setScene(walking, 10)
+      for (const [x, y, time] of [[1, 0, 11], [1, 1, 11.04], [0, 1, 11.07], [0, 0, 11.3]]) {
+        r.render(time)
+        const before = silhouette()
+        walking.billboards[0].x = x; walking.billboards[0].y = y
+        // Health/haste updates may also change the rate during a step.
+        walking.billboards[0].life.rate += 0.2
+        walking.player = { x, y }; walking.revision++
+        r.setOptions({ center: walking.player }); r.setScene(walking, time); r.render(time)
+        const after = silhouette()
+        checks++
+        if (!before.mass || !after.mass || Math.abs(after.mass / before.mass - 1) > 0.002 ||
+          Math.hypot(after.x - before.x, after.y - before.y) > 0.02) {
+          failures.push({ kind: 'continuous walking pose / rate change', width, height, dpr, degrees, easing, motion, time, before, after })
+        }
+      }
+    }
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('movement-checks')
   }

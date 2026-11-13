@@ -4,7 +4,12 @@ export type MovementEasing = 'ease-out' | 'smooth' | 'linear'
 export interface MovementOptions { enabled: boolean; duration: number; easing: MovementEasing }
 interface Point { x: number; y: number }
 interface Tween { from: Point; to: Point; start: number; duration: number; easing: MovementEasing; curve?: StepCurve }
-interface Actor { kind: Billboard['kind']; signature: string; tween: Tween }
+interface Actor {
+  kind: Billboard['kind']; signature: string; tween: Tween
+  // Snapshot the phase origin and integrate rate changes; mutable scene objects
+  // and destination cells must never restart an actor's idle animation.
+  origin: Point; time: number; at: number; rate: number
+}
 
 const same = (a: Point, b: Point) => a.x === b.x && a.y === b.y
 const distance = (a: Point, b: Point) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
@@ -35,7 +40,7 @@ function velocity(tween: Tween, now: number): Point {
 /** Confirmed positions only. Retarget in place; never queue turns or mutate a Scene. */
 export class DungeonMovement {
   private actors = new Map<string, Actor>()
-  private billboards = new Map<Billboard, Tween>()
+  private billboards = new Map<Billboard, Actor>()
   private camera: Tween | null = null
   private player: Point | null = null
   private level: string | undefined
@@ -74,10 +79,15 @@ export class DungeonMovement {
     }
     this.billboards.clear()
     for (const b of boards) {
-      const id = assigned.get(b)!, previous = this.actors.get(id)
-      const tween = this.retarget(previous?.kind === b.kind ? previous.tween : undefined, b, scene, now, options, true, b.kind === 'player')
-      next.set(id, { kind: b.kind, signature: signature(b), tween })
-      this.billboards.set(b, tween)
+      const id = assigned.get(b)!, candidate = this.actors.get(id)
+      const previous = candidate?.kind === b.kind ? candidate : undefined
+      const tween = this.retarget(previous?.tween, b, scene, now, options, true, b.kind === 'player')
+      const rate = b.life?.rate ?? 1
+      const actor: Actor = { kind: b.kind, signature: signature(b), tween,
+        origin: previous?.origin ?? { x: b.x, y: b.y },
+        time: previous ? previous.time + (now - previous.at) * previous.rate : now * rate, at: now, rate }
+      next.set(id, actor)
+      this.billboards.set(b, actor)
     }
     const walked = this.player && !same(this.player, scene.player)
     // Follow confirmed player movement at any distance. Targeting pans still snap.
@@ -122,12 +132,17 @@ export class DungeonMovement {
     return { from, to: { x: to.x, y: to.y }, start: now, duration: options.duration, easing: options.easing }
   }
 
-  position(b: Billboard, now: number): Point { return sampleMovement(this.billboards.get(b) ?? still(b), now) }
+  position(b: Billboard, now: number): Point { return sampleMovement(this.billboards.get(b)?.tween ?? still(b), now) }
+  animation(b: Billboard, now: number): Point & { time: number } {
+    const actor = this.billboards.get(b)
+    return actor ? { ...actor.origin, time: actor.time + (now - actor.at) * actor.rate }
+      : { x: b.x, y: b.y, time: now * (b.life?.rate ?? 1) }
+  }
   center(target: Point, now: number): Point {
     return this.camera && same(this.camera.to, target) ? sampleMovement(this.camera, now) : target
   }
   moving(b: Billboard, now: number) {
-    const tween = this.billboards.get(b)
+    const tween = this.billboards.get(b)?.tween
     return !!tween && now < tween.start + tween.duration - 1e-9
   }
   cameraMoving(now: number) { return !!this.camera && now < this.camera.start + this.camera.duration - 1e-9 }

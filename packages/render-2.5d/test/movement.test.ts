@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellKey, emptyScene, type Billboard, type Scene } from '@orbrun/scene'
+import { cellKey, emptyScene, livingPose, type Billboard, type Scene } from '@orbrun/scene'
 import { DungeonMovement, type MovementOptions } from '../src/movement.js'
 
 const options: MovementOptions = { enabled: true, duration: 0.1, easing: 'ease-out' }
@@ -78,6 +78,34 @@ describe('confirmed entity movement', () => {
     observe(m, scene(same, b), 1)
     expect(m.position(b, 1)).toEqual({ x: 0, y: 0 })
     expect(m.position(same, 1)).toEqual({ x: 4, y: 0 })
+  })
+
+  it('keeps independent idle phases with crossing identities and conservatively matched anonymous art', () => {
+    for (const anonymous of [false, true]) {
+      const m = new DungeonMovement(), a = actor(0, 0, { id: anonymous ? undefined : 1 }), b = actor(2, 0, { id: anonymous ? undefined : 2 })
+      observe(m, scene(a, b), 0)
+      const pose = (board: Billboard) => {
+        const sample = m.animation(board, 1)
+        return livingPose({ motion: 'fly' }, sample.x, sample.y, sample.time)
+      }
+      const first = pose(a), second = pose(b)
+      const moved = { ...a, x: 1 }, other = { ...b, x: anonymous ? 2 : 0 }
+      observe(m, scene(other, moved), 1)
+      expect(pose(moved)).toEqual(first)
+      expect(pose(other)).toEqual(second)
+      expect(first).not.toEqual(second)
+      // Turning movement off finishes glides without reseeding idle animation.
+      m.finish()
+      observe(m, scene({ ...moved, x: -1 }, other), 1, { ...options, enabled: false })
+      expect(pose(other)).toEqual(second)
+      // Removed actors cannot donate their phase to a later spawn with a reused ID.
+      observe(m, scene(), 2)
+      const returned = { ...moved, x: 3 }
+      observe(m, scene(returned), 3)
+      expect(m.animation(returned, 3)).toEqual({ x: 3, y: 0, time: 3 })
+      observe(m, { ...scene(returned), levelKey: 'D:2' }, 4)
+      expect(m.animation(returned, 4)).toEqual({ x: 3, y: 0, time: 4 })
+    }
   })
 
   it('snaps ambiguous anonymous spawns rather than moving the wrong copies', () => {
