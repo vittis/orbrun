@@ -674,7 +674,7 @@ export class GameScreen {
     return {
       tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.reducedMotion),
       meleeEffects: st.meleeEffects, meleeWeight: st.meleeWeight, meleeTrail: st.meleeTrail, meleeMotion: st.meleeMotion,
-      hitBumpStrength: st.hitBumpStrength, hitBumpSnap: st.hitBumpSnap,
+      meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
       movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
     }
   }

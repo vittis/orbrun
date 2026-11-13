@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.75 — 2026-11-12
+
+- Show melee swings only for player attacks, with one consistent gesture per weapon family and a shorter version for misses.
+- Give axes a broad directional sweep and thrusts a straight approach; remove randomized variations from the game and preview.
+- Make target hit bumps stronger and faster, with adjustable strength and Soft / Firm / Crunchy snap under Combat settings.
+
 ## 0.3.74 — 2026-11-12
 
 - Simplify spell entrances and exits to brief opacity fades of the original server artwork.

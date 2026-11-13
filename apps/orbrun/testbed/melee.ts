@@ -58,7 +58,7 @@ function frame(ms: number) {
   const freeze = select('playback').value === 'freeze'
   live.setOptions({ tilt: Number(select('tilt').value), center: { x: target.x / 2, y: target.y / 2 },
     meleeWeight: Number(select('weight').value), meleeTrail: Number(select('trail').value), meleeMotion: Number(select('motion').value),
-    hitBumpStrength: Number(select('bump').value), hitBumpSnap: Number(select('snap').value) })
+    meleeBumpStrength: Number(select('bump').value), meleeBumpSnap: Number(select('snap').value) })
   for (const preview of previews) {
     const { ctx, fx, style } = preview
     if (now - preview.born >= (freeze ? Infinity : Number(select('playback').value) / 1000) || !Number.isFinite(preview.born)) {
