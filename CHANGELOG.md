@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.91 — 2026-11-13
+
+- Confirmed misses show a small grey air-slip; hits that explicitly deal no damage show a muted contact glint. Both use shaded pixel art, follow the recipient and share melee contact timing without blood or damage flashes.
+- The brief feedback respects visibility, death cleanup and Still/reduced motion. Existing damaging hits, server authority, wider Dungeon camera controls and foreground wall cutaways remain intact.
+
 ## 0.3.90 — 2026-11-13
 
 - Keep walls beside and behind the player fully raised, including exposed ends next to narrow passages. Corridor cutaways remain in front of the player, with matching wall picking, lighting and shadows.
