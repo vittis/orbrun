@@ -1,0 +1,16 @@
+{
+  "id": "903f9db1-b240-4458-bade-c28dd65ce882",
+  "created_on": "2026-11-13T02:46:59.462021Z",
+  "source": "wrangler",
+  "strategy": "percentage",
+  "versions": [
+    {
+      "version_id": "c095f8fe-a72b-4c3b-990a-e01e6955d5a6",
+      "percentage": 100
+    }
+  ],
+  "commit": "4bb62e65eeebeeb5e19448e0ddc45653b5dc392a",
+  "sourceTag": "cloudflare-online-v1.75",
+  "workersBuild": "b66c429a-6c74-4721-bb14-910d57a63583",
+  "ci": "https://github.com/vittis/orbrun/actions/runs/43354423407"
+}
