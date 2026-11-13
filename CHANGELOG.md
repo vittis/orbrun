@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.108 — 2026-11-13
+
+- Searing Ray now mixes flame into hit and death splatter. Audited stable/trunk spell, ability and projectile classifications, including Fulsome Fusillade's individual substances, Magic Dart, crystal/stone/metal projectiles, steam, Sirocco and destruction abilities.
+- Shared effect classification keeps native projectiles, spawns and lighting consistent. Ghostly fire and shadowy lightning keep necromantic/magic signatures; physical attacks retain physical debris. Confirmed Mercury Arrow damage overrides its reused poison tile; cold auras now use cold effects.
+- Retained existing blood/material splatter, killing-hit attribution, venom brands, variation defaults, native artwork, visibility and Still/reduced motion. Integrated the concurrent level-up popup release without replacing its changes.
+
 ## 0.3.107 — 2026-11-13
 
 - Confirmed character level gains now strike a gold level seal into view, with a brief impact, ember shards and an automatic fade. The popup stays clear of HUD panes, never intercepts input, and uses a static presentation with Still or reduced motion.
