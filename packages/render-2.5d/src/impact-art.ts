@@ -6,8 +6,8 @@ export type ImpactKind = SpellEffect['kind'] | 'sand' | 'water' | 'miss' | 'no-d
 type Palette = readonly [string, string, string, string, string]
 /** Outline, shade, body, lit edge, hot core: the same small ramps as tile art. */
 export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
-  miss: ['#2c3035', '#495258', '#748085', '#a2adb0', '#c4cdcb'],
-  'no-damage': ['#302d2b', '#60594a', '#9a8c6b', '#c5b58b', '#ded1a7'],
+  miss: ['#18232e', '#39596d', '#81afc5', '#c2e4ed', '#f0fcff'],
+  'no-damage': ['#29212a', '#766044', '#b79960', '#efcf87', '#fff1c4'],
   physical: ['#25242b', '#56565b', '#94958d', '#d2d3bd', '#fff1ce'],
   earth: ['#302b2b', '#645044', '#9d8060', '#c6aa7b', '#ead6a5'],
   sand: ['#39302a', '#796247', '#b39869', '#d8bd88', '#f0dcaa'],
@@ -29,7 +29,16 @@ export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
 const SMOKE: Palette = ['#25232b', '#39303a', '#57434a', '#7e5b51', '#a77b5f']
 const ART = {
   slip: ['00000011100', '00011333110', '00133211100', '01321000000', '13210000000', '01100000000'],
-  glint: ['00100', '01410', '13431', '01410', '00100'],
+  miss: [
+    '0111000001110', '1353100013531', '1345310135431', '0134531354310',
+    '0013454543100', '0001345431000', '0000134310000', '0001345431000',
+    '0013454543100', '0134531354310', '1345310135431', '1353100013531', '0111000001110',
+  ],
+  guard: [
+    '00011111000', '01145554110', '14543334541', '14321112341',
+    '14321012341', '14321012341', '14321012341', '14321112341',
+    '01432123410', '01443234410', '00144344100', '00014441000', '00001110000',
+  ],
   flash: [
     '0000000100000000', '0001001310001000', '0000133431000000', '0100134431000100',
     '0011134431111000', '0001345544310000', '0113455555431100', '1344555555544310',
@@ -98,16 +107,21 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
   const count = 6 + Math.round(strength * 6), physical = kind === 'physical' || kind === 'earth' || kind === 'sand'
   ctx.globalAlpha = 1
   if (kind === 'miss') {
-    // Two short air slips skim the silhouette; no central impact or debris.
-    stamp(ctx, 'slip', -2 + expand * 5, -4 - expand * 3, colours, 0, 0.8, fade)
-    stamp(ctx, 'slip', 1 + expand * 5, 3 - expand * 2, colours, 2, 0.6, fade * 0.8)
+    // The crossed strike reads as a miss even in a single frame. A passing
+    // whiff stays to its side, rather than radiating out like a damage impact.
+    stamp(ctx, 'miss', 2 + expand * 2, -expand * 2, colours, 0, 1, fade)
+    stamp(ctx, 'slip', -10 + expand * 2, -5, colours, 0, 0.8, fade * 0.85)
+    stamp(ctx, 'slip', -11 + expand * 2, 3, colours, 0, 0.65, fade * 0.75)
     return
   }
   if (kind === 'no-damage') {
-    // Dull contact glint and two tiny chips, with no blood or damage flash.
-    if (age < 0.5) stamp(ctx, 'glint', 0, 0, colours, 0, 1, Math.min(1, (0.5 - age) * 4))
-    for (let i = 0; i < 2; i++) stamp(ctx, 'grain', (i ? 1 : -1) * (3 + expand * 5),
-      -3 - expand * 3 + age * age * 5, colours, i, 0.45, fade * 0.85)
+    // A strong shield silhouette distinguishes harmless contact from a miss.
+    stamp(ctx, 'guard', 0, 0, colours, 0, 1, fade)
+    for (let i = 0; i < 3; i++) {
+      const angle = -Math.PI * 0.85 + i * Math.PI * 0.35
+      stamp(ctx, 'spark', Math.cos(angle) * (8 + expand * 4), Math.sin(angle) * (8 + expand * 4),
+        colours, i === 1 ? 0 : 1, 0.65, fade * 0.9)
+    }
     return
   }
   if (kind === 'water') {

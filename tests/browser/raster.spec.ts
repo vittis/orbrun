@@ -45,7 +45,7 @@ for (const lane of Object.keys(fullChecks) as (keyof typeof fullChecks)[]) {
 
 
 
-test('shaded impact art includes subtle miss and zero-damage feedback with complete expiry', async ({ page }) => {
+test('shaded impact art includes readable miss and zero-damage symbols with complete expiry', async ({ page }) => {
   await page.goto('/testbed/impact-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }

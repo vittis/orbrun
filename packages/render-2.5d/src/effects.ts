@@ -137,7 +137,7 @@ export class DungeonEffects {
     if (this.killed(placed, now)) return false
     if (this.bursts.some(b => b.actorId === placed.actorId && b.turn === placed.turn && Math.abs(b.requested - now) < 0.2)) return false
     this.bursts.push({ ...placed, kind: 'physical', intensity: 'light', born: now, requested: now,
-      duration: effect.outcome === 'miss' ? 0.24 : 0.2, source: 'confirmed' })
+      duration: effect.outcome === 'miss' ? 0.42 : 0.36, source: 'confirmed' })
     this.bursts = this.bursts.slice(-48)
     return true
   }

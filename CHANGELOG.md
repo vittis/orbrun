@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.92 — 2026-11-13
+
+- Misses now show a bright pale-blue X with trailing whiff marks; zero-damage hits show a gold shield-shaped contact flash. Larger silhouettes, stronger contrast and longer visibility make both outcomes easier to read during combat.
+- Both symbols retain the existing pixel-art outlines and dithered fade, with no blood, floor residue or changes to confirmed combat timing, visibility or reduced-motion behavior.
+
 ## 0.3.91 — 2026-11-13
 
 - Confirmed misses show a small grey air-slip; hits that explicitly deal no damage show a muted contact glint. Both use shaded pixel art, follow the recipient and share melee contact timing without blood or damage flashes.
