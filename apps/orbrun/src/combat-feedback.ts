@@ -39,12 +39,25 @@ function toneOf(s: string): DamageType {
   return 'physical'
 }
 
+// HP is also spent on spells/abilities (notably Djinni casting), and previews
+// can change it too. Only explicit incoming results establish a player hit.
+const incomingStrike = /^(?!You\b).+? (?:hits?|bites?|claws?|pecks?|stings?|kicks?|headbutts?|gores?|tramples?|mauls?|constricts?|crushes?|tentacle-slaps?|tail-slaps?|pummels?|bashes?|punches?|slaps?|touches?|strikes?|pierces?|skewers?|engulfs?|burns?|scorches?|freezes?|chills?|electrocutes?|smites?|blasts?|lashes?) you(?:[.!]+| (?:with|for|but) .+[.!]+)$/
+const incomingSpell = /^You are (?:smitten|burned|burnt|scorched|frozen|electrocuted|blasted|engulfed in .+|struck by .+|blasted with .+)[.!]+$|^Pain shoots through your body[.!]+$|^Your mind is blasted[.!]+$/
+
 /** Parse confirmed outcomes for effect strength and actor matching. */
 export function combatText(text: string): CombatEvent[] {
   const out: CombatEvent[] = []
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
     const s = sentence.trim()
     let m: RegExpExecArray | null
+    if (incomingStrike.test(s) || incomingSpell.test(s)) {
+      const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
+      const amount = number ? Number(number[1]) : undefined
+      if (amount !== 0 && !/\bno damage\b/.test(s)) {
+        out.push({ kind: 'hurt', player: true, amount, tone: toneOf(s), intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
+      }
+      continue
+    }
     if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off|blow up) (.+?)[.!]+$/.exec(s))) {
       out.push({ kind: 'kill', target: m[1] })
     } else if ((m = /^(.+?) (?:dies|is killed|is destroyed|crumbles (?:to|into) dust|is blown up)[.!]+$/.exec(s))) {
@@ -69,7 +82,7 @@ export function combatText(text: string): CombatEvent[] {
         target = spellText(s).find(cue => cue.target && !cue.player
           && !['heal', 'buff', 'debuff', 'teleport', 'poison'].includes(cue.kind))?.target
       }
-      if (!target || /^you(?:\b|$)/i.test(target)) continue // HP deltas already report incoming damage.
+      if (!target || /^you(?:\b|$)/i.test(target)) continue
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const noDamage = /but (?:do|does) no damage/.test(s)
       // Native strong-hit descriptions follow the name ("like a sieve", "into
@@ -130,8 +143,7 @@ export class CombatFeedback {
         // Max-HP changes (berserk, forms, draining, levelling) aren't damage/healing.
         if (next.max === prev.max && next.hp !== prev.hp) {
           const change = next.hp - prev.hp
-          if (change < 0) this.pending.push({ kind: 'hurt', player: true, amount: -change, intensity: hitIntensity(-change) })
-          else if (change >= 3) this.cues.push({ kind: 'heal', player: true, intensity: hitIntensity(change) })
+          if (change >= 3) this.cues.push({ kind: 'heal', player: true, intensity: hitIntensity(change) })
         }
         for (const [status, kind] of next.spells) if (!prev.spells.has(status)) this.cues.push({ kind, player: true })
         if (prev.spells.has('poisoned') && !next.spells.has('poisoned')) this.cues.push({ kind: 'heal', player: true })

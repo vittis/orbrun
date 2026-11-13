@@ -111,8 +111,35 @@ describe('combat sentences', () => {
     expect(combatText('The goblin blocks your attack.')).toEqual([])
     expect(combatText('The arrow misses the goblin.')).toEqual([])
   })
-  it('does not mistake prompts, inventory or incoming damage for outgoing attacks', () => {
-    expect(combatText('You see here a dagger. You feel sick. You begin to explore. The bolt of fire hits you for 12!')).toEqual([])
+  it('distinguishes incoming damage from prompts and inventory', () => {
+    expect(combatText('You see here a dagger. You feel sick. You begin to explore. The bolt of fire hits you for 12!')).toMatchObject([{ kind: 'hurt', player: true, amount: 12, tone: 'fire' }])
+  })
+
+  it.each([
+    'The goblin hits you with a +0 club.',
+    'The black mamba bites you!',
+    'Something hits you.',
+    'Sigmund hits you with a +0 scythe!',
+    'The ice thorns skewer you!',
+    'The fireball engulfs you!',
+    'You are engulfed in blazing flames.',
+    'You are smitten!',
+    'Pain shoots through your body!',
+    'The air twists around and strikes you!',
+  ])('uses confirmed incoming damage for the player hit effect: %s', text => {
+    expect(combatText(text)).toMatchObject([{ kind: 'hurt', player: true, amount: undefined }])
+  })
+
+  it.each([
+    'The goblin misses you.',
+    'You block the arrow.',
+    'The bolt of fire hits you for 0 damage.',
+    'The goblin hits you but does no damage.',
+    'Casting: Magic Dart (safe; 1% risk of failure)',
+    'You miscast Magic Dart.',
+    'You feel sick.',
+  ])('does not invent an incoming hit: %s', text => {
+    expect(combatText(text)).toEqual([])
   })
 })
 
@@ -199,11 +226,32 @@ describe('combat updates', () => {
     send({ msg: 'player', hp: 26 })
     text('The bolt of fire hits you for 4!')
     send({ msg: 'player', hp: 21 })
+    text('The goblin hits you for 5!')
     expect(feedback.flush(scene).map(p => p.amount)).toEqual([4, 5])
     send({ msg: 'player', hp: 28 })
     expect(feedback.flush(scene)).toEqual([])
     expect(feedback.takeSpells()).toMatchObject([{ kind: 'heal', actorId: 'player', intensity: 'solid' }])
     send({ msg: 'player', hp: 29 }) // Don't spam passive regeneration.
+    expect(feedback.flush(scene)).toEqual([])
+  })
+  it.each([false, true])('ignores Djinni preview/cast HP costs while retaining enemy hits (HP first=%s)', hpFirst => {
+    const { feedback, scene, send, text } = harness()
+    send({ msg: 'player', species: 'Djinni', hp: 29 })
+    text('Casting: Magic Dart (safe; 1% risk of failure)')
+    expect(feedback.flush(scene)).toEqual([])
+    send({ msg: 'player', hp: 30 }) // Cancel preview.
+    expect(feedback.flush(scene)).toEqual([])
+    send({ msg: 'player', hp: 29 })
+    text('The magic dart hits the goblin.')
+    expect(feedback.flush(scene).map(e => e.kind)).toEqual(['hit'])
+    const hurt = () => text('The goblin hits you!')
+    const hp = () => send({ msg: 'player', hp: 23 }) // Cast cost and enemy damage share an update.
+    ;(hpFirst ? hp : hurt)()
+    const events = feedback.flush(scene)
+    ;(hpFirst ? hurt : hp)()
+    events.push(...feedback.flush(scene))
+    expect(events).toMatchObject([{ kind: 'hurt', player: true, amount: undefined }])
+    text('The goblin hits you! The goblin misses you.', 1)
     expect(feedback.flush(scene)).toEqual([])
   })
   it('ignores initial history and stat baselines, including spectating mid-combat', () => {
