@@ -159,7 +159,9 @@ export class DungeonEffects {
         || previous && now - previous.at < 0.2 && shot.billboard.x === previous.x && shot.billboard.y === previous.y))
       .map(shot => shot.billboard.life?.projectile).filter((a): a is ProjectileAppearance => !!a)
     const material = art.length && art.every(a => a.kind === art[0].kind) ? art[0].kind : undefined
-    const kind = effect.kind !== 'physical' || !material ? effect.kind
+    // Reused native tiles can mislead (Mercury Arrow uses Sting art). Explicit
+    // damage classifications win; unclassified flashes may still borrow art.
+    const kind = effect.kind !== 'physical' || !material || source === 'confirmed' ? effect.kind
       : material === 'stone' || material === 'sand' ? 'earth' : material === 'metal' ? 'physical' : material
     const placed = { ...effect, kind, material, turn: effect.turn ?? scene.turn,
       ...(target ? { x: target.x, y: target.y, actorId: combatActorId(target) } : {}) }

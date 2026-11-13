@@ -41,7 +41,7 @@ let freezeAt = 0
 let attackAt = 0
 let attackDuration = 320
 let lastEffect = ''
-const frozenTime = () => attackAt + (lastEffect === 'kill'
+const frozenTime = () => attackAt + ((lastEffect === 'kill' || lastEffect === 'searingDeath')
   ? Number((document.getElementById('death-age') as HTMLSelectElement).value)
   : Number((document.getElementById('effect-age') as HTMLInputElement).value) / 100 * attackDuration)
 const victim = scene.billboards.find(b => b.kind === 'monster' && b.name === 'goblin')!
@@ -93,7 +93,7 @@ function play(kind: string) {
     light: 'You slash the goblin.', solid: 'You slash the goblin!', hit: 'You slash the goblin!!', dart: 'The magic dart hits the goblin!', miss: 'You miss the goblin.',
     fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
     prism: 'The blast of energy engulfs the goblin!!', mystic: 'The mystic blast hits the goblin!',
-    searing: 'The searing ray hits the goblin!', hail: 'The hail pelts the goblin!',
+    searing: 'The searing ray hits the goblin!', searingDeath: 'The searing ray hits the goblin! You kill the goblin!', hail: 'The hail pelts the goblin!',
     kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
     incoming: 'The goblin hits you with a +0 club!', dodge: 'The goblin misses you.',
@@ -118,7 +118,7 @@ function play(kind: string) {
     send({ msg: 'player', hp: 21 })
   }
   if (messages[kind]) send({ msg: 'msgs', messages: [{ text: messages[kind].replaceAll('goblin', victim.name!) }] })
-  if (kind === 'kill') { scene.billboards = scene.billboards.filter(b => b !== victim); scene.revision++ }
+  if (kind === 'kill' || kind === 'searingDeath') { scene.billboards = scene.billboards.filter(b => b !== victim); scene.revision++ }
   if (kind === 'status') {
     send({ msg: 'player', status: [] }); feedback.flush(scene)
     send({ msg: 'player', status: [{ light: 'Pois', text: 'poisoned' }] })
@@ -128,7 +128,7 @@ function play(kind: string) {
   const speed = Number((document.getElementById('bump-speed') as HTMLSelectElement).value)
   const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
   if (renderer instanceof Render25d) {
-    if (kind === 'kill') renderer.setOptions({ animate: false })
+    if (kind === 'kill' || kind === 'searingDeath') renderer.setOptions({ animate: false })
     renderer.setOptions({ animate: !reduced,
       meleeBumpStrength: Number((document.getElementById('bump-strength') as HTMLSelectElement).value),
       meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value),
@@ -162,7 +162,7 @@ document.getElementById('effect-age')!.addEventListener('input', () => {
   if (paused) { freezeAt = frozenTime(); wake() }
 })
 document.getElementById('death-age')!.addEventListener('change', () => {
-  if (paused && lastEffect === 'kill') play('kill')
+  if (paused && (lastEffect === 'kill' || lastEffect === 'searingDeath')) play(lastEffect)
 })
 document.getElementById('reduced')!.addEventListener('change', () => {
   if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })

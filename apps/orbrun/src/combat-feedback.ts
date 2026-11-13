@@ -8,6 +8,8 @@ import { spellDamage } from './spell-damage'
 export interface CombatEvent {
   kind: 'hit' | 'miss' | 'block' | 'kill' | 'hurt'
   tone?: DamageType
+  /** A classified spell result can refine physical/magic into earth, air, holy or drain. */
+  spellKind?: SpellEffect['kind']
   target?: string
   x?: number
   y?: number
@@ -78,7 +80,7 @@ export function combatText(text: string): CombatEvent[] {
       const player = /^you$/i.test(spellHit.target)
       if (player && amount === 0) continue
       out.push({ kind: player ? 'hurt' : 'hit', ...(player ? { player: true } : { target: spellHit.target }),
-        melee: false, tone: spellHit.tone, amount, intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
+        melee: false, tone: spellHit.tone, spellKind: spellHit.kind, amount, intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
       continue
     }
     const strike = creatureStrike.exec(s)
@@ -365,17 +367,17 @@ export class CombatFeedback {
     }
     for (const event of resolved) {
       let kind: SpellEffect['kind'] | undefined
-      if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
+      if ((event.kind === 'hit' || (event.kind === 'hurt' && event.spellKind)) && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
         // A frost/flame brand is already presented by the melee contact spray.
         const brandedMelee = (event.melee || event.brandOnly)
           && resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
-        if (!brandedMelee) kind = event.tone ?? 'physical'
+        if (!brandedMelee) kind = event.spellKind ?? event.tone ?? 'physical'
       }
       const position = event.player ? scene.player : event.x === undefined || event.y === undefined ? undefined : { x: event.x, y: event.y }
       // Prefer a specific direct result (draining, holy, air...) over the
       // generic tone attached to the same damage sentence.
       if (kind && position) {
-        const existing = event.kind === 'hit' ? this.spells.find(s => s.x === position.x && s.y === position.y) : undefined
+        const existing = event.kind === 'hit' || (event.kind === 'hurt' && event.spellKind) ? this.spells.find(s => s.x === position.x && s.y === position.y) : undefined
         if (!existing) this.spells.push({ ...position, kind, intensity: event.intensity, actorId: event.player ? 'player' : event.actorId, turn: event.turn })
         else if (impactStrength(event.intensity) > impactStrength(existing.intensity)) existing.intensity = event.intensity
       }

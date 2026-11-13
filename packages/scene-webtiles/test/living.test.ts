@@ -14,7 +14,7 @@ describe('server tile semantics for atmosphere', () => {
   })
   it.each([
     ['BOLT_SANDBLAST', 'sand'], ['BOLT_SANDBLAST_2', 'sand'], ['BOLT_STONE_ARROW', 'stone'],
-    ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],
+    ['BOLT_CRYSTAL_SPEAR', 'stone'], ['BOLT_SPLINTERSPRAY', 'sand'], ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],
     ['BOLT_WEAK_AIR', 'air'], ['BOLT_MAGIC_DART', 'magic'], ['BOLT_ICICLE', 'cold'],
   ] as const)('gives %s projectile effects independent of lighting', (name, kind) => {
     expect(projectileAppearance(name)).toMatchObject({ kind })
@@ -23,6 +23,22 @@ describe('server tile semantics for atmosphere', () => {
       expect(projectileAppearance(name)).toMatchObject({ beam: false })
     }
   })
+  it.each([
+    ['BOLT_SEARING_RAY', 'fire', 'fire'], ['BOLT_GHOSTLY_FIREBALL', 'magic', 'slow'],
+    ['BOLT_SHADOWY_LIGHTNING', 'magic', 'slow'], ['BOLT_UMBRAL_TORCHLIGHT', 'magic', 'slow'],
+    ['BOLT_HOLY_FLAME', 'magic', 'slow'], ['BOLT_SIROCCO_2', 'fire', 'fire'],
+    ['BOLT_FIERY_PLASMA', 'fire', 'fire'], ['BOLT_PLASMA_BEAM', 'electric', 'electric'],
+    ['BOLT_FULSOME_FIRE', 'fire', 'fire'], ['BOLT_FULSOME_ICE', 'cold', 'slow'],
+    ['BOLT_FULSOME_POISON', 'poison', 'slow'], ['BOLT_FULSOME_ELECTRIC', 'electric', 'electric'],
+    ['BOLT_FULSOME_QUINTESSENCE', 'magic', 'slow'], ['BOLT_FIRE_STORM', 'fire', 'fire'],
+    ['CLOUD_ACID_2', 'acid', 'slow'], ['CLOUD_MIASMA_1', 'poison', 'slow'],
+  ] as const)('keeps %s projectile/spawn appearance and light in the same family', (name, kind, pulse) => {
+    expect(projectileAppearance(name)).toMatchObject({ kind })
+    expect(tileLight(name)).toMatchObject({ pulse })
+    const spawn = spawnAppearance(name)
+    if (spawn) expect(spawn.kind).toBe(kind)
+  })
+
   it('distinguishes directional artwork from distance/animation variants', () => {
     expect(projectileAppearance('BOLT_MAGIC_DART_5', 6)).toMatchObject({ family: 'BOLT_MAGIC_DART', distancePhase: 5, distanceCycle: 6 })
     expect(projectileAppearance('BOLT_MAGIC_DART', 6)).toMatchObject({ distancePhase: 0, distanceCycle: 6 })

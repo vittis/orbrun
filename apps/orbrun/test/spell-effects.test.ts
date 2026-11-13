@@ -78,7 +78,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
 
   it.each([
     'The blast of energy engulfs the goblin!!', 'The mystic blast hits the goblin!',
-    'The searing ray hits the goblin!', 'The barrage of energy hits the goblin!',
+    'The magic dart hits the goblin!', 'The barrage of energy hits the goblin!',
     'The wavering orb of destruction weakly hits the goblin!',
     'The goblin is dispelled!', 'The goblin is blasted by disruptive energy!',
   ])('adds one magic spray alongside blood for %s, following the recipient after knockback', line => {
@@ -109,6 +109,49 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
       expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
       expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
     })
+
+  it.each(['hit', 'death'] as const)('uses flame and blood for a Searing Ray %s', result => {
+    const h = harness(), scene = result === 'death' ? world(false) : h.scene
+    const { fx, deaths, renderer } = presentation(scene)
+    h.text('The searing ray hits the goblin!' + (result === 'death' ? ' You kill the goblin!' : ''))
+    presentCombat(renderer, scene, h.feedback.flush(scene, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+    const particles = result === 'death' ? deaths.sample(scene, 1.15) : sampleHitSpray(scene, fx.bursts[0], 1.15)
+    expect(particles.some(p => elementalPalettes.fire.includes(p.colour))).toBe(true)
+    expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(false)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+    expect(result === 'death' ? fx.bursts.length : fx.bursts.filter(b => b.spray).length).toBe(result === 'death' ? 0 : 1)
+  })
+
+  it.each([
+    ['The blast of wind hits the goblin!', 'physical', 'air'],
+    ['The stone arrow hits the goblin!', 'physical', 'earth'],
+    ['The iron shot hits the goblin!', 'physical', 'physical'],
+    ['The ghostly fireball engulfs the goblin!', 'magic', 'drain'],
+    ['The golden flame engulfs the goblin!', 'magic', 'holy'],
+    ['The fiery phlogiston engulfs the goblin!', 'fire', 'fire'],
+    ['The frigid brine engulfs the goblin!', 'cold', 'cold'],
+    ['The noxious sulphur engulfs the goblin!', 'poison', 'poison'],
+    ['The flickering plasma engulfs the goblin!', 'electric', 'electric'],
+    ['The unstable reaction engulfs the goblin!', 'magic', 'magic'],
+  ] as const)('retains %s presentation and killing-hit attribution', (line, tone, kind) => {
+    const h = harness()
+    h.text(line)
+    expect(h.feedback.flush(h.scene, 1000)).toMatchObject([{ kind: 'hit', tone, melee: false }])
+    expect(h.feedback.takeSpells()).toMatchObject([{ kind }])
+    h.text('You kill the goblin!')
+    expect(h.feedback.flush(world(false), 1050)).toMatchObject([{ kind: 'kill', death: { tone } }])
+  })
+
+  it.each(['the goblin', 'you'])('lets a confirmed Mercury Arrow against %s override its reused poison tile', target => {
+    const h = harness()
+    h.scene.billboards.push({ kind: 'player', x: 0, y: 0, tile: 0, height: 1 }, { kind: 'projectile', x: target === 'you' ? 0 : 1, y: 0, tile: 2, height: 0.3,
+      life: { projectile: { kind: 'poison', colour: [110, 220, 85], beam: false, family: 'BOLT_STING' } } })
+    const { fx, renderer } = presentation(h.scene)
+    h.text(`The glob of mercury hits ${target}!`)
+    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+    expect(fx.bursts).toMatchObject([{ kind: 'physical', spray: { kind: 'flesh' } }])
+    expect(sampleHitSpray(h.scene, fx.bursts[0], 1.15).some(p => elementalPalettes.poison.includes(p.colour))).toBe(false)
+  })
 
   it.each(['zero', 'miss', 'hidden', 'remote', 'still'] as const)('does not shed spell debris for %s results', mode => {
     const h = harness()
@@ -182,6 +225,13 @@ describe('confirmed non-projectile spells and abilities', () => {
       { x: 0, y: 0, kind: 'teleport', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'poison', actorId: 'player', turn: undefined },
       { x: 0, y: 0, kind: 'heal', actorId: 'player', turn: undefined }, { x: 0, y: 0, kind: 'buff', actorId: 'player', turn: undefined },
     ]))
+  })
+
+  it('uses cold for a cold aura while keeping a dazzling flash magical and harmless', () => {
+    const h = harness()
+    h.text('You radiate an aura of cold. You emit a dazzling flash of light!')
+    expect(h.feedback.flush(h.scene)).toEqual([])
+    expect(h.feedback.takeSpells()).toMatchObject([{ kind: 'cold' }, { kind: 'magic' }])
   })
 
   it('covers armour, regeneration, transformations and summons without repeating status countdowns', () => {

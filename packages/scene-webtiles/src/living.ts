@@ -1,12 +1,20 @@
 import type { Billboard, SceneCell, TileLife, TileLight, LifeMotion, ProjectileAppearance, SpawnAppearance } from '@orbrun/scene'
 import type { Gamedata, FlagWord } from '@orbrun/gamedata'
 import type { GameState, MapCell } from '@orbrun/webtiles'
+import { nativeEffectTone } from './effect-types.js'
+
+const effectColours = { fire: [255, 118, 30], cold: [140, 215, 255], electric: [150, 190, 255],
+  poison: [110, 220, 85], acid: [177, 234, 89], magic: [185, 100, 255] } satisfies Record<string, TileLight['colour']>
+const effectColour = (name: string, tone: keyof typeof effectColours): TileLight['colour'] =>
+  /HOLY|CLEANSING/.test(name) ? [255, 236, 190] : effectColours[tone]
 
 /** Name-based semantics follow the connected server's tile tables, including variants.
  * Inspired by super-dungeon-crawl's alive.js/light.js; no fixed tile numbers. */
 export function tileLight(name: string): TileLight | undefined {
-  if (/_GONE|_EXPIRED|_INACTIVE|DRY_FOUNTAIN|PETRIFIED|_CLOSED|BOLT_DEFAULT_BLACK/.test(name)) return
+  if (/_GONE|_EXPIRED|_INACTIVE|DRY_FOUNTAIN|PETRIFIED|_CLOSED|BOLT_DEFAULT_BLACK|BOLT_CRYSTAL_SPEAR/.test(name)) return
   const light = (colour: TileLight['colour'], radius: number, power: number, pulse: TileLight['pulse'] = 'slow'): TileLight => ({ colour, radius, power, pulse, transient: /^BOLT_|EXPLOSION|ZAP_/.test(name) || undefined })
+  const tone = nativeEffectTone(name)
+  if (tone) return light(effectColour(name, tone), tone === 'electric' ? 3 : 2.8, tone === 'electric' ? 0.6 : tone === 'fire' ? 0.45 : 0.3, tone === 'fire' ? 'fire' : tone === 'electric' ? 'electric' : 'slow')
   if (/TORCH|BRAZIER|CANDLE/.test(name)) return light([255, 158, 64], 4.2, 0.7, 'fire')
   if (/LAVA|MAGMA/.test(name)) return light([255, 78, 12], 3, 0.4)
   if (/FIRE|FLAME|IGNITE|SEARING|HELLFIRE|DAMNATION/.test(name)) return light([255, 118, 30], 2.8, 0.45, 'fire')
@@ -60,16 +68,15 @@ function projectileArt(name: string, variants?: number): Pick<ProjectileAppearan
 export function projectileAppearance(name: string, variants?: number): ProjectileAppearance | false {
   if (/_GONE|_EXPIRED|_INACTIVE|BOLT_DEFAULT_BLACK/.test(name)) return false
   const appearance = (kind: ProjectileAppearance['kind'], colour: ProjectileAppearance['colour'], beam = false): ProjectileAppearance => ({ kind, colour, beam, ...projectileArt(name, variants) })
-  if (/SANDBLAST|DUST|FRAG/.test(name)) return appearance('sand', [216, 181, 116])
-  if (/STONE|ROCK|BOULDER/.test(name)) return appearance('stone', [184, 168, 137])
+  if (/SANDBLAST|DUST|FRAG|BONE|THORN|WOOD|SPLINTERSPRAY/.test(name) && !/ICE_THORN/.test(name)) return appearance('sand', [216, 181, 116])
+  if (/STONE|ROCK|BOULDER|CRYSTAL_SPEAR/.test(name)) return appearance('stone', [184, 168, 137])
   if (/ARROW|BOLT|DART|JAVELIN|TOMAHAWK|SPEAR|BOOMERANG|BULLET/.test(name) && /^MI_/.test(name)) return appearance('metal', [190, 200, 210])
-  if (/IRON|METAL|STEEL|SILVER|SLUG/.test(name)) return appearance('metal', [190, 200, 210])
-  if (/AIR|WIND/.test(name)) return appearance('air', [196, 215, 222], true)
-  if (/ACID/.test(name)) return appearance('acid', [177, 234, 89])
-  if (/POISON|STING|VENOM|MEPHITIC/.test(name)) return appearance('poison', [110, 220, 85])
-  if (/COLD|FROST|ICE|ICICLE|FREEZ/.test(name)) return appearance('cold', [140, 215, 255], /^BOLT_(?:FROST|COLD|ICE_BOLT)/.test(name))
-  if (/ELEC|LIGHTNING|ZAP|PLASMA/.test(name)) return appearance('electric', [150, 190, 255], true)
-  if (/FIRE|FLAME|MAGMA|IGNITE|SEARING|HELLFIRE|DAMNATION/.test(name)) return appearance('fire', [255, 118, 30], true)
+  if (/IRON|METAL|STEEL|SILVER|SLUG|HARPOON|BOLAS|MERCURY/.test(name) && !/ICE_THORN/.test(name)) return appearance('metal', [190, 200, 210])
+  const tone = nativeEffectTone(name)
+  if (tone) return appearance(tone, effectColour(name, tone), tone === 'fire' || tone === 'electric'
+    || tone === 'cold' && /^BOLT_(?:FROST|COLD|ICE_BOLT)/.test(name)
+    || tone === 'magic' && /^BOLT_(?:DRAIN|SHADOW|NEGATIVE|FORCE_BOLT)/.test(name))
+  if (/AIR|WIND|WATER/.test(name)) return appearance('air', [196, 215, 222], true)
   // Every server overlay gets a quiet fallback, including newly added bolts and
   // physical MI_* missiles. Never infer an attack from a selected spell or key.
   const glow = tileLight(name)
@@ -84,9 +91,7 @@ export function spawnAppearance(name: string): SpawnAppearance | undefined {
   if (/FULMINANT_PRISM|BATTLESPHERE|SPELLFORGED_SERVITOR|BALL_LIGHTNING/.test(family)) return { kind: /LIGHTNING/.test(family) ? 'electric' : 'magic', style: 'summon', family }
   const style = /^CLOUD_/.test(family) ? 'cloud' : /^BOLT_(?:FIRE_STORM|ICEBLAST|IGNITE_POISON|FULSOME_)/.test(family) ? 'burst' : undefined
   if (!style) return
-  const kind = /COLD|FREEZ|ICE|FROST/.test(family) ? 'cold' : /FIRE|FLAME|IGNITE/.test(family) ? 'fire'
-    : /MEPHITIC|POISON/.test(family) ? 'poison' : /ACID/.test(family) ? 'acid'
-    : /ELEC|STORM/.test(family) ? 'electric' : /MAGIC|CHAOS|TLOC|MUTAGEN/.test(family) ? 'magic' : 'air'
+  const kind = nativeEffectTone(family) ?? 'air'
   return { kind, style, family }
 }
 

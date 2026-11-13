@@ -1291,3 +1291,5 @@ export function monsterGroups(scene: Scene): Billboard[][] {
   }
   return groups
 }
+
+export { namedEffect, nativeEffectTone } from './effect-types.js'

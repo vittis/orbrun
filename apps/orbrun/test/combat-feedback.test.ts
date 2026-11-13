@@ -75,7 +75,7 @@ describe('combat sentences', () => {
   it.each([
     ['The blast of energy engulfs the goblin!!', 'magic'], // Fulminant Prism
     ['The mystic blast hits the goblin!', 'magic'],
-    ['The searing ray hits the goblin!', 'magic'],
+    ['The searing ray hits the goblin!', 'fire'],
     ['The lance of force hits the goblin!', 'magic'],
     ['The barrage of energy hits the goblin!', 'magic'],
     ['The blast of shadow engulfs the goblin!', 'magic'],
@@ -101,6 +101,28 @@ describe('combat sentences', () => {
     ['The zap hits the goblin!', 'electric'],
     ['The plasma beam hits the goblin!', 'electric'],
     ['The shock of your passage hits the goblin!', 'electric'],
+    ['The magic dart hits the goblin!', 'magic'],
+    ['The fiery phlogiston engulfs the goblin!', 'fire'],
+    ['The frigid brine engulfs the goblin!', 'cold'],
+    ['The noxious sulphur engulfs the goblin!', 'poison'],
+    ['The flickering plasma engulfs the goblin!', 'electric'],
+    ['The unstable reaction engulfs the goblin!', 'magic'],
+    ['The scorching wind hits the goblin!', 'fire'],
+    ['The fiery plasma hits the goblin!', 'fire'],
+    ['The detonation engulfs the goblin!', 'fire'],
+    ['The stone arrow hits the goblin!', 'physical'],
+    ['The iron shot hits the goblin!', 'physical'],
+    ['The crystallising shot hits the goblin!', 'physical'],
+    ['The blast of crystal shards engulfs the goblin!', 'physical'],
+    ['The blast of sapphire shards engulfs the goblin!', 'physical'],
+    ['The blast of salt crystal fragments engulfs the goblin!', 'physical'],
+    ['The crystal spear hits the goblin!', 'physical'],
+    ['The glob of mercury hits the goblin!', 'physical'],
+    ['The torrent of water hits the goblin!', 'physical'],
+    ['The blast of wind hits the goblin!', 'physical'],
+    ['The blood arrow hits the goblin!', 'magic'],
+    ['The gout of destruction hits the goblin!', 'magic'],
+    ['The magical storm engulfs the goblin!', 'magic'],
   ])('classifies a confirmed spell/ability result without inventing a melee source: %s', (line, tone) => {
     const [hit] = combatText(line)
     expect(hit).toMatchObject({ kind: 'hit', tone, melee: false })
@@ -369,6 +391,7 @@ describe('combat updates', () => {
     send({ msg: 'player', hp: 21 })
     text('The goblin hits you for 5!')
     expect(feedback.flush(scene).map(p => p.amount)).toEqual([4, 5])
+    expect(feedback.takeSpells()).toMatchObject([{ kind: 'fire', actorId: 'player' }])
     send({ msg: 'player', hp: 28 })
     expect(feedback.flush(scene)).toEqual([])
     expect(feedback.takeSpells()).toMatchObject([{ kind: 'heal', actorId: 'player', intensity: 'solid' }])
