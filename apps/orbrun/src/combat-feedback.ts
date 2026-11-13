@@ -66,11 +66,6 @@ export function combatText(text: string): CombatEvent[] {
         ...(sourceName === 'your' ? {} : { sourceName }) })
       continue
     }
-    // Projectile blocks confirm shield contact, but never a melee lunge.
-    if ((m = /^(.+?) blocks? (?:an? |the |your )?(?:arrow|bolt(?: of [\w -]+)?|puff of [\w -]+|sling bullet|stone|javelin|boomerang|large rock|iron shot|crystal spear|orb of [\w -]+)[.!]+$/.exec(s))) {
-      out.push({ kind: 'block', tone: 'physical', ...(m[1] === 'You' ? { player: true } : { target: m[1] }) })
-      continue
-    }
     const strike = creatureStrike.exec(s)
     if (strike && !/^(?:The|Your) (?:(?:bolt|puff)(?: of .+)?|arrow|slug|stone|sling bullet|magic dart|ice thorns)$/.test(strike[1])) {
       const target = strike[3].replace(/(?: from afar| with | using | for | but |, | like | into ).*$/, '').trim()

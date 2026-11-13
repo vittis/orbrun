@@ -95,9 +95,6 @@ function play(kind: string) {
     kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
     incoming: 'The goblin hits you with a +0 club!', dodge: 'The goblin misses you.',
-    block: "You block the goblin's attack.",
-    mixed: "You block the goblin's attack. The orc misses you. The goblin hits you! The orc hits you but does no damage.",
-    stacked: "You block the goblin's attack. The orc misses you. The goblin misses you.",
     ally: 'Your orc hits the goblin!',
     exchange: 'You slash the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!',
   }
@@ -131,7 +128,7 @@ function play(kind: string) {
   renderer.setScene(scene, now / 1000)
   presentCombat(renderer, scene, events, feedback.takeSpells(), undefined, now, !reduced, speed)
   attackAt = now
-  attackDuration = Math.max(bumpTiming(speed).duration, 0.8) * 1000
+  attackDuration = bumpTiming(speed).duration * 1000
   lastEffect = kind
   if (paused) freezeAt = frozenTime()
   wake()

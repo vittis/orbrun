@@ -1,6 +1,6 @@
 import {
   cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
-  type Billboard, type CellKey, type MapRenderer, type Minibars, type DeflectionEffect,
+  type Billboard, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type CombatBump, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
@@ -237,10 +237,6 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate && this.effects.hit(this.scene, effect, now)) this.active = true
   }
 
-  deflect(effect: DeflectionEffect, now: number) {
-    if (this.opts.animate && this.effects.deflect(this.scene, effect, now)) this.active = true
-  }
-
   spell(effect: SpellEffect, now: number) {
     if (this.opts.animate && this.effects.spell(this.scene, effect, now)) this.active = true
   }
@@ -439,7 +435,6 @@ export class Render25d implements MapRenderer {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
       else if (entry.burst) {
-        if (entry.burst.outcome) continue // Defensive bursts draw after ordinary world art.
         ctx.save(); ctx.beginPath()
         for (let y = Math.round(entry.y) - 1; y <= Math.round(entry.y) + 1; y++) for (let x = Math.round(entry.x) - 1; x <= Math.round(entry.x) + 1; x++) {
           const cell = this.scene.cells.get(cellKey(x, y))
@@ -466,12 +461,6 @@ export class Render25d implements MapRenderer {
     this.dungeonExposure(ctx, p, cells)
 
     if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
-
-    // Preserve the contrast of defensive bursts around visible recipients.
-    // Their independent particles coexist with the ordinary blood spray.
-    for (const entry of standing) if (entry.burst?.outcome && this.inFrame(p, entry)) {
-      drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y })
-    }
 
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {

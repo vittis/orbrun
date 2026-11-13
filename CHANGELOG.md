@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.100 — 2026-11-13
+
+- Removed the entire miss, shield-block and zero-damage VFX feature, including particle art, animation, stacking state, renderer API and dedicated previews/tests. Normal attack bumps and damaging-hit effects remain.
+
 ## 0.3.99 — 2026-11-13
 
 - Removed miss/dodge VFX entirely; confirmed attack bumps remain.

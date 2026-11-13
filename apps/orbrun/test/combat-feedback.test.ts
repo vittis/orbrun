@@ -131,15 +131,8 @@ describe('combat sentences', () => {
     expect(combatText(text)).toMatchObject([{ kind: 'hurt', player: true, amount: undefined }])
   })
 
-  it.each(['You block the arrow.', 'You block the bolt of fire.', 'The goblin blocks the stone.'])('keeps projectile shield feedback without inventing melee: %s', sentence => {
-    const [event] = combatText(sentence)
-    expect(event.kind).toBe('block')
-    expect(event.melee).toBeUndefined()
-    expect(event.sourceName).toBeUndefined()
-    expect(event.player ?? false).toBe(sentence.startsWith('You'))
-  })
-
   it.each([
+    'You block the arrow.',
     'The bolt of fire hits you for 0 damage.',
     'Casting: Magic Dart (safe; 1% risk of failure)',
     'You miscast Magic Dart.',

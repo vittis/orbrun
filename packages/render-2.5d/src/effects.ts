@@ -1,13 +1,13 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
 import { nativeSpellArt } from './spell-presentation.js'
-import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeflectionEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
 export interface BodyBump extends CombatBump { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { outcome?: DeflectionEffect['outcome']; popupSlot?: number; actorHeight?: number; born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -129,27 +129,6 @@ export class DungeonEffects {
     return added
   }
 
-  deflect(scene: Scene, effect: DeflectionEffect, now: number) {
-    const target = this.target(scene, { ...effect, kind: 'physical' }, now)
-    // Feedback belongs to a known, visible recipient, never an empty/hidden cell.
-    if (!target || !scene.playerOnLevel || scene.cells.get(cellKey(target.x, target.y))?.occluder) return false
-    const placed = { ...effect, x: target.x, y: target.y, actorId: combatActorId(target), turn: effect.turn ?? scene.turn }
-    if (this.killed(placed, now)) return false
-    // Each confirmed attempt owns a popup, including repeated outcomes in one
-    // turn. Stable slots keep surviving popups from jumping as others expire.
-    this.bursts = this.bursts.filter(b => !b.outcome || now - b.born < b.duration)
-    const peers = this.bursts.filter(b => b.outcome && b.actorId === placed.actorId)
-    if (peers.length >= 6) { const oldest = peers.shift(); this.bursts = this.bursts.filter(b => b !== oldest) }
-    const occupied = new Set(peers.map(b => b.popupSlot))
-    const popupSlot = [0, 1, 2, 3, 4, 5].find(slot => !occupied.has(slot))!
-    const popups = this.bursts.filter(b => b.outcome)
-    if (popups.length >= 24) this.bursts = this.bursts.filter(b => b !== popups[0])
-    this.bursts.push({ ...placed, kind: 'physical', intensity: 'light', born: now, requested: now,
-      duration: 0.72, source: 'confirmed', popupSlot, actorHeight: Math.max(0.5, Math.min(1.4, target.height)) })
-    this.bursts = this.bursts.slice(-48)
-    return true
-  }
-
   private sprayFor(target: Billboard, direction: { x: number; y: number }, source: HitSpray['source']): HitSpray {
     const seed = ++this.spraySequence, length = Math.hypot(direction.x, direction.y)
     // Untraced incoming damage has no known attacker; vary its emission angle.
@@ -190,7 +169,6 @@ export class DungeonEffects {
     const contact = source === 'melee' || utility(placed.kind) ? undefined : this.missiles.bind(placed, now)
     const born = Math.max(now, contact?.time() ?? now)
     const existing = this.bursts.find(b => {
-      if (b.outcome) return false
       const sameTarget = b.actorId && placed.actorId ? b.actorId === placed.actorId : b.x === placed.x && b.y === placed.y
       const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.requested) < 0.2
       return sameTarget && sameResult
@@ -304,7 +282,7 @@ export class DungeonEffects {
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
-      if (!burst.outcome && !['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
+      if (!['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
       if (burst.contact) {
         burst.born = Math.max(burst.requested, burst.contact.time())
         const direction = burst.contact.direction()
@@ -312,7 +290,6 @@ export class DungeonEffects {
       }
       const target = burst.actorId && scene.billboards.find(b => creature(b) && combatActorId(b) === burst.actorId)
       if (target) { burst.x = target.x; burst.y = target.y }
-      else if (burst.outcome) burst.duration = 0
     }
     this.bursts = this.bursts.filter(b => now - b.born < b.duration && visible(scene, b))
     this.bumps = this.bumps.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
@@ -322,17 +299,16 @@ export class DungeonEffects {
     this.bursts = this.bursts.slice(-48)
   }
 
-  /** Coalesce damage art, but preserve every independent defensive popup. */
+  /** Rapid later hits replace the visible stamp instead of stacking over it. */
   visibleBursts(now: number) {
-    const current = new Map<string, SpellBurst>(), popups: SpellBurst[] = []
+    const current = new Map<string, SpellBurst>()
     for (const burst of this.bursts) {
       if (now < burst.born || now - burst.born >= burst.duration || burst.nativeArtwork && !burst.spray && burst.source !== 'melee') continue
-      if (burst.outcome) { popups.push(burst); continue }
       const key = burst.actorId ?? `cell:${burst.x},${burst.y}`
       const previous = current.get(key)
       if (!previous || burst.born >= previous.born) current.set(key, burst)
     }
-    return [...current.values(), ...popups]
+    return [...current.values()]
   }
 
   clear() { this.deaths = []; this.nativeCells.clear(); this.nativeUntil.clear(); this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
