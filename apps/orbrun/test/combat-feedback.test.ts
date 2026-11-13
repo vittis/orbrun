@@ -29,12 +29,68 @@ function harness() {
 
 describe('combat sentences', () => {
   it.each([
+    ['The blast of energy engulfs the goblin!!', 'magic'], // Fulminant Prism
+    ['The mystic blast hits the goblin!', 'magic'],
+    ['The searing ray hits the goblin!', 'magic'],
+    ['The lance of force hits the goblin!', 'magic'],
+    ['The barrage of energy hits the goblin!', 'magic'],
+    ['The blast of shadow engulfs the goblin!', 'magic'],
+    ['The bolt of dispelling energy hits the goblin!', 'magic'],
+    ['The nullifying energy engulfs the goblin!', 'magic'],
+    ['The crushing gravity hits the goblin!', 'magic'],
+    ['The concentrated momentum hits the goblin!', 'magic'],
+    ['The goblin is dispelled!', 'magic'],
+    ['The goblin is blasted by disruptive energy!', 'magic'],
+    ['The surge of chaos hits the goblin with cold!', 'cold'],
+    ['The ghostly fireball engulfs the goblin!', 'magic'],
+    ['The shadowy lightning hits the goblin!', 'magic'],
+    ["The goblin's mind is blasted!", 'magic'],
+    ['The blast of cleansing flame engulfs the goblin!', 'magic'],
+    ['The hail pelts the goblin!', 'cold'],
+    ['The seracfall batters the goblin!', 'cold'],
+    ['The frost grips the goblin!', 'cold'],
+    ['The fiery explosion engulfs the goblin!', 'fire'],
+    ['The searing blast hits the goblin!', 'fire'],
+    ['The sting hits the goblin!', 'poison'],
+    ['The goblin festers in the toxic bog!', 'poison'],
+    ['The caustic explosion engulfs the goblin!', 'acid'],
+    ['The zap hits the goblin!', 'electric'],
+    ['The plasma beam hits the goblin!', 'electric'],
+    ['The shock of your passage hits the goblin!', 'electric'],
+  ])('classifies a confirmed spell/ability result without inventing a melee source: %s', (line, tone) => {
+    const [hit] = combatText(line)
+    expect(hit).toMatchObject({ kind: 'hit', tone, melee: false })
+    expect(hit.target).toMatch(/^the goblin$/i)
+    expect(hit.sourceName).toBeUndefined()
+    expect(hit.amount).toBeUndefined()
+  })
+
+  it.each(['The blast of energy engulfs you!', 'The mystic blast hits you!', 'Your mind is blasted!'])(
+    'preserves incoming magical damage: %s', line => {
+      expect(combatText(line)).toMatchObject([{ kind: 'hurt', player: true, tone: 'magic', melee: false }])
+    })
+
+  it.each([
+    'You cast Iskenderun\'s Mystic Blast.', 'You erupt in a blast of force!',
+    'You conjure a fulminant prism.', 'The fulminant prism explodes!',
+    'The mystic blast misses the goblin.', 'The blast of energy engulfs empty space.',
+    'The goblin repels the searing ray!', 'The goblin resists.',
+    'The goblin is cursed with the promise of agony.',
+  ])('does not treat a cast, miss, utility cue or missing recipient as damage: %s', line => {
+    const { feedback, scene, text } = harness()
+    text(line)
+    expect(feedback.flush(scene).filter(e => e.kind === 'hit' || e.kind === 'hurt')).toEqual([])
+  })
+
+  it.each([
     ['The bolt of fire hits the goblin!', 'fire'],
     ['The puff of frost hits the goblin!', 'cold'],
     ['The bolt of poison hits the goblin!', 'poison'],
     ['The bolt of acid hits the goblin!', 'acid'],
     ['You electrocute the goblin!', 'electric'],
     ['The magic dart hits the goblin!', 'magic'],
+    ['The blast of energy engulfs the goblin!', 'magic'],
+    ['The mystic blast hits the goblin!', 'magic'],
     ['You smite the goblin!', 'magic'],
     ['You slash the goblin! You burn the goblin.', 'fire'],
   ])('retains the confirmed killing element across frames: %s', (sentence, tone) => {

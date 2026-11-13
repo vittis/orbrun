@@ -2,6 +2,7 @@ import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type 
 import { formattedStringToText, type GameState, type ServerMessage } from '@orbrun/webtiles'
 import { deathFor } from './death-effects'
 import { spellText, spellStatuses, type SpellCue } from './spell-effects'
+import { spellDamage } from './spell-damage'
 
 /** Confirmed combat evidence consumed by renderer effects, never display text. */
 export interface CombatEvent {
@@ -66,6 +67,18 @@ export function combatText(text: string): CombatEvent[] {
       out.push({ kind: 'block', melee: true, tone: 'physical',
         ...(player ? { player: true } : { target: m[1] }),
         ...(sourceName === 'your' ? {} : { sourceName }) })
+      continue
+    }
+    // Effect subjects can share melee grammar ("The mystic blast hits ...").
+    // Classify their confirmed damage before stripping creature source names.
+    const spellHit = spellDamage(s)
+    if (spellHit) {
+      const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
+      const amount = /\bno damage\b/.test(s) ? 0 : number ? Number(number[1]) : undefined
+      const player = /^you$/i.test(spellHit.target)
+      if (player && amount === 0) continue
+      out.push({ kind: player ? 'hurt' : 'hit', ...(player ? { player: true } : { target: spellHit.target }),
+        melee: false, tone: spellHit.tone, amount, intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
       continue
     }
     const strike = creatureStrike.exec(s)
@@ -348,7 +361,8 @@ export class CombatFeedback {
       let kind: SpellEffect['kind'] | undefined
       if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
         // A frost/flame brand is already presented by the melee contact spray.
-        const brandedMelee = resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
+        const brandedMelee = (event.melee || event.brandOnly)
+          && resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
         if (!brandedMelee) kind = event.tone ?? 'physical'
       }
       const position = event.player ? scene.player : event.x === undefined || event.y === undefined ? undefined : { x: event.x, y: event.y }

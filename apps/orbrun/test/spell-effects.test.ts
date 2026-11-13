@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
-import { cellKey, emptyScene, type Scene, type SpellEffect } from '@orbrun/scene'
+import { cellKey, emptyScene, type MapRenderer, type Scene, type SpellEffect } from '@orbrun/scene'
 import { CombatFeedback } from '../src/combat-feedback'
 import { spellText } from '../src/spell-effects'
+import { presentCombat } from '../src/combat-presentation'
+import { DungeonEffects } from '../../../packages/render-2.5d/src/effects'
+import { DungeonDeaths, debrisPalettes } from '../../../packages/render-2.5d/src/death'
+import { elementalPalettes } from '../../../packages/render-2.5d/src/elemental-spray'
+import { sampleHitSpray } from '../../../packages/render-2.5d/src/hit-spray'
 
 function world(alive = true): Scene {
   const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'D:1' }
@@ -22,6 +27,76 @@ function harness() {
   const text = (text: string, rollback = 0) => send({ msg: 'msgs', messages: [{ text, turn: state.player.turn }], rollback })
   return { state, scene, feedback, send, text }
 }
+
+function presentation(scene: Scene) {
+  const fx = new DungeonEffects(), deaths = new DungeonDeaths()
+  fx.observe(scene, 0, true); deaths.observe(scene, true)
+  const renderer: Partial<MapRenderer> = {
+    hit: (effect, now) => { fx.hit(scene, effect, now) },
+    spell: (effect, now) => { fx.spell(scene, effect, now) },
+    death: (effect, now) => { fx.death(scene, effect, now); deaths.spawn(scene, effect, now) },
+    bump: vi.fn(),
+  }
+  return { fx, deaths, renderer: renderer as MapRenderer }
+}
+
+describe('confirmed spell splatter through the presentation pipeline', () => {
+  it('keeps a Prism explosion’s element when it shares a turn and recipient with melee', () => {
+    const h = harness(), { fx, renderer } = presentation(h.scene)
+    h.text('You hit the goblin! The blast of energy engulfs the goblin!!')
+    const events = h.feedback.flush(h.scene, 1000), spells = h.feedback.takeSpells()
+    expect(spells).toMatchObject([{ kind: 'magic', actorId: 'id:1' }])
+    presentCombat(renderer, h.scene, events, spells, 'mace', 1000, true)
+    expect(fx.bursts).toHaveLength(1)
+    expect(sampleHitSpray(h.scene, fx.bursts[0], 1.15).some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
+  })
+
+  it.each([
+    'The blast of energy engulfs the goblin!!', 'The mystic blast hits the goblin!',
+    'The searing ray hits the goblin!', 'The barrage of energy hits the goblin!',
+    'The wavering orb of destruction weakly hits the goblin!',
+    'The goblin is dispelled!', 'The goblin is blasted by disruptive energy!',
+  ])('adds one magic spray alongside blood for %s, following the recipient after knockback', line => {
+    const h = harness(), moved = world()
+    moved.billboards[0].x = 2
+    const { fx, renderer } = presentation(moved)
+    h.text(line)
+    const events = h.feedback.flush(moved, 1000)
+    presentCombat(renderer, moved, events, h.feedback.takeSpells(), undefined, 1000, true)
+    expect(renderer.bump).not.toHaveBeenCalled()
+    expect(fx.bursts).toHaveLength(1)
+    expect(fx.bursts[0]).toMatchObject({ actorId: 'id:1', x: 2, y: 0, kind: 'magic' })
+    const particles = sampleHitSpray(moved, fx.bursts[0], 1.1)
+    expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+    h.text(line + ' Nothing happens.', 1)
+    expect(h.feedback.flush(moved, 1100)).toEqual([])
+    expect(h.feedback.takeSpells()).toEqual([])
+  })
+
+  it.each(['The blast of energy engulfs the goblin!', 'The mystic blast hits the goblin!'])(
+    'carries %s into the confirmed death instead of spawning a second impact', line => {
+      const h = harness(), removed = world(false), { fx, deaths, renderer } = presentation(removed)
+      h.text(line + ' You kill the goblin!')
+      presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+      expect(fx.bursts).toEqual([])
+      const particles = deaths.sample(removed, 1.1)
+      expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
+      expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+    })
+
+  it.each(['zero', 'miss', 'hidden', 'remote', 'still'] as const)('does not shed spell debris for %s results', mode => {
+    const h = harness()
+    if (mode === 'hidden') h.scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+    if (mode === 'remote') h.scene.playerOnLevel = false
+    const { fx, deaths, renderer } = presentation(h.scene)
+    h.text(mode === 'zero' ? 'The mystic blast hits the goblin but does no damage.'
+      : mode === 'miss' ? 'The mystic blast misses the goblin.' : 'The mystic blast hits the goblin!')
+    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000, mode !== 'still')
+    expect(fx.bursts.every(b => !b.spray)).toBe(true)
+    expect(deaths.sample(h.scene, 1.1)).toEqual([])
+  })
+})
 
 describe('confirmed non-projectile spells and abilities', () => {
   it.each<[string, SpellEffect['kind']]>([

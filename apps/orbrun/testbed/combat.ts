@@ -92,6 +92,8 @@ function play(kind: string) {
   const messages: Record<string, string> = {
     light: 'You slash the goblin.', solid: 'You slash the goblin!', hit: 'You slash the goblin!!', dart: 'The magic dart hits the goblin!', miss: 'You miss the goblin.',
     fire: 'The bolt of fire hits the orc!', cold: 'The puff of frost hits the goblin.',
+    prism: 'The blast of energy engulfs the goblin!!', mystic: 'The mystic blast hits the goblin!',
+    searing: 'The searing ray hits the goblin!', hail: 'The hail pelts the goblin!',
     kill: 'You hit the goblin for 12! You kill the goblin!',
     armor: 'You hit the goblin but do no damage.', incomingArmor: 'The goblin hits you but does no damage.',
     incoming: 'The goblin hits you with a +0 club!', dodge: 'The goblin misses you.',
