@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.104 — 2026-11-13
+
+- Fulminant Prism and Iskenderun’s Mystic Blast now mix magic splatter with existing hit and death debris. Extended confirmed-result coverage to Searing Ray, Force Lance, Battlesphere, Orb of Destruction, shadow/energy attacks, Mindburst and Dispel Undead.
+- Added missing elemental results for Hailstorm, creeping frost, Toxic Bog, caustic explosions, plasma, Blinkbolt and related spells/abilities. Explicit chaos-beam elements keep their reported colour.
+- A separate spell result keeps its element when melee hits the same recipient in the same turn. Casts, misses, zero-damage results, hidden targets and Still/reduced motion remain excluded from damaging splatter.
+
 ## 0.3.103 — 2026-11-13
 
 - Added `(edit rc)` beside each server-advertised Play version on the main menu. The editor shares the account’s server-side file with original WebTiles, verifies saves, protects unsaved changes and returns to the version link you opened. Each server keeps its own files.
