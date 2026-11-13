@@ -658,7 +658,6 @@ export class GameScreen {
     this.renderer.resize(px.width, px.height, this.viewDpr())
     // what rides the view's edges keeps clear of the panes
     const free = map ?? cells.clear
-    this.levelUp.place(this.grid.px(free))
     this.hud.spellRow = spells
     this.hud.glanceRow = glance
     this.hud.layout(this.grid, cells, free, { stats: hideStats, sidebar: hideSidebar, messages: hideMessages })
@@ -907,6 +906,18 @@ export class GameScreen {
     }
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
+    if (this.levelUp.active && this.viewPx) {
+      const scene = this.session.scene
+      const player = scene.billboards.find(b => b.kind === 'player')
+      const centre = this.renderer.project?.(scene.player.x, scene.player.y)
+      const right = this.renderer.project?.(scene.player.x + 1, scene.player.y)
+      // Upright sprites stand at y + 0.3 and are one projected tile tall.
+      const foot = this.renderer.project?.(scene.player.x, scene.player.y + 0.3)
+      const actor = player ? this.renderer.projectBillboard?.(player) ?? centre : centre
+      if (actor && centre && right && foot) this.levelUp.place(this.viewPx, {
+        x: actor.x, y: actor.y + foot.y - centre.y - Math.abs(right.x - centre.x) - 6,
+      })
+    }
     this.levelUp.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'),
       this.reducedMotion || !dungeonAnimation(settings, this.reducedMotion))

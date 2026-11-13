@@ -115,7 +115,12 @@ if (params.has('check')) {
   later(() => hit(thorns ? 'The ice thorns skewer the goblin.' : undefined), 1100)
 }
 const snapshot = () => {
-  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
+  const player = scene.billboards.find(b => b.kind === 'player')!
+  const feet = renderer.projectBillboard(player)
+  const scale = renderer.project(scene.player.x + 1, scene.player.y).x - renderer.project(scene.player.x, scene.player.y).x
+  const rect = document.querySelector('canvas.view')!.getBoundingClientRect()
+  const playerProjection = { x: rect.left + feet.x, y: rect.top + feet.y, scale }
+  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, xl: state.player.xl, playerProjection, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
 }
 const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
 function destroy() {
@@ -130,6 +135,6 @@ const receive = (msg: ServerMessage) => {
   reduce(state, msg)
   for (const fn of listeners) fn({ type: 'state', msg })
 }
-declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy; receive: typeof receive } } }
-window.__orbrunLiveAnimation = { snapshot, destroy, receive }
+declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy; receive: typeof receive; walk: typeof walk } } }
+window.__orbrunLiveAnimation = { snapshot, destroy, receive, walk }
 window.addEventListener('pagehide', destroy, { once: true })

@@ -1,6 +1,8 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
+type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
+
 test('level gain celebrates without intercepting input, respects motion, and expires', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
@@ -8,24 +10,81 @@ test('level gain celebrates without intercepting input, respects motion, and exp
   const popup = page.locator('.level-up')
   await expect(popup).toBeHidden()
   await page.evaluate(() => {
-    const fixture = (window as unknown as { __orbrunLiveAnimation: { receive(msg: { msg: string; xl: number }): void } }).__orbrunLiveAnimation
+    const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
     fixture.receive({ msg: 'player', xl: 4 })
   })
   await expect(popup).toBeVisible()
-  await expect(popup.locator('.level-up-number')).toHaveText('4')
+  await expect(popup).toHaveAttribute('data-level', '4')
   expect(await popup.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none')
-  expect(await popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+  await expect(popup).toHaveClass(/still/)
+  expect(await popup.locator('canvas').evaluate(el => getComputedStyle(el).imageRendering)).toBe('pixelated')
   expect(await page.locator(':focus').count()).toBe(0)
   // On can animate the world; native reduced motion still keeps this popup static.
   await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
-  await expect.poll(() => popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('level-up-strike')
+  await expect(popup).not.toHaveClass(/still/)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect.poll(() => popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+  await expect(popup).toHaveClass(/still/)
   await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
   await expect(popup).toBeHidden({ timeout: 6000 })
   const frames = (await result(page)).totalFrames
   await page.waitForTimeout(350)
   expect((await result(page)).totalFrames).toBe(frames)
+})
+
+test('level announcement appears before answering the stat choice and follows the rendered character', async ({ page }) => {
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  await page.clock.install()
+  await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
+    fixture.receive({ msg: 'player', xl: 5 })
+    fixture.receive({ msg: 'msgs', messages: [
+      { text: 'You have reached level 6!', channel: 11, turn: 41 },
+      { text: 'Your experience leads to an increase in your attributes!', channel: 11, turn: 41 },
+      { text: 'Increase (S)trength, (I)ntelligence, or (D)exterity?', channel: 2, turn: 41 },
+    ] })
+    fixture.receive({ msg: 'input_mode', mode: 7 }) // MouseMode.PROMPT
+  })
+  await page.clock.runFor(100)
+  const popup = page.locator('.level-up')
+  await expect(popup).toBeVisible()
+  await expect(popup).toHaveAttribute('data-level', '6')
+  await expect(page.locator('.prompt-card')).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.snapshot().xl)).toBe(5)
+  const checkAnchor = async () => {
+    const player = await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.snapshot().playerProjection)
+    const art = (await popup.locator('canvas').boundingBox())!
+    expect(Math.abs(art.x + art.width / 2 - player.x)).toBeLessThanOrEqual(1)
+    expect(art.y + art.height).toBeLessThan(player.y - player.scale * 0.7)
+    expect(art.y + art.height).toBeGreaterThan(player.y - player.scale * 1.5)
+  }
+  await checkAnchor()
+  // A camera/actor transition and a resize must not leave the banner at its old position.
+  await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.walk())
+  await page.clock.runFor(200)
+  await checkAnchor()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.runFor(200)
+  await checkAnchor()
+  // The pixel art contains actual dark and bright blood, with opaque source pixels.
+  const pixels = await popup.locator('canvas').evaluate(canvas => {
+    const data = (canvas as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 120, 60).data
+    let blood = 0, bone = 0, partial = 0
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] !== 0 && data[i + 3] !== 255) partial++
+      if (data[i + 3] && data[i] > 70 && data[i] > data[i + 1] * 2) blood++
+      if (data[i + 3] && data[i] > 190 && data[i + 1] > 150 && data[i + 2] < data[i]) bone++
+    }
+    return { blood, bone, partial }
+  })
+  expect(pixels.blood).toBeGreaterThan(100)
+  expect(pixels.bone).toBeGreaterThan(100)
+  expect(pixels.partial).toBe(0)
+  await page.clock.runFor(3000)
+  await expect(popup).toBeHidden()
+  await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.receive({ msg: 'player', xl: 6 }))
+  await page.clock.runFor(100)
+  await expect(popup).toBeHidden()
 })
 
 for (const touch of [false, true]) {
