@@ -73,7 +73,15 @@ export class QuickSettings {
     if (focused) this.onclose()
   }
 
-  refresh() { this.draws.forEach(draw => draw()) }
+  refresh() {
+    const active = document.activeElement, owned = this.owns(active)
+    this.draws.forEach(draw => draw())
+    // Chromium platforms differ on whether disabling a focused button blurs it.
+    // Keep the next key in the controls after reset, a bound, or a disabled dependency.
+    if (owned && this.open && (!this.owns(document.activeElement) || active?.matches(':disabled'))) {
+      this.tabs.get(this.group)!.focus()
+    }
+  }
 
   private showGroup(group: 'View' | 'Combat') {
     this.group = group

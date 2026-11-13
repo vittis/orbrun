@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.94 — 2026-11-13
+
+- Keep keyboard focus inside quick settings after Reset or reaching a numeric limit, including browsers that blur disabled controls.
+
 ## 0.3.93 — 2026-11-13
 
 - Added a collapsible Tune panel at the left-center of the game screen with every View and Combat setting.
