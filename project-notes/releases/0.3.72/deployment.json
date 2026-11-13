@@ -1,0 +1,17 @@
+{
+  "releaseCommit": "5053a5fcce5a363833cf98be3f30197eb855bb67",
+  "sourceTag": "cloudflare-online-v1.69",
+  "version": "0.3.72",
+  "buildId": "16903638-c827-46ce-afe2-d631b9198130",
+  "buildConclusion": "success",
+  "mainVerificationRun": 43345659763,
+  "verificationConclusion": "success",
+  "deploymentId": "201083ed-0a23-4430-abc7-deee1a2f4726",
+  "createdOn": "2026-11-13T01:33:08.709435Z",
+  "versions": [
+    {
+      "version_id": "7eea57b0-f487-4e88-8ea5-ab1b016da8fa",
+      "percentage": 100
+    }
+  ]
+}
