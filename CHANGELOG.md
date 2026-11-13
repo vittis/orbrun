@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.105 — 2026-11-13
+
+- Electric hits and deaths now emit larger forked blue-white lightning with bright cores and short, changing discharges instead of ice-like shards.
+- Made elemental splatter more present and distinct: fire tongues, frost crystals, bubbling poison and vapour, sharp acid streaks, and luminous purple magic glints. Increased elemental particle size and density while preserving existing total particle limits.
+- Dense hit and death bursts reserve room for their elemental signature; death floor splatter is retained. Existing gore/variation settings, confirmed contact, visibility clipping, Still/reduced motion and spell coverage remain intact.
+
 ## 0.3.104 — 2026-11-13
 
 - Fulminant Prism and Iskenderun’s Mystic Blast now mix magic splatter with existing hit and death debris. Extended confirmed-result coverage to Searing Ray, Force Lance, Battlesphere, Orb of Destruction, shadow/energy attacks, Mindburst and Dispel Undead.
