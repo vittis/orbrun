@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-11-13T02:58:23.893Z",
+  "version": "0.3.79",
+  "sourceTag": "cloudflare-online-v1.76",
+  "releaseCommit": "6f44ccc38da089f75e4406f283aac4bb401a60b6",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 8882,
+      "sha256": "dd466f0c7c269e8f48b1beec0c3ec1c587d06c0cd9a06df26bfff88776f6d9ba",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "bundle": "/assets/main-BKHSqW3W.js",
+      "bundleSha256": "789437101f045403a008d486b2ce86487a8c49dc8c13f70f94ba12c8740eca5e",
+      "bundleMatchesLocal": true
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 39496,
+      "sha256": "9fe8e699a986fe1dc6e8791e9e2cd01896d61fef7c4e5d02820510f542a07eb2",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "bytes": 1099,
+      "sha256": "76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/engine/health",
+      "status": 404,
+      "bytes": 47,
+      "sha256": "e78036b2f0d9eb2d5cb6d8b3bf16be787f9ffafcd61086058e3ebe2791b73e5e",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/example.com/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 404,
+      "bytes": 9,
+      "sha256": "907ba78b4545338d3539683e63ecb51cf51c10adc9dabd86e92bd52339f298b9",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 200,
+      "bytes": 9710,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc",
+      "csp": null
+    }
+  ],
+  "browser": {
+    "viewports": [
+      "1280x900",
+      "390x844"
+    ],
+    "reducedMotion": true,
+    "onlineOnly": true,
+    "pageErrors": []
+  },
+  "lobby": {
+    "anonymous": true,
+    "games": 22
+  },
+  "spectate": {
+    "anonymous": true,
+    "loaded": true,
+    "route": "/watch/cdi#Charlemagne66",
+    "canvas": {
+      "width": 1272,
+      "height": 893
+    }
+  }
+}

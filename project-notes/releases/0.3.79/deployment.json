@@ -1,0 +1,23 @@
+{
+  "version": "0.3.79",
+  "commit": "6f44ccc38da089f75e4406f283aac4bb401a60b6",
+  "sourceTag": "cloudflare-online-v1.76",
+  "buildId": "c074c69c-0c4f-4bcc-a67e-f8196ac12f9b",
+  "buildConclusion": "success",
+  "ci": {
+    "runId": 43355619266,
+    "conclusion": "success"
+  },
+  "deployment": {
+    "id": "8c37fc9f-1dd1-47ea-9460-52cb4a0e2833",
+    "created_on": "2026-11-13T02:57:32.387948Z",
+    "versions": [
+      {
+        "version_id": "20db716a-12cf-488c-81b2-0af4702b9594",
+        "percentage": 100
+      }
+    ],
+    "source": "wrangler",
+    "strategy": "percentage"
+  }
+}
