@@ -1,14 +1,14 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
-test('spell entrances bloom, settle, sleep and respect visibility/Still', async ({ page }) => {
+test('native spell tiles fade without deformation, settle and respect visibility/Still', async ({ page }) => {
   await page.goto('/testbed/spawn-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(32)
+  expect(report.checks).toBe(80)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 

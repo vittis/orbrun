@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.74 — 2026-11-12
+
+- Simplify spell entrances and exits to brief opacity fades of the original server artwork.
+- Remove added spawn particle bursts and tile growth/stretching, especially for Flame Wave; preserve fixed explosion positions.
+- Fade departing native clouds and spell terrain, retain very brief server overlays, and verify unchanged sprite shapes and colours in the browser.
+
 ## 0.3.73 — 2026-11-12
 
 - Keep complete melee silhouettes at visibility boundaries instead of clipping wide axe strokes and misses to cell rectangles.
