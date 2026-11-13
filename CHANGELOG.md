@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.117 — 2026-11-13
+
+- Simplified unexplored fog to a black background with small, crisp stars and minimal smooth movement. The same starfield is used throughout the dungeon.
+- Removed cloud rendering, branch palettes, atmosphere metadata and branch-theme preview controls. Kept the soft, rounded exploration boundary, existing fog toggle, Still/reduced motion and confirmed visibility.
+
 ## 0.3.116 — 2026-11-13
 
 - Toned down unexplored fog to mostly black space with sparse, restrained branch-colored wisps.
