@@ -84,6 +84,16 @@ export async function wallCoherenceChecks() {
     })
     assert('connected roofs and picking stay aligned through corners', cornerRoofs.every(({ x, body, above, roof }) =>
       body[1] > body[0] * 3 && above !== cellKey(x, 0) && roof === cellKey(x, 0)), cornerRoofs)
+    // Side walls meet the lowered foreground row without a dark crossbar.
+    // Sample inside the former vertical face, independently of cap geometry.
+    const side = planeRect(p, -1, -1, 0.58, dpr)
+    const joinY = side.y + side.height + (lip.y - side.y - side.height) * 0.25
+    const joins = [-1, 1].map(x => {
+      const q = r.project(x, -1)
+      return { pixel: sample(q.x, joinY), picked: r.pick(q.x, joinY), x }
+    })
+    assert('side wall stonework continues into lowered corners without internal face bands',
+      joins.every(({ pixel, picked, x }) => pixel[0] + pixel[1] > 210 && picked === cellKey(x, -1)), joins)
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('wall-coherence-checks')
   }

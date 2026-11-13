@@ -13,7 +13,7 @@ import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
 import { sampleHitSpray } from './hit-spray.js'
-import { drawWallShadows, shadeWallFace, wallHeight } from './wall-depth.js'
+import { drawWallShadows, shadeWallFace, wallHeight, wallRoof } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
 
@@ -666,7 +666,7 @@ export class Render25d implements MapRenderer {
 
   private frontierFog(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
     for (const cell of cells) {
-      const rect = planeRect(p, cell.x, cell.y, cell.occluder ? wallHeight(this.scene, cell) : 0, this.dpr)
+      const rect = cell.occluder ? wallRoof(this.scene, p, cell, this.dpr) : planeRect(p, cell.x, cell.y, 0, this.dpr)
       for (const [dx, dy, turn] of [[0,-1,0],[1,0,Math.PI/2],[0,1,Math.PI],[-1,0,-Math.PI/2]]) {
         const neighbour = this.scene.cells.get(cellKey(cell.x + dx, cell.y + dy))
         if (neighbour && neighbour.visibility !== 'unseen' && neighbour.kind !== 'unknown') continue
@@ -690,7 +690,7 @@ export class Render25d implements MapRenderer {
   }
 
   private wall(ctx: Context2d, p: Projection, cell: SceneCell) {
-    const roof = planeRect(p, cell.x, cell.y, wallHeight(this.scene, cell), this.dpr)
+    const roof = wallRoof(this.scene, p, cell, this.dpr)
     const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
     const tile = cell.faceTiles?.s ?? cell.wallTile ?? cell.featureTile ?? cell.floorTile
     const surface = { ...roof, height: ground.y + ground.height - roof.y }

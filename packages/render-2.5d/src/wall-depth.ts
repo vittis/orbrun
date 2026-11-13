@@ -32,6 +32,17 @@ export function wallHeight(scene: Scene, cell: SceneCell) {
   return WALL_HEIGHT
 }
 
+/** Continue the cap into a lower adjoining row instead of exposing an internal face. */
+export function wallRoof(scene: Scene, p: Projection, cell: SceneCell, dpr: number): SurfaceRect {
+  const roof = planeRect(p, cell.x, cell.y, wallHeight(scene, cell), dpr)
+  const south = scene.cells.get(cellKey(cell.x, cell.y + 1))
+  if (known(south) && south.occluder) {
+    const join = planeRect(p, south.x, south.y, wallHeight(scene, south), dpr).y
+    roof.height = Math.max(roof.height, join - roof.y)
+  }
+  return roof
+}
+
 /** Paint only receiving ground. Neighbouring wall tiles never get dark seams. */
 export function drawWallShadows(ctx: Context2d, p: Projection, scene: Scene, cells: SceneCell[], dpr: number, darkness?: (cell: SceneCell) => number) {
   for (const cell of cells) {

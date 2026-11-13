@@ -8,7 +8,7 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
-import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
+import { wallHeight, wallRoof, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
   return { x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
@@ -68,6 +68,28 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it.each(['visible', 'remembered'] as const)('joins a side wall to a lowered %s corner without an internal face', visibility => {
+    const scene = sceneOf(cell(0, -2, { kind: 'wall', occluder: true }), cell(0, -1),
+      cell(0, 0, { kind: 'wall', occluder: true }),
+      cell(1, -1, { kind: 'wall', occluder: true, visibility }),
+      cell(1, 0, { kind: 'wall', occluder: true, visibility }))
+    const p = { x: 0, y: 0, width: 900, height: 700, scale: 42, tilt: Math.PI / 4 }
+    const side = scene.cells.get(cellKey(1, -1))!
+    const south = scene.cells.get(cellKey(1, 0))!
+    const roof = wallRoof(scene, p, side, 1.25)
+    expect(roof.y).toBe(planeRect(p, 1, -1, WALL_HEIGHT, 1.25).y)
+    expect(roof.y + roof.height).toBeCloseTo(wallRoof(scene, p, south, 1.25).y)
+    // Neither the cell's elevation nor the ground footprint changes.
+    expect(wallHeight(scene, side)).toBe(WALL_HEIGHT)
+    expect(wallHeight(scene, south)).toBe(0.08)
+    for (const boundary of [undefined, cell(1, 0), cell(1, 0, { flags: { ...south.flags, water: true } }),
+      { ...south, visibility: 'unseen' as const }, { ...south, kind: 'unknown' as const }]) {
+      scene.cells.delete(cellKey(1, 0))
+      if (boundary) scene.cells.set(cellKey(1, 0), boundary)
+      expect(wallRoof(scene, p, side, 1.25)).toEqual(planeRect(p, 1, -1, WALL_HEIGHT, 1.25))
+    }
+  })
+
   it.each([1, 3, 5])('keeps the foreground wall level across a junction %s cells wide', width => {
     const { r } = renderer()
     const radius = (width - 1) / 2
