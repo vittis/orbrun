@@ -1,6 +1,33 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
+test('level gain celebrates without intercepting input, respects motion, and expires', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  const popup = page.locator('.level-up')
+  await expect(popup).toBeHidden()
+  await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: { receive(msg: { msg: string; xl: number }): void } }).__orbrunLiveAnimation
+    fixture.receive({ msg: 'player', xl: 4 })
+  })
+  await expect(popup).toBeVisible()
+  await expect(popup.locator('.level-up-number')).toHaveText('4')
+  expect(await popup.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none')
+  expect(await popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+  expect(await page.locator(':focus').count()).toBe(0)
+  // On can animate the world; native reduced motion still keeps this popup static.
+  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
+  await expect.poll(() => popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('level-up-strike')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(() => popup.locator('.level-up-copy').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
+  await expect(popup).toBeHidden({ timeout: 6000 })
+  const frames = (await result(page)).totalFrames
+  await page.waitForTimeout(350)
+  expect((await result(page)).totalFrames).toBe(frames)
+})
+
 for (const touch of [false, true]) {
   test.describe(touch ? 'RC editor touch' : 'RC editor desktop', () => {
     test.use({ viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 720 }, hasTouch: touch })

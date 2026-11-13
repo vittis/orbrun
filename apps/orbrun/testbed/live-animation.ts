@@ -4,7 +4,7 @@ import '../src/styles.css'
 import { GameScreen } from '../src/game'
 import { dungeonAnimation } from '../src/effects-motion'
 import { Render25d } from '@orbrun/render-2.5d'
-import { initialState, reduce, MouseMode, UiState } from '@orbrun/webtiles'
+import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
 import { cellKey, type TileSource } from '@orbrun/scene'
 import { defaultSettings, type Settings } from '../src/settings'
 import type { Session, SessionEvent } from '../src/session'
@@ -126,6 +126,10 @@ function destroy() {
   if (!nativeMotion) window.matchMedia = nativeMatch
   document.getElementById('result')!.textContent = JSON.stringify(snapshot())
 }
-declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy } } }
-window.__orbrunLiveAnimation = { snapshot, destroy }
+const receive = (msg: ServerMessage) => {
+  reduce(state, msg)
+  for (const fn of listeners) fn({ type: 'state', msg })
+}
+declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy; receive: typeof receive } } }
+window.__orbrunLiveAnimation = { snapshot, destroy, receive }
 window.addEventListener('pagehide', destroy, { once: true })
