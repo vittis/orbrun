@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.73 — 2026-11-12
+
+- Keep complete melee silhouettes at visibility boundaries instead of clipping wide axe strokes and misses to cell rectangles.
+- Treat minotaur headbutts as natural follow-ups, preserving damage feedback without extra axe swings or retargeting same-name enemies.
+- Add an actual dungeon-renderer panel to the melee preview and regression coverage comparing live weapon pixels with the isolated artwork in all eight directions.
+
 ## 0.3.72 — 2026-11-12
 
 - Add quick, material-specific entrance effects for Ice Thorns, Fulminant Prism, clouds and stationary spell explosions.
