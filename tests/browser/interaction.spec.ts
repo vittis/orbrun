@@ -432,19 +432,29 @@ for (const touch of [false, true]) {
 }
 
 
-test('unexplored fog can be toggled in Still mode, persists and resets', async ({ page }) => {
+test('unexplored atmosphere can be disabled independently, persists in Still and resets', async ({ page }) => {
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.goto('/settings/view')
   const fog = page.locator('[data-focus="setting:Unexplored fog"]')
+  const atmosphere = page.locator('[data-focus="setting:Unexplored atmosphere"]')
   await expect(fog.locator('.val')).toHaveText('On')
+  await expect(atmosphere.locator('.val')).toHaveText('On')
   await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
   await expect(page.locator('[data-focus="setting:Dungeon animation"] .val')).toHaveText('Still')
+  await page.getByRole('button', { name: 'Unexplored atmosphere next', exact: true }).click()
+  await expect(atmosphere.locator('.val')).toHaveText('Off')
+  await expect(fog.locator('.val')).toHaveText('On')
+  await page.reload()
+  await expect(atmosphere.locator('.val')).toHaveText('Off')
+  await expect(fog.locator('.val')).toHaveText('On')
   await page.getByRole('button', { name: 'Unexplored fog next', exact: true }).click()
   await expect(fog.locator('.val')).toHaveText('Off')
+  await expect(atmosphere).toHaveClass(/\boff\b/)
   await page.reload()
   await expect(fog.locator('.val')).toHaveText('Off')
   await page.getByText('Reset to defaults', { exact: true }).click()
   await expect(fog.locator('.val')).toHaveText('On')
+  await expect(atmosphere.locator('.val')).toHaveText('On')
 })
 
 test('fine combat controls work in a narrow settings panel and persist across reload', async ({ page }) => {

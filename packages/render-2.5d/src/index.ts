@@ -30,6 +30,8 @@ export interface Render25dOptions {
   animate?: boolean
   /** Black starfield and feathered exploration edges; gameplay opts in. */
   unexploredFog?: boolean
+  /** Optional stars and faint swirls; disabling them retains the soft frontier. */
+  unexploredAtmosphere?: boolean
   /** Tween confirmed movement; still/reduced-motion mode also disables this. */
   movement?: boolean
   /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
@@ -84,7 +86,7 @@ export class Render25d implements MapRenderer {
   private hits: Hit[] = []
   private active = false
   private opts: Required<Render25dOptions> = {
-    tilt: 50, zoom: 1, animate: true, unexploredFog: false, center: null, minibars: null, filterScaling: false,
+    tilt: 50, zoom: 1, animate: true, unexploredFog: false, unexploredAtmosphere: true, center: null, minibars: null, filterScaling: false,
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
@@ -348,7 +350,7 @@ export class Render25d implements MapRenderer {
       return { ...roof, height: ground.y + ground.height - roof.y }
     }) : []
     if (this.opts.unexploredFog && this.scene.playerOnLevel
-      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, fogGeometry) && this.opts.animate) this.active = true
+      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, fogGeometry, this.opts.unexploredAtmosphere) && this.opts.animate) this.active = true
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
     for (const cell of cells) {

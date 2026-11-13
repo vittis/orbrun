@@ -39,6 +39,23 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   r.render(0); const still = image(), terrain = center()
   const contrast = metrics(fog())
   assert('black void has sparse crisp stars without cloud cover', contrast.black >= 0.99 && contrast.black < 0.99995 && contrast.peak >= 20, contrast)
+  const regionWidth = Math.floor(canvas.width * 0.25), regionHeight = canvas.height, points = fog(), margin = Math.ceil(dpr * 3)
+  const value = (x: number, y: number) => {
+    const i = (y * regionWidth + x) * 4
+    return (points[i] + points[i + 1] + points[i + 2]) / 3
+  }
+  let peakX = margin, peakY = margin, peak = 0
+  for (let y = margin; y < regionHeight - margin; y++) for (let x = margin; x < regionWidth - margin; x++) {
+    const v = value(x, y)
+    if (v > peak) { peak = v; peakX = x; peakY = y }
+  }
+  const offset = Math.round(dpr)
+  const axial = [[1, 0], [-1, 0], [0, 1], [0, -1]].reduce((sum, [x, y]) => sum + value(peakX + x * offset, peakY + y * offset), 0) / 4
+  const diagonal = [[1, 1], [-1, 1], [1, -1], [-1, -1]].reduce((sum, [x, y]) => sum + value(peakX + x * offset, peakY + y * offset), 0) / 4
+  assert('star points have a soft circular falloff rather than square or cross cores', diagonal > 2 && axial > diagonal + 1 && peak > axial * 1.2, { peak, axial, diagonal })
+  r.setOptions({ unexploredAtmosphere: false }); r.render(0)
+  assert('atmosphere opt-out leaves a black void and retains explored terrain', metrics(fog()).peak === 0 && equalPixels(terrain, center()) && r.pick(width / 2, height / 2) === cellKey(0, 0))
+  r.setOptions({ unexploredAtmosphere: true }); r.render(0)
   r.render(60)
   assert('Still freezes stars and the frontier and sleeps', equalPixels(still, image()) && !r.animating)
   r.setOptions({ unexploredFog: false }); r.render(0)
@@ -47,7 +64,7 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   const animated = image(), fogStart = fog()
   r.render(1.5)
   const shortMotion = metrics(fog(), fogStart), beforeStep = fog()
-  assert('star movement remains minimal over 1.5 seconds', shortMotion.delta > 0 && shortMotion.delta < 0.1 && shortMotion.changed < 0.01, shortMotion)
+  assert('stars and curls drift subtly over 1.5 seconds', shortMotion.delta > 0.005 && shortMotion.delta < 0.25 && shortMotion.changed < 0.01, shortMotion)
   r.render(1.5 + 1 / 120)
   const smooth = metrics(fog(), beforeStep)
   assert('motion stays smooth between consecutive frames', smooth.delta < 0.75, smooth)
@@ -111,6 +128,9 @@ for (const tilt of [25, 50, 85]) for (const dpr of [1, 2]) for (const wall of [f
   const inset = 0.3, mid = pixel(r.project(2.5 - inset, 0).x, r.project(0, 1.5).y)[0]
   const corner = pixel(r.project(2.5 - inset, 0).x, r.project(0, 2.5 - inset).y)[0]
   assert('the shared feather rounds outer corners instead of outlining squares', corner < mid * 0.85, { corner, mid })
+  r.setOptions({ unexploredAtmosphere: false }); r.render(0)
+  assert('disabling stars and curls preserves the exact exploration feather', profile().every((v, i) => v === ramp[i]), { before: ramp, after: profile() })
+  r.setOptions({ unexploredAtmosphere: true }); r.render(0)
   r.setOptions({ animate: true }); r.render(0)
   const before = profile(); r.render(3)
   const after = profile()

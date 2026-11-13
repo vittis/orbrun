@@ -5,6 +5,7 @@ export interface Settings {
   depthZoom: number
   depthAnimate: boolean | 'auto'
   depthFog: boolean
+  depthAtmosphere: boolean
   depthMovement: boolean
   /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
@@ -48,6 +49,7 @@ export const defaultSettings: Settings = {
   depthZoom: 1,
   depthAnimate: 'auto',
   depthFog: true,
+  depthAtmosphere: true,
   depthMovement: true,
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',

@@ -66,7 +66,7 @@ describe('settings storage boundary', () => {
   })
 
   it('validates booleans and unions on both read and write', () => {
-    const invalid = { depthAnimate: 'yes', depthFog: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
+    const invalid = { depthAnimate: 'yes', depthFog: 'false', depthAtmosphere: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
     expect(getSettings()).toEqual(defaultSettings)
     saveSettings({ ...defaultSettings, ...invalid } as unknown as Settings)
@@ -76,6 +76,14 @@ describe('settings storage boundary', () => {
       expect(getSettings()).toMatchObject({ depthAnimate, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
     }
   })
+})
+
+it('persists an atmosphere opt-out independently of the exploration transition', () => {
+  saveSettings({ ...defaultSettings, depthFog: true, depthAtmosphere: false })
+  expect(getSettings()).toMatchObject({ depthFog: true, depthAtmosphere: false })
+  expect(JSON.parse(store.get(key)!)).toEqual({ depthAtmosphere: false })
+  saveSettings({ ...getSettings(), depthFog: false })
+  expect(getSettings()).toMatchObject({ depthFog: false, depthAtmosphere: false })
 })
 
 const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const

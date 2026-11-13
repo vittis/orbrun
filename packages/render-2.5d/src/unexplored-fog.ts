@@ -92,6 +92,8 @@ export class UnexploredFog {
   private edgeCanvas: HTMLCanvasElement | OffscreenCanvas | null = null
   private edgeInk: Context2d | null = null
   private edgePixels: ImageData | null = null
+  private stars: HTMLCanvasElement | OffscreenCanvas | null = null
+  private swirl: HTMLCanvasElement | OffscreenCanvas | null = null
   private occupied = new Uint8Array(0)
   private coverage = new Float32Array(0)
   private outside = new Float32Array(0)
@@ -105,7 +107,7 @@ export class UnexploredFog {
   get hasBoundary() { return this.prepared }
 
   draw(ctx: Context2d, p: Projection, known: readonly SceneCell[], time: number, dpr: number,
-    geometry: readonly SurfaceRect[] = known.map(c => planeRect(p, c.x, c.y, 0, dpr))): boolean {
+    geometry: readonly SurfaceRect[] = known.map(c => planeRect(p, c.x, c.y, 0, dpr)), decorations = true): boolean {
     this.prepared = false
     if (!known.length) return false
     let covered = 0
@@ -165,41 +167,86 @@ export class UnexploredFog {
       edge[i + 3] = 255 * (1 - smooth((this.coverage[k] - 0.5) / feather))
     }
     this.edgeInk.putImageData(this.edgePixels!, 0, 0)
+    this.prepared = true
+    if (!decorations) return true
+    this.prepareDecorations()
+    if (!this.stars || !this.swirl) return true
 
     // One jittered star per broad world patch; cap density when zoomed out.
-    // No star wraps, spawns or travels across the scene. Motion is sub-tile,
-    // and its soft breathing never flashes or switches a star on/off.
+    // Small, slow orbits give the points gentle curved drift without wrapping
+    // or spawning. Cached radial artwork avoids square cores and hard halos.
     const step = Math.max(2.25, Math.max(p.width, p.height / sy) / (p.scale * 26))
     const left = Math.floor((p.x - p.width / p.scale / 2) / step) - 1
     const right = Math.ceil((p.x + p.width / p.scale / 2) / step) + 1
     const top = Math.floor((p.y - p.height / (p.scale * sy) / 2) / step) - 1
     const bottom = Math.ceil((p.y + p.height / (p.scale * sy) / 2) / step) + 1
     ctx.save()
-    ctx.fillStyle = '#d1d2d8'
+    ctx.imageSmoothingEnabled = true
     for (let gy = top; gy <= bottom; gy++) for (let gx = left; gx <= right; gx++) {
       const seed = starHash(gx, gy)
       if (seed % 5 === 0) continue
       const rx = (seed & 0xffff) / 0xffff, ry = (seed >>> 16) / 0xffff
       const phase = rx * 17 + ry * 29
-      const q = project(p, (gx + 0.12 + rx * 0.76) * step + Math.sin(phase + time * 0.07) * 0.035,
-        (gy + 0.12 + ry * 0.76) * step + Math.cos(phase + time * 0.055) * 0.025)
+      const orbit = phase + time * (0.1 + rx * 0.035)
+      const q = project(p, (gx + 0.12 + rx * 0.76) * step + Math.cos(orbit) * 0.12 + Math.sin(time * 0.19 + phase) * 0.025,
+        (gy + 0.12 + ry * 0.76) * step + Math.sin(orbit) * 0.09)
       if (q.x < 0 || q.y < 0 || q.x >= p.width || q.y >= p.height) continue
       const distance = this.clearance((q.x - this.origin) / spacing - 0.5, (q.y - this.origin) / spacing - 0.5, width, height)
       const alpha = smooth((distance * spacing - spacing * 0.5) / (p.scale * 0.8))
-        * (0.7 + rx * 0.2 + Math.sin(phase + time * 0.11) * 0.025)
+        * (0.42 + rx * 0.38 + Math.sin(phase + time * (0.2 + ry * 0.1)) * 0.065)
       if (alpha <= 0) continue
-      const bright = seed % 19 === 0, size = bright ? 1.7 : 1 + ry * 0.4
+      const radius = seed % 19 === 0 ? 3 : 1.8 + ry
       ctx.globalAlpha = alpha
-      ctx.fillRect(q.x - size / 2, q.y - size / 2, size, size)
-      if (bright) {
-        ctx.globalAlpha = alpha * 0.28
-        ctx.fillRect(q.x - 1.6, q.y - 0.35, 3.2, 0.7)
-        ctx.fillRect(q.x - 0.35, q.y - 1.6, 0.7, 3.2)
-      }
+      ctx.drawImage(this.stars, (seed % 4) * 32, 0, 32, 32, q.x - radius, q.y - radius, radius * 2, radius * 2)
+    }
+    // A handful of low-contrast, tapered curls, never a full cloud layer.
+    const curlStep = Math.max(8, step * 3.5)
+    const x0 = Math.floor((p.x - p.width / p.scale / 2) / curlStep) - 1
+    const x1 = Math.ceil((p.x + p.width / p.scale / 2) / curlStep) + 1
+    const y0 = Math.floor((p.y - p.height / (p.scale * sy) / 2) / curlStep) - 1
+    const y1 = Math.ceil((p.y + p.height / (p.scale * sy) / 2) / curlStep) + 1
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const seed = starHash(x + 503, y - 311)
+      if (seed % 3 !== 0) continue
+      const rx = (seed & 0xffff) / 0xffff, ry = (seed >>> 16) / 0xffff, phase = rx * 17 + ry * 23
+      const q = project(p, (x + rx) * curlStep + Math.sin(time * 0.07 + phase) * 0.08, (y + ry) * curlStep)
+      const size = p.scale * (1.8 + rx * 0.5)
+      if (q.x < -size || q.y < -size || q.x > p.width + size || q.y > p.height + size) continue
+      const distance = this.clearance((q.x - this.origin) / spacing - 0.5, (q.y - this.origin) / spacing - 0.5, width, height) * spacing
+      const alpha = smooth((distance - size * 0.6) / p.scale) * (0.35 + ry * 0.2)
+      if (alpha <= 0) continue
+      ctx.save(); ctx.globalAlpha = alpha; ctx.translate(q.x, q.y); ctx.rotate(phase + time * 0.035)
+      ctx.drawImage(this.swirl, -size / 2, -size / 2, size, size); ctx.restore()
     }
     ctx.restore()
-    this.prepared = true
     return true
+  }
+
+  private prepareDecorations() {
+    if (this.stars && this.swirl) return
+    const make = (w: number, h: number) => typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h)
+      : typeof document !== 'undefined' ? Object.assign(document.createElement('canvas'), { width: w, height: h }) : null
+    this.stars ??= make(128, 32); this.swirl ??= make(128, 128)
+    const stars = this.stars?.getContext('2d') as Context2d | null
+    const swirl = this.swirl?.getContext('2d') as Context2d | null
+    if (!stars || !swirl) return
+    for (const [i, rgb] of ['222,230,242', '237,225,207', '199,214,235', '216,220,228'].entries()) {
+      const x = i * 32 + 16, point = stars.createRadialGradient(x, 16, 0, x, 16, 14)
+      point.addColorStop(0, `rgba(${rgb},0.98)`); point.addColorStop(0.27, `rgba(${rgb},0.7)`)
+      point.addColorStop(0.55, `rgba(${rgb},0.12)`); point.addColorStop(1, `rgba(${rgb},0)`)
+      stars.fillStyle = point; stars.fillRect(i * 32, 0, 32, 32)
+    }
+    swirl.lineCap = 'round'
+    for (let i = 0; i < 48; i++) {
+      const t = i / 48, next = (i + 1) / 48
+      const a = 0.6 + t * 3.9, b = 0.6 + next * 3.9, r = 8 + t * 36, s = 8 + next * 36
+      const taper = Math.sin(Math.PI * (t + next) / 2) ** 2
+      for (const [width, strength] of [[6, 0.025], [1.5, 0.16]]) {
+        swirl.strokeStyle = `rgba(115,130,151,${taper * strength})`; swirl.lineWidth = width
+        swirl.beginPath(); swirl.moveTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r * 0.7)
+        swirl.lineTo(64 + Math.cos(b) * s, 64 + Math.sin(b) * s * 0.7); swirl.stroke()
+      }
+    }
   }
 
   private clearance(x: number, y: number, width: number, height: number) {
@@ -222,6 +269,8 @@ export class UnexploredFog {
 
   clear() {
     if (this.edgeCanvas) { this.edgeCanvas.width = 0; this.edgeCanvas.height = 0 }
+    for (const canvas of [this.stars, this.swirl]) if (canvas) { canvas.width = 0; canvas.height = 0 }
+    this.stars = this.swirl = null
     this.edgeCanvas = null; this.edgeInk = null; this.edgePixels = null; this.prepared = false
     this.occupied = new Uint8Array(0); this.coverage = this.outside = this.scratch = new Float32Array(0)
     this.maskKey = ''; this.maskCells = null

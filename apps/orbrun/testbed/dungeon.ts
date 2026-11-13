@@ -89,10 +89,11 @@ function fit() {
   wake()
 }
 new ResizeObserver(fit).observe(canvas)
-for (const id of ['tilt', 'zoom', 'animate', 'fog', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
+for (const id of ['tilt', 'zoom', 'animate', 'fog', 'atmosphere', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
   const duration = Number((document.getElementById('duration') as HTMLSelectElement).value)
   renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value), animate: animate.checked,
     unexploredFog: (document.getElementById('fog') as HTMLInputElement).checked,
+    unexploredAtmosphere: (document.getElementById('atmosphere') as HTMLInputElement).checked,
     movement: duration > 0, movementDuration: duration || 0.1, movementEasing: (document.getElementById('easing') as HTMLSelectElement).value as MovementEasing })
   fit()
 })
