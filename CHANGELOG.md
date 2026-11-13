@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.106 — 2026-11-13
+
+- Confirmed hits with an identified venom weapon now include poison bubbles and vapour in hit/death splatter, including lethal strikes that send no separate poison-status sentence.
+- Capture the equipped brand when the server’s hit message arrives, preserving the correct appearance across weapon swaps before rendering. Poison-status messages alone do not create an extra hit; spells, auxiliary attacks, other actors, misses and zero-damage results keep their own feedback.
+
 ## 0.3.105 — 2026-11-13
 
 - Electric hits and deaths now emit larger forked blue-white lightning with bright cores and short, changing discharges instead of ice-like shards.
