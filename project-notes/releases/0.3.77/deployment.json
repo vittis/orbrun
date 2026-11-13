@@ -1,0 +1,24 @@
+{
+  "commit": "7e5ab36a685738e911d7837c52aa36b53d799e45",
+  "version": "0.3.77",
+  "sourceTag": "cloudflare-online-v1.74",
+  "worker": "dcss-client",
+  "buildId": "f1fe9d3b-f289-4841-a298-4eb46d15d02f",
+  "buildConclusion": "success",
+  "deployment": {
+    "id": "f7762bb3-f98e-4bd7-a328-be8ed4a7097e",
+    "created_on": "2026-11-13T02:30:25.405823Z",
+    "versions": [
+      {
+        "version_id": "88aaf91b-bb11-469a-a780-317132a169b9",
+        "percentage": 100
+      }
+    ],
+    "source": "wrangler",
+    "strategy": "percentage"
+  },
+  "ci": {
+    "runId": 43352554618,
+    "conclusion": "success"
+  }
+}
