@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.96 — 2026-11-13
+
+- Fixed missing attack bumps when multiple adjacent enemies share a name. Repeated confirmed attempts are distributed across visible matching attackers, including messages arriving across frames.
+- Each reported attempt retains its original hit, miss, shield block or zero-damage result; hidden and out-of-reach creatures stay excluded.
+
 ## 0.3.95 — 2026-11-13
 
 - Confirmed shield-blocked melee attacks now trigger the attacker’s body bump and a shield contact cue, including enemy, player and ally attacks. Blocks produce no damage flashes or blood and respect Still/reduced motion.

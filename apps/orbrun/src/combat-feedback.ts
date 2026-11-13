@@ -13,7 +13,7 @@ export interface CombatEvent {
   player?: boolean
   /** A confirmed melee attempt; kept separate from spell/brand damage. */
   melee?: boolean
-  /** Message source, resolved conservatively to a visible actor before motion. */
+  /** Message source, matched to a visible, in-range actor for presentation. */
   sourceName?: string
   source?: { x: number; y: number; actorId: string }
   reaching?: boolean
@@ -47,7 +47,7 @@ function toneOf(s: string): DamageType {
 // can change it too. Only explicit incoming results establish a player hit.
 const incomingStrike = /^(?!You\b).+? (?:hits?|bites?|claws?|pecks?|stings?|kicks?|headbutts?|gores?|tramples?|mauls?|constricts?|crushes?|tentacle-slaps?|tail-slaps?|pummels?|bashes?|punches?|slaps?|touches?|strikes?|pierces?|skewers?|engulfs?|burns?|scorches?|freezes?|chills?|electrocutes?|smites?|blasts?|lashes?) you(?:[.!]+| (?:with|for|but) .+[.!]+)$/
 // Physical attack grammar only. Spell/projectile subjects may match, but cannot
-// produce a bump unless they resolve to one visible, adjacent creature.
+// produce a bump unless they match a visible creature within melee reach.
 const creatureStrike = /^(?!You\b)(.+?) (hits?|bites?|claws?|pecks?|stings?|kicks?|headbutts?|gores?|tramples?|mauls?|crushes?|tentacle-slaps?|tail-slaps?|pummels?|bashes?|punches?|slaps?|touches?|strikes?|pierces?|skewers?|lashes?|(?:barely |closely |completely )?miss(?:es)?) (.+?)[.!]+$/
 const incomingSpell = /^You are (?:smitten|burned|burnt|scorched|frozen|electrocuted|blasted|engulfed in .+|struck by .+|blasted with .+)[.!]+$|^Pain shoots through your body[.!]+$|^Your mind is blasted[.!]+$/
 
@@ -137,6 +137,8 @@ export class CombatFeedback {
   private presented = false
   private scene: Scene | null = null
   private levelKey: string | undefined
+  /** Share same-name attempts across actors, even when packets straddle frames. */
+  private meleeAttempts = new Map<string, { turn?: number; count: number }>()
   /** Kill messages can follow the map removal across rendered frames. */
   private recentActors = new Map<string, { actor: Billboard; at: number }>()
 
@@ -158,6 +160,7 @@ export class CombatFeedback {
       this.cues = []; this.spells = []
       this.scene = null
       this.recentActors.clear()
+      this.meleeAttempts.clear()
       this.presented = false
       this.ready = false
       this.history = true
@@ -180,6 +183,7 @@ export class CombatFeedback {
         this.cues = []; this.spells = []
         this.scene = null
         this.recentActors.clear()
+        this.meleeAttempts.clear()
         this.presented = false
       }
       this.previous = next
@@ -227,10 +231,11 @@ export class CombatFeedback {
     this.scene = scene
     this.levelKey = scene.levelKey
     this.presented = scene.playerOnLevel && scene.cells.size > 0
-    if (!scene.playerOnLevel) { this.spells = []; this.recentActors.clear(); return [] }
-    if (!sameLevel) this.recentActors.clear()
+    if (!scene.playerOnLevel) { this.spells = []; this.recentActors.clear(); this.meleeAttempts.clear(); return [] }
+    if (!sameLevel) { this.recentActors.clear(); this.meleeAttempts.clear() }
     if (!pending.length && !cues.length && old === scene) return []
     const before = actorsIn(sameLevel ? old : null), after = actorsIn(scene)
+    for (const id of this.meleeAttempts.keys()) if (!after.has(id)) this.meleeAttempts.delete(id)
     const candidates = new Map([...before, ...after])
     for (const [id, seen] of this.recentActors) if (now - seen.at > 2000) this.recentActors.delete(id)
     for (const [id, actor] of candidates) this.recentActors.set(id, { actor, at: now })
@@ -264,9 +269,20 @@ export class CombatFeedback {
         return distance >= 1 && distance <= (event.reaching ? 2 : 1)
           ? [{ source, target }] : []
       }))
-      // Resolve the pair together, never by distance to the player. Identical
-      // nearby creatures are ambiguous; ordinary hit feedback remains intact.
-      return pairs.length === 1 ? pairs[0] : undefined
+      // Keep the recipient unambiguous. Native messages omit attacker IDs, so
+      // allocate each reported attempt to the least-used matching source this
+      // turn rather than suppressing every same-name creature. This is visual
+      // attribution only: never multiply the message's damage or effects.
+      if (!pairs.length || pairs.some(p => p.target !== pairs[0].target)) return undefined
+      const count = (source: Billboard) => {
+        const prior = this.meleeAttempts.get(actorKey(source))
+        return prior && prior.turn === event.turn ? prior.count : 0
+      }
+      pairs.sort((a, b) => count(a.source) - count(b.source) || actorKey(a.source).localeCompare(actorKey(b.source)))
+      const pair = pairs[0]
+      this.meleeAttempts.set(actorKey(pair.source), { turn: event.turn, count: count(pair.source) + 1 })
+      while (this.meleeAttempts.size > 256) this.meleeAttempts.delete(this.meleeAttempts.keys().next().value!)
+      return pair
     }
     const resolved: CombatEvent[] = pending.flatMap(event => {
       const pair = meleePair(event)
