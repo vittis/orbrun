@@ -17,7 +17,7 @@ const spell = (x = 1): Billboard => ({ x, y: 0, kind: 'projectile', tile: 3, hei
   life: { lights: [{ colour: [255, 118, 30], radius: 2.8, power: 0.45, pulse: 'fire', transient: true }] } })
 
 describe('non-projectile spell histories', () => {
-  it('blooms new terrain, clouds and prisms once, without treating charge/tile variants as spawns', () => {
+  it('fades in new terrain, clouds and prisms once, without treating charge/tile variants as spawns', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
     scene.cells.get(cellKey(1, 0))!.life = { spawn: { kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' } }
@@ -26,7 +26,8 @@ describe('non-projectile spell histories', () => {
     scene.billboards = [cloud, prism]
     fx.observe(scene, 1, true)
     expect(fx.spawns.effects.map(e => e.style)).toEqual(['crystal', 'cloud', 'summon'])
-    expect(fx.spawns.entrance(cloud, 1)).toBe(0)
+    expect(fx.spawns.entrance(cloud, 1)).toBeGreaterThan(0)
+    expect(fx.spawns.entrance(cloud, 1)).toBeLessThan(1)
     expect(fx.spawns.entrance(prism, 1.3)).toBe(1)
     prism.tile++; cloud.tile++
     fx.observe(scene, 1.1, true)
@@ -52,7 +53,7 @@ describe('non-projectile spell histories', () => {
     expect(fx.spawns.effects.every(e => e.kind === 'fire')).toBe(true)
     scene.billboards = [{ ...target, x: 2, id: 7 }]
     fx.observe(scene, 1.002, true)
-    for (const time of [1.02, 1.1, 1.2]) {
+    for (const time of [1.02, 1.08, 1.12]) {
       expect(fx.spawns.overlays(scene, time).map(b => [b.x, b.y])).toEqual([[1, 0], [2, 0], [1, 1]])
       expect(fx.projectiles(time)).toEqual([])
     }
@@ -74,6 +75,24 @@ describe('non-projectile spell histories', () => {
     expect(fx.projectiles(1.02).length).toBeGreaterThan(0)
     expect(fx.spawns.effects).toEqual([])
     expect(fx.spawns.overlays(scene, 1.02)).toEqual([])
+  })
+
+  it('fades the latest native tile on removal, even after its entrance has expired', () => {
+    const fx = new DungeonEffects(), scene = world()
+    const cloud: Billboard = { ...spell(1), kind: 'cloud', life: { spawn: { kind: 'cold', style: 'cloud', family: 'CLOUD_COLD' } } }
+    fx.observe(scene, 0, true)
+    scene.billboards = [cloud]; fx.observe(scene, 1, true)
+    fx.tick(scene, 1.5)
+    cloud.tile = 12; fx.observe(scene, 2, true)
+    scene.billboards = []; fx.observe(scene, 3, true)
+    cloud.tile = 99 // the reducer can reuse a mutable billboard after removal
+    expect(fx.spawns.departures(3.02)).toMatchObject([{ billboard: { tile: 12, x: 1, y: 0 } }])
+    const alpha = fx.spawns.departures(3.02)[0].alpha
+    expect(alpha).toBeGreaterThan(0)
+    expect(fx.spawns.departures(3.05)[0].alpha).toBeLessThan(alpha)
+    fx.observe(scene, 3.06, true) // unrelated updates do not restart the exit
+    expect(fx.spawns.departures(3.09)).toEqual([])
+    expect(fx.bursts).toEqual([])
   })
 
   it.each(['initial', 'reveal', 'level', 'remote', 'still'] as const)('does not invent a spawn on %s', reset => {
