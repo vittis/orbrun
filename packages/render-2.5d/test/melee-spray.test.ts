@@ -35,6 +35,7 @@ describe('subtle directional melee sprays', () => {
     expect(particles.length).toBeLessThanOrEqual(26)
     expect(particles.every(p => p.sprite === sprite && p.size < 0.08 && [5, 8].includes(p.minPixels!) && !p.ground && p.z > 0.2)).toBe(true)
     expect(particles.every(p => debrisPalettes[kind].includes(p.colour))).toBe(true)
+    expect(particles.every(p => Math.hypot(p.x, p.y) < 0.04)).toBe(true)
     expect(sampleHitSpray(scene, burst, contact + 0.7)).toEqual([])
     const death = new DungeonDeaths()
     death.observe(scene, true)
@@ -42,14 +43,18 @@ describe('subtle directional melee sprays', () => {
     expect(death.sample(scene, contact).some(p => p.sprite === 'burst')).toBe(true)
   })
 
-  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]])('sprays away from the attacker along (%i, %i)', (dx, dy) => {
+  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])('splashes around contact while favouring the hit direction (%i, %i)', (dx, dy) => {
     const { scene, fx } = setup()
     fx.melee(scene, { ...attack, from: { x: -dx, y: -dy } }, 1)
     const particles = sampleHitSpray(scene, fx.bursts[0], contact + 0.18)
     expect(particles.length).toBeGreaterThan(0)
-    expect(particles.every(p => p.x * dx + p.y * dy > 0.1)).toBe(true)
     const travel = particles.map(p => (p.x * dx + p.y * dy) / Math.hypot(dx, dy))
-    expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.35)
+    expect(travel.filter(d => d > 0).length / travel.length).toBeGreaterThan(0.6)
+    expect(Math.min(...travel)).toBeLessThan(-0.05)
+    expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.15)
+    const sideways = particles.map(p => (p.y * dx - p.x * dy) / Math.hypot(dx, dy))
+    expect(Math.min(...sideways)).toBeLessThan(-0.05)
+    expect(Math.max(...sideways)).toBeGreaterThan(0.05)
     expect(particles.some(p => p.minPixels === 5 && p.alpha < 1)).toBe(true)
   })
 

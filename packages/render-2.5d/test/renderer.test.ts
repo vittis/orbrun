@@ -249,7 +249,7 @@ describe('picking and visibility', () => {
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
       expect(spray.mock.calls.length).toBeLessThanOrEqual(26)
       const sourceX = (body.x - r.project(0, 0).x) / scale
-      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].x > sourceX && c[3].x < sourceX + 0.4)).toBe(true)
+      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && Math.abs(c[3].x - sourceX) < 0.08)).toBe(true)
       expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
       expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('spray'))
       spray.mockClear(); r.render(1.8)
