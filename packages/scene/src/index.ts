@@ -227,7 +227,11 @@ export interface Billboard {
   ref?: unknown
 }
 
+/** Presentation moods selected by the producer from confirmed surroundings. */
+export type Atmosphere = 'stone' | 'earth' | 'verdant' | 'marsh' | 'sea' | 'frost' | 'embers' | 'spectral' | 'arcane' | 'chaos' | 'holy'
+
 export interface Scene {
+  atmosphere?: Atmosphere
   /** Cumulative native animation delays in seconds; presentation only. */
   projectileTime?: number
   /** Confirmed player turn, when the producer supplies one. */

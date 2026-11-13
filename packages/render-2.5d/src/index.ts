@@ -16,7 +16,7 @@ import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight, wallRoof } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
-import { drawUnexploredAtmosphere } from './unexplored-fog.js'
+import { UnexploredFog } from './unexplored-fog.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -28,7 +28,7 @@ export interface Render25dOptions {
   zoom?: number
   /** Animated atmosphere, automatically disabled by the app for reduced motion. */
   animate?: boolean
-  /** Additional mist and motes behind unknown terrain; gameplay opts in. */
+  /** Rolling cloud banks behind unknown terrain; gameplay opts in. */
   unexploredFog?: boolean
   /** Tween confirmed movement; still/reduced-motion mode also disables this. */
   movement?: boolean
@@ -71,6 +71,7 @@ export class Render25d implements MapRenderer {
   private claimedImpacts = new WeakSet<object>()
   private visibility = new DungeonVisibility()
   private arrival = new DungeonArrival()
+  private unexploredAtmosphere = new UnexploredFog()
   private fogField: HTMLCanvasElement | OffscreenCanvas | null = null
   private frameTime = 0
   private cursor: SceneCursor | null = null
@@ -340,7 +341,7 @@ export class Render25d implements MapRenderer {
     ctx.imageSmoothingEnabled = this.opts.filterScaling
     this.unexploredFog(ctx, p, time)
     if (this.opts.unexploredFog && this.scene.playerOnLevel
-      && drawUnexploredAtmosphere(ctx, p, this.cells, time, this.dpr) && this.opts.animate) this.active = true
+      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, this.scene.atmosphere) && this.opts.animate) this.active = true
     const cells = this.cells.filter(c => this.inFrame(p, c))
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
@@ -926,6 +927,7 @@ export class Render25d implements MapRenderer {
     this.visibility.clear()
     this.arrival.clear()
     this.fogField = null
+    this.unexploredAtmosphere.clear()
     this.tiles.clear()
     this.tiles.source = null
     this.canvas = null

@@ -15,13 +15,36 @@ import { buildScene } from '../src/index.js'
 /** Everything a scene says, with the bookkeeping revisions left out and the cells in key order. */
 function semantics(s: Scene) {
   const cells = [...s.cells.entries()].sort((a, b) => a[0] - b[0]).map(([k, c]) => [k, c] as const)
-  return { bounds: s.bounds, player: s.player, playerOnLevel: s.playerOnLevel, cells, billboards: s.billboards }
+  return { atmosphere: s.atmosphere, bounds: s.bounds, player: s.player, playerOnLevel: s.playerOnLevel, cells, billboards: s.billboards }
 }
 
 describe('incremental scene building', () => {
   let gd: Gamedata
   beforeAll(async () => {
     gd = await fixtureGamedata()
+  })
+
+  it('follows confirmed branch changes and keeps unknown places on the default atmosphere', () => {
+    const state = fixtureState()
+    let previous = buildScene(state, gd)
+    for (const [place, atmosphere] of [
+      ['Dungeon', 'stone'], ['the Orcish Mines', 'earth'], ['Lair', 'verdant'],
+      ['the Lair of Beasts', 'verdant'], ['Swamp', 'marsh'], ['Slime Pits', 'marsh'],
+      ['Shoals', 'sea'], ['Ice Cave', 'frost'], ['Coc', 'frost'],
+      ['Gehenna', 'embers'], ['Volcano', 'embers'], ['Crypt', 'spectral'],
+      ['the Tomb of the Ancients', 'spectral'], ['Elven Halls', 'arcane'],
+      ['the Realm of Zot', 'arcane'], ['Abyss', 'chaos'], ['Pandemonium', 'chaos'],
+      ['the Ecumenical Temple', 'holy'], ['unrecognized custom branch', 'stone'], ['', 'stone'],
+    ]) {
+      reduce(state, { msg: 'player', place, depth: 1 })
+      const scene = buildScene(state, gd, { previous, dirty: { cells: new Set(), mapCleared: false } })
+      expect(scene.atmosphere, place).toBe(atmosphere)
+      expect(scene.atmosphere).toBe(buildScene(state, gd).atmosphere)
+      reduce(state, { msg: 'player', depth: 2 })
+      const deeper = buildScene(state, gd, { previous: scene, dirty: { cells: new Set(), mapCleared: false } })
+      expect(deeper.atmosphere, place + ' at another depth').toBe(atmosphere)
+      previous = deeper
+    }
   })
 
   it('matches full builds across alternating immediate and batched flushes of the complete recording', () => {

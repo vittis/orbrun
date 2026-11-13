@@ -1,6 +1,6 @@
 import { Render25d, fittedScale, type MovementEasing } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
-import { cellKey, emptyScene, type TileSource, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
+import { cellKey, emptyScene, type Atmosphere, type TileSource, type WoundLevel, type TileLight, type SpellEffect } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles, RoomTiles } from '../src/room/tiles'
 import { readScene, type PlaceFile } from '../src/room/place-data'
@@ -56,7 +56,7 @@ for (const cell of scene.cells.values()) {
   }
 }
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!
-const renderer = new Render25d({ center: { x: 9, y: 4 }, animate: !matchMedia('(prefers-reduced-motion: reduce)').matches })
+const renderer = new Render25d({ center: { x: 9, y: 4 }, unexploredFog: true, animate: !matchMedia('(prefers-reduced-motion: reduce)').matches })
 renderer.mount(canvas)
 renderer.setTiles(roomSource)
 renderer.setScene(scene)
@@ -89,9 +89,14 @@ function fit() {
   wake()
 }
 new ResizeObserver(fit).observe(canvas)
-for (const id of ['tilt', 'zoom', 'animate', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
+document.getElementById('atmosphere')!.addEventListener('change', event => {
+  scene.atmosphere = (event.target as HTMLSelectElement).value as Atmosphere
+  scene.revision++; renderer.setScene(scene); wake()
+})
+for (const id of ['tilt', 'zoom', 'animate', 'fog', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
   const duration = Number((document.getElementById('duration') as HTMLSelectElement).value)
   renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value), animate: animate.checked,
+    unexploredFog: (document.getElementById('fog') as HTMLInputElement).checked,
     movement: duration > 0, movementDuration: duration || 0.1, movementEasing: (document.getElementById('easing') as HTMLSelectElement).value as MovementEasing })
   fit()
 })
@@ -138,6 +143,7 @@ document.getElementById('scene')!.addEventListener('change', async () => {
   }
   const center = id === 'room' ? { x: 9, y: 4 } : scene.player
   scene.levelKey = id
+  scene.atmosphere = (document.getElementById('atmosphere') as HTMLSelectElement).value as Atmosphere
   renderer.setTiles(source)
   renderer.setOptions({ center })
   renderer.setScene(scene)

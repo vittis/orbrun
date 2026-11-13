@@ -12,14 +12,14 @@ test('ruined columns and similar wall-category props keep floor-supported silhou
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-test('unexplored mist and motes respect visibility, toggling and Still mode', async ({ page }) => {
+test('rolling branch fog has visible contrast and motion while respecting visibility and Still', async ({ page }) => {
   await page.goto('/testbed/fog-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(21)
+  expect(report.checks).toBe(52)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
