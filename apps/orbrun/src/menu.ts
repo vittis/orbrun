@@ -77,6 +77,8 @@ const HOME_LEAST_SHRINK = 0.75
 interface RcEdit {
   account: Account
   gameId: string | null
+  /** The Play link to return to, or null when opened from the account. */
+  homeFocus: string | null
   text: HTMLTextAreaElement
   /** the file as the server has it, once read; the text differs from it when there is something to save */
   saved: string | null
@@ -1300,6 +1302,11 @@ export class FrontEnd {
             // the line stands empty until the build is known, so the help under the menu never grows a line when it lands
             fine: server.offline ? (engineBuild(engines.build(g.id), engines.note(g.id)) ?? '\u00a0') : undefined,
             fn: () => this.connectTo(account, { kind: 'play', gameId: g.id }),
+            also: !server.offline && loggedIn && g.rc ? [{
+              id: 'rc:' + g.id, label: '(edit rc)',
+              title: `Edit your ${g.label} rc file on ${server.host}${sharedRc(games ?? [], g.rc, ' — ')}. Shared with WebTiles on this server.`,
+              fn: () => this.showRc(account, g.rc!, 'rc:' + g.id),
+            }] : undefined,
           })
         }
         if (!ordered.length) notices.push(h('div', { class: 'hint' }, !open ? 'Connecting…' : lobby?.complete ? 'No games offered by this server.' : 'Loading game versions…'))
@@ -1357,7 +1364,7 @@ export class FrontEnd {
     // Deck, or an installed app (quit.ts). `<` is the way out, as it is out of the dungeon.
     if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', hint: 'Close Orbrun. A game in progress is kept on the server.', fn: () => this.quit() })
     // the words under the cursor too: a saved game's row says its build's download only in its small print
-    const shape = JSON.stringify([[...rows, ...utilities].map((r) => [r.id, r.label, r.sub, r.hint, r.fine, r.conn, r.main, !!r.also, !!r.dot]), notices.map((n) => n.textContent)])
+    const shape = JSON.stringify([[...rows, ...utilities].map((r) => [r.id, r.label, r.sub, r.hint, r.fine, r.conn, r.main, r.also?.map((a) => [a.id, a.title]), !!r.dot]), notices.map((n) => n.textContent)])
     // a report to put up has its screen drawn first, however little of it changed: the dialog stands on it
     if (this._view === 'home' && this.shape.get('home') === shape && !this.error && !report) return
     // the screen under a dialog is drawn again as a redraw, not a fresh screen: it must not slide in behind it
@@ -2141,9 +2148,9 @@ export class FrontEnd {
    * device, one file for every game the player plays (@orbrun/offline
    * RcBook). A save is read back before it is called saved: a server says
    * nothing after `set_rc`, whether it wrote the file or not. Reached from
-   * Other versions, or from a device player's screen under Accounts.
+   * Play on the home screen, or an account's version list.
    */
-  showRc(a: Account, gameId: string | null) {
+  showRc(a: Account, gameId: string | null, homeFocus: string | null = null) {
     const server = findServer(a.serverId)
     if (!server || (!server.offline && !gameId)) return this.showAccounts()
     const again = this._view === 'rc' && !!this.rc && sameAccount(this.rc.account, a) && this.rc.gameId === gameId
@@ -2151,7 +2158,7 @@ export class FrontEnd {
       const text = h('textarea', { class: 'rc-text', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', wrap: 'off', rows: 14, 'aria-label': 'rc file' })
       text.readOnly = true
       text.addEventListener('input', () => this.rcMarks())
-      this.rc = { account: a, gameId, text, saved: null, state: 'reading', asked: false, note: null, leaving: false }
+      this.rc = { account: a, gameId, homeFocus, text, saved: null, state: 'reading', asked: false, note: null, leaving: false }
       // the file is the logged-in account's, so this is a switch to it, as Other versions is
       setChosenAccount(a)
     }
@@ -2165,11 +2172,12 @@ export class FrontEnd {
     const notices: HTMLElement[] = []
     if (rc.note) notices.push(h('div', { class: rc.note.error ? 'error' : 'hint' }, rc.note.text))
     else if (rc.state === 'reading') notices.push(h('div', { class: 'hint' }, !s.conn.open ? 'Connecting…' : loggedIn || s.loggingIn ? `Reading your rc file from ${where}…` : `Log in to ${server.host} to read your rc file.`))
+    if (!server.offline) notices.push(h('div', { class: 'hint rc-scope' }, 'Shared with WebTiles for this account and version on this server. Other servers keep separate rc files.'))
     const pad = !!this.hooks.padConnected?.()
     const version = server.offline ? null : game ? gameLinkVersion(game) : null
     const guide = `https://github.com/crawl/crawl/blob/${version && version !== 'trunk' ? 'stone_soup-' + version : 'master'}/crawl-ref/docs/options_guide.txt`
     const rows: Row[] = [
-      { id: BACK, label: 'Back', marker: '<', hint: 'Back to the account.', fn: () => this.back() },
+      { id: BACK, label: 'Back', marker: '<', hint: rc.homeFocus ? 'Back to Play.' : 'Back to the account.', fn: () => this.back() },
       { id: 'rc:text', label: 'rc file', text: rc.text, hint: 'Crawl’s options, one to a line.' + (pad ? ' A to type, Y when done; the right stick scrolls.' : ' Enter to edit, Esc when done, Ctrl+S to save.') },
       {
         id: 'rc:save', label: 'Save', sub: rcWord(rc), hint: server.offline ? 'Keep it on this device. It counts from the next game you start or continue.' : `Save it on ${server.host}. It counts from the next game you start or continue.`,
@@ -2275,6 +2283,10 @@ export class FrontEnd {
       return
     }
     this.rc = null
+    if (rc.homeFocus) {
+      this.marks.set('home', rc.homeFocus)
+      return this.showHome()
+    }
     const server = findServer(rc.account.serverId)
     if (server?.offline) this.showAccount(rc.account, 'rc')
     else this.showAccount(rc.account, rc.gameId ? 'rc:' + rc.gameId : undefined)

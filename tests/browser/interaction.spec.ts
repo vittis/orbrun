@@ -1,6 +1,68 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
+for (const touch of [false, true]) {
+  test.describe(touch ? 'RC editor touch' : 'RC editor desktop', () => {
+    test.use({ viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 720 }, hasTouch: touch })
+    test('edits the server file from Play and reads it again on reopen', async ({ page }) => {
+      const files: Record<string, string> = { 'dcss-web-0.34': '# server rc\n', 'dcss-web-trunk': '# trunk rc\n' }
+      const sent: { msg: string; game_id?: string; contents?: string }[] = []
+      // Exercise the app's real connection and lobby without any public-server dependency.
+      await page.route('**/morgue-proxy/**', route => route.fulfill({ status: 404, body: '' }))
+      await page.route('**/gamedata-proxy/**', route => route.fulfill({ status: 404, body: '' }))
+      await page.routeWebSocket('wss://crawl.dcss.io/socket', socket => {
+        socket.onMessage(raw => {
+          const message = JSON.parse(String(raw))
+          sent.push(message)
+          if (message.msg === 'token_login') socket.send(JSON.stringify({ msgs: [
+            { msg: 'login_success', username: 'rc-test' },
+            { msg: 'set_game_links', content: Object.keys(files).map(id => `<span><br><a href="#play-${id}">DCSS ${id.endsWith('trunk') ? 'trunk' : '0.34'}</a><a class="edit_rc_link" data-game_id="${id}">(edit rc)</a></span>`).join('') },
+            { msg: 'lobby_complete' },
+          ] }))
+          if (message.msg === 'set_login_cookie') socket.send(JSON.stringify({ msg: 'login_cookie', cookie: 'test-token', expires: 7 }))
+          if (message.msg === 'get_rc') socket.send(JSON.stringify({ msg: 'rcfile_contents', game_id: message.game_id, contents: files[message.game_id] ?? '' }))
+          if (message.msg === 'set_rc') files[message.game_id] = message.contents
+        })
+      })
+      await page.addInitScript(() => {
+        const account = { serverId: 'cdi', username: 'rc-test' }
+        localStorage.setItem('orbrun.accounts', JSON.stringify([account]))
+        localStorage.setItem('orbrun.account', JSON.stringify(account))
+        localStorage.setItem('orbrun.tokens', JSON.stringify({ 'cdi/rc-test': 'test-token' }))
+      })
+      await page.goto('/')
+      const edit = page.locator('[data-focus="rc:dcss-web-0.34"]')
+      await expect(edit).toBeVisible()
+      const bounds = await edit.boundingBox()
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+      await edit.click()
+      const text = page.getByRole('textbox', { name: 'rc file', exact: true })
+      await expect(text).toHaveValue('# server rc\n')
+      const contents = '# server rc\nautofight_stop = 60\n{\n  -- Lua stays verbatim\n}\n'
+      await text.fill(contents)
+      if (touch) await page.locator('[data-focus="rc:save"]').click()
+      else await text.press('Control+s')
+      await expect(page.locator('.brand > .hint').filter({ hasText: 'Saved on crawl.dcss.io.' })).toBeVisible()
+      expect(files['dcss-web-0.34']).toBe(contents)
+      expect(files['dcss-web-trunk']).toBe('# trunk rc\n')
+      expect(sent.filter(message => message.msg === 'set_rc')).toEqual([{ msg: 'set_rc', game_id: 'dcss-web-0.34', contents }])
+      await page.getByRole('button', { name: /Back/ }).click()
+      await expect(edit).toBeFocused()
+      // A WebTiles edit changes the same remote file. Reopening must fetch it again.
+      files['dcss-web-0.34'] = '# edited in WebTiles\n'
+      await edit.click()
+      await expect(text).toHaveValue('# edited in WebTiles\n')
+      await text.fill('# unsaved\n')
+      await page.getByRole('button', { name: /Back/ }).click()
+      await expect(text).toHaveValue('# unsaved\n')
+      await page.getByRole('button', { name: /Back, without saving\?/ }).click()
+      await expect(edit).toBeFocused()
+      expect(files['dcss-web-0.34']).toBe('# edited in WebTiles\n')
+      expect(sent.some(message => ['play', 'input', 'key'].includes(message.msg))).toBe(false)
+    })
+  })
+}
+
 test('Dungeon and flat atmosphere, Still, and impact', async ({ page }) => {
   await page.goto('/testbed/living-checks.html')
   await expect.poll(async () => {

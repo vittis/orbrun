@@ -8,7 +8,7 @@ import { settingsPanel } from '../src/settings-panel'
 import { GamepadInput } from '../src/gamepad'
 import type { Session } from '../src/session'
 import { XOM_SPLASHES } from '../src/splash'
-import { findServer, OFFLINE_SERVER, setGames, setToken, type Account, type ServerInfo } from '../src/servers'
+import { findServer, OFFLINE_SERVER, setChosenAccount, setGames, setToken, type Account, type ServerInfo } from '../src/servers'
 
 // happy-dom's localStorage has no working methods; give servers.ts a plain one
 const store = new Map<string, string>()
@@ -1876,12 +1876,68 @@ describe('the front end: the rc file', () => {
 
   const settle = () => new Promise((r) => setTimeout(r, 0))
   const box = (screen: FrontEnd) => screen.root.querySelector('textarea.rc-text') as HTMLTextAreaElement
-  const note = (screen: FrontEnd) => screen.root.querySelector('.brand > .hint, .brand > .error')?.textContent ?? null
+  const note = (screen: FrontEnd) => screen.root.querySelector('.brand > .hint:not(.rc-scope), .brand > .error')?.textContent ?? null
 
   function type(t: HTMLTextAreaElement, text: string) {
     t.value += text
     t.dispatchEvent(new Event('input', { bubbles: true }))
   }
+
+  it('edits from Play on the selected server, saves its version only, and returns to the same link', async () => {
+    const files = { 'dcss-web-0.34': 'show_more = true\n', 'dcss-web-trunk': 'show_more = true\n' }
+    const { s, readRc, writeRc } = withRc(files)
+    const other = fakeSession(crg, 'orbrun', { username: 'orbrun', games: s.state.lobby.games })
+    const otherRead = vi.fn()
+    const otherWrite = vi.fn()
+    Object.assign(other, { readRc: otherRead, writeRc: otherWrite })
+    const { screen, play } = make(server => server.id === cdi.id ? s : other)
+    setChosenAccount(orbrun)
+    screen.showHome()
+    const link = () => screen.root.querySelector<HTMLElement>('[data-focus="rc:dcss-web-0.34"]')!
+    expect(link().previousElementSibling?.textContent).toContain('Play DCSS 0.34')
+    link().click()
+    await settle()
+    expect(readRc).toHaveBeenCalledWith('dcss-web-0.34', expect.any(Number))
+    type(box(screen), 'autofight_stop = 60\n')
+    pick(screen, 'Save')
+    await settle()
+    expect(writeRc).toHaveBeenCalledWith('dcss-web-0.34', 'show_more = true\nautofight_stop = 60\n')
+    expect(files['dcss-web-trunk']).toBe('show_more = true\n')
+    expect(otherRead).not.toHaveBeenCalled()
+    expect(otherWrite).not.toHaveBeenCalled()
+    expect(play).not.toHaveBeenCalled()
+    pick(screen, 'Back')
+    expect(screen.view).toBe('home')
+    expect(focused(screen)).toBe('rc:dcss-web-0.34')
+    // Reopening reads current server contents, including edits made in WebTiles.
+    files['dcss-web-0.34'] = 'autofight_stop = 70\n'
+    link().click()
+    await settle()
+    expect(box(screen).value).toBe(files['dcss-web-0.34'])
+    type(box(screen), '# unsaved\n')
+    pick(screen, 'Back')
+    expect(screen.view).toBe('rc')
+    pick(screen, 'Back, without saving?')
+    expect(screen.view).toBe('home')
+    expect(focused(screen)).toBe('rc:dcss-web-0.34')
+  })
+
+  it('offers home editing only after login and only for files the server advertises', () => {
+    const { s, readRc } = withRc({})
+    s.state.lobby.username = null
+    setToken(cdi.id, 'orbrun', 'pending-login')
+    const { screen } = make(() => s)
+    setChosenAccount(orbrun)
+    screen.showHome()
+    expect(screen.root.querySelector('[data-focus^="rc:"]')).toBeNull()
+    s.state.lobby.username = 'orbrun'
+    screen.refresh()
+    expect(screen.root.querySelector('[data-focus="rc:dcss-web-0.34"]')).not.toBeNull()
+    s.state.lobby.games = s.state.lobby.games.map(({ rc: _rc, ...game }) => game)
+    screen.refresh()
+    expect(screen.root.querySelector('[data-focus^="rc:"]')).toBeNull()
+    expect(readRc).not.toHaveBeenCalled()
+  })
 
   it('stands beside each release on the account’s screen, and opens the file the lobby names, with who else reads it', async () => {
     const { s, readRc } = withRc({ 'dcss-web-0.34': 'autopickup = $?!+"/%\n' })
