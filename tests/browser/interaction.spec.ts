@@ -367,6 +367,21 @@ for (const touch of [false, true]) {
 }
 
 
+test('unexplored fog can be toggled in Still mode, persists and resets', async ({ page }) => {
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.goto('/settings/view')
+  const fog = page.locator('[data-focus="setting:Unexplored fog"]')
+  await expect(fog.locator('.val')).toHaveText('On')
+  await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
+  await expect(page.locator('[data-focus="setting:Dungeon animation"] .val')).toHaveText('Still')
+  await page.getByRole('button', { name: 'Unexplored fog next', exact: true }).click()
+  await expect(fog.locator('.val')).toHaveText('Off')
+  await page.reload()
+  await expect(fog.locator('.val')).toHaveText('Off')
+  await page.getByText('Reset to defaults', { exact: true }).click()
+  await expect(fog.locator('.val')).toHaveText('On')
+})
+
 test('fine combat controls work in a narrow settings panel and persist across reload', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
