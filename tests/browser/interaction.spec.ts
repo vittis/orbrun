@@ -30,6 +30,8 @@ test('real GameScreen follows native reduced motion, Still, and explicit On', as
   await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(2)
   await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
   await expect.poll(async () => (await result(page)).animating).toBe(false)
+  // Applying Still queues one static redraw; observe sleep after that paint.
+  await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(0)
   const stillFrames = (await result(page)).frames
   await page.waitForTimeout(350)
   expect((await result(page)).frames).toBe(stillFrames)
