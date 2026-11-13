@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-11-13T01:41:43.262Z",
+  "version": "0.3.73",
+  "sourceTag": "cloudflare-online-v1.70",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 8882,
+      "sha256": "e63e4abfabadbc093be43966f1ee39dff96360a62a196ddbba1aaf52b6118a5a",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "bundle": "/assets/main-BBPSRfNt.js",
+      "bundleSha256": "41983bd2135458089292b24638c876338fd02e20588057e661eb34424a9b85bc",
+      "bundleMatchesLocal": true
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 39496,
+      "sha256": "17772d8b03cb69dd97b7675be1a1a0720b2ac34bf42021fb5386ed157055a882",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "bytes": 1099,
+      "sha256": "76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:"
+    },
+    {
+      "path": "/engine/health",
+      "status": 404,
+      "bytes": 47,
+      "sha256": "e78036b2f0d9eb2d5cb6d8b3bf16be787f9ffafcd61086058e3ebe2791b73e5e",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/example.com/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 404,
+      "bytes": 9,
+      "sha256": "907ba78b4545338d3539683e63ecb51cf51c10adc9dabd86e92bd52339f298b9",
+      "csp": null
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 200,
+      "bytes": 9710,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc",
+      "csp": null
+    }
+  ]
+}
