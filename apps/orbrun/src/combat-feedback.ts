@@ -224,6 +224,12 @@ export class CombatFeedback {
           this.cues.push(...spellText(fresh))
           for (const parsed of combatText(fresh)) {
             const event = { ...parsed, turn }
+            // Venom applies a status, and skips that follow-up on lethal hits.
+            // Capture known weapon appearance at receipt, not the later frame;
+            // this colours a confirmed hit without asserting poison damage.
+            const weapon = plain(state.player.inv[state.player.weapon_index]?.name ?? '')
+            if (event.kind === 'hit' && event.melee && !event.sourceName && !event.auxiliary && event.amount !== 0
+              && event.tone === 'physical' && /(?:\bof venom\b|[({][^)}]*\bvenom\b[^)}]*[)}])/i.test(weapon)) event.tone = 'poison'
             const hit = event.followup && event.amount === undefined ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.sourceName && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
             if (hit) { hit.tone = event.tone; hit.followup = true }
             else this.pending.push(event)

@@ -101,8 +101,10 @@ function play(kind: string) {
     exchange: 'You slash the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!',
   }
   const element = (document.getElementById('hit-element') as HTMLSelectElement).value
+  state.player.inv[0] = { slot: 0, name: element === 'venom' ? 'a +2 dagger of venom' : 'a +2 dagger' }
+  state.player.weapon_index = 0
   const elementalHits: Record<string, string> = {
-    physical: 'You hit the goblin!', fire: 'You hit the goblin! You burn the goblin.',
+    physical: 'You hit the goblin!', venom: 'You hit the goblin!', fire: 'You hit the goblin! You burn the goblin.',
     cold: 'You hit the goblin! You freeze the goblin.', poison: 'The bolt of poison hits the goblin!',
     acid: 'The bolt of acid hits the goblin!', electric: 'You hit the goblin! You electrocute the goblin.',
     magic: 'The magic dart hits the goblin!',
@@ -138,7 +140,7 @@ function play(kind: string) {
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
-  presentCombat(renderer, scene, events, feedback.takeSpells(), undefined, now, !reduced, speed)
+  presentCombat(renderer, scene, events, feedback.takeSpells(), state.player.inv[0].name, now, !reduced, speed)
   attackAt = now
   attackDuration = bumpTiming(speed).duration * 1000
   lastEffect = kind

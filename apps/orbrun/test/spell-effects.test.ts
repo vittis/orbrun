@@ -41,6 +41,31 @@ function presentation(scene: Scene) {
 }
 
 describe('confirmed spell splatter through the presentation pipeline', () => {
+  it.each(['', ' The goblin is poisoned.'])('shows one venom hit spray with the native poison follow-up %j', suffix => {
+    const h = harness(), { fx, renderer } = presentation(h.scene)
+    h.state.player.inv[0] = { slot: 0, name: 'a +2 dagger of venom' }; h.state.player.weapon_index = 0
+    h.text('You stab the goblin!' + suffix)
+    const events = h.feedback.flush(h.scene, 1000)
+    expect(events).toHaveLength(1)
+    presentCombat(renderer, h.scene, events, h.feedback.takeSpells(), 'a +2 dagger of venom', 1000, true)
+    expect(renderer.bump).toHaveBeenCalledOnce()
+    expect(fx.bursts).toHaveLength(1)
+    const particles = sampleHitSpray(h.scene, fx.bursts[0], 1.15)
+    expect(particles.some(p => elementalPalettes.poison.includes(p.colour) && p.sprite === 'bubble')).toBe(true)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+  })
+
+  it('gives a lethal venom weapon strike poison death debris even when no status message is sent', () => {
+    const h = harness(), removed = world(false), { fx, deaths, renderer } = presentation(removed)
+    h.state.player.inv[0] = { slot: 0, name: 'a +2 dagger of venom' }; h.state.player.weapon_index = 0
+    h.text('You stab the goblin! You kill the goblin!')
+    presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), 'a +2 dagger of venom', 1000, true)
+    expect(fx.bursts).toEqual([])
+    const particles = deaths.sample(removed, 1.15)
+    expect(particles.some(p => elementalPalettes.poison.includes(p.colour) && p.sprite === 'bubble')).toBe(true)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+  })
+
   it('keeps a Prism explosion’s element when it shares a turn and recipient with melee', () => {
     const h = harness(), { fx, renderer } = presentation(h.scene)
     h.text('You hit the goblin! The blast of energy engulfs the goblin!!')

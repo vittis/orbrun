@@ -27,6 +27,50 @@ function harness() {
   return { state, feedback, scene, send, text }
 }
 
+describe('confirmed venom weapon appearance', () => {
+  it.each([
+    'a +2 dagger of venom', '<green>a +2 short sword of venom<lightgrey>',
+    'the +8 whip "Snakebite" {venom, curare, rPois}', 'a +1 dagger (venom)',
+  ])('carries %s into a confirmed hit and death without a poison sentence', name => {
+    const h = harness()
+    h.state.player.inv[0] = { slot: 0, name }; h.state.player.weapon_index = 0
+    h.text('You stab the goblin!')
+    expect(h.feedback.flush(h.scene, 1000)).toMatchObject([{ kind: 'hit', tone: 'poison', amount: undefined, melee: true }])
+    h.text('You kill the goblin!')
+    expect(h.feedback.flush({ ...h.scene, billboards: [] }, 1100)[0].death).toMatchObject({ tone: 'poison', kind: 'flesh' })
+  })
+
+  it.each([true, false])('captures the brand at message receipt when changing weapons before a frame (venom first=%s)', venomFirst => {
+    const h = harness()
+    h.state.player.inv[0] = { slot: 0, name: venomFirst ? 'a +2 dagger of venom' : 'a +2 dagger' }
+    h.state.player.weapon_index = 0
+    h.text('You hit the goblin! You kill the goblin!')
+    h.state.player.inv[0].name = venomFirst ? 'a +2 dagger' : 'a +2 dagger of venom'
+    const events = h.feedback.flush({ ...h.scene, billboards: [] }, 1000)
+    expect(events[0].tone).toBe(venomFirst ? 'poison' : 'physical')
+    expect(events[1].death?.tone).toBe(events[0].tone)
+  })
+
+  it('does not colour spells, allied hits, auxiliary attacks, misses or zero damage from an equipped venom weapon', () => {
+    const h = harness()
+    h.state.player.inv[0] = { slot: 0, name: 'a +2 dagger of venom' }; h.state.player.weapon_index = 0
+    h.text('You miss the goblin. You hit the goblin but do no damage. You headbutt the goblin! The mystic blast hits the goblin! Your orc hits the goblin!')
+    const events = h.feedback.flush(h.scene)
+    expect(events.every(e => e.tone !== 'poison')).toBe(true)
+    expect(events.find(e => e.auxiliary)?.tone).toBe('physical')
+    expect(events.find(e => !e.melee && e.kind === 'hit')?.tone).toBe('magic')
+  })
+
+  it('never creates a hit from poisoning alone or infers a killing hit just from the held weapon', () => {
+    const h = harness()
+    h.state.player.inv[0] = { slot: 0, name: 'a +2 dagger of venom' }; h.state.player.weapon_index = 0
+    h.text('The goblin is poisoned. The goblin looks even sicker. The goblin looks as sick as possible!')
+    expect(h.feedback.flush(h.scene)).toEqual([])
+    h.text('You kill the goblin!')
+    expect(h.feedback.flush({ ...h.scene, billboards: [] })[0].death?.tone).toBeUndefined()
+  })
+})
+
 describe('combat sentences', () => {
   it.each([
     ['The blast of energy engulfs the goblin!!', 'magic'], // Fulminant Prism
