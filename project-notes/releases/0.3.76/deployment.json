@@ -1,0 +1,19 @@
+{
+  "id": "35471ed7-eeaf-4517-b463-6da08db71845",
+  "source": "wrangler",
+  "strategy": "percentage",
+  "created_on": "2026-11-13T02:13:23.227562Z",
+  "versions": [
+    {
+      "version_id": "c3ad9f75-9b37-4b5c-8d2f-916d5dd4587d",
+      "percentage": 100
+    }
+  ],
+  "commit": "9830a4731eb26381112c1d5313f133e9f2d2f0e1",
+  "version": "0.3.76",
+  "sourceTag": "cloudflare-online-v1.73",
+  "buildId": "de38a2ae-6a90-4b7d-b1af-e54f2b5a3aab",
+  "buildConclusion": "success",
+  "githubRunId": 43350505097,
+  "githubConclusion": "success"
+}
