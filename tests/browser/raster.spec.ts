@@ -8,7 +8,7 @@ test('native spell tiles fade without deformation, settle and respect visibility
   }).toMatch(/complete|error/)
   const report = await result(page)
   expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(80)
+  expect(report.checks).toBe(274)
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 

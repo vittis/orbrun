@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.77 — 2026-11-12
+
+- Keep native spell artwork and brief entry/exit fades; remove stacked spell light pools, added cloud deformation/particles and cloud floor residue. Spell overlays no longer change nearby terrain lighting masks or slide between cloud cells.
+- Let native area explosions/clouds own their visual effect, without a second generated burst. Smaller standalone spell/contact cues retain confirmed damage feedback, projectile timing, and the concurrent melee/hit-splash improvements.
+- Expand spell raster checks to 16 artwork families, with independent native-shape references and pixel comparisons for terrain/torch stability around Flame Wave, Volatile Blastmotes and clouds.
+
 ## 0.3.76 — 2026-11-12
 
 - Show melee swings only for player attacks, with one consistent gesture per weapon family and a shorter version for misses.

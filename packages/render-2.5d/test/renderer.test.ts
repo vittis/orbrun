@@ -391,7 +391,7 @@ describe('picking and visibility', () => {
     } finally { draw.mockRestore(); spray.mockRestore(); r.destroy() }
   })
 
-  it('does not keep rendering for offscreen melee or expired spell residue', () => {
+  it('does not keep rendering for offscreen melee or removed native spell artwork', () => {
     const { r } = renderer()
     const scene = sceneOf(cell(0, 0), cell(100, 100), cell(101, 100))
     r.setScene(scene, 0)
@@ -403,7 +403,7 @@ describe('picking and visibility', () => {
     r.setScene({ ...scene, revision: 1, billboards: [bolt] }, 2)
     r.setScene({ ...scene, revision: 2, billboards: [] }, 2.1)
     r.render(3)
-    expect(r.animating).toBe(true)
+    expect(r.animating).toBe(false)
     r.render(5)
     expect(r.animating).toBe(false)
   })
@@ -426,6 +426,21 @@ describe('picking and visibility', () => {
     r.render(1.09)
     expect(order).toEqual([3, 2])
     draw.mockRestore()
+  })
+
+  it('keeps cloud cells fixed instead of tweening anonymous or identified artwork between cells', () => {
+    for (const id of [undefined, 7]) {
+      const { r } = renderer()
+      const scene = sceneOf(cell(0, 0), cell(1, 0))
+      const cloud = { id, x: 0, y: 0, kind: 'cloud' as const, tile: 8, height: 1, life: { motion: 'cloud' as const } }
+      r.setScene({ ...scene, billboards: [cloud] }, 0)
+      const moved = { ...cloud, x: 1 }
+      r.setScene({ ...scene, revision: 1, billboards: [moved] }, 1)
+      r.render(1.03)
+      expect(r.projectBillboard(moved)).toEqual(r.project(1, 0))
+      expect(r.animating).toBe(false)
+      r.destroy()
+    }
   })
 
   it('moves sprite picking and contact shadows together while retaining the confirmed destination', () => {
@@ -542,7 +557,7 @@ describe('picking and visibility', () => {
 
   it('stops animation in still mode and releases scene state on destroy', () => {
     const { r } = renderer()
-    r.setScene(sceneOf(cell(0, 0, { cloud: 8 })))
+    r.setScene(sceneOf(cell(0, 0, { life: { motion: 'flame', lights: [{ colour: [255, 158, 64], radius: 3, power: 0.5, pulse: 'fire' }] } })))
     r.render(0)
     expect(r.animating).toBe(true)
     r.setOptions({ animate: false })
@@ -573,7 +588,7 @@ describe('picking and visibility', () => {
     r.render(0)
     // One terrain glyph and one fallback cloud glyph, not two copies of the cloud.
     expect(ctx.fillText).toHaveBeenCalledTimes(2)
-    expect(r.animating).toBe(true)
+    expect(r.animating).toBe(false)
   })
 })
 

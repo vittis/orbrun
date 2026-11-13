@@ -3,6 +3,7 @@ import { cellKey, lightReaches, lightingFor, type Billboard, type Emitter, type 
 import { planeRect, project, type Projection, type SurfaceRect } from './projection.js'
 import type { Context2d, SurfaceLighting } from './tiles.js'
 import { wallHeight } from './wall-depth.js'
+import { nativeSpellArt } from './spell-presentation.js'
 export function lightField(scene: Scene) { return lightingFor(scene).field }
 
 export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(6, source.radius * 0.85))
@@ -11,7 +12,7 @@ export const glowRadius = (source: Emitter) => Math.max(0.65, Math.min(6, source
 type ActorPosition = (b: Billboard) => { x: number; y: number }
 export function glowCenter(scene: Scene, p: Projection, source: Emitter, tiles?: TileSource | null, position?: ActorPosition) {
   const cell = scene.cells.get(cellKey(source.x, source.y))
-  const billboard = scene.billboards.find(b => b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
+  const billboard = scene.billboards.find(b => !nativeSpellArt(b) && b.x === source.x && b.y === source.y && b.life?.lights?.some(l => l.radius === source.radius && l.colour.join(',') === source.colour.join(',')))
   if (!billboard && cell?.occluder) {
     const z = wallHeight(scene, cell)
     const roof = planeRect(p, cell.x, cell.y, z, 1)
@@ -107,14 +108,14 @@ export class DungeonLighting implements SurfaceLighting {
         } else mask.rect(r.x, r.y, r.width, r.height)
         // Give standing art headroom in the visibility mask. Its own alpha
         // clips the final light sample, so no rectangular sprite glow leaks.
-        if (scene.billboards.some(b => b.x === cell.x && b.y === cell.y) || cell.stance === 'upright' || cell.freestanding) {
+        if (scene.billboards.some(b => !nativeSpellArt(b) && b.x === cell.x && b.y === cell.y) || !cell.life?.spawn && (cell.stance === 'upright' || cell.freestanding)) {
           const foot = project(p, cell.x, cell.y + 0.3)
           mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
         }
       }
       // Retain headroom at each drawn position while actors travel between cells.
       if (position) for (const b of scene.billboards) {
-        if (!cells.some(c => c.x === b.x && c.y === b.y && receives(c))) continue
+        if (nativeSpellArt(b) || !cells.some(c => c.x === b.x && c.y === b.y && receives(c))) continue
         const anchor = position(b), foot = project(p, anchor.x, anchor.y + 0.3)
         mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
       }
