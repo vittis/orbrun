@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.75 — 2026-11-12
+
+- Make confirmed melee and ranged impacts splash naturally around the contact point, with a smaller all-direction spray and a stronger forward majority.
+- Vary splash angles and speed while preserving material artwork, hit timing, visibility clipping and Still/reduced-motion behavior.
+
 ## 0.3.74 — 2026-11-12
 
 - Simplify spell entrances and exits to brief opacity fades of the original server artwork.
