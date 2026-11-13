@@ -33,6 +33,7 @@ import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
+import { LevelUp } from './level-up'
 import { QuickSettings } from './quick-settings'
 
 /** Cap dungeon pixels per CSS pixel to keep the pixel art crisp. */
@@ -103,6 +104,7 @@ export interface GameHooks {
 export class GameScreen {
   private feedback: CombatFeedback
   private nearDeath: NearDeath
+  private levelUp: LevelUp
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
   private renderer: MapRenderer
@@ -297,11 +299,12 @@ export class GameScreen {
     this.session = session
     this.feedback = new CombatFeedback(session.state)
     this.nearDeath = new NearDeath(session.state)
+    this.levelUp = new LevelUp(session.state)
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     this.root.append(this.canvas, this.loading, this.fps.root)
-    this.root.append(this.nearDeath.root)
+    this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
     const st = hooks.settings()
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
@@ -442,6 +445,7 @@ export class GameScreen {
         } else if (e.type === 'state') {
           this.feedback.observe(session.state, e.msg)
           this.nearDeath.observe(session.state, e.msg, performance.now())
+          this.levelUp.observe(session.state, e.msg, performance.now())
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
@@ -456,6 +460,7 @@ export class GameScreen {
           this.lastSent = performance.now()
         } else if (e.type === 'closed') {
           this.nearDeath.clear()
+          this.levelUp.clear()
           this.wake()
         } else if (e.type === 'gamedata') {
           if (e.status === 'ready') {
@@ -544,6 +549,7 @@ export class GameScreen {
     document.documentElement.style.removeProperty('--phone-shrink')
     this.renderer.destroy()
     this.nearDeath.clear()
+    this.levelUp.clear()
     this.root.remove()
   }
 
@@ -652,6 +658,7 @@ export class GameScreen {
     this.renderer.resize(px.width, px.height, this.viewDpr())
     // what rides the view's edges keeps clear of the panes
     const free = map ?? cells.clear
+    this.levelUp.place(this.grid.px(free))
     this.hud.spellRow = spells
     this.hud.glanceRow = glance
     this.hud.layout(this.grid, cells, free, { stats: hideStats, sidebar: hideSidebar, messages: hideMessages })
@@ -900,6 +907,9 @@ export class GameScreen {
     }
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
+    this.levelUp.render(now, !this.mapShown && !this.overlays.hasClientOverlay
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'),
+      this.reducedMotion || !dungeonAnimation(settings, this.reducedMotion))
     this.fps.update(now, rendered)
     perf?.end()
   }
@@ -992,7 +1002,7 @@ export class GameScreen {
   /** Something wants this frame: a message, an input, an easing, an animation, a hold. */
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
-    if (this.renderer.animating || this.nearDeath.active) return true
+    if (this.renderer.animating || this.nearDeath.active || this.levelUp.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 
