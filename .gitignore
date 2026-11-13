@@ -18,4 +18,5 @@ playwright-report/
 # Local-only docs
 docs/
 AGENTS.md
+!/AGENTS.md
 CLAUDE.md

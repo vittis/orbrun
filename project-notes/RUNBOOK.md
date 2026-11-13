@@ -30,26 +30,43 @@ npm run preview -w apps/orbrun -- --host 127.0.0.1
 
 Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; the build does not provision offline engine artifacts. Network/listener/keychain sandbox refusals must be distinguished from application failures.
 
-## Automated checks
+## Automated checks: use the smallest relevant gate
 
 ```sh
-npx playwright install chromium
+# While editing: affected tests since HEAD (or a specific test file).
+npm run test:changed
+npm test -- settings.test.ts
+npm run test:watch -- settings.test.ts
+# Before finishing an ordinary code change:
 npm run verify
-# Faster focused lanes:
-npm run typecheck:full
-npm test
+# Install Chromium once, only when browser checks are needed:
+npx playwright install chromium
 npm run verify:browser
-# Optional engine lane (separate from web acceptance):
-npm run e2e
+# Renderer/scene/artwork/fixture changes: full raster, same interaction tests.
+npm run verify:render
+# Build/Worker/production flags/embedded docs: build once + production preview.
+npm run verify:production
+# Deployment tooling: real Git remote/cleanliness/freshness tests.
+npm run test:deploy
+# Shared harness/config/dependencies, and before releasing:
+npm run verify:release
 ```
 
-`verify` runs forced workspace and browser-test TypeScript checks, unit tests, production build and the full isolated Chromium suite. `verify:browser` rebuilds production assets before starting strict loopback servers on 5286/5287; an occupied port fails instead of testing another checkout. Full raster counts are pinned in `tests/browser/baseline.spec.ts`. The suite tests native reduced-motion transitions, repeated maps/overview/settings/resize, narrow mouse/touch layout, and the online-only production menu. No public server or credentials are required. Browser results and failure traces/screenshots go to ignored `test-results/`.
+`verify` runs incremental workspace and verification-tool TypeScript checks plus the retained unit suite. It needs no Chromium, server, production build or Git-remote fixtures. Warm TypeScript state lives in ignored build-info files; a clean checkout still checks everything. `typecheck:full` deliberately forces the workspace rebuild and remains part of the release gate.
 
-Branch/PR CI runs the same command in `.github/workflows/verify.yml`; browser download is pinned by the exact Playwright dependency. CI installs Linux browser dependencies with `npx playwright install --with-deps chromium`. No automatic retry hides failures.
+`test:changed` uses Vitest's import dependency graph against HEAD, including staged/unstaged/untracked files. It checks both unit and deployment projects when affected. For committed branch changes use `npx vitest run --changed origin/main` (fetch the comparison ref first). Missing bases fail. A zero-test result is allowed for editing convenience and is not acceptance. CSS, readFile fixtures, assets and build configuration can escape dependency selection: explicitly run the appropriate wider command above. `verify` runs the whole retained unit suite regardless of selection.
 
-Run focused suites for changed behavior before the integrated suite. Keep test isolation enabled. The normal suite explicitly skips absent optional engine artifacts; `REQUIRE_ENGINE=1 npm test` and `REQUIRE_ENGINE=1 npm run e2e` make missing stable engine artifacts fatal. Report skips instead of claiming engine coverage.
+`verify:browser` starts only the strict dev server on 5286. Its smoke profile runs 250 raster assertions across all nine concerns, 12 atmosphere assertions, native reduced-motion/Still/On behavior, and actual narrow mouse/touch HUD and map/overview/settings/resize/targeting. `verify:render` substitutes the complete 4,072 raster matrix. Both profiles assert exact counts and fixture completion. `verify:production` builds once, starts only preview on 5287 and checks the online-only production shell. Public WebSockets are intercepted. `verify:release` runs forced TypeScript, both Vitest projects, one production build, then the full browser/production suite with both servers. No duplicate build inside Playwright.
 
-Security-focused regressions include `packages/gamedata/test/parse.test.ts`, `packages/webtiles/test/connection.test.ts`, and app tests for gamedata proxy, session loading and Worker routes. `npm audit --json` can report current advisories; assess exposure before changing dependencies and never use `npm audit fix --force` as a routine verification step.
+Ports are strict and never reuse another checkout's server. Browser contexts and unit files remain isolated; browser retries stay at zero. Reports and failure traces/screenshots go to ignored `test-results/`. Do not install Chromium or run full release verification for ordinary unit-only edits. Retain deliberate browser quiet windows proving that animation stops; use fake time for unit timing.
+
+CI runs once per PR update and on main, plus manual dispatch; it no longer runs a duplicate feature-branch push job. PRs always check retained units for code changes. `tools/testing/change-scope.mjs` adds smoke/full rendering, production and deployment checks based on changed paths, with conservative full checks for unknown paths or shared config. Repository prose-only PRs skip dependency/browser setup; embedded ABOUT/INSTALL/STEAM/CHANGELOG pages still get a production build. Main/manual dispatch run release verification. CI installs pinned Chromium/Linux dependencies only when a browser gate is needed. Main CI is not a deployment interlock: perform release verification before publishing, as in DEPLOYMENT.md.
+
+Keep tests for meaningful behavior and regression boundaries. Remove duplicated storage cases, exact cosmetic wording/layout assertions and redundant matrix combinations rather than perpetuating every historical test. Preserve protocol/input/storage, independent raster oracles, accessibility and security checks. [AGENTS.md](../AGENTS.md) is the short agent policy; [BASELINE.md](BASELINE.md) records measured speed and deliberate tradeoffs.
+
+Optional engine checks remain separate: `REQUIRE_ENGINE=1 npm run e2e` requires provisioned stable artifacts; without the flag, absent artifacts produce explicit skips. Recording describes is a manual tool: `E2E_RECORD=1 npm run e2e -- record-describes`; it is not collected by normal engine acceptance. The assertion-free probe/help dumps were removed. Never claim engine coverage from skips.
+
+Security-focused regressions include gamedata parsing, WebSocket connection, proxy/session loading and Worker routes. Dependency audits are separate maintenance, not part of the editing loop; never use `npm audit fix --force` as routine verification.
 
 ## Browser acceptance
 
@@ -81,7 +98,7 @@ Follow [DEPLOYMENT.md](DEPLOYMENT.md). Commit before the guarded dry-run; do not
 
 Use this checkout's actual Vite port (another checkout may occupy 5173).
 
-- `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. The full profile is the verification default. `&profile=smoke` is explicitly representative, never reported as full acceptance. `&capture=1` retains visual captures; default runs release canvases and yield between bounded cases. JSON in `#result`/`window.__orbrunFixture` reports status, profile, checks, failures and duration.
+- `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. The full profile is the manual fixture default and release/render gate; routine browser checks explicitly select smoke. `&profile=smoke` is explicitly representative, never reported as full acceptance. `&capture=1` retains visual captures; default runs release canvases and yield between bounded cases. JSON in `#result`/`window.__orbrunFixture` reports status, profile, checks, failures and duration.
 - `/testbed/living-checks.html`: 12 retained Dungeon/flat atmosphere, Still and impact assertions at desktop and narrow/DPR sizes.
 - `/testbed/live-animation.html`: actual GameScreen scheduler, combat receipt timing and reduced-motion controls. `?native-motion=1&motion=auto` uses browser media emulation; default synthetic controls support manual inspection. Pixel sampling is opt-in and bounded (`sample=1`), so the probe does not stall the scheduler.
 - `/testbed/map-lifecycle.html`: local message-driven GameScreen transitions, overview hold, cursor, settings changes, cleanup and input evidence. The renderer factory receives the actual presentation requested by GameScreen, supplies fixture tiles and reports applied Dungeon options. Production preview separately exercises default selection.

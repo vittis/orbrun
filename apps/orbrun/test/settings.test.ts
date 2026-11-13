@@ -35,7 +35,7 @@ describe('settings storage boundary', () => {
       store.set('orbrun.' + name, ' untouched bytes ' + name)
     }
     const unrelated = new Map(store)
-    const raw = JSON.stringify({ renderer: '3d', fov: 100, viewmodel: true, keyHints: false, gamepadHints: 'contextual', depthTilt: 42, uiScale: 1.12 })
+    const raw = JSON.stringify({ renderer: '3d', combatPopups: false, fov: 100, viewmodel: true, keyHints: false, gamepadHints: 'contextual', depthTilt: 42, uiScale: 1.12 })
     store.set(key, raw)
     const s = getSettings()
     expect(s.hints).toBe('contextual')
@@ -59,14 +59,14 @@ describe('settings storage boundary', () => {
   })
 
   it('validates booleans and unions on both read and write', () => {
-    const invalid = { depthAnimate: 'yes', depthMovement: 'false', combatPopups: 0, confirmStairs: 1, depthMovementEasing: 'bounce' }
+    const invalid = { depthAnimate: 'yes', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
     expect(getSettings()).toEqual(defaultSettings)
     saveSettings({ ...defaultSettings, ...invalid } as unknown as Settings)
     expect(store.get(key)).toBe('{}')
     for (const depthAnimate of [true, false, 'auto'] as const) {
-      saveSettings({ ...defaultSettings, depthAnimate, depthMovement: false, combatPopups: false, confirmStairs: true, depthMovementEasing: 'linear' })
-      expect(getSettings()).toMatchObject({ depthAnimate, depthMovement: false, combatPopups: false, confirmStairs: true, depthMovementEasing: 'linear' })
+      saveSettings({ ...defaultSettings, depthAnimate, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
+      expect(getSettings()).toMatchObject({ depthAnimate, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
     }
   })
 })

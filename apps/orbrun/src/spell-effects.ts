@@ -1,7 +1,7 @@
 import type { SpellEffect } from '@orbrun/scene'
 import { formattedStringToText, type StatusEntry } from '@orbrun/webtiles'
 
-export interface SpellCue { kind: SpellEffect['kind']; target?: string; player?: boolean }
+export interface SpellCue { kind: SpellEffect['kind']; target?: string; player?: boolean; intensity?: SpellEffect['intensity'] }
 
 // Crawl's confirmed result sentences. Never use cast prompts, selected spells,
 // keypresses or MP expenditure: those also occur for cancelled/failed casts.
@@ -63,16 +63,26 @@ export function spellText(text: string): SpellCue[] {
   return cues
 }
 
-/** Additional magical statuses beyond the small set shown as combat popups.
- * Using the stable light/text identity avoids retriggering countdown changes. */
+const statusEffects = [
+  [/pois|poison/i, 'poisoned', 'debuff'], [/conf/i, 'confused', 'debuff'],
+  [/paral/i, 'paralysed', 'debuff'], [/slow/i, 'slowed', 'debuff'],
+  [/haste|fast/i, 'hasted', 'buff'], [/berserk/i, 'berserk', 'buff'],
+  [/corro/i, 'corroded', 'debuff'], [/petr/i, 'petrifying', 'debuff'],
+  [/invis/i, 'invisible', 'buff'], [/silence|silenced/i, 'silenced', 'buff'],
+  [/held|net|web/i, 'held', 'debuff'],
+] as const
+
+/** Stable status identities avoid retriggering effects as countdowns/strength change. */
 export function spellStatuses(entries: StatusEntry[]): Map<string, SpellEffect['kind']> {
   const result = new Map<string, SpellEffect['kind']>()
   for (const entry of entries) {
     const text = entry.light || entry.text || ''
+    const matched = statusEffects.find(([re]) => re.test(text))
+    if (matched) { result.set(matched[1], matched[2]); continue }
     const kind: SpellEffect['kind'] | undefined = /icy armour|ozocubu|rampart/i.test(text) ? 'cold'
       : /toxic radiance|toxic bog/i.test(text) ? 'poison'
       : /charge|discharge|coupling/i.test(text) ? 'electric'
-      : /swiftness|swift|flight|flying|repel|resist|shroud|regenerat|regen|death.s door|death channel|infusion|song|heroism|finesse|might|brilliance|agility|divine|vitali[sz]|wereblood|invis|haste|berserk/i.test(text) ? 'buff'
+      : /swiftness|swift|flight|flying|repel|resist|shroud|regenerat|regen|death.s door|death channel|infusion|song|heroism|finesse|might|brilliance|agility|divine|vitali[sz]|wereblood/i.test(text) ? 'buff'
       : /\bform\b|necromutation|lich|transmut|transform/i.test(text) ? 'magic' : undefined
     if (kind) result.set(text, kind)
   }

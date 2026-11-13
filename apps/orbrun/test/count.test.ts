@@ -158,8 +158,8 @@ describe('counts: stable or trunk, and the window size', () => {
 
 describe('counts: the settings a game starts on', () => {
   it('keeps counted settings in sync with the offered stops', () => {
-    // Dungeon and combat effects preferences remain local.
-    const offered = ALL_SETTING_ROWS.filter((r) => !r.key.startsWith('depth') && r.key !== 'combatPopups')
+    // Dungeon presentation preferences remain local.
+    const offered = ALL_SETTING_ROWS.filter((r) => !r.key.startsWith('depth'))
     expect(SETTING_KEYS.slice().sort()).toEqual(offered.map((r) => r.key).sort())
     for (const r of offered) expect([...COUNTED_SETTINGS[r.key as keyof typeof COUNTED_SETTINGS]], r.key).toEqual([...r.values])
   })

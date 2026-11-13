@@ -17,7 +17,7 @@ export async function wallCoherenceChecks() {
   }
   let checks = 0
   const failures: unknown[] = []
-  for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
+  for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
     const canvas = document.createElement('canvas'), r = new Render25d({ animate: false, filterScaling, tilt: degrees, zoom })
     r.mount(canvas); r.resize(900, 700, dpr); r.setTiles(source)
     const scene = emptyScene()

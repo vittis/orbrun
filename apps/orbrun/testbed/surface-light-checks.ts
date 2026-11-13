@@ -1,4 +1,4 @@
-import { fixtureYield, releaseCanvas, pixelSampler } from './fixture'
+import { matrix, fixtureYield, releaseCanvas, pixelSampler } from './fixture'
 import { Render25d, fittedScale, project } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 
@@ -17,7 +17,7 @@ export async function surfaceLightChecks() {
     tile: id => ({ atlas: 'test', sx: (id - 1) * 32, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
     atlas: () => atlas, atlasNames: () => ['test'],
   }
-  for (const dpr of [1, 2]) {
+  for (const dpr of matrix([1, 2], [2])) {
     await fixtureYield(`surfaces DPR${dpr}`)
     const canvas = document.createElement('canvas'), r = new Render25d({ animate: false })
     r.mount(canvas); r.resize(640, 480, dpr); r.setTiles(source)

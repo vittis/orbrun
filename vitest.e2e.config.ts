@@ -8,7 +8,7 @@ if (process.env.REQUIRE_ENGINE === '1' && !existsSync(new URL('./engine/dist/sta
 }
 export default defineConfig({
   test: {
-    include: ['apps/orbrun/test/e2e/**/*.test.ts'],
+    include: process.env.E2E_RECORD ? ['apps/orbrun/test/e2e/record-describes.manual.ts'] : ['apps/orbrun/test/e2e/**/*.test.ts'],
     testTimeout: 600_000,
   },
 })

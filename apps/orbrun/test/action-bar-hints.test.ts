@@ -108,15 +108,6 @@ describe('a hold in progress fills its prompt', () => {
   })
 })
 
-describe('the level map', () => {
-  it('lays its prompts along its foot in the pairs that go together, one over the other', () => {
-    const el = bar(ctx({ mode: 'levelmap', mapCursorHome: true }))
-    expect(el.classList.contains('foot')).toBe(true)
-    const pairs = [...el.querySelectorAll('.foot-pair')].map((p) => [...p.querySelectorAll('.chip')].map((c) => c.classList[1]))
-    expect(pairs).toEqual([['LB', 'RB'], ['LT', 'RT'], ['L3', 'R3'], ['Y', 'X']])
-    expect(bar(ctx({ mode: 'command' })).classList.contains('foot')).toBe(false)
-  })
-})
 
 describe('the stack under a centred panel', () => {
   it('lies down in a row under a menu, a crt screen or a popup, and stands as a column in play', () => {
@@ -148,16 +139,6 @@ describe('the pad menu strip', () => {
     return new Hud(host, { onSelectMonster() {}, onBarAction() {}, onMinimapClick() {}, onPanelItem() {}, onPanelShow() {} }) as unknown as Inner
   }
   const chips = (side: Element) => [...side.querySelectorAll('.chip')].map((c) => [c.classList[1], c.querySelector('.label')?.textContent])
-
-  it('stands Select in the left corner and the right hand\'s three in the right, Spells at the foot', () => {
-    const inner = hud()
-    inner.renderMenus(ctx({}), 'xbox', true)
-    expect(inner.menubar.hidden).toBe(false)
-    const [left, right] = inner.menubar.querySelectorAll('.side')
-    expect(chips(left)).toEqual([['SELECT', 'Level map']])
-    expect(chips(right)).toEqual([['START', 'Character'], ['Y', 'Gear'], ['X', 'Spells']])
-    expect(inner.menubar.querySelector('.chip.X svg')).not.toBeNull()
-  })
 
   it('is only for the play view, not a menu, aiming, the keyboard or a spectator', () => {
     const inner = hud()

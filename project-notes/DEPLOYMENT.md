@@ -27,7 +27,7 @@ Do not append an asset build to the build command: Wrangler's hook builds once. 
 
 1. Inspect status, HEAD, remotes and current remote main. Integrate `origin/main`, preserve intervening changes and rerun affected verification.
 2. Choose the next semantic version and a new immutable `cloudflare-online-v1.N` source tag. Do not reuse or move a tag. Update app version/lockfile, changelog and every source link, including `ABOUT.md`, `apps/orbrun/index.html`, `site-pages.ts`, `src/markdown.ts` and relevant tests.
-3. Run forced TypeScript rebuild, all unit tests, production build, optional E2E lanes, browser fixtures and production preview checks. Record counts, failures/skips and coverage limits. Independently review the actual integrated diff.
+3. Run `npm run verify:release`: forced TypeScript, both unit/deployment projects, one production build, full raster/interaction checks and production preview. Run optional engine E2E when provisioned or affected. `npm run verify` alone is only the fast development gate. Record counts, failures/skips and coverage limits. Independently review the actual integrated diff.
 4. Commit the reviewed source. With a clean tree, run:
 
 ```sh

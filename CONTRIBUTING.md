@@ -15,14 +15,15 @@ Use Node 24.11.1/npm 11.6.2 for the verified web workflow.
 ```sh
 npm ci --include=dev
 npm run dev -w apps/orbrun -- --host 127.0.0.1
-npx playwright install chromium
-npm run verify
-npm run e2e # optional engine artifacts required for execution
+npm run test:changed # while editing
+npm run verify # incremental types + retained unit tests, no browser/build
 ```
 
-Run focused regressions during work and the integrated checks before release. Absent optional engine artifacts cause explicit skips; `REQUIRE_ENGINE=1` makes stable-artifact absence fatal. The verification command includes real Chromium fixture checks and production preview; browser config/tests are typechecked too. [RUNBOOK.md](project-notes/RUNBOOK.md) describes acceptance and coverage limits.
+For UI changes, install Chromium once with `npx playwright install chromium`, then run `npm run verify:browser`. Renderer/scene/artwork changes use `npm run verify:render` instead. Build/Worker/production changes use `npm run verify:production`; deployment tools also need `npm run test:deploy`. Before release or after shared harness/config/dependency changes, use `npm run verify:release` (full types, both test projects, one build, full browser matrix and production preview).
 
-Test workers use isolated threads with at most four workers. To compare settings, run `node tools/perf/vitest-workers.mjs --rounds 2`; compare repeated timings and equal collected cases/skips on the target machine. Recording helpers share parsed immutable fixture input and clone mutable messages/state. Do not remove isolation or weaken assertions to improve timings.
+[AGENTS.md](AGENTS.md) is the concise agent workflow. [RUNBOOK.md](project-notes/RUNBOOK.md) explains selection caveats, optional engines, CI and acceptance limits. [BASELINE.md](project-notes/BASELINE.md) records measured performance. Changed-test selection does not establish CSS/asset/build coverage; use the relevant broader gate. No automatic retries or disabled isolation. Add tests for meaningful behavior and regressions; remove duplicated cases and cosmetic implementation assertions.
+
+Test workers use bounded isolated threads. `node tools/perf/vitest-workers.mjs --rounds 2` compares repeated timings and identical test inventories when runner tuning is justified. Do not benchmark concurrently with other test/build workloads.
 
 ## Fixtures and live testing
 

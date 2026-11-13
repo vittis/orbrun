@@ -1,7 +1,7 @@
-name: Verify baseline
+name: Verify
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -18,13 +18,41 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Select verification scope
+        id: scope
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/testing/change-scope.mjs "$BASE_SHA" "$HEAD_SHA"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event_name != 'pull_request' || steps.scope.outputs.code == 'true'
         with:
           node-version: '24.11.1'
           cache: npm
-      - run: npm ci --include=dev --no-audit --no-fund
+      - run: npm ci --include=dev --prefer-offline --no-audit --no-fund
+        if: github.event_name != 'pull_request' || steps.scope.outputs.code == 'true'
       - run: npx playwright install --with-deps chromium
-      - run: npm run verify
+        if: github.event_name != 'pull_request' || steps.scope.outputs.browser != 'none' || steps.scope.outputs.production == 'true'
+      - name: Fast checks
+        if: github.event_name == 'pull_request' && steps.scope.outputs.code == 'true'
+        run: npm run verify
+      - name: Deployment tooling
+        if: github.event_name == 'pull_request' && steps.scope.outputs.deploy == 'true'
+        run: npm run test:deploy
+      - name: Browser checks
+        if: github.event_name == 'pull_request' && steps.scope.outputs.browser != 'none'
+        env:
+          BROWSER_SUITE: ${{ steps.scope.outputs.browser }}
+        run: npm run verify:browser
+      - name: Production bundle
+        if: github.event_name == 'pull_request' && steps.scope.outputs.production == 'true'
+        run: npm run verify:production
+      - name: Release checks
+        if: github.event_name != 'pull_request'
+        run: npm run verify:release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

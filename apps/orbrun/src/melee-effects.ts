@@ -1,5 +1,5 @@
 import { hitIntensity, type MeleeAttack, type Scene, type DamageType, type HitIntensity } from '@orbrun/scene'
-import type { CombatPopup } from './combat-feedback'
+import type { CombatEvent } from './combat-feedback'
 
 /** Inventory names include enchantments and brands; match the weapon noun. */
 export function meleeStyle(weapon: string | undefined): MeleeAttack['style'] | null {
@@ -11,8 +11,8 @@ export function meleeStyle(weapon: string | undefined): MeleeAttack['style'] | n
   return 'slash'
 }
 
-/** Popups are optional; the same confirmed feedback drives melee in all 2.5D games. */
-export function meleeFor(event: CombatPopup, scene: Scene, weapon: string | undefined): MeleeAttack | null {
+/** Confirmed combat evidence drives melee gestures. */
+export function meleeFor(event: CombatEvent, scene: Scene, weapon: string | undefined): MeleeAttack | null {
   if (!event.melee || event.brandOnly || event.player || event.x === undefined || event.y === undefined) return null
   const style = meleeStyle(weapon)
   if (!style) return null

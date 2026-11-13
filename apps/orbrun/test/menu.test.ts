@@ -2273,14 +2273,14 @@ describe('the front end: settings and marks', () => {
     pick(screen, 'Settings')
     pick(screen, 'View')
     expect(screen.root.querySelector('.menu-actions [data-focus="back"]')).not.toBeNull()
-    const row = screen.root.querySelector<HTMLElement>('[data-focus="setting:Combat popups"]')!
+    const row = screen.root.querySelector<HTMLElement>('[data-focus="setting:Dungeon movement"]')!
     expect(row.classList.contains('item')).toBe(true)
     expect(row.querySelector('.marker')?.getAttribute('aria-hidden')).toBe('true')
     row.querySelector<HTMLElement>('.arrow:last-child')!.click()
-    expect(focused(screen)).toBe('setting:Combat popups')
-    expect(row.querySelector('.val')?.textContent).toBe('Off')
+    expect(focused(screen)).toBe('setting:Dungeon movement')
+    expect(row.querySelector('.val')?.textContent).toBe('Instant')
     // The same setting changes once, not once for the arrow and again for the row.
-    expect(JSON.parse(localStorage.getItem('orbrun.settings')!).combatPopups).toBe(false)
+    expect(JSON.parse(localStorage.getItem('orbrun.settings')!).depthMovement).toBe(false)
     const inGame = settingsPanel('View')
     expect(inGame.el.querySelector('.front-setting, .item, .marker')).toBeNull()
     expect(inGame.el.querySelector('.hotkey')).not.toBeNull()

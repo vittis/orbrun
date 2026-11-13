@@ -21,7 +21,7 @@
     "build": "npm run build -w apps/orbrun",
     "preview": "npm run preview -w apps/orbrun",
     "typecheck": "tsc -b && tsc -p tsconfig.browser.json",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
     "e2e": "vitest run -c vitest.e2e.config.ts",
     "record": "node tools/record/record.mjs",
     "room:pack": "node tools/build/pack-room.mjs",
@@ -29,9 +29,15 @@
     "deploy": "wrangler deploy",
     "deploy:guard": "node tools/build/deploy-guard.mjs",
     "deploy:check": "wrangler deploy --dry-run",
-    "verify": "npm run typecheck:full && npm test && npm run verify:browser",
-    "verify:browser": "npm run build && playwright test",
-    "typecheck:full": "tsc -b --force && tsc -p tsconfig.browser.json"
+    "verify": "npm run typecheck && npm test",
+    "verify:browser": "playwright test",
+    "typecheck:full": "tsc -b tsconfig.json tsconfig.browser.json --force",
+    "test:changed": "vitest run --changed HEAD --passWithNoTests",
+    "test:watch": "vitest --project unit",
+    "test:deploy": "vitest run --project deploy",
+    "verify:render": "BROWSER_SUITE=full playwright test",
+    "verify:production": "npm run build && BROWSER_SUITE=production playwright test",
+    "verify:release": "npm run typecheck:full && vitest run && npm run build && BROWSER_SUITE=release playwright test"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",

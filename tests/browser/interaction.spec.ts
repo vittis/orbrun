@@ -1,36 +1,5 @@
-import { test as base, expect, type Page } from '@playwright/test'
-
-// Every test gets a fresh browser context. Fixture exceptions must fail the gate,
-// including errors that happen after a fixture writes its initial status.
-const test = base.extend<{ pageErrors: void }>({
-  pageErrors: [async ({ page }, use) => {
-    const errors: string[] = []
-    page.on('pageerror', error => errors.push(error.message))
-    await use()
-    expect(errors, 'uncaught browser errors').toEqual([])
-  }, { auto: true }],
-})
-
-async function result(page: Page) {
-  const text = await page.locator('#result').innerText()
-  return text.trim() ? JSON.parse(text) : {}
-}
-
-const fullChecks = { tiles: 342, markers: 216, surfaces: 28, movement: 324, depth: 162, visibility: 96, arrival: 96, coherence: 378, corridors: 2430 }
-for (const [lane, checks] of Object.entries(fullChecks)) {
-  test(`full raster: ${lane}`, async ({ page }) => {
-    await page.goto(`/testbed/dungeon-checks.html?lane=${lane}`)
-    await expect.poll(async () => {
-      try { return (await result(page)).status } catch { return 'loading' }
-    }, { timeout: 75_000 }).toMatch(/complete|error/)
-    const report = await result(page)
-    expect(report.status, JSON.stringify(report)).toBe('complete')
-    expect(report.profile).toBe('full')
-    expect(report.checks, 'complete full matrix').toBe(checks)
-    expect(report.failures, JSON.stringify(report)).toEqual([])
-    expect(report.passed).toBe(report.checks)
-  })
-}
+import { expect } from '@playwright/test'
+import { test, result } from './fixtures'
 
 test('Dungeon and flat atmosphere, Still, and impact', async ({ page }) => {
   await page.goto('/testbed/living-checks.html')
@@ -71,6 +40,10 @@ test('real GameScreen follows native reduced motion, Still, and explicit On', as
   await expect.poll(async () => (await result(page)).reduced).toBe(false)
   await expect.poll(async () => (await result(page)).animating).toBe(true)
   await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(beforeResume + 2)
+  // Removing floating text must leave confirmed world effects connected to GameScreen.
+  const impacts = (await result(page)).impacts
+  await page.getByRole('button', { name: 'Trigger local hit', exact: true }).click()
+  await expect.poll(async () => (await result(page)).impacts).toBeGreaterThan(impacts)
 })
 
 for (const touch of [false, true]) {
@@ -120,17 +93,3 @@ for (const touch of [false, true]) {
   })
 }
 
-test('production shell has Dungeon scenery and only bundled online play', async ({ page }) => {
-  // Keep the acceptance lane deterministic and independent of public servers.
-  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
-  await page.goto('http://127.0.0.1:5287/')
-  await expect(page.locator('canvas.room.in')).toHaveCount(1)
-  await expect(page.getByText('An unofficial 2.5D client for Dungeon Crawl Stone Soup.', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: /Settings/ }).click()
-  await expect(page.getByText('Dungeon tilt', { exact: false })).toBeVisible()
-  await expect(page.getByText('Projection', { exact: true })).toHaveCount(0)
-  await page.goto('http://127.0.0.1:5287/')
-  await page.getByRole('button', { name: /Play/ }).click()
-  await expect(page.getByRole('button', { name: /CDI/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Offline|Custom server|Add server/i })).toHaveCount(0)
-})

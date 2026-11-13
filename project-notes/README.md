@@ -5,7 +5,8 @@ Read [STATUS.md](STATUS.md), then [ARCHITECTURE.md](ARCHITECTURE.md) and [RUNBOO
 | Document | Purpose |
 |---|---|
 | [STATUS.md](STATUS.md) | Current implementation/release state and limitations |
-| [STABILIZATION.md](STABILIZATION.md) | Current stabilization scope, ownership and acceptance |
+| [../AGENTS.md](../AGENTS.md) | Fast iteration policy for coding agents |
+| [STABILIZATION.md](STABILIZATION.md) | Completed 0.3.68 stabilization scope and review |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Package responsibilities and state/presentation boundaries |
 | [DECISIONS.md](DECISIONS.md) | Decisions introduced by the simplification |
 | [BASELINE.md](BASELINE.md) | Current validation results and coverage limits |

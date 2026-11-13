@@ -138,18 +138,10 @@ The offline engine's patches and build files (`engine/`) are derived from
 WebAssembly port of DCSS (GPLv2+), reworked into a patch series against
 upstream and a JSPI-only build.
 
-Combat popup presentation is inspired by [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl).
-The offline engine's beam-damage patch is adapted from that project's
-`spell-damage-numbers.patch` (GPLv2); the attack-damage patch follows its
-approach of including actual damage in combat messages. The client popup
-layer is implemented independently for Orbrun's renderers.
-
 ## Third-party assets and dependencies
 
 - Grenze Gotisch by Omnibus-Type (SIL Open Font License 1.1,
   `assets/fonts/OFL.txt`): the title face, as described above.
-- Barlow Condensed Bold by the Barlow Project Authors (SIL Open Font License
-  1.1, `apps/orbrun/public/fonts/BARLOW-OFL.txt`): self-hosted combat popup face.
 - Tile art and atlases for gameplay are **not** distributed here. They are
   fetched at runtime from the connected DCSS server, which serves its own
   copies. DCSS tiles are by the DCSS contributors under the licenses stated

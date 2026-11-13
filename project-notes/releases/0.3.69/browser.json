@@ -1,0 +1,634 @@
+{
+  "config": {
+    "argv": [
+      "/Users/vittis/.nvm/versions/node/v24.11.1/bin/node",
+      "/Users/vittis/dev/dcss-client/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/Users/vittis/dev/dcss-client/playwright.config.ts",
+    "rootDir": "/Users/vittis/dev/dcss-client/tests/browser",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 480000,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/vittis/dev/dcss-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "profile": "full"
+        },
+        "id": "release",
+        "name": "release",
+        "testDir": "/Users/vittis/dev/dcss-client/tests/browser",
+        "testIgnore": [],
+        "testMatch": [
+          "**/raster.spec.ts",
+          "**/interaction.spec.ts",
+          "**/production.spec.ts"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/vittis/dev/dcss-client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "profile": "full"
+        },
+        "name": "release",
+        "testDir": "/Users/vittis/dev/dcss-client/tests/browser",
+        "snapshotDir": "/Users/vittis/dev/dcss-client/tests/browser",
+        "testIgnore": [],
+        "testMatch": [
+          "**/raster.spec.ts",
+          "**/interaction.spec.ts",
+          "**/production.spec.ts"
+        ],
+        "timeout": 90000,
+        "use": {
+          "browserName": "chromium",
+          "actionTimeout": 5000,
+          "navigationTimeout": 20000,
+          "baseURL": "http://127.0.0.1:5286",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "trace": "retain-on-failure",
+          "screenshot": "only-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "release"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/browser.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.0",
+    "workers": 2,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "interaction.spec.ts",
+      "file": "interaction.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Dungeon and flat atmosphere, Still, and impact",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 977,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:43.147Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "658d4d77d9fd28df6a81-6c21a17da0362d445edd",
+          "file": "interaction.spec.ts",
+          "line": 4,
+          "column": 1
+        },
+        {
+          "title": "real GameScreen follows native reduced motion, Still, and explicit On",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 3675,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:43.148Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "658d4d77d9fd28df6a81-0b89c6eae919edd5bae2",
+          "file": "interaction.spec.ts",
+          "line": 17,
+          "column": 1
+        }
+      ],
+      "suites": [
+        {
+          "title": "narrow mouse",
+          "file": "interaction.spec.ts",
+          "line": 50,
+          "column": 8,
+          "specs": [
+            {
+              "title": "readable HUD and repeated map/overview restoration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "release",
+                  "projectName": "release",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2403,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-13T00:17:44.378Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "658d4d77d9fd28df6a81-fdb3fff5a3895bfc94a1",
+              "file": "interaction.spec.ts",
+              "line": 52,
+              "column": 5
+            }
+          ]
+        },
+        {
+          "title": "narrow touch",
+          "file": "interaction.spec.ts",
+          "line": 50,
+          "column": 8,
+          "specs": [
+            {
+              "title": "readable HUD and repeated map/overview restoration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "release",
+                  "projectName": "release",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2470,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-13T00:17:46.791Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "658d4d77d9fd28df6a81-8f662a537603efd368ca",
+              "file": "interaction.spec.ts",
+              "line": 52,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "production.spec.ts",
+      "file": "production.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "production shell has Dungeon scenery and only bundled online play",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1389,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:47.079Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ed69554c53210704c98c-2b6dfaac97731fa4c33a",
+          "file": "production.spec.ts",
+          "line": 4,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "raster.spec.ts",
+      "file": "raster.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "raster: tiles",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 10444,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:48.493Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-33f49dd6d46a422c589a",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: markers",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2132,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:49.272Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-17205b103058d1b25c5e",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: surfaces",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5198,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:51.412Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-14a7a3da777766c7690e",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: movement",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5576,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:56.619Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-cd3b6c112058bdb11bed",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: depth",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 3780,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:17:58.947Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-d648c267452d9b357dbc",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: visibility",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 11270,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:18:02.205Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-c6326c1b2cce79fb2e00",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: arrival",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1119,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:18:02.735Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-34a7608df885cb423115",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: coherence",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 4494,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:18:03.862Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-e219f021561376c424e0",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        },
+        {
+          "title": "raster: corridors",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "release",
+              "projectName": "release",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 9668,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-13T00:18:08.368Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c87c80ffe0d3d2ef1f9a-ebe9223c8518779289e3",
+          "file": "raster.spec.ts",
+          "line": 8,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-13T00:17:41.070Z",
+    "duration": 37028.054000000004,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

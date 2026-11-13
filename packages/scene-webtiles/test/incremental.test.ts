@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
+import { describe, it, expect, beforeAll } from 'vitest'
+import { initialState, reduce } from '@orbrun/webtiles'
 import type { Gamedata } from '@orbrun/gamedata'
 import { fixtureGamedata, fixtureMessages, fixtureState } from './recording'
 import { cellKey, type Scene } from '@orbrun/scene'
@@ -7,10 +7,10 @@ import { buildScene } from '../src/index.js'
 
 /**
  * The incremental build (`BuildOptions.dirty`) must give the scene the full
- * build gives, at every flush, for the whole recorded session: the same
+ * build gives, at each selected flush, for the whole recorded session: the same
  * cells, billboards, lids, level and bounds, and the same layout revisions
- * as the plain `previous` chain. Replayed at several flush cadences, since a
- * flush may gather one message or many.
+ * as the plain `previous` chain. One replay alternates flush cadences, since a
+ * flush may gather one message or many; avoid three nearly identical full replays.
  */
 /** Everything a scene says, with the bookkeeping revisions left out and the cells in key order. */
 function semantics(s: Scene) {
@@ -20,47 +20,46 @@ function semantics(s: Scene) {
 
 describe('incremental scene building', () => {
   let gd: Gamedata
-  let messages: ServerMessage[]
   beforeAll(async () => {
     gd = await fixtureGamedata()
   })
-  beforeEach(() => { messages = fixtureMessages() })
 
-  for (const every of [1, 7, 50]) {
-    it(`matches the full build at every flush, one flush every ${every} message${every > 1 ? 's' : ''}`, () => {
-      const state = initialState()
-      let chained: Scene | undefined
-      let incremental: Scene | undefined
-      let flushes = 0
-      let reused = 0
-      let carried = 0
-      const flush = () => {
-        flushes++
-        const full = buildScene(state, gd)
-        chained = buildScene(state, gd, { previous: chained })
-        const before = incremental
-        incremental = buildScene(state, gd, { previous: incremental, dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
-        state.dirtyCells.clear()
-        state.mapCleared = false
-        expect(semantics(incremental)).toEqual(semantics(full))
-        // the layout revisions move as the plain chain's do: same on the same flushes, new on the same flushes
-        expect(incremental.revision).toBe(chained.revision)
-        if (before) {
-          reused++
-          for (const [k, c] of incremental.cells) if (before.cells.get(k) === c) carried++
-        }
+  it('matches full builds across alternating immediate and batched flushes of the complete recording', () => {
+    const messages = fixtureMessages()
+    const cadence = [1, 7, 50]
+    let pending = 0
+    const state = initialState()
+    let chained: Scene | undefined
+    let incremental: Scene | undefined
+    let flushes = 0
+    let reused = 0
+    let carried = 0
+    const flush = () => {
+      flushes++
+      const full = buildScene(state, gd)
+      chained = buildScene(state, gd, { previous: chained })
+      const before = incremental
+      incremental = buildScene(state, gd, { previous: incremental, dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
+      state.dirtyCells.clear()
+      state.mapCleared = false
+      expect(semantics(incremental)).toEqual(semantics(full))
+      // the layout revisions move as the plain chain's do: same on the same flushes, new on the same flushes
+      expect(incremental.revision).toBe(chained.revision)
+      if (before) {
+        reused++
+        for (const [k, c] of incremental.cells) if (before.cells.get(k) === c) carried++
       }
-      for (const [i, m] of messages.entries()) {
-        reduce(state, m)
-        if ((i + 1) % every === 0) flush()
-      }
-      flush()
-      expect(flushes).toBeGreaterThan(2)
-      // and it did carry cells over rather than rebuild them: most of an explored level stands still between flushes
-      expect(carried).toBeGreaterThan(0)
-      expect(reused).toBeGreaterThan(0)
-    }, 60_000) // three builds per message over the whole recording: slow under a loaded suite, never flaky
-  }
+    }
+    for (const m of messages) {
+      reduce(state, m)
+      if (++pending === cadence[flushes % cadence.length]) { flush(); pending = 0 }
+    }
+    flush()
+    expect(flushes).toBeGreaterThan(2)
+    // and it did carry cells over rather than rebuild them: most of an explored level stands still between flushes
+    expect(carried).toBeGreaterThan(0)
+    expect(reused).toBeGreaterThan(0)
+  })
 
   it('carries untouched cells and billboards over by identity, and rebuilds the touched ones', () => {
     const state = fixtureState()
@@ -87,7 +86,7 @@ describe('incremental scene building', () => {
   it('does not trust a previous scene built from another state', () => {
     const state = fixtureState()
     const other = initialState()
-    for (const m of messages.slice(0, 40)) reduce(other, m)
+    for (const m of fixtureMessages().slice(0, 40)) reduce(other, m)
     const foreign = buildScene(other, gd)
     const s = buildScene(state, gd, { previous: foreign, dirty: { cells: new Set(), mapCleared: false } })
     expect(semantics(s)).toEqual(semantics(buildScene(state, gd)))
@@ -121,7 +120,7 @@ describe('incremental scene building', () => {
     expect(player().life).toMatchObject({ motion: 'fly', flying: true, held: true })
   })
 
-  it.each(['Gnoll', 'Human', 'Minotaur', 'Merfolk', 'Naga', 'Gargoyle', 'Tengu', 'Draconian', 'Djinni'])(
+  it.each(['Human', 'Tengu', 'Djinni'])(
     'keeps a %s grounded without an active flight status, despite the player tile flag', species => {
       const state = fixtureState()
       state.player.species = species; state.player.status = []

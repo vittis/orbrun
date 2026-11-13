@@ -8,7 +8,6 @@ export interface Settings {
   /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
   depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
-  combatPopups: boolean
   uiScale: number
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
@@ -42,7 +41,6 @@ export const defaultSettings: Settings = {
   depthMovement: true,
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
-  combatPopups: true,
   uiScale: 1,
   confirmStairs: false,
   minimapTiles: 0,

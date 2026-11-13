@@ -6,7 +6,19 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.browser.tsbuildinfo",
+    "allowJs": true,
+    "checkJs": true
   },
-  "include": ["playwright.config.ts", "tests/browser/**/*.ts"]
+  "include": [
+    "playwright.config.ts",
+    "tests/browser/**/*.ts",
+    "vitest.config.ts",
+    "tools/testing/**/*.mjs",
+    "tools/testing/test/**/*.ts"
+  ]
 }

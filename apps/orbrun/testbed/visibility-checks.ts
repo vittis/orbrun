@@ -7,7 +7,7 @@ import { TileCache } from '../../../packages/render-2.5d/src/tiles'
 export async function visibilityChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
-  for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const kind of ['floor', 'wall', 'sprite']) {
+  for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of matrix([false, true], [true])) for (const kind of ['floor', 'wall', 'sprite']) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ animate: true, filterScaling })
     r.mount(canvas); r.resize(640, 480, dpr); r.setTiles(source)

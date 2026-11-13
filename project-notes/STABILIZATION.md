@@ -36,7 +36,7 @@ One presentation state replaces the prior correlated flags; settings cannot sele
 
 The new browser gate caught a test-selector error, fixed without changing runtime behavior. Full raster matrices now finish in about a minute and pass all 4,072 checks; native reduced-motion transitions pass. Verification is typechecked, rejects reduced assertion counts, aborts public WebSockets in preview tests and preserves failure traces.
 
-Independent reviewers inspected settings/storage, renderer oracles and full matrices, map/pointer/layout behavior, verification/CI and documentation links/security safeguards. Local `npm run verify` passed: 2,296 unit tests plus 14 browser tests. See BASELINE.md for measured limits.
+Independent reviewers inspected settings/storage, renderer oracles and full matrices, map/pointer/layout behavior, verification/CI and documentation links/security safeguards. Local `npm run verify` passed: 2,296 unit tests plus 14 browser tests. This is the completed 0.3.68 release result; see releases/0.3.68.md for its evidence. BASELINE.md now records the subsequent fast-iteration verification setup.
 
 Release source, guarded preflight, branch CI and hosted evidence: [releases/0.3.68.md](releases/0.3.68.md).
 
