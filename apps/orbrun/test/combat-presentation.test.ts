@@ -108,6 +108,32 @@ describe('combat contact timing', () => {
     expect(renderer.deflect).toHaveBeenCalledTimes(2)
   })
 
+  it.each([0.5, 2])('animates blocked melee at %sx with shield contact and no damage effects', speed => {
+    const { scene, renderer } = harness()
+    scene.billboards = [{ x: 1, y: 0, id: 1, name: 'goblin', kind: 'monster', tile: 1, height: 1 }]
+    const state = initialState()
+    state.player.hp_max = 30
+    const feedback = new CombatFeedback(state)
+    feedback.flush(scene)
+    const msg = { msg: 'msgs', messages: [{ text: "You block the goblin's attack. The goblin blocks your attack." }] }
+    reduce(state, msg); feedback.observe(state, msg)
+    const events = feedback.flush(scene)
+    const spells = feedback.takeSpells()
+    presentCombat(renderer, scene, events, spells, 'mace', 1000, true, speed)
+    expect(renderer.bump).toHaveBeenCalledTimes(2)
+    expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'id:1', toId: 'player', hit: false, speed }), 1)
+    expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: false, speed }), 1)
+    expect(renderer.deflect).toHaveBeenCalledTimes(2)
+    for (const actorId of ['player', 'id:1']) expect(renderer.deflect).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId, outcome: 'no-damage' }), 1 + bumpTiming(speed).contact)
+    expect(renderer.hit).not.toHaveBeenCalled()
+    expect(renderer.impact).not.toHaveBeenCalled()
+    expect(renderer.spell).not.toHaveBeenCalled()
+    presentCombat(renderer, scene, events, spells, 'mace', 2000, false, speed)
+    expect(renderer.bump).toHaveBeenCalledTimes(2)
+    expect(renderer.deflect).toHaveBeenCalledTimes(2)
+  })
+
   it('flashes direct spell damage but ignores resisted, utility, zero-damage and Still-mode results', () => {
     const { scene, renderer } = harness()
     for (const text of ['Flames lash the goblin!', 'The goblin convulses!', 'The electricity discharges through the goblin!', 'The goblin shatters!']) {

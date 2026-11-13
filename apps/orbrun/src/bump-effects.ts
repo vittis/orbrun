@@ -10,7 +10,7 @@ export function bumpFor(event: CombatEvent, scene: Scene, weapon: string | undef
     if (to.x === undefined || to.y === undefined) return null
     return { from: { x: event.source.x, y: event.source.y }, to: { x: to.x, y: to.y },
       fromId: event.source.actorId, toId: event.player ? 'player' : event.actorId,
-      hit: event.kind !== 'miss' && event.amount !== 0, tone: event.tone, intensity: event.intensity }
+      hit: event.kind !== 'miss' && event.kind !== 'block' && event.amount !== 0, tone: event.tone, intensity: event.intensity }
   }
   if (event.player || event.x === undefined || event.y === undefined) return null
   // Auxiliary damage keeps its normal feedback without a second weapon bump.

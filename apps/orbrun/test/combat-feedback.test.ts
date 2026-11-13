@@ -108,8 +108,8 @@ describe('combat sentences', () => {
     expect(combatText('The bolt hits the goblin!')[0]).toMatchObject({ tone: 'physical' })
   })
   it('distinguishes misses, shield blocks and kills from hits', () => {
-    expect(combatText('You barely miss the goblin. The goblin closely misses you. You block the goblin\'s attack. You kill the goblin!').map(p => p.kind)).toEqual(['miss', 'miss', 'kill'])
-    expect(combatText('The goblin blocks your attack.')).toEqual([])
+    expect(combatText('You barely miss the goblin. The goblin closely misses you. You block the goblin\'s attack. You kill the goblin!').map(p => p.kind)).toEqual(['miss', 'miss', 'block', 'kill'])
+    expect(combatText('The goblin blocks your attack.')).toMatchObject([{ kind: 'block', melee: true, target: 'The goblin' }])
     expect(combatText('The arrow misses the goblin.')).toEqual([])
   })
   it('distinguishes incoming damage from prompts and inventory', () => {
@@ -496,7 +496,7 @@ describe('one event per reported attack', () => {
 
 
 describe('visible creature melee sources', () => {
-  it.each(['The goblin hits you!', 'The goblin misses you.', 'The goblin hits you but does no damage.'])(
+  it.each(['The goblin hits you!', 'The goblin misses you.', 'The goblin hits you but does no damage.', "You block the goblin's attack."])(
     'resolves incoming attempts without consulting the player weapon: %s', sentence => {
       const { feedback, scene, text } = harness()
       text(sentence)
@@ -513,13 +513,26 @@ describe('visible creature melee sources', () => {
     const ally: Billboard = { ...goblin(2, 2), name: 'orc', ref: { id: 2, name: 'orc' }, attitude: 'friendly' }
     const scene = world(goblin(), ally)
     feedback.flush(scene)
-    text('Your orc hits the goblin! The goblin bites your orc.')
+    text("Your orc hits the goblin! The goblin bites your orc. Your orc blocks the goblin's attack. The goblin blocks your orc's attack.")
     const events = feedback.flush(scene)
     expect(events.map(e => bumpFor(e, scene, 'shortbow'))).toMatchObject([
       { fromId: 'id:2', toId: 'id:1', hit: true },
       { fromId: 'id:1', toId: 'id:2', hit: true },
+      { fromId: 'id:1', toId: 'id:2', hit: false },
+      { fromId: 'id:2', toId: 'id:1', hit: false },
     ])
     expect(feedback.takeSpells()).toEqual([]) // Contact owns the material spray.
+  })
+
+  it('resolves shield blocks in both directions without replaying appended messages', () => {
+    const { feedback, scene, text } = harness()
+    text("You block the goblin's attack.")
+    expect(feedback.flush(scene)).toMatchObject([{ kind: 'block', player: true, source: { actorId: 'id:1' } }])
+    text("You block the goblin's attack. The goblin blocks your attack.", 1)
+    const events = feedback.flush(scene)
+    expect(events).toHaveLength(1)
+    expect(bumpFor(events[0], scene, 'mace')).toMatchObject({ fromId: 'player', toId: 'id:1', hit: false })
+    expect(feedback.takeSpells()).toEqual([])
   })
 
   it.each(['hidden', 'ambiguous', 'far', 'spell', 'projectile', 'unknown'])(
@@ -534,6 +547,12 @@ describe('visible creature melee sources', () => {
       const events = feedback.flush(scene)
       expect(events).toMatchObject([{ kind: 'hurt', player: true }])
       expect(bumpFor(events[0], scene, undefined)).toBeNull()
+      if (['hidden', 'ambiguous', 'far'].includes(mode)) {
+        text("You block the goblin's attack.")
+        const blocks = feedback.flush(scene)
+        expect(blocks).toMatchObject([{ kind: 'block', player: true }])
+        expect(bumpFor(blocks[0], scene, undefined)).toBeNull()
+      }
     })
 
   it('keeps player follow-ups on their target when an ally hits an identically named enemy', () => {

@@ -5,7 +5,7 @@ import { spellText, spellStatuses, type SpellCue } from './spell-effects'
 
 /** Confirmed combat evidence consumed by renderer effects, never display text. */
 export interface CombatEvent {
-  kind: 'hit' | 'miss' | 'kill' | 'hurt'
+  kind: 'hit' | 'miss' | 'block' | 'kill' | 'hurt'
   tone?: DamageType
   target?: string
   x?: number
@@ -57,6 +57,15 @@ export function combatText(text: string): CombatEvent[] {
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
     const s = sentence.trim()
     let m: RegExpExecArray | null
+    // Shield blocks confirm a melee attempt even though no damage was dealt.
+    if ((m = /^(.+?) blocks? (your|.+?'s|.+?') attack[.!]+$/.exec(s))) {
+      const player = m[1] === 'You'
+      const sourceName = m[2].replace(/(?:'s|')$/, '')
+      out.push({ kind: 'block', melee: true, tone: 'physical',
+        ...(player ? { player: true } : { target: m[1] }),
+        ...(sourceName === 'your' ? {} : { sourceName }) })
+      continue
+    }
     const strike = creatureStrike.exec(s)
     if (strike && !/^(?:The|Your) (?:(?:bolt|puff)(?: of .+)?|arrow|slug|stone|sling bullet|magic dart|ice thorns)$/.test(strike[1])) {
       const target = strike[3].replace(/(?: from afar| with | using | for | but |, | like | into ).*$/, '').trim()

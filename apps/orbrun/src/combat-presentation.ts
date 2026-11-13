@@ -24,7 +24,7 @@ export function presentCombat(renderer: MapRenderer, scene: Scene, events: Comba
     const x = event.player ? scene.player.x : event.x, y = event.player ? scene.player.y : event.y
     const delay = delayFor(x, y, event.player ? 'player' : event.actorId)
     if (killed(x, y, event.player ? 'player' : event.actorId)) continue
-    if (animate && (event.kind === 'miss' || (event.kind === 'hit' || event.kind === 'hurt') && event.amount === 0)
+    if (animate && (event.kind === 'miss' || event.kind === 'block' || (event.kind === 'hit' || event.kind === 'hurt') && event.amount === 0)
       && x !== undefined && y !== undefined) {
       renderer.deflect?.({ x, y, actorId: event.player ? 'player' : event.actorId, turn: event.turn,
         outcome: event.kind === 'miss' ? 'miss' : 'no-damage' }, (now + delay) / 1000)
