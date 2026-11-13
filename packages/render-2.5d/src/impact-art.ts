@@ -2,11 +2,10 @@ import type { SpellEffect } from '@orbrun/scene'
 import { DEATH_ART, deathDither } from './death-art.js'
 import type { Context2d } from './tiles.js'
 
-export type ImpactKind = SpellEffect['kind'] | 'sand' | 'water' | 'miss' | 'block' | 'no-damage'
+export type ImpactKind = SpellEffect['kind'] | 'sand' | 'water' | 'block' | 'no-damage'
 type Palette = readonly [string, string, string, string, string]
 /** Outline, shade, body, lit edge, hot core: the same small ramps as tile art. */
 export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
-  miss: ['#18232e', '#39596d', '#81afc5', '#c2e4ed', '#f0fcff'],
   block: ['#29212a', '#766044', '#b79960', '#efcf87', '#fff1c4'],
   'no-damage': ['#242632', '#505d70', '#8c9baa', '#c3d0d6', '#f0f2e5'],
   physical: ['#25242b', '#56565b', '#94958d', '#d2d3bd', '#fff1ce'],
@@ -29,10 +28,6 @@ export const IMPACT_PALETTES: Record<ImpactKind, Palette> = {
 }
 const SMOKE: Palette = ['#25232b', '#39303a', '#57434a', '#7e5b51', '#a77b5f']
 const ART = {
-  gust: [
-    '00000011111110000', '00011344444331100', '00134433111111110',
-    '01344310000000000', '13443100000000000', '01311000000000000', '00100000000000000',
-  ],
   flash: [
     '0000000100000000', '0001001310001000', '0000133431000000', '0100134431000100',
     '0011134431111000', '0001345544310000', '0113455555431100', '1344555555544310',
@@ -100,33 +95,24 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
   const fade = age < 0.55 ? 1 : (1 - age) / 0.45
   const count = 6 + Math.round(strength * 6), physical = kind === 'physical' || kind === 'earth' || kind === 'sand'
   ctx.globalAlpha = 1
-  if (kind === 'miss') {
-    // Passing air wraps around the body, with an empty centre rather than an
-    // impact stamp. The three streaks drift independently through the whiff.
-    const drift = expand * 9, side = seed % 2 ? 1 : -1
-    for (let i = 0; i < 3; i++) stamp(ctx, 'gust', side * (-5 + drift + i * 2), -9 + i * 8 - age * 3,
-      colours, i === 1 ? 2 : 0, 1 - i * 0.1, fade * (1 - i * 0.08))
-    return
-  }
   if (kind === 'no-damage') {
-    // Steel flecks scatter off armor and fall away; no equipment silhouette.
-    for (let i = 0; i < 9; i++) {
-      const angle = seed * 0.7 + i * 2.4, radius = 4 + expand * (7 + i % 3 * 2)
-      const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius * 0.65 + age * age * 9
-      stamp(ctx, 'grain', x, y, colours, i % 4, i % 3 === 0 ? 0.95 : 0.75, fade)
-      if (i % 3 === 0 && age < 0.65) stamp(ctx, 'spark', x * 0.75, y * 0.75 - 2, colours, i % 4, 0.55, fade * 0.65)
+    // A small, round scatter of steel chips drops away from the armor.
+    // No long streaks: this stays distinct from the directional shield fan.
+    for (let i = 0; i < 5; i++) {
+      const angle = seed * 0.7 + i * 2.4, radius = 2 + expand * (4 + i % 2)
+      const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius * 0.7 + age * age * 8
+      stamp(ctx, 'grain', x, y, colours, i % 4, 0.8, fade)
     }
     return
   }
   if (kind === 'block') {
-    // A tight golden ricochet fans away from contact, unlike the rounder steel
-    // scatter. Short trailing streaks make the deflection read in motion.
+    // Three parallel glancing sparks fan sideways from a single contact edge.
+    // Their longer horizontal strokes contrast with the compact armor chips.
     const side = seed % 2 ? 1 : -1
-    if (age < 0.3) stamp(ctx, 'grain', -side * 4, 1, colours, 0, 1, 1 - age / 0.3)
-    for (let i = 0; i < 5; i++) {
-      const x = side * (3 + expand * (7 + i % 2 * 4)), y = (i - 2) * (3 + expand * 2) + age * age * 4
-      stamp(ctx, 'spark', x, y, colours, i % 2, 0.9, fade)
-      stamp(ctx, 'grain', x - side * (3 + expand * 2), y * 0.85, colours, i % 4, 0.65, fade * 0.75)
+    for (let i = 0; i < 3; i++) {
+      const x = side * (3 + expand * (7 - Math.abs(i - 1) * 2)), y = (i - 1) * (2 + expand * 3)
+      stamp(ctx, 'spark', x, y, colours, 1, 0.8, fade)
+      stamp(ctx, 'grain', x - side * (3 + expand), y * 0.7, colours, 0, 0.45, fade * 0.7)
     }
     return
   }
@@ -177,7 +163,7 @@ export function paintImpact(ctx: Context2d, kind: ImpactKind, age: number, seed 
 
 /** Ash, chips, frost and puddles live on the floor after the contact flash. */
 export function paintImpactResidue(ctx: Context2d, kind: ImpactKind, age: number, seed = 0) {
-  if (age < 0 || age >= 1 || kind === 'miss' || kind === 'block' || kind === 'no-damage') return
+  if (age < 0 || age >= 1 || kind === 'block' || kind === 'no-damage') return
   ctx.globalAlpha = 1
   const colours = kind === 'fire' ? SMOKE : IMPACT_PALETTES[kind]
   const fade = (1 - age) ** 1.3

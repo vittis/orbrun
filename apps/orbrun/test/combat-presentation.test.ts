@@ -47,7 +47,7 @@ describe('combat contact timing', () => {
     expect(vi.mocked(renderer.bump!).mock.calls.map(([b]) => b.fromId)).toEqual(['id:1', 'id:2', 'id:3', 'id:4'])
     expect(renderer.hit).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
     expect(renderer.impact).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
-    expect(renderer.deflect).toHaveBeenCalledTimes(outcome === 'hit' ? 0 : 2)
+    expect(renderer.deflect).toHaveBeenCalledTimes(outcome === 'hit' || outcome === 'miss' ? 0 : 2)
     expect(renderer.spell).not.toHaveBeenCalled()
     presentCombat(renderer, scene, events, spells, 'shortbow', 2000, false)
     expect(renderer.bump).toHaveBeenCalledTimes(4)
@@ -116,15 +116,14 @@ describe('combat contact timing', () => {
     expect(renderer.hit).toHaveBeenCalledWith({ x: 2, y: 0, actorId: undefined, turn: undefined }, 1)
   })
 
-  it('shows misses and armor at contact without emitting a damage ripple', () => {
+  it('keeps miss bumps without VFX and shows armor at contact without damage', () => {
     const { scene, renderer } = harness()
     for (const text of ['You miss the goblin.', 'You hit the goblin but do no damage.']) {
       const events = combatText(text).map(e => ({ ...e, x: 1, y: 0 }))
       presentCombat(renderer, scene, events, [], 'mace', 0, true)
     }
     expect(renderer.bump).toHaveBeenCalledTimes(2)
-    expect(renderer.deflect).toHaveBeenNthCalledWith(1, { x: 1, y: 0, actorId: undefined, turn: undefined, outcome: 'miss' }, bumpTiming().contact)
-    expect(renderer.deflect).toHaveBeenNthCalledWith(2, { x: 1, y: 0, actorId: undefined, turn: undefined, outcome: 'no-damage' }, bumpTiming().contact)
+    expect(renderer.deflect).toHaveBeenCalledExactlyOnceWith({ x: 1, y: 0, actorId: undefined, turn: undefined, outcome: 'no-damage' }, bumpTiming().contact)
     expect(renderer.impact).not.toHaveBeenCalled()
     expect(renderer.hit).not.toHaveBeenCalled()
   })
@@ -137,12 +136,11 @@ describe('combat contact timing', () => {
       { kind: 'hurt', player: true, amount: 0, melee: true, sourceName: 'goblin', source },
       { kind: 'hit', x: 2, y: 0 },
     ], [], undefined, 1000, true, speed)
-    expect(renderer.deflect).toHaveBeenCalledTimes(2)
-    for (const outcome of ['miss', 'no-damage']) expect(renderer.deflect).toHaveBeenCalledWith(
-      { x: 0, y: 0, actorId: 'player', turn: undefined, outcome }, 1 + bumpTiming(speed).contact)
+    expect(renderer.deflect).toHaveBeenCalledExactlyOnceWith(
+      { x: 0, y: 0, actorId: 'player', turn: undefined, outcome: 'no-damage' }, 1 + bumpTiming(speed).contact)
     expect(renderer.hit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ x: 2 }), 1)
     presentCombat(renderer, scene, [{ kind: 'miss', x: 1, y: 0 }, { kind: 'hit', amount: 0, x: 2, y: 0 }], [], undefined, 2000, false)
-    expect(renderer.deflect).toHaveBeenCalledTimes(2)
+    expect(renderer.deflect).toHaveBeenCalledTimes(1)
   })
 
   it.each([0.5, 2])('animates blocked melee at %sx with shield contact and no damage effects', speed => {
@@ -229,11 +227,11 @@ it('preserves block, miss, armor and blood from separate attackers in one receip
   const msg = { msg: 'msgs', messages: [{ text, turn: 5 }] }
   reduce(state, msg); feedback.observe(state, msg)
   presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), undefined, 1000, true)
-  expect(vi.mocked(renderer.deflect!).mock.calls.map(([effect]) => effect.outcome)).toEqual(['block', 'miss', 'no-damage'])
+  expect(vi.mocked(renderer.deflect!).mock.calls.map(([effect]) => effect.outcome)).toEqual(['block', 'no-damage'])
   expect(renderer.hit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ actorId: 'player' }), 1 + bumpTiming().contact)
-  // Appended-line replacement must not replay the same three popups.
+  // Appended-line replacement must not replay the same two bursts.
   const append = { msg: 'msgs', rollback: 1, messages: [{ text: text + ' The orc misses you.', turn: 5 }] }
   reduce(state, append); feedback.observe(state, append)
   presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), undefined, 1100, true)
-  expect(renderer.deflect).toHaveBeenCalledTimes(4)
+  expect(renderer.deflect).toHaveBeenCalledTimes(2)
 })

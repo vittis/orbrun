@@ -2,6 +2,11 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.99 — 2026-11-13
+
+- Removed miss/dodge VFX entirely; confirmed attack bumps remain.
+- Made shield and zero-damage VFX smaller and more distinct: three sideways golden ricochet strokes for shields, and a compact scatter of falling steel chips for armor. Both still accumulate alongside blood with smooth settling and fade.
+
 ## 0.3.98 — 2026-11-13
 
 - Replaced defensive combat icons with material VFX: curved wind streaks for dodges, steel armor flecks for zero-damage hits and golden ricochet sparks for shield blocks.

@@ -40,10 +40,10 @@ for (const [width, height, dpr] of [[960, 720, 1], [390, 600, 2]]) {
     return count
   }
   const prefix = `${width} DPR${dpr}`
-  // Independent colour oracles: all three material effects must survive in
+  // Independent colour oracles: both material effects must survive in
   // the same real renderer frame, alongside red body-material particles.
   check(`${prefix} shield`, changed(239, 207, 135) > 3)
-  check(`${prefix} dodge`, changed(194, 228, 237) > 3)
+  check(`${prefix} no dodge particles`, changed(194, 228, 237) === 0)
   check(`${prefix} armor`, changed(195, 208, 214) > 3)
   let blood = 0
   for (let i = 0; i < contact.length; i += 4) if (contact[i] > 70 && contact[i] > contact[i + 1] * 1.8 && contact[i] > contact[i + 2] * 1.4
@@ -58,7 +58,7 @@ for (const [width, height, dpr] of [[960, 720, 1], [390, 600, 2]]) {
   renderer.setOptions({ animate: false })
   check(`${prefix} Still clears`, equalPixels(before, frame(5.2)) && !renderer.animating)
   renderer.setOptions({ animate: true })
-  renderer.deflect({ x: 0, y: 0, actorId: 'player', outcome: 'miss' }, 6)
+  renderer.deflect({ x: 0, y: 0, actorId: 'player', outcome: 'no-damage' }, 6)
   scene.billboards = scene.billboards.filter(b => b.kind !== 'player'); scene.revision++
   renderer.setScene(scene, 6.1); frame(7)
   check(`${prefix} recipient removal`, !renderer.animating)

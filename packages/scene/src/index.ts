@@ -327,13 +327,13 @@ export interface CombatBump {
   intensity?: HitIntensity
 }
 
-/** Explicit unsuccessful attack; never inferred from unchanged HP. */
+/** Explicit shield or armor contact; never inferred from unchanged HP. */
 export interface DeflectionEffect {
   x: number
   y: number
   actorId?: string
   turn?: number
-  outcome: 'miss' | 'block' | 'no-damage'
+  outcome: 'block' | 'no-damage'
 }
 
 /** Confirmed spell/ability feedback, independent of projectile artwork or damage. */
