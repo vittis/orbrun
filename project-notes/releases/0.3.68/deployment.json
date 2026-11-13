@@ -1,0 +1,24 @@
+{
+  "releaseCommit": "858964a9bd263cd41720fdde7824953dca97f52f",
+  "sourceTag": "cloudflare-online-v1.65",
+  "version": "0.3.68",
+  "buildId": "b8d0ce16-278d-41c5-83b7-776e3b60ab30",
+  "buildConclusion": "success",
+  "branchVerificationRun": 43307162387,
+  "mainVerificationRun": 43307699022,
+  "verificationConclusion": "success",
+  "deploymentId": "5a420740-f6a6-4f0f-9986-1a72952a73a4",
+  "createdOn": "2026-11-12T21:11:41.022094Z",
+  "versions": [
+    {
+      "version_id": "d3317b27-3bb9-4860-9c85-0b90aeb8dc9f",
+      "percentage": 100
+    }
+  ],
+  "bindings": [
+    {
+      "name": "ASSETS",
+      "type": "assets"
+    }
+  ]
+}

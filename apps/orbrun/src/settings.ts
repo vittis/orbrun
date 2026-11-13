@@ -12,7 +12,6 @@ export interface Settings {
   meleeWeight: number
   meleeTrail: number
   meleeMotion: number
-  combatPopups: boolean
   uiScale: number
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
@@ -50,7 +49,6 @@ export const defaultSettings: Settings = {
   meleeWeight: 1,
   meleeTrail: 1,
   meleeMotion: 1,
-  combatPopups: true,
   uiScale: 1,
   confirmStairs: false,
   minimapTiles: 0,

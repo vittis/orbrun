@@ -42,8 +42,10 @@ describe('finite movement curves', () => {
           const curve = planStep(length, duration, start, continuous)
           expect(sampleStep(curve, 0)).toEqual({ distance: 0, speed: start })
           let previous = 0
-          for (let i = 1; i < 1000; i++) {
-            const elapsed = duration * i / 1000
+          // Endpoints, interior samples and either side of the ramp/brake joins.
+          // Thousands of uniformly spaced samples added cost without new branches.
+          for (const fraction of [0.001, 0.05, 0.1, 0.1999, 0.2, 0.2001, 0.4, 0.6, 0.7499, 0.75, 0.7501, 0.9, 0.99, 0.999]) {
+            const elapsed = duration * fraction
             const s = sampleStep(curve, elapsed)
             expect(s.distance).toBeGreaterThanOrEqual(previous)
             expect(s.distance).toBeLessThanOrEqual(length)

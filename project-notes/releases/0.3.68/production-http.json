@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-11-12T21:13:00.222Z",
+  "releaseCommit": "858964a9bd263cd41720fdde7824953dca97f52f",
+  "sourceTag": "cloudflare-online-v1.65",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 8882,
+      "contentType": "text/html",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "sha256": "4da276ac56e7f12c548aea1b948b8b6d96f7fa7006d157746fe9e490f75b677d",
+      "hasSourceTag": true,
+      "scripts": [
+        "/assets/main-BNcEDPo8.js"
+      ],
+      "bundleMatchesLocal": true,
+      "bundleHasVersion": true,
+      "bundleSha256": "8b35b82864a7b45bca4c764314f2b4abe054af7c25821de4cf4c6d81270cc8cb"
+    },
+    {
+      "path": "/about",
+      "status": 200,
+      "bytes": 39496,
+      "contentType": "text/html",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "sha256": "e0592c6fbaef91198c42d50e63bd0fcac47c6b32b3dbe444846a2c816a387da0",
+      "hasSourceTag": true
+    },
+    {
+      "path": "/licenses/acorn.txt",
+      "status": 200,
+      "bytes": 1099,
+      "contentType": "text/plain",
+      "csp": "script-src 'self'; script-src-attr 'none'; object-src 'none'; base-uri 'self'; frame-src 'none'; frame-ancestors 'none'; worker-src 'self' blob:",
+      "sha256": "76a876cf886ff9be2a8b5e2e86514fed06223c8c9f0c1e9ee9606e93841e00b7"
+    },
+    {
+      "path": "/engine/health",
+      "status": 404,
+      "bytes": 47,
+      "contentType": "text/plain;charset=UTF-8",
+      "csp": null,
+      "sha256": "e78036b2f0d9eb2d5cb6d8b3bf16be787f9ffafcd61086058e3ebe2791b73e5e"
+    },
+    {
+      "path": "/gamedata-proxy/example.com/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 404,
+      "bytes": 9,
+      "contentType": "text/plain;charset=UTF-8",
+      "csp": null,
+      "sha256": "907ba78b4545338d3539683e63ecb51cf51c10adc9dabd86e92bd52339f298b9"
+    },
+    {
+      "path": "/gamedata-proxy/crawl.dcss.io/gamedata/acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8/enums.js",
+      "status": 200,
+      "bytes": 9710,
+      "contentType": "text/javascript; charset=utf-8",
+      "csp": null,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc"
+    }
+  ]
+}

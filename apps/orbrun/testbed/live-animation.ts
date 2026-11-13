@@ -51,8 +51,6 @@ let frames = 0, totalFrames = 0, frameTimes: number[] = [], actorImages = new Se
 let pixelSamples = 0, lastSampleAt = -Infinity, destroyed = false
 let hits = 0
 let moves = 0, maxPlayerDrift = 0
-let lastPopup: { text: string; visible: boolean; width: number; height: number } | null = null
-const seenPopups = new Map<string, { text: string; visible: boolean; noDamage: boolean; cold: boolean }>()
 let impacts = 0
 const impact = renderer.impact.bind(renderer)
 renderer.impact = (...args) => { impacts++; impact(...args) }
@@ -63,15 +61,6 @@ renderer.render = now => {
   const feet = renderer.projectBillboard(player)
   const frameCanvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
   if (moves && frameCanvas) maxPlayerDrift = Math.max(maxPlayerDrift, Math.abs(feet.x - frameCanvas.clientWidth / 2))
-  const popup = document.querySelector<HTMLElement>('.combat-popup')
-  if (popup) {
-    const box = popup.getBoundingClientRect(), number = popup.querySelector('.combat-number')!
-    lastPopup = { text: popup.textContent ?? '', visible: !popup.hidden && getComputedStyle(number).opacity !== '0', width: box.width, height: box.height }
-  }
-  for (const node of document.querySelectorAll<HTMLElement>('.combat-popup')) {
-    const visible = !node.hidden && getComputedStyle(node.querySelector('.combat-number')!).opacity !== '0'
-    if (visible) seenPopups.set(node.textContent ?? '', { text: node.textContent ?? '', visible, noDamage: node.classList.contains('no-damage'), cold: node.classList.contains('cold') })
-  }
   const canvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
   const q = renderer.project(scene.player.x, scene.player.y)
   if (params.has('sample') && pixelSamples < 12 && performance.now() - lastSampleAt >= 250 && canvas && q) {
@@ -126,8 +115,7 @@ if (params.has('check')) {
   later(() => hit(thorns ? 'The ice thorns skewer the goblin.' : undefined), 1100)
 }
 const snapshot = () => {
-  const number = document.querySelector<HTMLElement>('.combat-number')
-  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, seenPopups: [...seenPopups.values()], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed, popupAnimation: number ? getComputedStyle(number).animationName : null, lastPopup }
+  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
 }
 const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
 function destroy() {

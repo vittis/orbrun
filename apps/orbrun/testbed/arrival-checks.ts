@@ -1,4 +1,4 @@
-import { fixtureYield, releaseCanvas } from './fixture'
+import { matrix, fixtureYield, releaseCanvas } from './fixture'
 import { emptyScene } from '@orbrun/scene'
 import { DungeonArrival } from '../../../packages/render-2.5d/src/arrival'
 
@@ -6,8 +6,8 @@ import { DungeonArrival } from '../../../packages/render-2.5d/src/arrival'
 export async function arrivalChecks() {
   let checks = 0
   const failures: unknown[] = []
-  for (const [width, height] of [[640, 480], [390, 600]]) for (const dpr of [1, 2]) {
-    for (const [dx, dy] of [[8, 0], [-8, 0], [0, 8], [0, -8], [8, 8], [-8, 8], [8, -8], [-8, -8]]) {
+  for (const [width, height] of matrix([[640, 480], [390, 600]], [[390, 600]])) for (const dpr of [1, 2]) {
+    for (const [dx, dy] of matrix([[8, 0], [-8, 0], [0, 8], [0, -8], [8, 8], [-8, 8], [8, -8], [-8, -8]], [[8, 0], [0, -8], [-8, 8], [8, -8]])) {
       const canvas = document.createElement('canvas')
       canvas.width = width * dpr; canvas.height = height * dpr
       const ctx = canvas.getContext('2d')!

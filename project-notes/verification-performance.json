@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-12",
+  "sourceBaseline": "8e6861fd24d437c35dd8ecac18a14651fc2de756",
+  "environment": {
+    "node": "24.11.1",
+    "npm": "11.6.2",
+    "vitest": "3.2.7",
+    "playwright": "1.65.0",
+    "platform": "darwin arm64",
+    "availableParallelism": 12
+  },
+  "method": "Installed dependencies and Chromium, warmed caches, sequential command wall time via /usr/bin/time -p. Before is one full-gate sample; fast and two-worker smoke have two samples. No Linux timing claim.",
+  "runs": [
+    {
+      "name": "before-release",
+      "command": "npm run verify",
+      "wallSeconds": 77.96,
+      "browserWorkers": 1,
+      "unitPassed": 2296,
+      "unitSkipped": 2,
+      "browserPassed": 14,
+      "browserPhaseSeconds": 58.6
+    },
+    {
+      "name": "after-fast-1",
+      "command": "npm run verify",
+      "wallSeconds": 11.69,
+      "unitPassed": 2262,
+      "unitSkipped": 2
+    },
+    {
+      "name": "after-fast-2",
+      "command": "npm run verify",
+      "wallSeconds": 11.43,
+      "unitPassed": 2262,
+      "unitSkipped": 2
+    },
+    {
+      "name": "after-focused",
+      "command": "npm run test:changed -- settings.test.ts",
+      "wallSeconds": 0.5,
+      "unitPassed": 44,
+      "unitSkipped": 0
+    },
+    {
+      "name": "smoke-one-worker",
+      "command": "npm run verify:browser",
+      "wallSeconds": 20.01,
+      "browserWorkers": 1,
+      "browserPassed": 13,
+      "browserPhaseSeconds": 19.5
+    },
+    {
+      "name": "smoke-two-workers-1",
+      "command": "npm run verify:browser -- --workers=2",
+      "wallSeconds": 12.29,
+      "browserWorkers": 2,
+      "browserPassed": 13,
+      "browserPhaseSeconds": 11.9
+    },
+    {
+      "name": "smoke-two-workers-2",
+      "command": "npm run verify:browser",
+      "wallSeconds": 12.37,
+      "browserWorkers": 2,
+      "browserPassed": 13,
+      "browserPhaseSeconds": 12.0
+    },
+    {
+      "name": "after-release",
+      "command": "npm run verify:release",
+      "wallSeconds": 51.59,
+      "browserWorkers": 2,
+      "unitPassed": 2277,
+      "unitSkipped": 2,
+      "browserPassed": 14,
+      "browserPhaseSeconds": 31.9
+    }
+  ]
+}

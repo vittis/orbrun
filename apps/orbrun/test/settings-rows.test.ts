@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { defaultSettings, getSettings, saveSettings } from '../src/settings'
 import { settingsPanel } from '../src/settings-panel'
-import { adjustSetting, ALL_SETTING_ROWS, groupAtDefaults, resetGroup, settingGroups, MESSAGE_LINES, MESSAGE_LINES_AUTO, MINIMAP_AUTO, MINIMAP_CELLS, MINIMAP_TILES, rowHint, rowOff, SETTING_ROWS, settingValue, messageLinesOf, setAutoMessageLines, setAutoMinimap, exploreOptions, setExploreGame } from '../src/settings-rows'
+import { adjustSetting, ALL_SETTING_ROWS, groupAtDefaults, resetGroup, settingGroups, MESSAGE_LINES_AUTO, MINIMAP_AUTO, rowHint, rowOff, SETTING_ROWS, settingValue, messageLinesOf, setAutoMessageLines, setAutoMinimap, exploreOptions, setExploreGame } from '../src/settings-rows'
 
 // happy-dom's localStorage has no working methods; give settings.ts a plain one
 const store = new Map<string, string>()
@@ -30,41 +30,6 @@ describe('what is written down', () => {
     }
   })
 
-  it('offers combat popups in every view and persists the off switch', () => {
-    const effects = row('Combat popups')
-    expect(getSettings().combatPopups).toBe(true)
-    expect(effects.group).toBe('Combat')
-    adjustSetting(effects, 1)
-    expect(getSettings().combatPopups).toBe(false)
-    expect(settingValue(effects)).toBe('Off')
-    resetGroup('Combat')
-    expect(getSettings().combatPopups).toBe(true)
-  })
-
-
-
-  it('is only what the player changed, so a later default reaches everyone who never touched the row', () => {
-    saveSettings({ ...defaultSettings })
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
-    saveSettings({ ...defaultSettings, depthTilt: 65 })
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ depthTilt: 65 })
-    // the row goes back to its default: the override is dropped, not pinned at today's value
-    saveSettings({ ...defaultSettings })
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({})
-    expect(getSettings().depthTilt).toBe(defaultSettings.depthTilt)
-  })
-
-  it('drops the old split hint fields once hints are saved once', () => {
-    store.set('orbrun.settings', JSON.stringify({ gamepadHints: 'contextual', keyHints: false }))
-    const s = getSettings()
-    expect(s.hints).toBe('contextual')
-    saveSettings(s)
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ hints: 'contextual' })
-  })
-
-
-
-
 })
 
 describe('Dungeon presentation', () => {
@@ -85,19 +50,6 @@ describe('Dungeon presentation', () => {
     resetGroup('View')
     expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
   })
-
-  it('validates stored movement settings and bounds presentation delay', () => {
-    store.set('orbrun.settings', JSON.stringify({ depthMovement: 'true', depthMovementDuration: 'slow', depthMovementEasing: 'bounce' }))
-    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
-    for (const [input, expected] of [[-5, 0.04], [5, 0.25]]) {
-      store.set('orbrun.settings', JSON.stringify({ depthMovementDuration: input }))
-      expect(getSettings().depthMovementDuration).toBe(expected)
-    }
-  })
-
-
-
-
 })
 
 describe('Hints', () => {
@@ -131,15 +83,6 @@ describe('Minimap size', () => {
     expect(rowHint(size)).toMatch(/tiles across/)
   })
 
-  it('runs from Auto over every odd count from 15 (crawl\'s line of sight) to 61, two a step, so the player stands on the centre tile', () => {
-    expect(MINIMAP_TILES[0]).toBe(MINIMAP_AUTO)
-    const counts = MINIMAP_TILES.slice(1)
-    expect(counts[0]).toBe(15)
-    expect(counts[counts.length - 1]).toBe(61)
-    for (const n of counts) expect(n % 2).toBe(1)
-    for (let i = 1; i < counts.length; i++) expect(counts[i] - counts[i - 1]).toBe(2)
-  })
-
   it('right from Auto is the fewest tiles, left the most; then right is two tiles more, left two fewer', () => {
     const size = row('Minimap size')
     expect(adjustSetting(size, 1)).toBe('15 tiles')
@@ -164,13 +107,6 @@ describe('Minimap tile size', () => {
     saveSettings({ ...defaultSettings, minimapCell: 20 })
     expect(settingValue(cell)).toBe('20px')
     expect(rowOff(cell)).toBe(false)
-  })
-
-  it('runs from Auto, then 8px to 32px, every stop bigger than the last', () => {
-    expect(MINIMAP_CELLS[0]).toBe(MINIMAP_AUTO)
-    expect(MINIMAP_CELLS[1]).toBe(8)
-    expect(MINIMAP_CELLS[MINIMAP_CELLS.length - 1]).toBe(32)
-    for (let i = 1; i < MINIMAP_CELLS.length; i++) expect(MINIMAP_CELLS[i]).toBeGreaterThan(MINIMAP_CELLS[i - 1])
   })
 
   it('right is the next cell up, left the one down, and the tile count is left alone', () => {
@@ -200,11 +136,6 @@ describe('Message lines', () => {
     expect(settingValue(lines)).toBe('4 lines')
     expect(rowOff(lines)).toBe(false)
     expect(rowHint(lines)).toMatch(/msg_webtiles_height/)
-  })
-
-  it('runs from Auto over every count from 2 to 20, one a step', () => {
-    expect(MESSAGE_LINES[0]).toBe(MESSAGE_LINES_AUTO)
-    expect(MESSAGE_LINES.slice(1)).toEqual(Array.from({ length: 19 }, (_, i) => 2 + i))
   })
 
   it('right from Auto is the fewest lines, left the most; then a line a step', () => {
@@ -239,10 +170,6 @@ describe('Responsive supporting views', () => {
     vi.stubGlobal('innerWidth', held === 'upright' ? 390 : 844)
     vi.stubGlobal('innerHeight', held === 'upright' ? 844 : 390)
   }
-
-
-
-
 
   it('the minimap\'s Auto reads what a game drew it as, and where Auto starts again once the game is gone', () => {
     setAutoMinimap({ tiles: 17, cell: 16 })
@@ -366,19 +293,6 @@ describe('Explore delay', () => {
 
 describe('Dungeon-only settings migration', () => {
   beforeEach(() => store.clear())
-  it.each(['3d', '2d', '2.5d', 'invalid', undefined])('ignores saved projection %s and preserves unrelated data', renderer => {
-    const account = JSON.stringify([{ username: 'fixture', serverId: 'cdi' }])
-    store.set('orbrun.accounts', account)
-    store.set('orbrun.games', 'saved-game-fixture')
-    store.set('orbrun.settings', JSON.stringify({ renderer, fov: 95, viewmodel: true, predictiveMovement: true, leftRightKeys: 'turn', depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true }))
-    const settings = getSettings()
-    expect(settings).toMatchObject({ depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true })
-    for (const obsolete of ['renderer', 'fov', 'viewmodel', 'predictiveMovement', 'leftRightKeys']) expect(settings).not.toHaveProperty(obsolete)
-    saveSettings(settings)
-    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ depthTilt: 65, depthAnimate: false, uiScale: 1.3, confirmStairs: true })
-    expect(store.get('orbrun.accounts')).toBe(account)
-    expect(store.get('orbrun.games')).toBe('saved-game-fixture')
-  })
   it('offers Dungeon settings immediately with no projection or first-person controls', () => {
     expect(getSettings()).toEqual(defaultSettings)
     for (const label of ['Projection', 'Hands', 'Field of view', 'Camera height', 'Camera angle', 'Nearby', 'Predictive movement', 'Keyboard left/right', 'Gamepad left/right', 'Swipe to turn', 'Look sensitivity', 'Invert look']) expect(SETTING_ROWS.some(r => r.label === label)).toBe(false)

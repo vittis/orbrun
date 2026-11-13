@@ -45,7 +45,7 @@ if (lane !== 'all' && !lanes.includes(lane)) throw new Error(`Unknown raster lan
 const run = (name: string) => lane === 'all' || lane === name
 const failures: unknown[] = []
 let checks = 0
-if (run('tiles')) for (const [viewWidth, viewHeight] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) {
+if (run('tiles')) for (const [viewWidth, viewHeight] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of [false, true]) {
   for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) for (const wall of [false, true]) {
     await fixtureYield(lane)
     const canvas = document.createElement('canvas')
@@ -116,7 +116,7 @@ if (run('tiles')) for (const [viewWidth, viewHeight] of matrix([[512, 384], [390
   await fixtureYield(lane)
 }
 // Visibility and marker checks use real Canvas pixels, including filtered fractional scales.
-if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
+if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of [false, true]) for (const degrees of matrix([35, 50, 65], [50])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
   const canvas = document.createElement('canvas')
   const r = new Render25d({ tilt: degrees, zoom, animate: false, filterScaling })
   r.mount(canvas)

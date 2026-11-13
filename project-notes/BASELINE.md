@@ -1,32 +1,43 @@
-# Current validation baseline
+# Validation baseline
 
-## Starting point
+Measured 2026-11-12 on macOS arm64, Node 24.11.1/npm 11.6.2, Vitest 3.2.7, Playwright 1.65.0. The fast-iteration measurements below predate the subsequent combat-popup removal. At the time of that measurement the runtime matched deployed 0.3.68; later working-tree changes are recorded separately below. The prior release's complete evidence is in [0.3.68](releases/0.3.68.md).
 
-Stabilization started at `88166befdfa7a4bfa37027751df2de56f039bcdb`, with fetched origin/main `a37449b0749bbbf3c241a55e099947f646c4a860` already an ancestor. Node 24.11.1/npm 11.6.2. Initial forced TypeScript passed; unit suite: **2,236 passed, two optional-engine skips**, 132 files passed/one skipped, 12.04s. Historical simplification results and deployment: [0.3.67](releases/0.3.67.md).
+## Measured iteration speed
 
-## Stabilized web baseline
+| Workflow | Before | After | Interpretation |
+|---|---:|---:|---|
+| Ordinary completion (`npm run verify`) | 77.96s | 11.69s / 11.43s | About 85% less waiting (6.7× faster); now incremental types + retained units |
+| Focused settings edit (`test:changed -- settings.test.ts`) | — | 0.50s | 44 affected tests, including process startup |
+| Routine browser test phase | 58.6s full matrix | 11.9s / 12.0s smoke | About 80% faster; intentional representative profile |
+| Complete release gate | 77.96s | 51.59s | About 34% faster; full raster + production acceptance retained |
 
-`npm run verify` passed locally:
+Browser smoke command wall times: one worker 20.01s; two workers 12.29s and 12.37s. Two workers are now the bounded default (one on a single-core host). The release browser phase passed in 31.9s versus 58.6s previously. Isolation and zero retries remain enabled.
 
-- Forced application and browser-test TypeScript checks: passed.
-- Unit suite: **2,296 passed, two optional-engine skips**, 135 files passed/one skipped, 12.07s. The net increase of 60 covers settings normalization, offered-value round trips, lifecycle changes and responsive layout. Final affected HUD/layout/control tests also passed (106 cases); four further font-metric/cache regressions reproduce the Linux issue described below.
-- Production build: passed. Renderer packages and authored artwork are unchanged. Existing large-main-chunk and mixed JSON-import-attribute warnings remain; these are not test failures.
-- Chromium: **14/14 passed**, no skips/retries/flaky results, 59.8s. Includes all nine full raster lanes (**4,072/4,072**), Dungeon/flat atmosphere (**12/12**), actual GameScreen native reduced-motion transitions, mouse/touch-emulated map/overview/settings/resize/targeting, text overflow and online-only production preview. [Browser report](releases/0.3.68/browser.json).
-- Engine E2E: **44 cases skipped in 12 files** because optional artifacts are absent. This is not offline-engine acceptance.
-- Independent settings, renderer-fixture, map/layout, verification and documentation reviews completed; actionable findings resolved. `git diff --check` passed.
+The incremental scene test file fell from 5,162ms to 644–745ms by replaying the whole recording once with alternating single/coalesced flushes, rather than replaying three entire cadence matrices. The movement curve file fell from 1,081ms to 19ms by sampling meaningful endpoints/interiors and both sides of ramp/brake joins instead of 999 interior points per curve. These per-file timings vary with worker scheduling.
 
-The raster total increased from 4,070 to 4,072 through one mutation-sensitivity assertion per DPR. The obsolete beam-thinning threshold is replaced by an independent native-Canvas reference for exact authored geometry/coverage, including width, thickness and gaps. It does not claim exact RGBA equivalence. No renderer behavior was changed to satisfy the test. Full parameter matrices and deterministic timestamps remain intact.
+[Machine-readable measurements](verification-performance.json) record command scope, counts and wall time. Dependencies/browser were already installed; caches were warm. Measurements were sequential, with no concurrent full build/test workloads. The old gate has one fresh sample; the new fast gate and two-worker smoke each have two. These are local measurements, not Linux CI timing promises. No wall-clock assertions or profiling framework were added to the suite.
 
-The narrow fine-pointer HUD now has readable, bounded scroll panes and a separate clear map/prompt region. Chat space remains reachable. Wide desktop and existing phone geometry have regression coverage. Short windows necessarily have a small clear/map area. [Narrow Dungeon](releases/0.3.68/narrow-mouse.png), [map](releases/0.3.68/narrow-map.png).
+## Final verification
 
-## Coverage boundaries
+- `npm run verify`: 2,262 passing unit cases, two optional-engine skips, 135 passing files/one skipped. Both timed runs passed. Incremental TypeScript includes app, browser/config and verification-routing code.
+- `npm run verify:release`: forced TypeScript, **2,277 passing cases** across unit and deploy projects (two optional-engine skips), one production build, **14 passing browser tests**, all **4,072 full raster assertions** and 12 atmosphere assertions. Real-Git deployment freshness/cleanliness tests are included (15 cases).
+- `npm run verify:browser`: **13 passing browser tests**, **250 raster assertions** across all nine concerns, plus 12 atmosphere assertions, native reduced motion/Still/On and narrow mouse/touch map/HUD regressions. Both one-worker and repeated two-worker runs passed.
+- CI routing regression tests pass; workflow YAML parses; suite listings select 13 dev checks or one production check as intended. CI changes have been verified locally, not executed on GitHub during this pass.
+- Optional engine acceptance: **41 cases in nine files skipped**, because engine artifacts are absent. The manual recorder is no longer collected; assertion-free probe/help dumps were removed.
+- No changes to shipped app code, renderer algorithms or artwork. The rebuilt main bundle still has SHA-256 `8b35b82864a7b45bca4c764314f2b4abe054af7c25821de4cf4c6d81270cc8cb`, matching the deployed 0.3.68 bundle.
 
-Automated Chromium tests use local server-message fixtures and production preview. They do not establish physical-controller, physical-phone, authenticated-login/save continuity, optional engine execution, or every public-server/browser combination. Anonymous production spectating and deployment checks are recorded separately in [the release record](releases/0.3.68.md).
+## Deliberate coverage tradeoffs
 
-`npm run verify` is the reproducible web gate. Full assertion counts are pinned; the smoke profile is not full acceptance. No player credentials or private recordings are kept in evidence.
+Removed 24 redundant unit cases (including duplicate storage migrations/normalization, cosmetic label/layout expectations, repeated grounded-species inputs and duplicate full replays); added five CI-routing regressions. Real-Git deployment tests moved out of the ordinary gate, not out of release verification. Motion tests now sample behavior boundaries; the recording replay no longer asserts every possible batching of every message.
 
-## Cross-platform CI correction
+The smoke matrix samples fractional/high DPI, both filtering paths, floors/walls/sprites, picking, occlusion, movement, projectile coverage and camera extremes; it does not claim exhaustive parameter coverage. Full matrices and independent authored-art oracles remain in render/release gates. The browser text-overflow assertion that caught Linux font clipping is retained unchanged.
 
-The first Linux branch CI run passed all unit/raster/native-motion checks but caught narrow touch HP/MP text overflow (406px of text in a 383px pane). The old grid extrapolated 11px text width from a 100px font probe; small hinted glyphs on Linux were wider than that estimate. GridHost now caches measurements at actual candidate sizes and invalidates them on font changes. The same overflow assertion is retained.
+The fast gate deliberately omits builds and browsers. CSS/assets/readFile fixtures/configuration can escape import-based changed-test selection. Follow [AGENTS.md](../AGENTS.md) and [RUNBOOK.md](RUNBOOK.md) to select broader checks, and use release verification before publication. Browser acceptance remains deterministic and local; it does not establish physical devices, authenticated play or provisioned offline-engine behavior. No deployment was made during this verification-only pass.
 
-After correction, the full local unit suite passed 2,296 cases; all four affected browser cases passed in 8.6s, including native motion, both narrow pointer types and production preview. The pure fitting helper now uses the actual measurement callback, avoiding an unused legacy linear helper. The clean Linux CI result is recorded in the release evidence.
+## Combat popup removal (subsequent working-tree change)
+
+Removed the floating-text renderer, CSS, SVG icon factory, Barlow font/license, setting/default, lifecycle/frame hooks, preview overlays, dedicated popup tests, and the two offline-engine damage-number patches. Shared feedback now uses `CombatEvent` without display labels, layout coordinates above actors or popup delay fields. Confirmed melee, hit, spell/healing/status and death effects remain; legacy saved settings are ignored and omitted on the next settings write without touching accounts/saves. Historical release notes remain historical records.
+
+Validation: `npm run verify` passed **2,222 unit cases** (two optional-engine skips), with incremental types; full `verify:render` passed **13 browser cases**, all **4,072 raster assertions** and 12 atmosphere assertions. Production build/preview passed separately. The existing native-motion browser regression now also triggers a local hit through the real GameScreen and checks that a world impact still occurs; its focused run passed. Final healing-strength preservation passed typechecking and 100 affected combat/spell cases. Production output contains no popup renderer/styles or Barlow assets.
+
+`REQUIRE_ENGINE=1 npm run e2e` cannot run without `engine/dist/stable/engine.json`; the removed patches have not been validated in a rebuilt WASM engine. The content-based engine recipe automatically changes when patches are removed, so subsequent engine builds will use the new recipe. No deployment was performed.

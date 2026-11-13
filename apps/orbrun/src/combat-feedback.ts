@@ -1,21 +1,17 @@
 import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type DeathEffect, type Billboard, type Scene, type MeleeAttack, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
-import { formattedStringToText, type GameState, type ServerMessage, type StatusEntry } from '@orbrun/webtiles'
+import { formattedStringToText, type GameState, type ServerMessage } from '@orbrun/webtiles'
 import { deathFor } from './death-effects'
 import { incomingMelee } from './melee-effects'
 import { spellText, spellStatuses, type SpellCue } from './spell-effects'
 
-export type PopupKind = 'hit' | 'miss' | 'block' | 'kill' | 'hurt' | 'heal' | 'status' | 'level'
-export type PopupTone = DamageType
-export interface CombatPopup {
-  text: string
-  kind: PopupKind
-  tone?: PopupTone
+/** Confirmed combat evidence consumed by renderer effects, never display text. */
+export interface CombatEvent {
+  kind: 'hit' | 'miss' | 'kill' | 'hurt'
+  tone?: DamageType
   target?: string
   x?: number
   y?: number
-  height?: number
   player?: boolean
-  heavy?: boolean
   /** A confirmed player melee attempt; kept separate from spell/brand damage. */
   melee?: boolean
   /** A weapon brand's extra sentence, which can recolor the preceding hit. */
@@ -23,8 +19,6 @@ export interface CombatPopup {
   brandOnly?: boolean
   amount?: number
   intensity?: HitIntensity
-  /** Presentation delay in milliseconds, measured from the confirmed attack. */
-  delay?: number
   turn?: number
   actorId?: string
   death?: DeathEffect
@@ -34,7 +28,7 @@ export interface CombatPopup {
 const attacks = /^(?:hit|slash|slice|stab|pierce|puncture|impale|skewer|spit|stick|perforate|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|sock|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|flog|flagellate|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast|dice|fracture|shatter|splatter|open|cut|beat|flatten|eviscerate|tentacle-slap|squash|pulverise|shave)$/i
 const bare = (s: string) => s.toLowerCase().replace(/^(?:the |an? |your )/, '').trim()
 const plain = (s: string) => formattedStringToText(s).trim()
-function toneOf(s: string): PopupTone {
+function toneOf(s: string): DamageType {
   if (/acid|corro/i.test(s)) return 'acid'
   if (/fire|flame|burn|lava|scorch/i.test(s)) return 'fire'
   if (/cold|frost|freez|ice|icicle/i.test(s)) return 'cold'
@@ -44,29 +38,18 @@ function toneOf(s: string): PopupTone {
   return 'physical'
 }
 
-/** Only reported damage becomes a number; unknown amounts retain qualitative strength. */
-export function combatText(text: string): CombatPopup[] {
-  const out: CombatPopup[] = []
+/** Parse confirmed outcomes for effect strength and actor matching. */
+export function combatText(text: string): CombatEvent[] {
+  const out: CombatEvent[] = []
   for (const sentence of plain(text).split(/(?<=[.!?])\s+/)) {
     const s = sentence.trim()
     let m: RegExpExecArray | null
     if ((m = /^You (?:kill|destroy|slay|annihilate|obliterate|banish|finish off|blow up) (.+?)[.!]+$/.exec(s))) {
-      out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
+      out.push({ kind: 'kill', target: m[1] })
     } else if ((m = /^(.+?) (?:dies|is killed|is destroyed|crumbles (?:to|into) dust|is blown up)[.!]+$/.exec(s))) {
-      out.push({ kind: 'kill', text: 'SLAIN', target: m[1], heavy: true })
-    } else if (/^(?!You\b).+? you(?: with .+?)? but (?:do|does) no damage[.!]+$/.test(s)) {
-      // There is no HP delta for a zero-damage incoming hit. Keep the server's explicit result.
-      out.push({ kind: 'hurt', text: '0', amount: 0, player: true, tone: toneOf(s) })
+      out.push({ kind: 'kill', target: m[1] })
     } else if ((m = /^You(?: (?:barely|closely|completely))? miss (.+?)(?: with .+)?[.!]+$/.exec(s))) {
-      out.push({ kind: 'miss', text: 'MISS', target: m[1], melee: true })
-    } else if (/^(?!You\b).+? (?:(?:barely|closely|completely) )?(?:misses|fails to hit) you[.!]+$/.test(s)) {
-      out.push({ kind: 'miss', text: 'DODGED', player: true })
-    } else if (/^You (?:block|reflect) .+[.!]+$/.test(s)) {
-      out.push({ kind: 'block', text: 'BLOCKED', player: true })
-    } else if ((m = /^(.+?) blocks your .+[.!]+$/.exec(s))) {
-      out.push({ kind: 'block', text: 'BLOCKED', target: m[1] })
-    } else if ((m = /^(?:The|Your) .+? misses (.+?)[.!]+$/.exec(s))) {
-      out.push({ kind: 'miss', text: bare(m[1]) === 'you' ? 'DODGED' : 'MISS', target: m[1], player: bare(m[1]) === 'you' })
+      out.push({ kind: 'miss', target: m[1], melee: true })
     } else {
       // Debug/patched servers append "for N"; ordinary WebTiles sends only punctuation.
       m = /^You (?:clumsily )?([\w-]+) (.+?)(?:[.!]+)$/.exec(s)
@@ -92,33 +75,15 @@ export function combatText(text: string): CombatPopup[] {
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
       const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
-      out.push({ kind: 'hit', text: damage === null ? 'HIT' : String(damage), amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), heavy: damage !== null ? damage >= 18 : /!!/.test(s), followup, brandOnly: followup, melee })
+      out.push({ kind: 'hit', amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), followup, brandOnly: followup, melee })
     }
   }
   return out
 }
 
-const statusRules: [RegExp, string, PopupTone][] = [
-  [/pois|poison/i, 'POISONED', 'poison'], [/conf/i, 'CONFUSED', 'magic'],
-  [/paral/i, 'PARALYSED', 'magic'], [/slow/i, 'SLOWED', 'cold'],
-  [/haste|fast/i, 'HASTED', 'magic'], [/berserk/i, 'BERSERK', 'fire'],
-  [/corro/i, 'CORRODED', 'acid'], [/petr/i, 'PETRIFYING', 'physical'],
-  [/invis/i, 'INVISIBLE', 'magic'], [/silence|silenced/i, 'SILENCED', 'magic'],
-  [/held|net|web/i, 'HELD', 'physical'],
-]
-function statuses(entries: StatusEntry[]) {
-  const result = new Map<string, PopupTone>()
-  for (const entry of entries) {
-    const rule = statusRules.find(([re]) => re.test(entry.light || entry.text || ''))
-    if (rule) result.set(rule[1], rule[2])
-  }
-  return result
-}
-
 /** Consumes protocol updates individually, so fast actions between frames aren't lost. */
 export class CombatFeedback {
-  resets = 0
-  private pending: CombatPopup[] = []
+  private pending: CombatEvent[] = []
   private incoming: ReturnType<typeof incomingMelee> = []
   private melee: MeleeAttack[] = []
   private cues: SpellCue[] = []
@@ -142,12 +107,11 @@ export class CombatFeedback {
 
   private snapshot(state: GameState) {
     const p = state.player
-    return { hp: p.hp, max: p.hp_max, xl: p.xl, place: p.place + ':' + p.depth, turn: p.turn, statuses: statuses(p.status), spells: spellStatuses(p.status) }
+    return { hp: p.hp, max: p.hp_max, place: p.place + ':' + p.depth, spells: spellStatuses(p.status) }
   }
 
   observe(state: GameState, msg: ServerMessage) {
     if (msg.msg === 'game_client' || msg.msg === 'go_lobby') {
-      this.resets++
       this.pending = []
       this.incoming = []; this.melee = []; this.cues = []; this.spells = []
       this.scene = null
@@ -165,14 +129,12 @@ export class CombatFeedback {
         // Max-HP changes (berserk, forms, draining, levelling) aren't damage/healing.
         if (next.max === prev.max && next.hp !== prev.hp) {
           const change = next.hp - prev.hp
-          if (change < 0 || change >= 3) this.pending.push({ kind: change < 0 ? 'hurt' : 'heal', text: change < 0 ? String(change) : '+' + change + ' HP', player: true, amount: Math.abs(change), intensity: hitIntensity(Math.abs(change)), heavy: -change >= next.max * 0.2 })
+          if (change < 0) this.pending.push({ kind: 'hurt', player: true, amount: -change, intensity: hitIntensity(-change) })
+          else if (change >= 3) this.cues.push({ kind: 'heal', player: true, intensity: hitIntensity(change) })
         }
-        if (next.xl > prev.xl) this.pending.push({ kind: 'level', text: 'LEVEL ' + next.xl, player: true, heavy: true })
-        for (const [text, tone] of next.statuses) if (!prev.statuses.has(text)) this.pending.push({ kind: 'status', text, tone, player: true })
-        for (const [text, kind] of next.spells) if (!prev.spells.has(text)) this.cues.push({ kind, player: true })
-        if (prev.statuses.has('POISONED') && !next.statuses.has('POISONED')) this.pending.push({ kind: 'heal', text: 'POISON CLEARED', player: true })
+        for (const [status, kind] of next.spells) if (!prev.spells.has(status)) this.cues.push({ kind, player: true })
+        if (prev.spells.has('poisoned') && !next.spells.has('poisoned')) this.cues.push({ kind: 'heal', player: true })
       } else if (this.ready && next.place !== prev.place) {
-        this.resets++
         this.pending = []
         this.incoming = []; this.melee = []; this.cues = []; this.spells = []
         this.scene = null
@@ -201,7 +163,7 @@ export class CombatFeedback {
           this.cues.push(...spellText(fresh))
           for (const parsed of combatText(fresh)) {
             const event = { ...parsed, turn }
-            const hit = event.followup && event.text === 'HIT' ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
+            const hit = event.followup && event.amount === undefined ? [...this.pending].reverse().find(p => p.kind === 'hit' && !p.followup && p.turn === turn && bare(p.target ?? '') === bare(event.target ?? '')) : undefined
             if (hit) { hit.tone = event.tone; hit.followup = true }
             else this.pending.push(event)
           }
@@ -219,7 +181,7 @@ export class CombatFeedback {
 
   takeMelee(): MeleeAttack[] { return this.melee.splice(0) }
 
-  flush(scene: Scene, now = performance.now()): CombatPopup[] {
+  flush(scene: Scene, now = performance.now()): CombatEvent[] {
     const pending = this.pending.splice(0)
     const incoming = this.incoming.splice(0)
     const cues = this.cues.splice(0)
@@ -257,7 +219,7 @@ export class CombatFeedback {
       const id = actorKey(b), was = before.get(id), now = after.get(id)
       return was && now ? Math.max(0, woundRank(now.damage) - woundRank(was.damage)) : 0
     }
-    const resolved: CombatPopup[] = pending.flatMap(event => {
+    const resolved: CombatEvent[] = pending.flatMap(event => {
       if (event.player) return [event]
       const wanted = bare(event.target ?? '')
       const deathEvidence = (b: Billboard) => killedNames.has(wanted) && deathCandidates.has(actorKey(b)) && !after.has(actorKey(b)) ? 1 : 0
@@ -276,10 +238,10 @@ export class CombatFeedback {
       used.add(id)
       if (event.kind === 'hit') lastHit.set(wanted, b)
       if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id) }
-      return [{ ...event, actorId: id, x: b.x, y: b.y, height: Math.min(0.9, b.height),
+      return [{ ...event, actorId: id, x: b.x, y: b.y,
         ...(event.kind === 'kill' ? { death: deathFor(b, scene.player) } : {}) }]
     })
-    // Resolve direct spell results even when they produce no damage popup.
+    // Resolve direct spell results even when they report no damage.
     // Previous visible actors preserve a killing blow's position; never pick a
     // hidden actor or a targeting cursor as evidence of a successful cast.
     const cueUsed = new Set<string>()
@@ -295,14 +257,12 @@ export class CombatFeedback {
       const position = cue.player ? scene.player : placed ?? matches[0]
       if (placed?.actorId) cueUsed.add(placed.actorId)
       else if (matches[0]) cueUsed.add(actorKey(matches[0]))
-      if (position && position.x !== undefined && position.y !== undefined) this.spells.push({ x: position.x, y: position.y, kind: cue.kind,
+      if (position && position.x !== undefined && position.y !== undefined) this.spells.push({ x: position.x, y: position.y, kind: cue.kind, intensity: cue.intensity,
         actorId: cue.player ? 'player' : placed?.actorId ?? (matches[0] ? actorKey(matches[0]) : undefined), turn: placed?.turn })
     }
     for (const event of resolved) {
       let kind: SpellEffect['kind'] | undefined
-      if (event.kind === 'heal') kind = 'heal'
-      else if (event.kind === 'status') kind = /HASTED|BERSERK|INVISIBLE|SILENCED/.test(event.text) ? 'buff' : 'debuff'
-      else if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
+      if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
         // A frost/flame brand is already presented by the weapon gesture.
         const brandedMelee = resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
         if (!brandedMelee) kind = event.tone ?? 'physical'

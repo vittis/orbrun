@@ -6,7 +6,7 @@ import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/sc
 export async function movementChecks(source: TileSource) {
   const failures: unknown[] = []
   let checks = 0
-  for (const [width, height] of matrix([[512, 384], [390, 600]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const degrees of matrix([35, 50, 65], [50])) for (const easing of ['ease-out', 'smooth', 'linear'] as MovementEasing[]) {
+  for (const [width, height] of matrix([[512, 384], [390, 600]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const degrees of matrix([35, 50, 65], [50])) for (const easing of ['ease-out', 'smooth', 'linear'] as MovementEasing[]) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, movementDuration: 0.1, movementEasing: easing, center: { x: 0, y: 0 } })
     r.mount(canvas); r.resize(width, height, dpr); r.setTiles(source)

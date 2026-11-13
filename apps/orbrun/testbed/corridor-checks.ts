@@ -7,7 +7,7 @@ export async function corridorChecks(source: TileSource) {
   let checks = 0
   const failures: unknown[] = []
   for (const [width, height] of matrix([[512, 384], [390, 600], [1728, 1117]], [[390, 600]])) {
-    for (const dpr of matrix([1, 1.25, 2], [1, 2])) for (const filterScaling of [false, true]) {
+    for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const filterScaling of [false, true]) {
       for (const tilt of matrix([30, 35, 50, 65, 75], [30, 75])) for (const zoom of matrix([0.8, 1, 1.4], [1])) {
         const canvas = document.createElement('canvas')
         const r = new Render25d({ tilt, zoom, animate: false, filterScaling })

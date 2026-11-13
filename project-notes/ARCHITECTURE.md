@@ -35,6 +35,10 @@ Input is compass-based across keyboard, gamepad and touch. `X` is the level map;
 
 The gamedata parser accepts a bounded known grammar and fails closed on unsupported helpers. Transport and asset queues have explicit count/byte limits. The proxy permits exact bundled HTTPS hosts, rejects redirects and bounds request time/size/concurrency; browser game WebSockets use WSS directly. These controls and the restrictive CSP are independent of renderer choice. Deployment details and residual limits are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Combat presentation
+
+Confirmed combat events drive melee gestures, spell bursts, hit feedback and death effects. They contain effect evidence and actor identity, not display labels or DOM positioning data. Floating combat text and its setting, stylesheet, icons, font, scheduler and offline damage-number patches have been removed. HP/status changes still feed the retained world effects; native server messages remain in the message log.
+
 ## Settings and layout
 
 `settings.ts` reads and writes only `orbrun.settings`. It preserves existing keys/defaults and legacy hint migration, ignores retired fields, normalizes finite numbers to documented supported domains, and stores only non-default values. Reading never rewrites storage. Server/account/save persistence remains in `servers.ts`.
@@ -43,4 +47,4 @@ HUD geometry uses available grid space. Narrow mouse windows receive readable to
 
 ## Verification
 
-`npm run verify` runs forced application/browser-test typechecking, unit tests, a production build and isolated Chromium checks. The browser gate uses local fixtures and production preview; it does not need a public server or credentials. Each full raster lane reports an explicit result with a pinned assertion count. Optional engine execution remains a separate lane.
+`npm run verify` is the fast development gate: incremental types and retained units. Isolated Vitest projects separate ordinary units from real-Git deployment tooling; changed/watch commands support the editing loop. The browser smoke profile samples all nine rendering concerns; render/release verification keeps the complete matrix. Playwright starts only the needed dev/preview servers, with at most two workers and no retries. Release verification builds once and includes production acceptance. CI routes PR changes conservatively and runs the complete gate on main. See [RUNBOOK.md](RUNBOOK.md) and [AGENTS.md](../AGENTS.md) for commands and selection limits. Optional engine execution remains separate.

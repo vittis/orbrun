@@ -195,7 +195,6 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('Combat', 'Melee weight', 'meleeWeight', [0.6, 0.8, 1, 1.25, 1.5], 'Thickness of weapon strokes and size of their silhouettes.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || !s.meleeEffects),
   row('Combat', 'Melee trail', 'meleeTrail', [0.4, 0.7, 1, 1.4], 'Short trails make strikes crisp; longer trails emphasize the swing.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || !s.meleeEffects),
   row('Combat', 'Melee movement', 'meleeMotion', [0, 0.35, 0.65, 1], 'Amount of attacker lunge and defender recoil. Zero keeps actors planted while weapon effects play.', v => v === 0 ? 'Planted' : Math.round(v * 100) + '%', s => s.depthAnimate === false),
-  row('Combat', 'Combat popups', 'combatPopups', [true, false], 'Confirmed damage numbers, player HP changes, hit strength and damage type, misses, blocks, healing and status changes. Unknown enemy damage uses visual cues. Respects reduced motion.', v => v ? 'On' : 'Off'),
   // Controls
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface

@@ -30,10 +30,11 @@ Use Node 24.11.1 and npm 11.6.2, the verified web toolchain.
 ```sh
 npm ci --include=dev
 npm run dev -w apps/orbrun -- --host 127.0.0.1
-npx playwright install chromium
-npm run verify
-npm run e2e # optional engine artifacts required for execution
+npm run test:changed # focused editing loop
+npm run verify # incremental types + unit tests; no browser/build
 ```
+
+For UI checks: install Chromium once (`npx playwright install chromium`), then `npm run verify:browser`. Before release: `npm run verify:release`. [Agent workflow](AGENTS.md).
 
 Development and preview include the bounded gamedata proxy; WebSockets connect directly to the selected DCSS server. Optional engine tests report explicit skips when their artifacts are missing. [CONTRIBUTING.md](CONTRIBUTING.md) and the [runbook](project-notes/RUNBOOK.md) explain fixtures, browser checks and release validation.
 

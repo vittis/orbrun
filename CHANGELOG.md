@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.69 — 2026-11-12
+
+- Remove floating combat popups, their setting, font/icons and dedicated engine patches while preserving world combat and spell effects.
+- Make everyday verification substantially faster with incremental typechecking, focused unit tests and representative browser checks.
+- Keep full rendering, production and deployment checks in the release gate; document the verification choices for contributors and agents.
+- Remove redundant tests and unused diagnostic setup, and run only relevant verification on pull requests.
+
 ## 0.3.68 — 2026-11-12
 
 - Stabilize the Dungeon-only baseline while preserving existing 2.5D artwork and renderer behavior.

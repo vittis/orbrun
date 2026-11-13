@@ -1,7 +1,5 @@
 import { Render25d } from '@orbrun/render-2.5d'
-import { cellKey, emptyScene, type MapRenderer, type TileSource } from '@orbrun/scene'
-import { CombatPopups } from '../src/combat-popups'
-import type { PopupTone } from '../src/combat-feedback'
+import { cellKey, type TileSource } from '@orbrun/scene'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 import { surfaceLightChecks } from './surface-light-checks'
@@ -28,25 +26,14 @@ const setLight = () => {
 }
 setLight()
 const stage = document.getElementById('stage')!
-const numbers = document.getElementById('numbers')!, popupView = document.createElement('canvas')
-popupView.style.width = '100%'; popupView.style.height = '150px'
-Object.defineProperties(popupView, { clientWidth: { get: () => numbers.clientWidth }, clientHeight: { get: () => 150 } })
-const popups = new CombatPopups(); numbers.prepend(popups.root)
-const tones: PopupTone[] = ['physical', 'fire', 'cold', 'poison', 'acid', 'electric', 'magic']
-document.getElementById('labels')!.replaceChildren(...tones.map(tone => Object.assign(document.createElement('span'), { textContent: tone })))
-const anchors = { project: (x: number) => ({ x: (x + 0.5) * numbers.clientWidth / tones.length, y: 100 }) } as unknown as MapRenderer
-let born = -Infinity, fixed = false
-const add = (now: number) => { popups.clear(); popups.add(tones.map((tone, x) => ({ kind: 'hit' as const, tone, x, y: 0, text: x % 2 ? '24' : '12', heavy: x % 2 === 1 })), now); born = now }
 const still = document.getElementById('still') as HTMLInputElement
-still.addEventListener('change', () => { fixed = still.checked; renderer.setOptions({ animate: !fixed }); add(performance.now()) })
+still.addEventListener('change', () => renderer.setOptions({ animate: !still.checked }))
 document.getElementById('light')!.addEventListener('change', setLight)
 new ResizeObserver(() => renderer.resize(stage.clientWidth, stage.clientHeight, devicePixelRatio)).observe(stage)
 function frame(now: number) {
   renderer.render(now / 1000)
-  if (!fixed && now - born > 1450) add(now)
-  popups.render(fixed ? born + 150 : now, anchors, emptyScene(), popupView, fixed)
   requestAnimationFrame(frame)
 }
-add(performance.now()); requestAnimationFrame(frame)
+requestAnimationFrame(frame)
 const result = document.createElement('pre'); result.id = 'result'; result.style.margin = '16px 24px'
 result.textContent = JSON.stringify(await surfaceLightChecks(), null, 2); document.body.append(result)

@@ -117,7 +117,7 @@ describe('a game torn down under a finger (a reconnect)', () => {
     const screen = Object.assign(Object.create(GameScreen.prototype), {
       wake, saveView: noop, raf: 0, idleTimer: 0, tooltipTimer: 0, onKeyDown: noop, onResize: noop, unsub: [],
       runner: { abortSequence: noop }, prediction: { reset: noop }, hud: { destroy: noop }, overlays: { destroy: noop }, perf: { destroy: noop },
-      grid: { destroy: noop }, renderer: { destroy: noop }, park: { clear: noop }, combatPopups: { clear: noop }, nearDeath: { clear: noop }, root: { remove: noop },
+      grid: { destroy: noop }, renderer: { destroy: noop }, park: { clear: noop }, nearDeath: { clear: noop }, root: { remove: noop },
     }) as { destroy(): void; pad(ev: PadEvent): void; hooks: unknown }
     // the pad hands the releases straight back to the game, as main.ts routes them
     const virtualRelease = vi.fn(() => screen.pad({ type: 'release', button: 'LB', t: 0, held: 100, touch: true }))

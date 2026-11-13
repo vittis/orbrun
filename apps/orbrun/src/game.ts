@@ -31,7 +31,6 @@ import { PointerDrag } from './pointer-drag'
 import { requestRenderFrame, cancelFrame } from './frames'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
-import { CombatPopups } from './combat-popups'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
 
@@ -102,7 +101,6 @@ export interface GameHooks {
  */
 export class GameScreen {
   private feedback: CombatFeedback
-  private combatPopups = new CombatPopups()
   private nearDeath: NearDeath
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
@@ -301,7 +299,7 @@ export class GameScreen {
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     this.root.append(this.canvas, this.loading, this.fps.root)
-    this.root.append(this.nearDeath.root, this.combatPopups.root)
+    this.root.append(this.nearDeath.root)
     const st = hooks.settings()
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
@@ -439,10 +437,8 @@ export class GameScreen {
           this.wake()
           this.onScene()
         } else if (e.type === 'state') {
-          const resets = this.feedback.resets
           this.feedback.observe(session.state, e.msg)
           this.nearDeath.observe(session.state, e.msg, performance.now())
-          if (resets !== this.feedback.resets) this.combatPopups.clear()
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
@@ -456,7 +452,6 @@ export class GameScreen {
         } else if (e.type === 'sent') {
           this.lastSent = performance.now()
         } else if (e.type === 'closed') {
-          this.combatPopups.clear()
           this.nearDeath.clear()
           this.wake()
         } else if (e.type === 'gamedata') {
@@ -539,7 +534,6 @@ export class GameScreen {
     this.grid.destroy()
     document.documentElement.style.removeProperty('--phone-shrink')
     this.renderer.destroy()
-    this.combatPopups.clear()
     this.nearDeath.clear()
     this.root.remove()
   }
@@ -836,12 +830,10 @@ export class GameScreen {
     this.relayout()
     this.applyServerOptions()
     const settings = this.settings()
-    const popups = this.feedback.flush(this.session.scene)
+    const combat = this.feedback.flush(this.session.scene)
     const incomingMelee = this.feedback.takeMelee()
     const spells = this.feedback.takeSpells()
-    if (spells.length || incomingMelee.length || popups.length) this.needsRender = true
-    const showCombat = settings.combatPopups && !this.mapShown && !this.overlays.hasClientOverlay && (st.phase === 'playing' || st.phase === 'watching')
-    if (!showCombat) this.combatPopups.clear()
+    if (spells.length || incomingMelee.length || combat.length) this.needsRender = true
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
     let padLabels = this.chat.capturing ? [] : ours ?? this.padHints.prompts(this.ctx, settings.hints)
@@ -886,8 +878,7 @@ export class GameScreen {
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
         const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
-        const timed = presentCombat(this.renderer, this.session.scene, popups, incomingMelee, spells, weapon, now, animate)
-        if (showCombat) this.combatPopups.add(timed, now, this.presentation === 'dungeon')
+        presentCombat(this.renderer, this.session.scene, combat, incomingMelee, spells, weapon, now, animate)
       }
       this.renderer.render(now / 1000)
       rendered = true
@@ -895,8 +886,6 @@ export class GameScreen {
       // a frame that drew: the key whose answer it put on the screen stops waiting (perf.ts `drew`)
       if (perf) this.perf.net.drew()
     }
-    this.combatPopups.render(now, this.renderer, this.session.scene, this.canvas,
-      this.presentation === 'dungeon' ? !dungeonAnimation(settings, this.reducedMotion) : this.reducedMotion)
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
     this.fps.update(now, rendered)
@@ -991,7 +980,7 @@ export class GameScreen {
   /** Something wants this frame: a message, an input, an easing, an animation, a hold. */
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
-    if (this.renderer.animating || this.combatPopups.active || this.nearDeath.active) return true
+    if (this.renderer.animating || this.nearDeath.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 
