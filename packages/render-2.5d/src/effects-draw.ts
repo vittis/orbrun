@@ -4,6 +4,17 @@ import type { Context2d } from './tiles.js'
 import { impactStrength } from '@orbrun/scene'
 import type { ImpactArt } from './impact-draw.js'
 import type { ImpactKind } from './impact-art.js'
+import type { SpawnEffect } from './spawns.js'
+
+/** Quick tile-sized bloom; its anchor never follows nearby actors. */
+export function drawSpawn(ctx: Context2d, p: Projection, spawn: SpawnEffect, now: number, art: ImpactArt, dpr: number) {
+  const age = (now - spawn.born) / spawn.duration
+  const q = project(p, spawn.x, spawn.y + 0.22)
+  const cloud = spawn.style === 'cloud', crystal = spawn.style === 'crystal'
+  art.draw(ctx, spawn.kind, age, spawn.x * 11 + spawn.y * 23, cloud ? 0.25 : 0.5,
+    q.x, q.y - p.scale * (cloud ? 0.48 : crystal ? 0.18 : 0.3), p.scale * (cloud ? 0.65 : 0.8), dpr,
+    crystal ? 1.15 : cloud ? 0.6 : 0.85)
+}
 
 /** Shaded tile-scale contact art, shared by missiles and direct spell effects. */
 export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst, now: number, art: ImpactArt, dpr: number, position = burst) {

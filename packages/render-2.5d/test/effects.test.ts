@@ -17,6 +17,91 @@ const spell = (x = 1): Billboard => ({ x, y: 0, kind: 'projectile', tile: 3, hei
   life: { lights: [{ colour: [255, 118, 30], radius: 2.8, power: 0.45, pulse: 'fire', transient: true }] } })
 
 describe('non-projectile spell histories', () => {
+  it('blooms new terrain, clouds and prisms once, without treating charge/tile variants as spawns', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.observe(scene, 0, true)
+    scene.cells.get(cellKey(1, 0))!.life = { spawn: { kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' } }
+    const cloud: Billboard = { ...spell(2), kind: 'cloud', life: { spawn: { kind: 'cold', style: 'cloud', family: 'CLOUD_COLD' } } }
+    const prism: Billboard = { ...target, x: 3, id: 9, life: { spawn: { kind: 'magic', style: 'summon', family: 'MONS_FULMINANT_PRISM' } } }
+    scene.billboards = [cloud, prism]
+    fx.observe(scene, 1, true)
+    expect(fx.spawns.effects.map(e => e.style)).toEqual(['crystal', 'cloud', 'summon'])
+    expect(fx.spawns.entrance(cloud, 1)).toBe(0)
+    expect(fx.spawns.entrance(prism, 1.3)).toBe(1)
+    prism.tile++; cloud.tile++
+    fx.observe(scene, 1.1, true)
+    expect(fx.spawns.effects.every(e => e.born === 1)).toBe(true)
+    fx.tick(scene, 1.4)
+    expect(fx.spawns.effects).toEqual([])
+    expect(fx.bursts).toEqual([])
+    expect(fx.hits.active).toBe(false)
+  })
+
+  it('keeps expanding explosions at their confirmed cells, even when updates arrive before a draw', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.cells.set(cellKey(1, 1), { ...scene.cells.get(cellKey(1, 0))!, y: 1 })
+    const explosion = (x: number, y = 0): Billboard => ({ ...spell(x), y,
+      life: { projectile: { kind: 'magic', colour: [255, 70, 50], beam: true, family: 'BOLT_DEFAULT_RED' } } })
+    fx.observe(scene, 0, true)
+    scene.billboards = [explosion(1), explosion(2)]
+    fx.observe(scene, 1, true) // provisional straight path
+    scene.billboards.push(explosion(1, 1))
+    fx.observe(scene, 1.001, true)
+    expect(fx.projectiles(1.02)).toEqual([])
+    expect(fx.spawns.effects).toHaveLength(3)
+    expect(fx.spawns.effects.every(e => e.kind === 'fire')).toBe(true)
+    scene.billboards = [{ ...target, x: 2, id: 7 }]
+    fx.observe(scene, 1.002, true)
+    for (const time of [1.02, 1.1, 1.2]) {
+      expect(fx.spawns.overlays(scene, time).map(b => [b.x, b.y])).toEqual([[1, 0], [2, 0], [1, 1]])
+      expect(fx.projectiles(time)).toEqual([])
+    }
+    fx.tick(scene, 1.4)
+    expect(fx.spawns.overlays(scene, 1.4)).toEqual([])
+    expect(fx.bursts).toEqual([])
+    scene.billboards = [explosion(1), explosion(2)]
+    fx.observe(scene, 2, true)
+    expect(fx.projectiles(2.02)).toHaveLength(1) // later straight missile remains a missile
+  })
+
+  it('keeps bent specialised bolts out of the generic explosion classifier', () => {
+    const fx = new DungeonEffects(), scene = world()
+    scene.cells.set(cellKey(2, 1), { ...scene.cells.get(cellKey(2, 0))!, y: 1 })
+    fx.observe(scene, 0, true)
+    scene.billboards = [[1, 0], [2, 0], [2, 1]].map(([x, y]) => ({ ...spell(x), y,
+      life: { projectile: { kind: 'electric', colour: [150, 190, 255], beam: true, family: 'BOLT_STRONG_ELEC' } } }))
+    fx.observe(scene, 1, true)
+    expect(fx.projectiles(1.02).length).toBeGreaterThan(0)
+    expect(fx.spawns.effects).toEqual([])
+    expect(fx.spawns.overlays(scene, 1.02)).toEqual([])
+  })
+
+  it.each(['initial', 'reveal', 'level', 'remote', 'still'] as const)('does not invent a spawn on %s', reset => {
+    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(1, 0))!
+    if (reset === 'reveal') cell.visibility = 'remembered'
+    if (reset !== 'initial') fx.observe(scene, 0, true)
+    cell.life = { spawn: { kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' } }
+    cell.visibility = 'visible'
+    if (reset === 'level') scene.levelKey = 'D:2'
+    if (reset === 'remote') scene.playerOnLevel = false
+    fx.observe(scene, 1, reset !== 'still')
+    expect(fx.spawns.effects).toEqual([])
+  })
+
+  it('expires entrance effects on loss of visibility and permits a new spawn after removal', () => {
+    const fx = new DungeonEffects(), scene = world(), cell = scene.cells.get(cellKey(1, 0))!
+    fx.observe(scene, 0, true)
+    cell.life = { spawn: { kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' } }
+    fx.observe(scene, 1, true)
+    cell.visibility = 'remembered'; fx.observe(scene, 1.05, true)
+    expect(fx.spawns.effects).toEqual([])
+    cell.visibility = 'visible'; fx.observe(scene, 1.1, true)
+    expect(fx.spawns.effects).toEqual([])
+    const life = cell.life
+    cell.life = undefined; fx.observe(scene, 1.2, true)
+    cell.life = life; fx.observe(scene, 1.3, true)
+    expect(fx.spawns.effects).toMatchObject([{ born: 1.3 }])
+  })
   it('keeps confirmed zero-damage casts without projectile/light dependencies, deduplicates and expires', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)

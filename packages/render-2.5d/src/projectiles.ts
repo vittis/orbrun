@@ -48,10 +48,14 @@ export class DungeonProjectiles {
   private flights: Flight[] = []
   private current = new Map<string, Flight>()
 
-  observe(scene: Scene, now: number, recipient: (b: Billboard) => Billboard | undefined) {
+  observe(scene: Scene, now: number, recipient: (b: Billboard) => Billboard | undefined, stationary: (b: Billboard) => boolean = () => false) {
+    // A growing area can begin with one or two overlays before its shape is
+    // known. Discard that provisional path as soon as the area is confirmed.
+    this.flights = this.flights.filter(f => !f.points.some(stationary))
+    for (const [key, flight] of this.current) if (!this.flights.includes(flight)) this.current.delete(key)
     const groups = new Map<string, Billboard[]>()
     for (const b of scene.billboards) {
-      if (b.kind !== 'projectile' || b.life?.projectile === false || !visible(scene, b)) continue
+      if (b.kind !== 'projectile' || b.life?.projectile === false || stationary(b) || !visible(scene, b)) continue
       const art = b.life?.projectile, groupKey = `${family(b)}:${art ? art.angle : ''}`
       const group = groups.get(groupKey) ?? []
       group.push(b); groups.set(groupKey, group)

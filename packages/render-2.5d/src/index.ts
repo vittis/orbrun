@@ -8,7 +8,8 @@ import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting }
 import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementEasing } from './movement.js'
 import { DungeonEffects, type SpellBurst } from './effects.js'
-import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
+import { drawSpellTrace, drawSpellBurst, drawSpawn } from './effects-draw.js'
+import type { SpawnEffect } from './spawns.js'
 import { drawMelee } from './melee-draw.js'
 import { ImpactArt } from './impact-draw.js'
 import { DeathArt } from './death-draw.js'
@@ -44,7 +45,7 @@ export interface Render25dOptions {
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
-type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean; contactBlend?: number }
+type Standing = { cell: SceneCell; billboard?: Billboard; burst?: SpellBurst; spawn?: SpawnEffect; death?: DeathParticle; depth: number; x: number; y: number; moving?: boolean; contactBlend?: number }
 
 /**
  * A separate presentation of Scene, not a filter over another renderer.
@@ -262,6 +263,16 @@ export class Render25d implements MapRenderer {
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
     }).sort((a, b) => a.depth - b.depth || a.x - b.x)
     if (this.opts.animate) {
+      for (const billboard of this.effects.spawns.overlays(this.scene, now)) {
+        const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))!
+        standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
+      }
+      for (const spawn of this.effects.spawns.effects) {
+        const cell = this.scene.cells.get(cellKey(spawn.x, spawn.y))!
+        if (!this.inFrame(p, spawn)) continue
+        standing.push({ cell, spawn, x: spawn.x, y: spawn.y, depth: spawn.y + 0.6 })
+        this.active = true
+      }
       for (const death of deathParticles) {
         if (death.ground) continue
         const cell = this.scene.cells.get(cellKey(Math.round(death.x), Math.round(death.y)))!
@@ -305,7 +316,7 @@ export class Render25d implements MapRenderer {
     }
     this.life.tick(now)
     const emitters = this.life.emitters(now)
-    if (this.opts.animate) for (const shot of this.effects.projectiles(now)) {
+    if (this.opts.animate) for (const shot of [...this.effects.projectiles(now), ...this.effects.spawns.overlays(this.scene, now)]) {
       for (const light of shot.life?.lights ?? []) emitters.push({ ...light, x: Math.round(shot.x), y: Math.round(shot.y) })
     }
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
@@ -377,7 +388,7 @@ export class Render25d implements MapRenderer {
     // Shadows lie on the ground; no sprite's shadow is painted over another sprite.
     for (const entry of standing) {
       if (!this.inFrame(p, entry)) continue
-      if (entry.death || entry.burst || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
+      if (entry.death || entry.burst || entry.spawn || entry.cell.occluder || entry.billboard?.kind === 'projectile' || entry.billboard?.kind === 'cloud') continue
       const q = project(p, entry.x, entry.y + 0.28)
       ctx.save()
       ctx.translate(q.x, q.y)
@@ -397,7 +408,7 @@ export class Render25d implements MapRenderer {
       if (entry.death) {
         this.deathArt.draw(ctx, p, this.scene, entry.death, this.dpr)
       }
-      else if (entry.burst) {
+      else if (entry.burst || entry.spawn) {
         ctx.save(); ctx.beginPath()
         for (let y = Math.round(entry.y) - 1; y <= Math.round(entry.y) + 1; y++) for (let x = Math.round(entry.x) - 1; x <= Math.round(entry.x) + 1; x++) {
           const cell = this.scene.cells.get(cellKey(x, y))
@@ -405,7 +416,10 @@ export class Render25d implements MapRenderer {
           const rect = planeRect(p, x, y, 0, this.dpr)
           ctx.rect(rect.x, rect.y - s * 1.1, rect.width, rect.height + s * 1.1)
         }
-        ctx.clip(); drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y }); ctx.restore()
+        ctx.clip()
+        if (entry.spawn) drawSpawn(ctx, p, entry.spawn, now, this.impactArt, this.dpr)
+        else if (entry.burst) drawSpellBurst(ctx, p, entry.burst, now, this.impactArt, this.dpr, { ...entry.burst, x: entry.x, y: entry.y })
+        ctx.restore()
       }
       else if (entry.billboard) this.actor(ctx, p, entry.cell, entry.billboard, time, entry)
       else if (entry.cell.occluder) this.wall(ctx, p, entry.cell)
@@ -707,6 +721,12 @@ export class Render25d implements MapRenderer {
         width: plane.width + (s - plane.width) * blend, height: plane.height + (s - plane.height) * blend }
       const thin = false
       ctx.save(); ctx.imageSmoothingEnabled = thin || this.opts.filterScaling; ctx.globalAlpha = b.alpha ?? 0.95
+      if (this.opts.animate) {
+        const scale = this.effects.spawns.overlayScale(b, time)
+        ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
+        ctx.scale(scale, scale)
+        ctx.translate(-rect.x - rect.width / 2, -rect.y - rect.height / 2)
+      }
       this.tiles.drawPlane(ctx, b.layers ?? [{ tile: b.tile }], rect, 1, false, undefined, undefined, undefined, thin)
       ctx.restore()
       return
@@ -716,6 +736,10 @@ export class Render25d implements MapRenderer {
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
     const breathing = creature && !b.lying && life.motion === 'breath' && !life.held && this.opts.animate && visible
     const pose = livingPose(life, b.x, b.y, time, this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
+    const entrance = this.opts.animate && visible ? this.effects.spawns.entrance(b, time) : 1
+    const bloom = 1 - (1 - entrance) ** 3
+    pose.sx *= 0.72 + bloom * 0.28
+    pose.sy *= 0.55 + bloom * 0.45
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
     const wound = ['uninjured', 'lightly_damaged', 'moderately_damaged', 'heavily_damaged', 'severely_damaged', 'almost_dead'].indexOf(b.damage ?? 'uninjured')
@@ -745,7 +769,7 @@ export class Render25d implements MapRenderer {
     // while easing row transitions. Explicit smooth scaling uses the atlas directly.
     const rasterScale = breathing && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
     ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || breathing
-    ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1)
+    ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1) * (0.45 + bloom * 0.55)
     const brightness = this.opts.animate && visible ? this.effects.hits.brightness(combatActorId(b), time) : 1
     if (brightness > 1) {
       if (typeof ctx.filter === 'string') ctx.filter = `brightness(${brightness})`

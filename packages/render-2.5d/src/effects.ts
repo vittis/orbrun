@@ -1,4 +1,5 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
+import { DungeonSpawns } from './spawns.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 import type { MeleeVariant } from './melee-path.js'
@@ -20,6 +21,7 @@ const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 /** Small, bounded visual histories. No game rules, prose parsing or timers. */
 export class DungeonEffects {
   readonly hits = new HitEffects()
+  readonly spawns = new DungeonSpawns()
   strokes: MeleeStroke[] = []
   traces: SpellTrace[] = []
   bursts: SpellBurst[] = []
@@ -44,7 +46,10 @@ export class DungeonEffects {
       const previous = old && (old.x !== b.x || old.y !== b.y) ? { x: old.x, y: old.y, at: now } : old?.previous
       return [id, { x: b.x, y: b.y, at: now, previous }]
     }))
-    if (animate && scene.playerOnLevel) this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now))
+    if (animate && scene.playerOnLevel) {
+      this.spawns.observe(scene, now, continuing)
+      this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now), b => this.spawns.stationary(b))
+    }
     const flashes = new Map<ReturnType<typeof cellKey>, string>()
     if (animate && scene.playerOnLevel) for (const cell of scene.cells.values()) {
       const f = cell.flash
@@ -218,6 +223,7 @@ export class DungeonEffects {
   }
 
   tick(scene: Scene, now: number) {
+    this.spawns.tick(scene, now)
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
@@ -249,5 +255,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.hits.clear(); this.strokes = []; this.meleeVariants.clear(); this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.spawns.clear(); this.hits.clear(); this.strokes = []; this.meleeVariants.clear(); this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }
