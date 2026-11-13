@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.102 — 2026-11-13
+
+- Made the critical-health red corner vignette stronger and extended it from 2.8 to 5.6 seconds, with a brief hold before fading. The center stays clear and reduced-motion intensity remains lowered.
+
 ## 0.3.101 — 2026-11-13
 
 - Hit and death splatters mix fire, cold, poison, acid, electricity or magic from the confirmed damaging hit with the creature’s existing blood or material debris. Deaths retain same-turn hit evidence across frames without reusing older attacks or guessing from elemental creature names.
