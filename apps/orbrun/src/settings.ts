@@ -12,6 +12,8 @@ export interface Settings {
   meleeWeight: number
   meleeTrail: number
   meleeMotion: number
+  hitBumpStrength: number
+  hitBumpSnap: number
   uiScale: number
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
@@ -49,6 +51,8 @@ export const defaultSettings: Settings = {
   meleeWeight: 1,
   meleeTrail: 1,
   meleeMotion: 1,
+  hitBumpStrength: 1,
+  hitBumpSnap: 1,
   uiScale: 1,
   confirmStairs: false,
   minimapTiles: 0,
@@ -72,6 +76,8 @@ const numericDomains: Record<NumericSetting, { min: number; max: number; integer
   meleeWeight: { min: 0.6, max: 1.5 },
   meleeTrail: { min: 0.4, max: 1.4 },
   meleeMotion: { min: 0, max: 1 },
+  hitBumpStrength: { min: 0, max: 1.5 },
+  hitBumpSnap: { min: 0, max: 1 },
   uiScale: { min: 0.85, max: 1.5 },
   minimapTiles: { min: 15, max: 61, integer: true, auto: true },
   minimapCell: { min: 8, max: 32, auto: true },

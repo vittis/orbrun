@@ -361,7 +361,7 @@ describe('picking and visibility', () => {
     expect(r.animating).toBe(false)
   })
 
-  it.each([false, true])('anchors swings and impacts to the moving sprites, including incoming=%s', incoming => {
+  it('anchors player swings and impacts to the moving sprites', () => {
     const draw = vi.spyOn(meleeArt, 'drawMelee').mockImplementation(() => {})
     const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
     const { r } = renderer()
@@ -376,17 +376,17 @@ describe('picking and visibility', () => {
       const player = { ...start.billboards[0], x: 1 }, enemy = start.billboards[1]
       const scene = { ...start, revision: 1, player: { x: 1, y: 0 }, billboards: [player, enemy] }
       r.setScene(scene, 1)
-      r.melee({ from: incoming ? enemy : player, to: incoming ? player : enemy,
-        fromId: incoming ? 'id:7' : 'player', toId: incoming ? 'player' : 'id:7', style: 'slash', hit: true }, 1)
+      r.melee({ from: player, to: enemy,
+        fromId: 'player', toId: 'id:7', style: 'slash', hit: true }, 1)
       for (const time of [1.1, 1.18]) {
         r.render(time)
         const anchors = draw.mock.calls.at(-1)![2]
-        expect(r.project(anchors.from.x, anchors.from.y)).toEqual(r.projectBillboard(incoming ? enemy : player))
-        expect(r.project(anchors.to.x, anchors.to.y)).toEqual(r.projectBillboard(incoming ? player : enemy))
+        expect(r.project(anchors.from.x, anchors.from.y)).toEqual(r.projectBillboard(player))
+        expect(r.project(anchors.to.x, anchors.to.y)).toEqual(r.projectBillboard(enemy))
       }
       // The player is still finishing a step; using its confirmed cell would float ahead.
       const anchors = draw.mock.calls[0][2]
-      expect((incoming ? anchors.to : anchors.from).x).toBeLessThan(player.x)
+      expect(anchors.from.x).toBeLessThan(player.x)
       expect(spray).toHaveBeenCalled()
     } finally { draw.mockRestore(); spray.mockRestore(); r.destroy() }
   })

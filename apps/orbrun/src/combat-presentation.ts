@@ -9,7 +9,7 @@ export function presentCombat(renderer: MapRenderer, scene: Scene, events: Comba
     return attack ? [attack] : []
   })]
   const visible = (p: { x: number; y: number }) => scene.cells.get(cellKey(p.x, p.y))?.visibility === 'visible'
-  const scheduled = animate && renderer.melee ? attacks.filter(a => scene.playerOnLevel && visible(a.from) && visible(a.to)) : []
+  const scheduled = animate && renderer.melee ? attacks.filter(a => a.fromId === 'player' && scene.playerOnLevel && visible(a.from) && visible(a.to)) : []
   for (const attack of scheduled) renderer.melee!(attack, now / 1000)
   const delayFor = (x: number | undefined, y: number | undefined, id?: string) => Math.max(0, ...scheduled
     .filter(a => id && a.toId ? id === a.toId : a.to.x === x && a.to.y === y)

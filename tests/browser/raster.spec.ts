@@ -14,7 +14,7 @@ test('spell entrances bloom, settle, sleep and respect visibility/Still', async 
 
 const fullChecks = { tiles: 342, markers: 216, surfaces: 28, movement: 324, depth: 162, visibility: 96, arrival: 96, coherence: 378, corridors: 2430, melee: 576 }
 // A smoke run still exercises every rendering concern; the profile reduces combinations.
-const smokeChecks = { tiles: 12, markers: 16, surfaces: 14, movement: 36, depth: 12, visibility: 36, arrival: 24, coherence: 28, corridors: 72, melee: 64 }
+const smokeChecks = { tiles: 12, markers: 16, surfaces: 14, movement: 36, depth: 12, visibility: 36, arrival: 24, coherence: 28, corridors: 72, melee: 96 }
 for (const lane of Object.keys(fullChecks) as (keyof typeof fullChecks)[]) {
   test(`raster: ${lane}`, async ({ page }, testInfo) => {
     const profile = testInfo.project.metadata.profile as 'smoke' | 'full'

@@ -304,16 +304,18 @@ describe('Dungeon-only settings migration', () => {
 describe('Melee preferences', () => {
   beforeEach(() => store.clear())
   it('persists tuning, disables unavailable controls, and resets just combat', () => {
-    saveSettings({ ...defaultSettings, meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, depthZoom: 1.2 })
-    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0 })
+    saveSettings({ ...defaultSettings, meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, hitBumpStrength: 1.5, hitBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 0, hitBumpStrength: 1.5, hitBumpSnap: 0.5 })
     expect(rowOff(row('Melee weight'), { ...defaultSettings, meleeEffects: false })).toBe(true)
     expect(rowOff(row('Melee trail'), { ...defaultSettings, depthAnimate: false })).toBe(true)
     expect(rowOff(row('Melee movement'), { ...defaultSettings, meleeEffects: false })).toBe(false)
+    expect(rowOff(row('Hit bump strength'), { ...defaultSettings, meleeMotion: 0 })).toBe(true)
+    expect(rowOff(row('Hit bump snap'), { ...defaultSettings, hitBumpStrength: 0 })).toBe(true)
     resetGroup('Combat')
-    expect(getSettings()).toMatchObject({ meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, hitBumpStrength: 1, hitBumpSnap: 1, depthZoom: 1.2 })
   })
   it('normalizes malformed or out-of-range saved tuning', () => {
-    store.set('orbrun.settings', JSON.stringify({ meleeWeight: 99, meleeTrail: -1, meleeMotion: 4, meleeEffects: 'off' }))
-    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 1, meleeEffects: true })
+    store.set('orbrun.settings', JSON.stringify({ meleeWeight: 99, meleeTrail: -1, meleeMotion: 4, hitBumpStrength: 99, hitBumpSnap: -1, meleeEffects: 'off' }))
+    expect(getSettings()).toMatchObject({ meleeWeight: 1.5, meleeTrail: 0.4, meleeMotion: 1, hitBumpStrength: 1.5, hitBumpSnap: 0, meleeEffects: true })
   })
 })

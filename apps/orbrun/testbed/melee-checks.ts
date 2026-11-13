@@ -1,7 +1,6 @@
 import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, meleeTiming, type MeleeAttack, type TileSource } from '@orbrun/scene'
 import { drawMelee } from '../../../packages/render-2.5d/src/melee-draw'
-import type { MeleeVariant } from '../../../packages/render-2.5d/src/melee-path'
 import { captures, matrix, fixtureYield, releaseCanvas } from './fixture'
 
 /** Compare the isolated gesture with real dungeon pixels at a visibility edge.
@@ -17,9 +16,8 @@ export async function meleeChecks() {
     atlas: () => atlas, atlasNames: () => ['black'],
   }
   const width = 360, height = 266
-  for (const style of matrix<MeleeAttack['style']>(['cleave', 'lash', 'crush'], ['cleave']))
+  for (const style of matrix<MeleeAttack['style']>(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'], ['cleave', 'lash', 'crush']))
     for (const degrees of matrix([35, 65], [50]))
-      for (const variant of matrix<MeleeVariant>([0, 1, 2], [0, 1]))
         for (const [dx, dy] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]])
           for (const hit of [true, false]) {
     const canvas = document.createElement('canvas'), reference = document.createElement('canvas')
@@ -35,12 +33,10 @@ export async function meleeChecks() {
     })
     r.setScene(scene, 0)
     const attack = { from: { x: 0, y: 0 }, to: { x: dx, y: dy }, style, hit, intensity: 'solid' as const }
-    // Deterministic accepted gesture, just as the existing preview's variant selector.
-    const random = Math.random
-    try { Math.random = () => (variant + 0.5) / 3; r.melee(attack, 1) } finally { Math.random = random }
+    r.melee(attack, 1)
     const tilt = degrees * Math.PI / 180
     const p = { x: 0, y: 0, width, height, tilt, scale: fittedScale(width, height, tilt) }
-    const stroke = { ...attack, born: 1, duration: meleeTiming(style).duration, variant, heading: { x: dx, y: dy } }
+    const stroke = { ...attack, born: 1, duration: meleeTiming(style).duration, heading: { x: dx, y: dy } }
     for (const phase of [0.35, 0.44]) {
       const time = 1 + phase * stroke.duration
       r.render(time); ref.clearRect(0, 0, width, height); drawMelee(ref, p, stroke, time)
@@ -53,8 +49,8 @@ export async function meleeChecks() {
         if (Math.max(actual[i], actual[i + 1], actual[i + 2]) < 30) missing++
       }
       checks++
-      if (!solid || missing) failures.push({ style, degrees, variant, dx, dy, hit, phase, solid, missing })
-      if (captures && style === 'cleave' && variant === 0 && dx === 0 && dy === -1 && phase === 0.44) {
+      if (!solid || missing) failures.push({ style, degrees, dx, dy, hit, phase, solid, missing })
+      if (captures && style === 'cleave' && dx === 0 && dy === -1 && phase === 0.44) {
         const copy = document.createElement('canvas'); copy.width = width; copy.height = height
         copy.getContext('2d')!.drawImage(canvas, 0, 0); document.querySelector('#captures')!.append(copy)
       }

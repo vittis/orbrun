@@ -56,7 +56,8 @@ describe('combat contact timing', () => {
       { kind: 'hurt', amount: 12, player: true },
       { kind: 'hit', x: 2, y: 0, tone: 'magic', intensity: 'solid' },
     ], [attack], [], undefined, 1000, true)
-    expect(renderer.hit).toHaveBeenCalledWith({ x: 0, y: 0, actorId: 'player', turn: undefined }, 1 + meleeTiming('crush').contact)
+    expect(renderer.hit).toHaveBeenCalledWith({ x: 0, y: 0, actorId: 'player', turn: undefined }, 1)
+    expect(renderer.melee).not.toHaveBeenCalled()
     expect(renderer.hit).toHaveBeenCalledWith({ x: 2, y: 0, actorId: undefined, turn: undefined }, 1)
   })
 

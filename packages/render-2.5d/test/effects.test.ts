@@ -143,20 +143,17 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
-  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('keeps %s gesture variations on the existing material-spray contact clock', style => {
+  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('keeps %s gesture on the existing material-spray contact clock', style => {
     const scene = world(), fx = new DungeonEffects()
     scene.billboards = [player, { ...target, id: 7, name: 'jelly' }]
     fx.observe(scene, 0, true)
-    let previous: number | undefined
     for (let i = 0; i < 6; i++) {
       const now = 1 + i, contact = now + meleeTiming(style).contact
       scene.turn = i
       fx.tick(scene, now)
       fx.melee(scene, { ...attack, style, fromId: 'player', toId: 'id:7' }, now)
       const stroke = fx.strokes.at(-1)!
-      expect(stroke.variant).not.toBe(previous)
       expect(stroke.duration).toBe(meleeTiming(style).duration)
-      previous = stroke.variant
       fx.hit(scene, { x: 1, y: 0, actorId: 'id:7', turn: i }, contact)
       fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', turn: i, kind: 'fire' }, contact)
       expect(fx.visibleBursts(contact - 0.001)).toEqual([])
@@ -184,6 +181,24 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.offset(player, time, 0)).toEqual({ x: 0, y: 0 })
     expect(fx.offset(player, time, 0.35).x).toBeCloseTo(fx.offset(player, time).x * 0.35)
     expect(fx.strokes[0].born).toBe(1)
+  })
+
+  it('kicks sharply only after contact, tunes strength/snap independently and settles completely', () => {
+    const fx = new DungeonEffects(), scene = world()
+    fx.melee(scene, { ...attack, style: 'cleave', intensity: 'heavy' }, 1)
+    const contact = 1 + meleeTiming('cleave').contact
+    expect(fx.offset(target, contact - 0.001)).toEqual({ x: 0, y: 0 })
+    const at = contact + 0.02
+    const crunchy = fx.offset(target, at, 1, 1, 1).x
+    expect(crunchy).toBeGreaterThan(0.14)
+    expect(fx.offset(target, at, 1, 1, 0).x).toBeLessThan(crunchy)
+    expect(fx.offset(target, at, 1, 0.5, 1).x).toBeCloseTo(crunchy / 2)
+    expect(fx.offset(target, at, 1, 1.5, 1).x).toBeCloseTo(crunchy * 1.5)
+    expect(fx.offset(target, at, 1, 0, 1)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(player, at, 1, 0, 0)).toEqual(fx.offset(player, at, 1, 1.5, 1))
+    expect(fx.offset(target, 1.41)).toEqual({ x: 0, y: 0 })
+    fx.clear(); fx.melee(scene, { ...attack, hit: false }, 2)
+    expect(fx.offset(target, 2.15, 1, 1.5, 1)).toEqual({ x: 0, y: 0 })
   })
 
   it('interpolates one head along the native path without guessing another impact', () => {
@@ -315,18 +330,17 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.offset(player, 2.1).x).toBeGreaterThan(0)
   })
 
-  it('keeps recoil after contact and assigns the lunge to the incoming attacker by ID', () => {
+  it('rejects enemy melee with or without actor IDs, including enemies on the player cell', () => {
     const fx = new DungeonEffects(), scene = world()
     fx.observe(scene, 0, true)
-    const enemy = { ...target, id: 7 }, receiver = { ...player }
-    fx.melee(scene, { ...attack, from: attack.to, to: attack.from, fromId: 'id:7', toId: 'player' }, 1)
-    const contact = 1 + meleeTiming('slash').contact
-    expect(fx.offset(receiver, contact - 0.001)).toEqual({ x: 0, y: 0 })
-    expect(fx.offset(enemy, contact).x).toBeLessThan(-0.1)
-    expect(fx.offset(receiver, contact + 0.04).x).toBeLessThan(0)
-    // A different actor standing at the attacker's cell must not lunge.
-    expect(fx.offset({ ...enemy, id: 8 }, contact)).toEqual({ x: 0, y: 0 })
-    expect(fx.offset(enemy, 1.5)).toEqual({ x: 0, y: 0 })
+    for (const fromId of [undefined, 'id:7']) {
+      expect(fx.melee(scene, { ...attack, from: attack.to, to: attack.from, fromId, toId: 'player' }, 1)).toBe(false)
+    }
+    expect(fx.melee(scene, { ...attack, fromId: 'id:7' }, 1)).toBe(false)
+    expect(fx.strokes).toEqual([])
+    expect(fx.bursts).toEqual([])
+    expect(fx.offset(player, 1.1)).toEqual({ x: 0, y: 0 })
+    expect(fx.offset(target, 1.1)).toEqual({ x: 0, y: 0 })
   })
 
   it('deduplicates rapid reports, caps history and motion, and refuses hidden targets', () => {
@@ -336,38 +350,26 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.strokes).toHaveLength(1)
     for (let i = 0; i < 100; i++) fx.melee(scene, attack, 2 + i * 0.1)
     expect(fx.strokes.length).toBeLessThanOrEqual(12)
-    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.18)
+    expect(Math.hypot(...Object.values(fx.offset(player, 11.96)))).toBeLessThanOrEqual(0.28)
     scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     fx.tick(scene, 12)
     expect(fx.strokes).toHaveLength(0)
     expect(fx.melee(scene, attack, 12)).toBe(false)
   })
 
-  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('chooses %s variations once per accepted swing without consecutive repeats', style => {
-    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
-    try {
-      const fx = new DungeonEffects(), scene = world(), swing = { ...attack, style, fromId: 'player' }
-      fx.observe(scene, 0, true)
-      fx.melee(scene, swing, 1)
-      expect(fx.strokes[0].variant).toBe(0)
-      fx.melee(scene, swing, 1.02)
-      expect(random).toHaveBeenCalledTimes(1)
-      fx.tick(scene, 1.05); fx.offset(player, 1.05)
-      expect(fx.strokes[0].variant).toBe(0)
-      expect(random).toHaveBeenCalledTimes(1)
-      // Even after the previous stroke expires, preserve the combo's variation.
-      fx.tick(scene, 2)
-      fx.melee(scene, swing, 2)
-      expect(fx.strokes[0].variant).toBe(1)
-      random.mockReturnValue(0.999)
-      fx.melee(scene, swing, 2.1)
-      expect(fx.strokes[1].variant).toBe(2)
-      fx.melee(scene, swing, 2.2)
-      expect(fx.strokes[2].variant).toBe(1)
-      fx.clear()
-      fx.melee(scene, swing, 3)
-      expect(fx.strokes[0].variant).toBe(2)
-    } finally { random.mockRestore() }
+  it.each(['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed'] as const)('repeats the same %s swing after expiry and reset', style => {
+    const fx = new DungeonEffects(), scene = world(), swing = { ...attack, style, fromId: 'player' }
+    fx.observe(scene, 0, true)
+    fx.melee(scene, swing, 1)
+    const first = { ...fx.strokes[0], born: 0 }
+    fx.melee(scene, swing, 1.02)
+    expect(fx.strokes).toHaveLength(1)
+    fx.tick(scene, 2)
+    fx.melee(scene, swing, 2)
+    expect({ ...fx.strokes[0], born: 0 }).toEqual(first)
+    fx.clear()
+    fx.melee(scene, swing, 3)
+    expect({ ...fx.strokes[0], born: 0 }).toEqual(first)
   })
 
   it('leaves one trace when a confirmed spell disappears, with no refresh on unrelated updates', () => {

@@ -106,7 +106,7 @@ export function drawMelee(ctx: Context2d, p: Projection, stroke: MeleeStroke, no
   const colours = palettes[stroke.tone ?? 'physical']
   const heading = stroke.heading
   const frame = heading ? meleeFrame(heading.x, heading.y * groundDepth(p.tilt)) : meleeFrame(dx, dy)
-  const { path } = meleePath(style, stroke.variant, dx, dy, stroke.hit, frame)
+  const { path } = meleePath(style, dx, dy, stroke.hit, frame)
   const size = weight * (1 + strength * 0.2)
   const tail = { slash: 0.65, cleave: 0.48, reap: 0.75, staff: 0.48, lash: 0.9, crush: 0.18, thrust: 0.65, stab: 0.3, unarmed: 0.25 }[style]
     * trail * (1 - smooth((recovery - 0.2) / 0.65))

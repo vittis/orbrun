@@ -2,9 +2,8 @@ import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
 import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
-import type { MeleeVariant } from './melee-path.js'
 
-export interface MeleeStroke extends MeleeAttack { born: number; duration: number; variant: MeleeVariant; heading?: { x: number; y: number } }
+export interface MeleeStroke extends MeleeAttack { born: number; duration: number; heading?: { x: number; y: number } }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
 export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray }
@@ -33,7 +32,6 @@ export class DungeonEffects {
   private level: string | undefined
   private onLevel = false
   private spraySequence = 0
-  private meleeVariants = new Map<string, MeleeVariant>()
 
   observe(scene: Scene, now: number, animate: boolean) {
     const continuing = animate && scene.playerOnLevel && this.onLevel && scene.levelKey === this.level
@@ -178,20 +176,14 @@ export class DungeonEffects {
   }
 
   melee(scene: Scene, attack: MeleeAttack, now: number) {
+    const playerAttack = attack.fromId ? attack.fromId === 'player'
+      : attack.from.x === scene.player.x && attack.from.y === scene.player.y
+    if (!playerAttack) return false
     const distance = Math.hypot(attack.to.x - attack.from.x, attack.to.y - attack.from.y)
     if (!scene.playerOnLevel || !visible(scene, attack.from) || !visible(scene, attack.to) || distance < 0.5 || distance > 2.9) return false
     // Multiple reports for a cleave/brand must not stack the same stroke.
     if (this.strokes.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
-    // Choose once per accepted swing; duplicate reports and redraws never roll
-    // again. Keep the previous gesture through rapid combos and short pauses.
-    const key = `${attack.fromId ?? `${attack.from.x},${attack.from.y}`}:${attack.style}`
-    const previous = this.meleeVariants.get(key)
-    const roll = Math.floor(Math.random() * (previous === undefined ? 3 : 2))
-    const variant = (previous === undefined || roll < previous ? roll : roll + 1) as MeleeVariant
-    this.meleeVariants.delete(key)
-    this.meleeVariants.set(key, variant)
-    if (this.meleeVariants.size > 64) this.meleeVariants.delete(this.meleeVariants.keys().next().value!)
-    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration, variant,
+    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration,
       heading: { x: attack.to.x - attack.from.x, y: attack.to.y - attack.from.y } })
     this.strokes = this.strokes.slice(-12)
     if (attack.hit) {
@@ -203,7 +195,7 @@ export class DungeonEffects {
     return true
   }
 
-  offset(b: Billboard, now: number, motion = 1) {
+  offset(b: Billboard, now: number, motion = 1, bumpStrength = 1, bumpSnap = 1) {
     let x = 0, y = 0
     if (b.lying || b.scenery || b.life?.held || b.kind !== 'monster' && b.kind !== 'player') return { x, y }
     for (const stroke of this.strokes) {
@@ -213,12 +205,12 @@ export class DungeonEffects {
       const id = combatActorId(b)
       const attacker = stroke.fromId ? id === stroke.fromId : b.x === stroke.from.x && b.y === stroke.from.y
       const target = stroke.hit && (stroke.toId ? id === stroke.toId : b.x === stroke.to.x && b.y === stroke.to.y)
-      const pose = meleePose(stroke.style, now - stroke.born)
-      const kick = attacker ? pose.lunge : target ? pose.recoil * (0.6 + impactStrength(stroke.intensity) * 0.4) : 0
+      const pose = meleePose(stroke.style, now - stroke.born, bumpSnap)
+      const kick = attacker ? pose.lunge : target ? pose.recoil * bumpStrength * (0.6 + impactStrength(stroke.intensity) * 0.4) : 0
       x += dx / length * kick; y += dy / length * kick
     }
     // Rapid actions never accumulate more than a small fraction of a cell.
-    const limit = Math.max(1, Math.hypot(x, y) / 0.18)
+    const limit = Math.max(1, Math.hypot(x, y) / 0.28)
     return { x: x / limit * motion, y: y / limit * motion }
   }
 
@@ -255,5 +247,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.spawns.clear(); this.hits.clear(); this.strokes = []; this.meleeVariants.clear(); this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.spawns.clear(); this.hits.clear(); this.strokes = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

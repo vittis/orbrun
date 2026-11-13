@@ -39,6 +39,8 @@ export interface Render25dOptions {
   meleeWeight?: number
   meleeTrail?: number
   meleeMotion?: number
+  hitBumpStrength?: number
+  hitBumpSnap?: number
   center?: { x: number; y: number } | null
   minibars?: Minibars | null
   filterScaling?: boolean
@@ -80,7 +82,7 @@ export class Render25d implements MapRenderer {
   private active = false
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
-    meleeEffects: true, meleeWeight: 1, meleeTrail: 1, meleeMotion: 1,
+    meleeEffects: true, meleeWeight: 1, meleeTrail: 1, meleeMotion: 1, hitBumpStrength: 1, hitBumpSnap: 1,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
   }
 
@@ -92,7 +94,7 @@ export class Render25d implements MapRenderer {
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.6, Math.min(1.6, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
-    for (const [key, min, max] of [['meleeWeight', 0.6, 1.5], ['meleeTrail', 0.4, 1.4], ['meleeMotion', 0, 1]] as const) {
+    for (const [key, min, max] of [['meleeWeight', 0.6, 1.5], ['meleeTrail', 0.4, 1.4], ['meleeMotion', 0, 1], ['hitBumpStrength', 0, 1.5], ['hitBumpSnap', 0, 1]] as const) {
       this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : 1
     }
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
@@ -178,7 +180,7 @@ export class Render25d implements MapRenderer {
   }
 
   private actorPosition(b: Billboard, now: number) {
-    const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now, this.opts.meleeMotion) : { x: 0, y: 0 }
+    const pos = this.movement.position(b, now), offset = this.opts.animate ? this.effects.offset(b, now, this.opts.meleeMotion, this.opts.hitBumpStrength, this.opts.hitBumpSnap) : { x: 0, y: 0 }
     return { x: pos.x + offset.x, y: pos.y + offset.y }
   }
 

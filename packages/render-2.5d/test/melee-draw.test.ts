@@ -4,11 +4,9 @@ import { drawMelee, type MeleeAppearance } from '../src/melee-draw.js'
 import { groundDepth, type Projection } from '../src/projection.js'
 import type { MeleeStroke } from '../src/effects.js'
 import type { Context2d } from '../src/tiles.js'
-import type { MeleeVariant } from '../src/melee-path.js'
 import * as impacts from '../src/impact-art.js'
 
 const styles: MeleeAttack['style'][] = ['slash', 'stab', 'thrust', 'cleave', 'reap', 'crush', 'lash', 'staff', 'unarmed']
-const variants: MeleeVariant[] = [0, 1, 2]
 const projection: Projection = { x: 0, y: 0, width: 640, height: 480, scale: 32, tilt: Math.PI / 4 }
 interface Run { x: number; y: number; width: number; alpha: number; colour: string }
 function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeStroke> = {}, appearance: MeleeAppearance = {}) {
@@ -22,7 +20,7 @@ function frame(style: MeleeAttack['style'], age: number, options: Partial<MeleeS
     translate(x: number, y: number) { if (stack.length > 1) { offset.x += x; offset.y += y } }, scale() {},
     fillRect(x: number, y: number, width: number) { runs.push({ x: x + offset.x, y: y + offset.y, width, alpha: this.globalAlpha, colour: this.fillStyle }) },
   }
-  const stroke: MeleeStroke = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style, variant: 0, hit: true, born: 0, duration: meleeTiming(style).duration, ...options }
+  const stroke: MeleeStroke = { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style, hit: true, born: 0, duration: meleeTiming(style).duration, ...options }
   drawMelee(ctx as unknown as Context2d, projection, stroke, age * stroke.duration, appearance)
   return runs
 }
@@ -33,15 +31,15 @@ describe('pixel-art melee gestures', () => {
   it('leaves every contact effect to the material spray renderer', () => {
     const contact = vi.spyOn(impacts, 'paintImpact')
     try {
-      for (const style of styles) for (const variant of variants) for (const age of [0.42, 0.55, 0.72]) frame(style, age, { variant })
+      for (const style of styles) for (const age of [0.42, 0.55, 0.72]) frame(style, age, {})
       expect(contact).not.toHaveBeenCalled()
     } finally { contact.mockRestore() }
   })
   it.each(styles)('%s reaches the defender at shared contact in every direction, including reaching weapons', style => {
-    for (const variant of variants) for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0]]) {
+    for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0]]) {
       const tx = x * 32, ty = Math.floor(y * groundDepth(projection.tilt) * 32)
-      expect(covers(frame(style, 0.42001, { to: { x, y }, variant }), tx, ty), `${style} ${variant} contact ${x},${y}`).toBe(true)
-      expect(covers(frame(style, 0.42001, { to: { x, y }, variant, hit: false }), tx, ty), `${style} ${variant} miss ${x},${y}`).toBe(false)
+      expect(covers(frame(style, 0.42001, { to: { x, y } }), tx, ty), `${style} contact ${x},${y}`).toBe(true)
+      expect(covers(frame(style, 0.42001, { to: { x, y }, hit: false }), tx, ty), `${style} miss ${x},${y}`).toBe(false)
     }
   })
 
@@ -55,14 +53,14 @@ describe('pixel-art melee gestures', () => {
 
   it('brings overhead blows downward into the target even when attacking north', () => {
     const centreY = (runs: Run[]) => runs.reduce((sum, r) => sum + r.y * r.width * r.alpha, 0) / area(runs)
-    for (const variant of variants) for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, -1]]) {
-      expect(centreY(frame('crush', 0.3, { to: { x, y }, variant }))).toBeLessThan(centreY(frame('crush', 0.41, { to: { x, y }, variant })))
+    for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, -1]]) {
+      expect(centreY(frame('crush', 0.3, { to: { x, y } }))).toBeLessThan(centreY(frame('crush', 0.41, { to: { x, y } })))
     }
   })
 
   it.each(styles)('%s stays finite, bounded and on the tile pixel grid throughout its lifetime', style => {
-    for (const variant of variants) for (let i = 1; i < 100; i++) for (const hit of [false, true]) {
-      const runs = frame(style, i / 100, { hit, variant, intensity: 'heavy', to: { x: -1, y: -1 } })
+    for (let i = 1; i < 100; i++) for (const hit of [false, true]) {
+      const runs = frame(style, i / 100, { hit, intensity: 'heavy', to: { x: -1, y: -1 } })
       expect(runs.every(r => [r.x, r.y, r.width].every(Number.isInteger)
         && Math.abs(r.x) < 100 && Math.abs(r.y) < 100 && r.width > 0 && r.alpha > 0 && r.alpha <= 1)).toBe(true)
     }
@@ -99,11 +97,11 @@ describe('pixel-art melee gestures', () => {
   it('tunes weight and trail without moving contact, and keeps oversized misses clear', () => {
     expect(area(frame('slash', 0.4, {}, { weight: 1.5 }))).toBeGreaterThan(area(frame('slash', 0.4, {}, { weight: 0.6 })))
     expect(area(frame('reap', 0.4, {}, { trail: 1.4 }))).toBeGreaterThan(area(frame('reap', 0.4, {}, { trail: 0.4 })))
-    for (const style of styles) for (const variant of variants) for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1], [2, 0]]) {
+    for (const style of styles) for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1], [2, 0]]) {
       const tx = x * 32, ty = Math.floor(y * groundDepth(projection.tilt) * 32)
       for (const weight of [0.6, 1.5]) {
-        expect(covers(frame(style, 0.42001, { to: { x, y }, variant }, { weight }), tx, ty), `${style} contact at weight ${weight}`).toBe(true)
-        expect(covers(frame(style, 0.42001, { to: { x, y }, variant, hit: false, intensity: 'heavy' }, { weight }), tx, ty), `${style} miss at weight ${weight}`).toBe(false)
+        expect(covers(frame(style, 0.42001, { to: { x, y } }, { weight }), tx, ty), `${style} contact at weight ${weight}`).toBe(true)
+        expect(covers(frame(style, 0.42001, { to: { x, y }, hit: false, intensity: 'heavy' }, { weight }), tx, ty), `${style} miss at weight ${weight}`).toBe(false)
       }
     }
   })

@@ -10,7 +10,7 @@ const materials: [string, DeathKind, string][] = [
   ['ice beast', 'ice', 'shard'], ['thorn hunter', 'plant', 'chip'], ['hornet', 'insect', 'drop'],
   ['water elemental', 'water', 'drop'],
 ]
-const attack: MeleeAttack = { from: { x: -1, y: 0 }, to: { x: 0, y: 0 }, toId: 'id:7', style: 'slash', hit: true }
+const attack: MeleeAttack = { fromId: 'player', from: { x: -1, y: 0 }, to: { x: 0, y: 0 }, toId: 'id:7', style: 'slash', hit: true }
 const contact = 1 + meleeTiming(attack.style).contact
 function setup(name = 'orc') {
   const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'D:1' }

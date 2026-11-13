@@ -23,11 +23,17 @@ export function meleeTiming(style: MeleeAttack['style']) {
 }
 
 /** Anticipation, contact and recovery; the defender moves only after contact. */
-export function meleePose(style: MeleeAttack['style'], elapsed: number) {
+export function meleePose(style: MeleeAttack['style'], elapsed: number, bumpSnap = 1) {
   const { duration, contact } = meleeTiming(style)
   const age = elapsed / duration, impact = (elapsed - contact) / (duration - contact)
   const lunge = age < 0 || age >= 1 ? 0 : age < 0.16 ? -0.025 * Math.sin(age / 0.16 * Math.PI)
     : elapsed < contact ? 0.15 * ((age - 0.16) / (0.42 - 0.16)) ** 2 : 0.15 * (1 - impact) ** 2
-  const recoil = impact < 0 || impact >= 1 ? 0 : Math.sin(Math.PI * Math.sqrt(impact)) * 0.085
+  // A fast kick, brief compression, then a clean settle. This is visual pose
+  // only: never pause input, the renderer clock, or confirmed server movement.
+  const snap = Number.isFinite(bumpSnap) ? Math.max(0, Math.min(1, bumpSnap)) : 1
+  const rise = 0.25 - snap * 0.19, hold = snap * 0.1
+  const recoil = impact < 0 || impact >= 1 ? 0 : 0.16 * (impact < rise
+    ? 1 - (1 - impact / rise) ** 3
+    : impact < rise + hold ? 1 : (1 - (impact - rise - hold) / (1 - rise - hold)) ** 3)
   return { lunge, recoil }
 }
