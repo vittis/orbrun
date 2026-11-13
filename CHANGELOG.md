@@ -2,6 +2,10 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.103 — 2026-11-13
+
+- Added `(edit rc)` beside each server-advertised Play version on the main menu. The editor shares the account’s server-side file with original WebTiles, verifies saves, protects unsaved changes and returns to the version link you opened. Each server keeps its own files.
+
 ## 0.3.102 — 2026-11-13
 
 - Made the critical-health red corner vignette stronger and extended it from 2.8 to 5.6 seconds, with a brief hold before fading. The center stays clear and reduced-motion intensity remains lowered.
