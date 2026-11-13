@@ -186,8 +186,8 @@ const percentSteps = (min: number, max: number) => Array.from({ length: (max - m
 /** Every row, whatever is offered; `SETTING_ROWS` is what the player sees. */
 export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   // View
-  row('View', 'Dungeon tilt', 'depthTilt', [35, 40, 45, 50, 55, 60, 65], 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°'),
-  row('View', 'Dungeon zoom', 'depthZoom', [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4], 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%'),
+  row('View', 'Dungeon tilt', 'depthTilt', Array.from({ length: 13 }, (_, i) => 25 + i * 5), 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°'),
+  row('View', 'Dungeon zoom', 'depthZoom', Array.from({ length: 56 }, (_, i) => (25 + i * 5) / 100), 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%'),
   row('View', 'Dungeon animation', 'depthAnimate', ['auto', true, false], 'Auto follows your device’s reduced motion preference. On enables movement, breathing, swaying, clouds and light flicker; Still freezes them.', v => v === 'auto' ? 'Auto (device)' : v ? 'On' : 'Still'),
   row('View', 'Dungeon movement', 'depthMovement', [true, false], 'Smooth confirmed movement for entities and the following camera. Still mode also disables movement.', v => v ? 'Tween' : 'Instant', s => s.depthAnimate === false),
   row('View', 'Dungeon move duration', 'depthMovementDuration', [0.06, 0.08, 0.1, 0.14, 0.18, 0.25], 'Time per move. Shorter feels snappier; longer makes each step easier to follow. Fast travel retargets immediately without queuing moves.', v => Math.round(v * 1000) + ' ms', s => s.depthAnimate === false || !s.depthMovement),

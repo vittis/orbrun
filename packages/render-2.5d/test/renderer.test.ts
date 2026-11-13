@@ -48,7 +48,7 @@ describe('the north-up projection', () => {
     }
   })
 
-  it.each([35, 50, 65])('round-trips ground coordinates at %s degrees on desktop and phone', degrees => {
+  it.each([25, 35, 50, 65, 85])('round-trips ground coordinates at %s degrees on desktop and phone', degrees => {
     for (const [width, height] of [[1280, 800], [390, 600]]) {
       const tilt = degrees * Math.PI / 180
       const p = { x: -13, y: 27, width, height, tilt, scale: fittedScale(width, height, tilt) }
@@ -184,7 +184,7 @@ describe('picking and visibility', () => {
     r.destroy()
   })
 
-  it.each([30, 35, 50, 65, 75])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
+  it.each([25, 30, 35, 50, 65, 75, 85])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
     const { r } = renderer()
     r.setOptions({ tilt, animate: false })
     const cells = [-2, -1, 0, 1, 2].flatMap(y => [-1, 0, 1].map(x =>
