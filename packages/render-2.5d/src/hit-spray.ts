@@ -1,5 +1,6 @@
 import { cellKey, impactStrength, lightReaches, type DeathKind, type Scene } from '@orbrun/scene'
 import { debrisPalettes, debrisRandom, type DeathParticle } from './death.js'
+import { profileRandom, sampleElementalSpray } from './elemental-spray.js'
 import type { SpellBurst } from './effects.js'
 
 export const HIT_SPRAY_DURATION = 0.3
@@ -15,19 +16,19 @@ export interface HitSpray {
 }
 
 /** Directional splatters with a loose impact splash, using the death material art. */
-export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }, gore = 1, outward = 0.35): DeathParticle[] {
+export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }, gore = 1, outward = 0.35, variation = 0.25): DeathParticle[] {
   gore = Number.isFinite(gore) ? Math.max(0, Math.min(2, gore)) : 1
   outward = Number.isFinite(outward) ? Math.max(0, Math.min(1, outward)) : 0.35
   if (gore === 0) return []
   const spray = burst.spray, t = now - burst.born
   if (!spray || t < 0 || t >= burst.duration) return []
   const origin = spray.origin ??= { ...position }
-  const random = debrisRandom(spray.seed), strength = impactStrength(burst.intensity)
-  const count = Math.round((18 + random() * 10) * (0.7 + strength * 0.5) * gore)
-  const energy = 1.25 + random() * 0.65, spread = 0.55 + random() * 0.85
-  const heading = Math.atan2(spray.direction.y, spray.direction.x) + (random() - 0.5) * 0.2
-  const z0 = spray.height * (0.35 + random() * 0.25), scatter = 0.015 + random() * 0.035
-  const splashCount = Math.round(count * outward), splashPhase = random() * Math.PI * 2
+  const random = debrisRandom(spray.seed), profile = profileRandom(random, variation), strength = impactStrength(burst.intensity)
+  const count = Math.min(56, Math.round((18 + profile() * 10) * (0.7 + strength * 0.5) * gore))
+  const energy = 1.25 + profile() * 0.65, spread = 0.55 + profile() * 0.85
+  const heading = Math.atan2(spray.direction.y, spray.direction.x) + (profile() - 0.5) * 0.2
+  const z0 = spray.height * (0.35 + profile() * 0.25), scatter = 0.015 + profile() * 0.035
+  const splashCount = Math.round(count * outward), splashPhase = profile() * Math.PI * 2
   const airy = spray.kind === 'spirit' || spray.kind === 'fire'
   const liquid = ['flesh', 'insect', 'slime', 'water'].includes(spray.kind)
   const particles: DeathParticle[] = []
@@ -64,5 +65,7 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
       y: y - Math.round(vy * 0.04 * Math.exp(-elapsed * 2.2) * 64) / 64,
       size: size * 0.65, minPixels: 5, alpha: alpha * 0.65 })
   }
-  return particles
+  particles.push(...sampleElementalSpray(scene, origin, spray.direction, spray.height, burst.kind, burst.intensity,
+    spray.seed, t, false, gore, outward, variation))
+  return particles.slice(0, 96)
 }

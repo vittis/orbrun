@@ -33,13 +33,15 @@ export interface CombatEvent {
 const attacks = /^(?:hit|slash|slice|stab|pierce|puncture|impale|skewer|spit|stick|perforate|bludgeon|whack|smash|hack|chop|cleave|crush|pummel|thump|sock|punch|kick|headbutt|claw|bite|slap|sting|touch|pound|thrash|lash|shred|mangle|batter|hammer|bash|gore|rip|slam|nick|peck|squeeze|trample|whip|flog|flagellate|rend|tear|scratch|stomp|buffet|lacerate|jab|prick|carve|flay|constrict|smite|strike|burn|freeze|electrocute|drain|blast|dice|fracture|shatter|splatter|open|cut|beat|flatten|eviscerate|tentacle-slap|squash|pulverise|shave)$/i
 const bare = (s: string) => s.toLowerCase().replace(/^(?:the |an? |your )/, '').trim()
 const plain = (s: string) => formattedStringToText(s).trim()
-function toneOf(s: string): DamageType {
+function toneOf(s: string, names: string[] = []): DamageType {
+  // Elemental creature names do not establish the element of an attack.
+  for (const name of names) if (name) s = s.replaceAll(name, '')
   if (/acid|corro/i.test(s)) return 'acid'
   if (/fire|flame|burn|lava|scorch/i.test(s)) return 'fire'
-  if (/cold|frost|freez|ice|icicle/i.test(s)) return 'cold'
+  if (/cold|frost|freez|chill|ice|icicle/i.test(s)) return 'cold'
   if (/poison|venom/i.test(s)) return 'poison'
   if (/lightning|electr/i.test(s)) return 'electric'
-  if (/magic|negative energy|drain|holy/i.test(s)) return 'magic'
+  if (/magic|negative energy|drain|holy|smit|agony|convuls/i.test(s)) return 'magic'
   return 'physical'
 }
 
@@ -74,7 +76,7 @@ export function combatText(text: string): CombatEvent[] {
       const number = / for (\d+)(?: damage)?(?=[.!]|$)/.exec(s)
       const amount = /\bno damage\b/.test(s) ? 0 : number ? Number(number[1]) : undefined
       out.push({ kind: miss ? 'miss' : player ? 'hurt' : 'hit', ...(player ? { player: true } : { target }),
-        sourceName: strike[1], reaching: /\bfrom afar\b/.test(s), amount, tone: toneOf(s),
+        sourceName: strike[1], reaching: /\bfrom afar\b/.test(s), amount, tone: toneOf(s, [strike[1], target]),
         intensity: hitIntensity(amount, /[.!]+$/.exec(s)?.[0]) })
       continue
     }
@@ -119,7 +121,7 @@ export function combatText(text: string): CombatEvent[] {
       const damage = noDamage ? 0 : number ? Number(number[1]) : null
       const followup = /^(?:You (?:burn|freeze|electrocute)|The (?:bolt|arrow|slug|stone|sling bullet) (?:burns|freezes|electrocutes))\b/.test(s)
       const punctuation = /[.!]+$/.exec(s)?.[0] ?? '.'
-      out.push({ kind: 'hit', amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s), followup, brandOnly: followup, melee, ...(auxiliary ? { auxiliary: true } : {}) })
+      out.push({ kind: 'hit', amount: damage ?? undefined, intensity: hitIntensity(damage ?? undefined, punctuation), target, tone: toneOf(s, [target]), followup, brandOnly: followup, melee, ...(auxiliary ? { auxiliary: true } : {}) })
     }
   }
   return out
@@ -139,6 +141,8 @@ export class CombatFeedback {
   private levelKey: string | undefined
   /** Share same-name attempts across actors, even when packets straddle frames. */
   private meleeAttempts = new Map<string, { turn?: number; count: number }>()
+  /** Keep confirmed hit evidence through a same-turn death in a later frame. */
+  private recentHits = new Map<string, { tone?: DamageType; intensity?: HitIntensity; source?: CombatEvent['source']; turn?: number; at: number }>()
   /** Kill messages can follow the map removal across rendered frames. */
   private recentActors = new Map<string, { actor: Billboard; at: number }>()
 
@@ -159,7 +163,7 @@ export class CombatFeedback {
       this.pending = []
       this.cues = []; this.spells = []
       this.scene = null
-      this.recentActors.clear()
+      this.recentActors.clear(); this.recentHits.clear()
       this.meleeAttempts.clear()
       this.presented = false
       this.ready = false
@@ -182,7 +186,7 @@ export class CombatFeedback {
         this.pending = []
         this.cues = []; this.spells = []
         this.scene = null
-        this.recentActors.clear()
+        this.recentActors.clear(); this.recentHits.clear()
         this.meleeAttempts.clear()
         this.presented = false
       }
@@ -231,12 +235,13 @@ export class CombatFeedback {
     this.scene = scene
     this.levelKey = scene.levelKey
     this.presented = scene.playerOnLevel && scene.cells.size > 0
-    if (!scene.playerOnLevel) { this.spells = []; this.recentActors.clear(); this.meleeAttempts.clear(); return [] }
-    if (!sameLevel) { this.recentActors.clear(); this.meleeAttempts.clear() }
+    if (!scene.playerOnLevel) { this.spells = []; this.recentActors.clear(); this.recentHits.clear(); this.meleeAttempts.clear(); return [] }
+    if (!sameLevel) { this.recentActors.clear(); this.recentHits.clear(); this.meleeAttempts.clear() }
     if (!pending.length && !cues.length && old === scene) return []
     const before = actorsIn(sameLevel ? old : null), after = actorsIn(scene)
     for (const id of this.meleeAttempts.keys()) if (!after.has(id)) this.meleeAttempts.delete(id)
     const candidates = new Map([...before, ...after])
+    for (const [id, hit] of this.recentHits) if (now - hit.at > 2000) this.recentHits.delete(id)
     for (const [id, seen] of this.recentActors) if (now - seen.at > 2000) this.recentActors.delete(id)
     for (const [id, actor] of candidates) this.recentActors.set(id, { actor, at: now })
     while (this.recentActors.size > 256) this.recentActors.delete(this.recentActors.keys().next().value!)
@@ -305,10 +310,20 @@ export class CombatFeedback {
       const id = actorKey(b)
       used.add(id)
       if (event.melee && !event.sourceName && !event.auxiliary) lastMelee.set(wanted, { actor: b, turn: event.turn })
-      if (event.kind === 'hit') lastHit.set(wanted, b)
-      if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id) }
+      if (event.kind === 'hit') {
+        lastHit.set(wanted, b)
+        if (event.amount !== 0) {
+          const previous = this.recentHits.get(id)
+          this.recentHits.set(id, { tone: event.tone, intensity: event.intensity, turn: event.turn, at: now,
+            source: event.source ?? (event.followup && previous?.turn === event.turn ? previous?.source : undefined) })
+          while (this.recentHits.size > 256) this.recentHits.delete(this.recentHits.keys().next().value!)
+        }
+      }
+      const hit = this.recentHits.get(id)
+      const killingHit = hit && hit.turn === event.turn ? hit : undefined
+      if (event.kind === 'kill') { slain.add(id); lastHit.delete(wanted); this.recentActors.delete(id); this.recentHits.delete(id) }
       return [{ ...event, actorId: id, x: b.x, y: b.y,
-        ...(event.kind === 'kill' ? { death: deathFor(b, scene.player) } : {}) }]
+        ...(event.kind === 'kill' ? { death: { ...deathFor(b, killingHit?.source ?? scene.player), tone: killingHit?.tone, intensity: killingHit?.intensity } } : {}) }]
     })
     // Resolve direct spell results even when they report no damage.
     // Previous visible actors preserve a killing blow's position; never pick a
@@ -332,7 +347,7 @@ export class CombatFeedback {
     for (const event of resolved) {
       let kind: SpellEffect['kind'] | undefined
       if (event.kind === 'hit' && (event.amount !== 0 || !event.melee && event.tone !== 'physical')) {
-        // A frost/flame brand is already presented by the weapon gesture.
+        // A frost/flame brand is already presented by the melee contact spray.
         const brandedMelee = resolved.some(p => p.melee && p.actorId === event.actorId && p.turn === event.turn)
         if (!brandedMelee) kind = event.tone ?? 'physical'
       }

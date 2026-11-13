@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.101 — 2026-11-13
+
+- Hit and death splatters mix fire, cold, poison, acid, electricity or magic from the confirmed damaging hit with the creature’s existing blood or material debris. Deaths retain same-turn hit evidence across frames without reusing older attacks or guessing from elemental creature names.
+- Added Combat → VFX variation, defaulting to 25%, for stable per-spawn changes in particle count, energy, size and spray shape. Off keeps a consistent burst profile; visibility, particle limits and Still/reduced motion remain enforced.
+- Combat defaults now use 175% bump strength, 115% speed, 70% snap, 100% hit gore, 50% death gore, and 100%/75% hit/death outward spray. Existing saved overrides remain supported.
+
 ## 0.3.100 — 2026-11-13
 
 - Removed the entire miss, shield-block and zero-damage VFX feature, including particle art, animation, stacking state, renderer API and dedicated previews/tests. Normal attack bumps and damaging-hit effects remain.

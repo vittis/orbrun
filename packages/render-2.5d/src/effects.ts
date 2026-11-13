@@ -124,7 +124,7 @@ export class DungeonEffects {
     if (added && target) {
       const direction = contact?.direction() ?? (target.kind === 'player' ? { x: 0, y: 0 }
         : { x: target.x - scene.player.x, y: target.y - scene.player.y })
-      this.spell(scene, { ...placed, kind: 'physical' }, now, 'generic', this.sprayFor(target, direction, 'ranged'))
+      this.spell(scene, { ...placed, kind: effect.tone ?? 'physical', intensity: effect.intensity }, now, 'generic', this.sprayFor(target, direction, 'ranged'))
     }
     return added
   }

@@ -3,6 +3,7 @@ import { cellKey, emptyScene, bumpTiming, type DeathKind, type CombatBump, type 
 import { DungeonEffects } from '../src/effects.js'
 import { sampleHitSpray } from '../src/hit-spray.js'
 import { debrisPalettes, DungeonDeaths } from '../src/death.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
 
 const materials: [string, DeathKind, string][] = [
   ['orc', 'flesh', 'drop'], ['skeleton', 'bone', 'shard'], ['jelly', 'slime', 'drop'],
@@ -24,6 +25,34 @@ function setup(name = 'orc') {
 }
 
 describe('snappy directional melee sprays', () => {
+  it.each(['fire', 'cold', 'poison', 'acid', 'electric', 'magic'] as const)('mixes %s contact particles with existing body splatter', tone => {
+    const { scene, fx } = setup()
+    fx.bump(scene, { ...attack, tone }, 1)
+    const burst = fx.bursts[0], time = contact + 0.1
+    const particles = sampleHitSpray(scene, burst, time)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+    expect(particles.some(p => elementalPalettes[tone].includes(p.colour))).toBe(true)
+    expect(sampleHitSpray(scene, burst, time)).toEqual(particles)
+    expect(sampleHitSpray(scene, burst, time, undefined, 0)).toEqual([])
+    expect(sampleHitSpray(scene, burst, time, undefined, 2, 1, 1).length).toBeLessThanOrEqual(96)
+    expect(sampleHitSpray(scene, burst, contact - 0.001)).toEqual([])
+    expect(sampleHitSpray(scene, burst, contact + 0.31)).toEqual([])
+  })
+
+  it('keeps the authored count with variation Off and varies repeated spawns when enabled', () => {
+    const { scene, fx } = setup(), fixed = new Set<number>(), varied = new Set<number>()
+    for (let i = 0; i < 24; i++) {
+      scene.turn = i
+      fx.tick(scene, 1 + i)
+      fx.bump(scene, attack, 1 + i)
+      const burst = fx.bursts.at(-1)!
+      fixed.add(sampleHitSpray(scene, burst, burst.born, undefined, 1, 1, 0).length)
+      varied.add(sampleHitSpray(scene, burst, burst.born, undefined, 1, 1, 1).length)
+    }
+    expect(fixed.size).toBe(1)
+    expect(varied.size).toBeGreaterThan(4)
+  })
+
   it('adjusts outward spread independently of hit density and keeps the directional endpoint forward', () => {
     const { scene, fx } = setup()
     fx.bump(scene, attack, 1)

@@ -21,6 +21,23 @@ function setup() {
 }
 
 describe('quick View and Combat settings', () => {
+  it('persists VFX variation, honors Still, and resets to the screenshot baseline', () => {
+    const { panel, control } = setup()
+    const variation = control('combatVfxVariation')
+    variation.value = '0'
+    variation.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(getSettings().combatVfxVariation).toBe(0)
+    saveSettings({ ...getSettings(), depthAnimate: false })
+    panel.refresh()
+    expect(variation.disabled).toBe(true)
+    saveSettings({ ...getSettings(), depthAnimate: true })
+    panel.refresh()
+    panel.root.querySelector<HTMLButtonElement>('#quick-settings-combat .quick-settings-reset')!.click()
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSpeed: 1.15, meleeBumpSnap: 0.7,
+      hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25 })
+    expect(variation.getAttribute('aria-valuetext')).toBe('25%')
+  })
+
   it('offers every shared row, applies slider/selector changes once, and preserves unrelated preferences on reset', () => {
     saveSettings({ ...defaultSettings, uiScale: 1.15, depthTilt: 42.5, hitGore: 1.5 })
     const { panel, control, changed } = setup()

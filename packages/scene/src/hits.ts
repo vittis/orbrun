@@ -1,8 +1,8 @@
 import { cellKey } from './coordinates.js'
 import { combatActorId } from './combat.js'
-import type { Billboard, Scene } from './index.js'
+import type { Billboard, Scene, DamageType, HitIntensity } from './index.js'
 
-export interface HitEffect { x: number; y: number; actorId?: string; turn?: number }
+export interface HitEffect { x: number; y: number; actorId?: string; turn?: number; tone?: DamageType; intensity?: HitIntensity }
 interface Hit { actorId: string; turn?: number; requested: number; contact?: () => number }
 const DURATION = 0.16
 const creature = (b: Billboard) => b.kind === 'player' || b.kind === 'monster' && !b.scenery

@@ -685,6 +685,7 @@ export class GameScreen {
       meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
       hitGore: st.hitGore, deathGore: st.deathGore,
       hitSprayOutward: st.hitSprayOutward, deathSprayOutward: st.deathSprayOutward,
+      combatVfxVariation: st.combatVfxVariation,
       movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
     }
   }

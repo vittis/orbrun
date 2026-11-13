@@ -28,6 +28,48 @@ function harness() {
 }
 
 describe('combat sentences', () => {
+  it.each([
+    ['The bolt of fire hits the goblin!', 'fire'],
+    ['The puff of frost hits the goblin!', 'cold'],
+    ['The bolt of poison hits the goblin!', 'poison'],
+    ['The bolt of acid hits the goblin!', 'acid'],
+    ['You electrocute the goblin!', 'electric'],
+    ['The magic dart hits the goblin!', 'magic'],
+    ['You smite the goblin!', 'magic'],
+    ['You slash the goblin! You burn the goblin.', 'fire'],
+  ])('retains the confirmed killing element across frames: %s', (sentence, tone) => {
+    const { feedback, scene, text } = harness()
+    text(sentence)
+    feedback.flush(scene, 1000)
+    text('You kill the goblin!')
+    const [kill] = feedback.flush({ ...scene, billboards: [] }, 1050)
+    expect(kill.death).toMatchObject({ actorId: 'id:1', kind: 'flesh', tone })
+    expect(feedback.flush(scene, 1060)).toEqual([])
+  })
+
+  it.each(['next-turn', 'expired', 'zero', 'physical', 'level'] as const)('does not reuse an old elemental hit after %s', boundary => {
+    const { feedback, scene, text, state } = harness()
+    text('The bolt of fire hits the goblin!')
+    feedback.flush(scene, 1000)
+    if (boundary === 'next-turn') state.player.turn++
+    if (boundary === 'level') feedback.flush({ ...scene, levelKey: 'D:2' }, 1020)
+    if (boundary === 'zero') {
+      state.player.turn++
+      text('You freeze the goblin but do no damage.')
+    }
+    if (boundary === 'physical') text('You hit the goblin!')
+    text('You kill the goblin!')
+    const events = feedback.flush({ ...scene, billboards: [] }, boundary === 'expired' ? 3100 : 1050)
+    const death = events.find(e => e.kind === 'kill')?.death
+    expect(death?.tone).not.toBe('fire')
+    if (boundary === 'physical') expect(death?.tone).toBe('physical')
+  })
+
+  it.each(['You slash the fire giant!', 'You hit the ice beast!', 'The fire giant hits you!', 'The ice beast hits the goblin!'])(
+    'keeps elemental creature names from recoloring physical attacks: %s', sentence => {
+      expect(combatText(sentence)[0].tone).toBe('physical')
+    })
+
   it.each(['.', '!', '!!'])('keeps ordinary melee target identity with %s punctuation', punctuation => {
     expect(combatText(`You slash the goblin${punctuation}`)).toMatchObject([
       { kind: 'hit', target: 'the goblin', melee: true },

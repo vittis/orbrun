@@ -12,7 +12,7 @@ import { defaultSettings } from '../src/settings'
 
 for (const [id, key] of [
   ['bump-strength', 'meleeBumpStrength'], ['bump-speed', 'meleeBumpSpeed'], ['bump-snap', 'meleeBumpSnap'],
-  ['hit-gore', 'hitGore'], ['death-gore', 'deathGore'], ['hit-outward', 'hitSprayOutward'], ['death-outward', 'deathSprayOutward'],
+  ['hit-gore', 'hitGore'], ['death-gore', 'deathGore'], ['hit-outward', 'hitSprayOutward'], ['death-outward', 'deathSprayOutward'], ['vfx-variation', 'combatVfxVariation'],
 ] as const) {
   const row = ALL_SETTING_ROWS.find(row => row.key === key)!
   const select = document.getElementById(id) as HTMLSelectElement
@@ -98,6 +98,15 @@ function play(kind: string) {
     ally: 'Your orc hits the goblin!',
     exchange: 'You slash the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!',
   }
+  const element = (document.getElementById('hit-element') as HTMLSelectElement).value
+  const elementalHits: Record<string, string> = {
+    physical: 'You hit the goblin!', fire: 'You hit the goblin! You burn the goblin.',
+    cold: 'You hit the goblin! You freeze the goblin.', poison: 'The bolt of poison hits the goblin!',
+    acid: 'The bolt of acid hits the goblin!', electric: 'You hit the goblin! You electrocute the goblin.',
+    magic: 'The magic dart hits the goblin!',
+  }
+  if (kind === 'kill') messages.kill = elementalHits[element] + ' You kill the goblin!'
+  else if (element !== 'physical' && ['light', 'solid', 'hit'].includes(kind)) messages[kind] = elementalHits[element]
   if (kind === 'hurt' || kind === 'incoming') {
     Object.assign(state.player, { hp: 30 })
     feedback.observe(state, { msg: 'player' })
@@ -122,7 +131,8 @@ function play(kind: string) {
       hitGore: Number((document.getElementById('hit-gore') as HTMLSelectElement).value),
       deathGore: Number((document.getElementById('death-gore') as HTMLSelectElement).value),
       hitSprayOutward: Number((document.getElementById('hit-outward') as HTMLSelectElement).value),
-      deathSprayOutward: Number((document.getElementById('death-outward') as HTMLSelectElement).value) })
+      deathSprayOutward: Number((document.getElementById('death-outward') as HTMLSelectElement).value),
+      combatVfxVariation: Number((document.getElementById('vfx-variation') as HTMLSelectElement).value) })
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)

@@ -78,7 +78,7 @@ describe('settings storage boundary', () => {
   })
 })
 
-const numericKeys = ['meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
+const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
 describe('numeric preference validation', () => {
   it.each(numericKeys)('rejects invalid %s values on read and write', name => {
     for (const value of [null, true, '12', {}, [], NaN, Infinity, -Infinity]) {
@@ -93,6 +93,7 @@ describe('numeric preference validation', () => {
   })
 
   it.each([
+    ['combatVfxVariation', -1, 0], ['combatVfxVariation', 2, 1],
     ['hitSprayOutward', -1, 0], ['hitSprayOutward', 2, 1], ['deathSprayOutward', -1, 0], ['deathSprayOutward', 2, 1],
     ['meleeBumpSpeed', 0, 0.5], ['meleeBumpSpeed', 99, 2],
     ['hitGore', -1, 0], ['hitGore', 99, 2], ['deathGore', -1, 0], ['deathGore', 99, 2],

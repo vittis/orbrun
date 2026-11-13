@@ -15,6 +15,7 @@ export interface Settings {
   deathGore: number
   hitSprayOutward: number
   deathSprayOutward: number
+  combatVfxVariation: number
   uiScale: number
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
@@ -48,13 +49,14 @@ export const defaultSettings: Settings = {
   depthMovement: true,
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
-  meleeBumpStrength: 1,
-  meleeBumpSpeed: 1,
-  meleeBumpSnap: 1,
+  meleeBumpStrength: 1.75,
+  meleeBumpSpeed: 1.15,
+  meleeBumpSnap: 0.7,
   hitGore: 1,
-  deathGore: 1,
-  hitSprayOutward: 0.35,
-  deathSprayOutward: 0.35,
+  deathGore: 0.5,
+  hitSprayOutward: 1,
+  deathSprayOutward: 0.75,
+  combatVfxVariation: 0.25,
   uiScale: 1,
   confirmStairs: false,
   minimapTiles: 0,
@@ -82,6 +84,7 @@ const numericDomains: Record<NumericSetting, { min: number; max: number; integer
   deathGore: { min: 0, max: 2 },
   hitSprayOutward: { min: 0, max: 1 },
   deathSprayOutward: { min: 0, max: 1 },
+  combatVfxVariation: { min: 0, max: 1 },
   uiScale: { min: 0.85, max: 1.5 },
   minimapTiles: { min: 15, max: 61, integer: true, auto: true },
   minimapCell: { min: 8, max: 32, auto: true },

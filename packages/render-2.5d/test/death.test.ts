@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { cellKey, emptyScene, type DeathEffect, type DeathKind, type SceneCell } from '@orbrun/scene'
 import { DungeonDeaths as DeathEffects } from '../src/death.js'
 import { DEATH_ART, DEATH_TEXELS, deathDither } from '../src/death-art.js'
+import { debrisPalettes } from '../src/death.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
 
 const death = (kind: DeathKind = 'flesh', id = 1): DeathEffect => ({ actorId: 'id:' + id, kind, x: 0, y: 0, height: 0.8, direction: { x: 1, y: 0 } })
 function room() {
@@ -13,6 +15,37 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it.each(['fire', 'cold', 'poison', 'acid', 'electric', 'magic'] as const)('mixes %s debris with the body, then fades and clips it', tone => {
+    const scene = room(), fx = new DeathEffects()
+    fx.observe(scene, true); fx.spawn(scene, { ...death(), tone, intensity: 'heavy' }, 1)
+    const spray = fx.sample(scene, 1.12)
+    expect(spray.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+    expect(spray.some(p => elementalPalettes[tone].includes(p.colour))).toBe(true)
+    expect(fx.sample(scene, 1.12)).toEqual(spray)
+    scene.cells.get(cellKey(-1, 0))!.visibility = 'remembered'
+    scene.cells.get(cellKey(1, 0))!.occluder = true
+    expect(fx.sample(scene, 1.3).every(p => {
+      const c = scene.cells.get(cellKey(Math.round(p.x), Math.round(p.y)))!
+      return c.visibility === 'visible' && !c.occluder
+    })).toBe(true)
+    expect(fx.sample(scene, 1.81).some(p => elementalPalettes[tone].includes(p.colour))).toBe(false)
+    expect(fx.sample(scene, 4)).toEqual([])
+  })
+
+  it('controls per-spawn density variation without frame randomness, and bounds maximum elemental gore', () => {
+    const scene = room(), fixed = new Set<number>(), varied = new Set<number>()
+    for (let id = 1; id <= 24; id++) {
+      const fx = new DeathEffects()
+      fx.observe(scene, true); fx.spawn(scene, { ...death('flesh', id), tone: 'fire' }, 1)
+      fixed.add(fx.sample(scene, 1, 1, 0.75, 0).length)
+      varied.add(fx.sample(scene, 1, 1, 0.75, 1).length)
+      expect(fx.sample(scene, 1.15, 2, 1, 1).length).toBeLessThanOrEqual(192)
+      expect(fx.sample(scene, 1.15, 2, 1, NaN)).toEqual(fx.sample(scene, 1.15, 2, 1, 0.25))
+    }
+    expect(fixed.size).toBe(1)
+    expect(varied.size).toBeGreaterThan(4)
+  })
+
   it('adjusts death direction independently of density, with radial and forward endpoints', () => {
     const scene = room(), fx = new DeathEffects()
     fx.observe(scene, true); fx.spawn(scene, death(), 1)

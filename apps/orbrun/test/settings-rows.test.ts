@@ -337,7 +337,7 @@ describe('Hit bump preferences', () => {
     expect(rowOff(row('Hit bump speed'), { ...defaultSettings, depthAnimate: false })).toBe(true)
     expect(rowOff(row('Hit bump speed'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
     resetGroup('Combat')
-    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1, meleeBumpSnap: 1, meleeBumpSpeed: 1, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSnap: 0.7, meleeBumpSpeed: 1.15, depthZoom: 1.2 })
   })
   it('drops retired VFX settings without losing bump tuning or unrelated preferences', () => {
     store.set('orbrun.settings', JSON.stringify({ meleeEffects: false, meleeMotion: 0, meleeWeight: 1.5, meleeTrail: 0.4,

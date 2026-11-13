@@ -39,6 +39,7 @@ export interface Render25dOptions {
   deathGore?: number
   hitSprayOutward?: number
   deathSprayOutward?: number
+  combatVfxVariation?: number
   center?: { x: number; y: number } | null
   minibars?: Minibars | null
   filterScaling?: boolean
@@ -80,8 +81,8 @@ export class Render25d implements MapRenderer {
   private active = false
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
-    meleeBumpStrength: 1, meleeBumpSnap: 1,
-    hitGore: 1, deathGore: 1, hitSprayOutward: 0.35, deathSprayOutward: 0.35,
+    meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
+    hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
   }
 
@@ -93,11 +94,11 @@ export class Render25d implements MapRenderer {
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.25, Math.min(3, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
-    for (const [key, min, max] of [['meleeBumpStrength', 0, 2], ['meleeBumpSnap', 0, 1], ['hitGore', 0, 2], ['deathGore', 0, 2]] as const) {
-      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : 1
+    for (const [key, min, max, fallback] of [['meleeBumpStrength', 0, 2, 1.75], ['meleeBumpSnap', 0, 1, 0.7], ['hitGore', 0, 2, 1], ['deathGore', 0, 2, 0.5], ['combatVfxVariation', 0, 1, 0.25]] as const) {
+      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : fallback
     }
-    for (const key of ['hitSprayOutward', 'deathSprayOutward'] as const) {
-      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(0, Math.min(1, this.opts[key])) : 0.35
+    for (const [key, fallback] of [['hitSprayOutward', 1], ['deathSprayOutward', 0.75]] as const) {
+      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(0, Math.min(1, this.opts[key])) : fallback
     }
     if (this.opts.deathGore === 0) this.deaths.clear()
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
@@ -262,7 +263,7 @@ export class Render25d implements MapRenderer {
     }
     this.effects.tick(this.scene, now)
     if (this.effects.hits.active) this.active = true
-    const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now, this.opts.deathGore, this.opts.deathSprayOutward) : []
+    const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now, this.opts.deathGore, this.opts.deathSprayOutward, this.opts.combatVfxVariation) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.filter(entry => !this.opts.animate || entry.billboard?.kind !== 'projectile').map(entry => {
       if (!entry.billboard) return entry
@@ -309,7 +310,7 @@ export class Render25d implements MapRenderer {
         const position = actor ? this.actorPosition(actor, now) : burst
         if (!cell || cell.occluder || !this.inFrame(p, position)) continue
         if (burst.spray) {
-          for (const particle of sampleHitSpray(this.scene, burst, now, position, this.opts.hitGore, this.opts.hitSprayOutward)) {
+          for (const particle of sampleHitSpray(this.scene, burst, now, position, this.opts.hitGore, this.opts.hitSprayOutward, this.opts.combatVfxVariation)) {
             if (particle.ground) deathParticles.push(particle)
             else {
               const cell = this.scene.cells.get(cellKey(Math.round(particle.x), Math.round(particle.y)))!

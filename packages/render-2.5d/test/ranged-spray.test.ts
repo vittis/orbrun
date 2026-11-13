@@ -3,6 +3,7 @@ import { cellKey, emptyScene, type Billboard, type DeathKind, type SceneCell } f
 import { DungeonEffects } from '../src/effects.js'
 import { sampleHitSpray } from '../src/hit-spray.js'
 import { debrisPalettes } from '../src/death.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
 
 function setup(name = 'orc') {
   const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'D:1', turn: 1, projectileTime: 0, player: { x: -2, y: 0 } }
@@ -20,6 +21,15 @@ const shot = (x: number, y: number, angle: number): Billboard => ({ x, y, kind: 
   life: { projectile: { kind: 'magic', family: 'dart', angle, colour: [180, 180, 240], beam: false } } })
 
 describe('material-specific ranged hit splatters', () => {
+  it('uses the incoming hit element even without a separate spell report', () => {
+    const { scene, fx } = setup()
+    fx.hit(scene, { ...hit, tone: 'fire', intensity: 'heavy' }, 1)
+    expect(fx.bursts).toHaveLength(1)
+    const particles = sampleHitSpray(scene, fx.bursts[0], 1.1)
+    expect(particles.some(p => elementalPalettes.fire.includes(p.colour))).toBe(true)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+  })
+
   it.each<[string, DeathKind]>([
     ['orc', 'flesh'], ['skeleton', 'bone'], ['jelly', 'slime'], ['stone golem', 'stone'],
     ['phantom', 'spirit'], ['fire elemental', 'fire'], ['ice beast', 'ice'],
@@ -34,7 +44,9 @@ describe('material-specific ranged hit splatters', () => {
     const particles = sampleHitSpray(scene, burst, 1.1)
     expect(particles.length).toBeGreaterThanOrEqual(8)
     expect(particles.length).toBeLessThanOrEqual(48)
-    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.08 && [5, 7].includes(p.minPixels!) && p.sprite !== 'burst')).toBe(true)
+    expect(particles.some(p => debrisPalettes[kind].includes(p.colour))).toBe(true)
+    expect(particles.some(p => elementalPalettes.cold.includes(p.colour) && p.sprite === 'shard')).toBe(true)
+    expect(particles.every(p => p.size < 0.08 && [5, 7].includes(p.minPixels!) && p.sprite !== 'burst')).toBe(true)
     expect(sampleHitSpray(scene, burst, 1.7)).toEqual([])
   })
 

@@ -100,7 +100,7 @@ describe('combat contact timing', () => {
     const contact = 0.055 / speed
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: true, speed }), 1)
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1 + contact)
-    expect(renderer.hit).toHaveBeenCalledWith({ x: 1, y: 0, actorId: 'id:1', turn: undefined }, 1 + contact)
+    expect(renderer.hit).toHaveBeenCalledWith({ x: 1, y: 0, actorId: 'id:1', turn: undefined, tone: 'physical', intensity: 'solid' }, 1 + contact)
     expect(renderer.spell).toHaveBeenCalledWith({ x: 1, y: 0, kind: 'fire' }, 1 + contact)
   })
 
@@ -110,9 +110,9 @@ describe('combat contact timing', () => {
       { kind: 'hurt', amount: 12, player: true },
       { kind: 'hit', x: 2, y: 0, tone: 'magic', intensity: 'solid' },
     ], [], undefined, 1000, true)
-    expect(renderer.hit).toHaveBeenCalledWith({ x: 0, y: 0, actorId: 'player', turn: undefined }, 1)
+    expect(renderer.hit).toHaveBeenCalledWith({ x: 0, y: 0, actorId: 'player', turn: undefined, tone: undefined, intensity: undefined }, 1)
     expect(renderer.bump).not.toHaveBeenCalled()
-    expect(renderer.hit).toHaveBeenCalledWith({ x: 2, y: 0, actorId: undefined, turn: undefined }, 1)
+    expect(renderer.hit).toHaveBeenCalledWith({ x: 2, y: 0, actorId: undefined, turn: undefined, tone: 'magic', intensity: 'solid' }, 1)
   })
 
   it('keeps misses and zero-damage bumps without impact VFX', () => {

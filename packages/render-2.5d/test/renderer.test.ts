@@ -8,6 +8,7 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
 import { wallHeight, wallRoof, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
@@ -300,7 +301,9 @@ describe('picking and visibility', () => {
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
       expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
       const sourceX = (body.x - r.project(0, 0).x) / scale
-      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && Math.abs(c[3].x - sourceX) < 0.08)).toBe(true)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'drop')).toBe(true)
+      expect(spray.mock.calls.some(c => elementalPalettes.magic.includes(c[3].colour))).toBe(true)
+      expect(spray.mock.calls.every(c => Math.abs(c[3].x - sourceX) < 0.08)).toBe(true)
       expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
       expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('spray'))
       spray.mockClear(); r.render(1.8)
@@ -353,7 +356,8 @@ describe('picking and visibility', () => {
       expect(art).not.toHaveBeenCalled()
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
       expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
-      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'shard' && elementalPalettes.cold.includes(c[3].colour))).toBe(true)
       const normalCount = spray.mock.calls.length
       spray.mockClear(); r.setOptions({ hitGore: 2, deathGore: 0 }); r.render(contact + 0.03)
       expect(spray.mock.calls.length).toBeGreaterThan(normalCount)
