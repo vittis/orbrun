@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.97 — 2026-11-13
+
+- Shield blocks, misses and zero-damage hits now use distinct shield, sidestep and breastplate symbols. Confirmed projectile blocks also get shield feedback without a melee lunge.
+- Defensive popups accumulate independently, including repeated misses, while damaging hits retain their blood/material VFX. Stable positions keep simultaneous results readable.
+- Popups spring upward with a quick overshoot and settle, then lift and smoothly fade. Visibility, recipient removal, death and Still/reduced-motion cleanup remain enforced.
+
 ## 0.3.96 — 2026-11-13
 
 - Fixed missing attack bumps when multiple adjacent enemies share a name. Repeated confirmed attempts are distributed across visible matching attackers, including messages arriving across frames.

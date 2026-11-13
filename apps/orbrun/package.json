@@ -1,6 +1,6 @@
 {
   "name": "orbrun",
-  "version": "0.3.96",
+  "version": "0.3.97",
   "private": true,
   "description": "Orbrun: a 2.5D Dungeon Crawl Stone Soup WebTiles client for keyboard, controllers and touch.",
   "license": "AGPL-3.0-or-later",
