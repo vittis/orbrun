@@ -41,9 +41,6 @@ export class DungeonDeaths {
   private level: string | undefined
   private onLevel = false
   get active() { return this.bursts.length > 0 }
-  coversImpact(x: number, y: number, now: number) {
-    return this.bursts.some(b => b.x === x && b.y === y && now >= b.born && now - b.born < 0.9)
-  }
 
   observe(scene: Scene, animate: boolean) {
     if (!animate || !scene.playerOnLevel || !this.onLevel || scene.levelKey !== this.level) this.clear()
@@ -61,8 +58,9 @@ export class DungeonDeaths {
     return true
   }
 
-  sample(scene: Scene, now: number, gore = 1): DeathParticle[] {
+  sample(scene: Scene, now: number, gore = 1, outward = 0.35): DeathParticle[] {
     gore = Number.isFinite(gore) ? Math.max(0, Math.min(2, gore)) : 1
+    outward = Number.isFinite(outward) ? Math.max(0, Math.min(1, outward)) : 0.35
     if (gore === 0) { this.clear(); return [] }
     this.bursts = this.bursts.filter(b => now - b.born < durations[b.kind] && scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible')
     const particles: DeathParticle[] = []
@@ -90,13 +88,14 @@ export class DungeonDeaths {
         alpha: 1 - t / 0.12, colour: palette[1], sprite: gory || liquid ? 'splat' : 'burst', ground: false })
       const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
       const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
-      const splashCount = Math.ceil(count / 3), splashPhase = random() * Math.PI * 2
+      const splashCount = Math.round(count * outward), splashPhase = random() * Math.PI * 2
+      let splashIndex = 0
       for (let i = 0; i < count; i++) {
         const large = i < chunks
         // Interleave chunks and flecks around the body in jittered sectors.
         // The rest retain the killing blow's forward fan and directional push.
-        const splash = i % 3 === 0
-        const angle = splash ? splashPhase + (Math.floor(i / 3) + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
+        const splash = Math.floor((i + 1) * splashCount / count) > Math.floor(i * splashCount / count)
+        const angle = splash ? splashPhase + (splashIndex++ + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
           : heading + (random() - 0.5) * spread * (distribution === 0 ? 1.2 : 1)
             + (distribution === 2 ? i % 2 ? 0.35 : -0.35 : 0)
         const speed = (large ? 1.2 + random() * 1.6 : 1.6 + random() * 2.5) * energy * (leafy || airy ? 0.65 : 1)

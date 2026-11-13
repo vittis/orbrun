@@ -37,6 +37,8 @@ export interface Render25dOptions {
   meleeBumpSnap?: number
   hitGore?: number
   deathGore?: number
+  hitSprayOutward?: number
+  deathSprayOutward?: number
   center?: { x: number; y: number } | null
   minibars?: Minibars | null
   filterScaling?: boolean
@@ -79,7 +81,7 @@ export class Render25d implements MapRenderer {
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, center: null, minibars: null, filterScaling: false,
     meleeBumpStrength: 1, meleeBumpSnap: 1,
-    hitGore: 1, deathGore: 1,
+    hitGore: 1, deathGore: 1, hitSprayOutward: 0.35, deathSprayOutward: 0.35,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
   }
 
@@ -93,6 +95,9 @@ export class Render25d implements MapRenderer {
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     for (const [key, min, max] of [['meleeBumpStrength', 0, 2], ['meleeBumpSnap', 0, 1], ['hitGore', 0, 2], ['deathGore', 0, 2]] as const) {
       this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : 1
+    }
+    for (const key of ['hitSprayOutward', 'deathSprayOutward'] as const) {
+      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(0, Math.min(1, this.opts[key])) : 0.35
     }
     if (this.opts.deathGore === 0) this.deaths.clear()
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
@@ -237,7 +242,9 @@ export class Render25d implements MapRenderer {
   }
 
   death(effect: DeathEffect, now: number) {
-    if (this.opts.animate && this.opts.deathGore > 0 && this.deaths.spawn(this.scene, effect, now)) this.active = true
+    if (!this.opts.animate) return
+    this.effects.death(this.scene, effect, now)
+    if (this.opts.deathGore > 0 && this.deaths.spawn(this.scene, effect, now)) this.active = true
   }
 
   render(now = performance.now() / 1000) {
@@ -255,7 +262,7 @@ export class Render25d implements MapRenderer {
     }
     this.effects.tick(this.scene, now)
     if (this.effects.hits.active) this.active = true
-    const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now, this.opts.deathGore) : []
+    const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now, this.opts.deathGore, this.opts.deathSprayOutward) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
     const standing = this.standing.filter(entry => !this.opts.animate || entry.billboard?.kind !== 'projectile').map(entry => {
       if (!entry.billboard) return entry
@@ -297,13 +304,12 @@ export class Render25d implements MapRenderer {
       }
       if (this.effects.bursts.some(b => now < b.born && this.inFrame(p, b))) this.active = true
       for (const burst of this.effects.visibleBursts(now)) {
-        if (this.deaths.coversImpact(burst.x, burst.y, now)) continue
         const cell = this.scene.cells.get(cellKey(burst.x, burst.y))
         const actor = burst.actorId && this.scene.billboards.find(b => combatActorId(b) === burst.actorId)
         const position = actor ? this.actorPosition(actor, now) : burst
         if (!cell || cell.occluder || !this.inFrame(p, position)) continue
         if (burst.spray) {
-          for (const particle of sampleHitSpray(this.scene, burst, now, position, this.opts.hitGore)) {
+          for (const particle of sampleHitSpray(this.scene, burst, now, position, this.opts.hitGore, this.opts.hitSprayOutward)) {
             if (particle.ground) deathParticles.push(particle)
             else {
               const cell = this.scene.cells.get(cellKey(Math.round(particle.x), Math.round(particle.y)))!

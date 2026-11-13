@@ -4,6 +4,12 @@ import { bumpFor } from './bump-effects'
 
 /** Schedule presentation only. State and input are never delayed. */
 export function presentCombat(renderer: MapRenderer, scene: Scene, events: CombatEvent[], spells: SpellEffect[], weapon: string | undefined, now: number, animate: boolean): void {
+  const deaths = events.filter(e => e.kind === 'kill')
+  const killed = (x: number | undefined, y: number | undefined, id?: string) => deaths.some(e =>
+    id && e.actorId ? id === e.actorId : x !== undefined && y !== undefined && e.x === x && e.y === y)
+  // Establish death ownership before a bump can schedule its contact spray.
+  // A kill is confirmed by the server; never predict it from damage or wounds.
+  if (animate) for (const event of deaths) if (event.death) renderer.death?.(event.death, now / 1000)
   const attacks = events.flatMap(e => {
     const attack = bumpFor(e, scene, weapon)
     return attack ? [attack] : []
@@ -17,8 +23,7 @@ export function presentCombat(renderer: MapRenderer, scene: Scene, events: Comba
   for (const event of events) {
     const x = event.player ? scene.player.x : event.x, y = event.player ? scene.player.y : event.y
     const delay = delayFor(x, y, event.player ? 'player' : event.actorId)
-    // The server has already removed the body: replace it on this frame.
-    if (animate && event.kind === 'kill' && event.death) renderer.death?.(event.death, now / 1000)
+    if (killed(x, y, event.player ? 'player' : event.actorId)) continue
     if (animate && (event.kind === 'hit' || event.kind === 'hurt') && event.amount !== 0 && x !== undefined && y !== undefined) {
       renderer.hit?.({ x, y, actorId: event.player ? 'player' : event.actorId, turn: event.turn }, (now + delay) / 1000)
     }
@@ -26,5 +31,5 @@ export function presentCombat(renderer: MapRenderer, scene: Scene, events: Comba
       renderer.impact?.(x, y, impactStrength(event.intensity), (now + delay) / 1000)
     }
   }
-  for (const spell of spells) renderer.spell?.(spell, (now + delayFor(spell.x, spell.y)) / 1000)
+  for (const spell of spells) if (!killed(spell.x, spell.y, spell.actorId)) renderer.spell?.(spell, (now + delayFor(spell.x, spell.y)) / 1000)
 }

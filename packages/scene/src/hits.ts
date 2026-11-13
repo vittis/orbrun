@@ -51,5 +51,6 @@ export class HitEffects {
   }
 
   private born(hit: Hit) { return Math.max(hit.requested, hit.contact?.() ?? hit.requested) }
+  remove(actorId: string) { this.hits = this.hits.filter(h => h.actorId !== actorId) }
   clear() { this.hits = []; this.level = undefined }
 }

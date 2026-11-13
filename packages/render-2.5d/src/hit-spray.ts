@@ -15,8 +15,9 @@ export interface HitSpray {
 }
 
 /** Directional splatters with a loose impact splash, using the death material art. */
-export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }, gore = 1): DeathParticle[] {
+export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, position = { x: burst.x, y: burst.y }, gore = 1, outward = 0.35): DeathParticle[] {
   gore = Number.isFinite(gore) ? Math.max(0, Math.min(2, gore)) : 1
+  outward = Number.isFinite(outward) ? Math.max(0, Math.min(1, outward)) : 0.35
   if (gore === 0) return []
   const spray = burst.spray, t = now - burst.born
   if (!spray || t < 0 || t >= burst.duration) return []
@@ -26,13 +27,13 @@ export function sampleHitSpray(scene: Scene, burst: SpellBurst, now: number, pos
   const energy = 1.25 + random() * 0.65, spread = 0.55 + random() * 0.85
   const heading = Math.atan2(spray.direction.y, spray.direction.x) + (random() - 0.5) * 0.2
   const z0 = spray.height * (0.35 + random() * 0.25), scatter = 0.015 + random() * 0.035
-  const splashCount = Math.max(3, Math.round(count * 0.35)), splashPhase = random() * Math.PI * 2
+  const splashCount = Math.round(count * outward), splashPhase = random() * Math.PI * 2
   const airy = spray.kind === 'spirit' || spray.kind === 'fire'
   const liquid = ['flesh', 'insect', 'slime', 'water'].includes(spray.kind)
   const particles: DeathParticle[] = []
   for (let i = 0; i < count; i++) {
-    // Jittered sectors keep a small splash around the whole contact point,
-    // even at low particle counts. Most debris still follows the hit direction.
+    // The outward share fills jittered sectors around contact. The remaining
+    // particles follow the hit direction without changing total density.
     const splash = i < splashCount
     const a = heading + (splash ? splashPhase + (i + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
       : (random() - 0.5) * spread)

@@ -162,6 +162,28 @@ describe('non-projectile spell histories', () => {
 })
 
 describe('bounded dungeon combat presentation', () => {
+  it.each(['before', 'after'] as const)('lets death own contact VFX when it arrives %s the hit, without suppressing a new occupant', order => {
+    const scene = world(), fx = new DungeonEffects()
+    scene.billboards = [player, { ...target, id: 7 }]
+    fx.observe(scene, 0, true)
+    const death = { actorId: 'id:7', x: 1, y: 0, height: 1, kind: 'flesh' as const, direction: { x: 1, y: 0 } }
+    const contact = 1 + bumpTiming().contact
+    if (order === 'before') fx.death(scene, death, 1)
+    fx.bump(scene, { ...attack, fromId: 'player', toId: 'id:7' }, 1)
+    fx.hit(scene, { x: 1, y: 0, actorId: 'id:7' }, contact)
+    if (order === 'after') fx.death(scene, death, 1.01)
+    fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', kind: 'fire' }, contact)
+    expect(fx.visibleBursts(contact + 0.03)).toEqual([])
+    expect(fx.hits.brightness('id:7', contact + 0.03)).toBe(1)
+    expect(fx.offset(player, contact).x).toBeGreaterThan(0)
+    scene.billboards = [player, { ...target, id: 8 }]
+    fx.observe(scene, 1.1, true)
+    expect(fx.hit(scene, { x: 1, y: 0, actorId: 'id:8' }, 1.1)).toBe(true)
+    expect(fx.visibleBursts(1.11)).toHaveLength(1)
+    fx.clear(); fx.observe(scene, 2, true)
+    expect(fx.spell(scene, { x: 1, y: 0, actorId: 'id:7', kind: 'physical' }, 2)).toBe(true)
+  })
+
   it('keeps the bump and ordinary material splash on one contact clock', () => {
     const scene = world(), fx = new DungeonEffects()
     scene.billboards = [player, { ...target, id: 7, name: 'jelly' }]

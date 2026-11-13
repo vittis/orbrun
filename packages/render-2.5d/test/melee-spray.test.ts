@@ -24,6 +24,22 @@ function setup(name = 'orc') {
 }
 
 describe('snappy directional melee sprays', () => {
+  it('adjusts outward spread independently of hit density and keeps the directional endpoint forward', () => {
+    const { scene, fx } = setup()
+    fx.bump(scene, attack, 1)
+    const burst = fx.bursts[0]
+    const sample = (outward: number) => sampleHitSpray(scene, burst, contact + 0.14, undefined, 1.25, outward)
+    const forward = sample(0), radial = sample(1)
+    expect(forward.length).toBe(radial.length)
+    expect(forward.every(p => p.x > 0)).toBe(true)
+    expect(radial.some(p => p.x < -0.1)).toBe(true)
+    expect(radial.some(p => p.y < -0.1)).toBe(true)
+    expect(radial.some(p => p.y > 0.1)).toBe(true)
+    expect(sample(-1)).toEqual(forward)
+    expect(sample(2)).toEqual(radial)
+    expect(sample(NaN)).toEqual(sample(0.35))
+  })
+
   it('bursts at early contact, scales gore density and expires quickly at every level', () => {
     const { scene, fx } = setup()
     fx.bump(scene, { ...attack, intensity: 'heavy' }, 1)

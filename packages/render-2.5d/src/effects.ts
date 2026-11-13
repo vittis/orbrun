@@ -1,7 +1,7 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
 import { DungeonSpawns } from './spawns.js'
 import { nativeSpellArt } from './spell-presentation.js'
-import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
 
 export interface BodyBump extends CombatBump { born: number; duration: number }
@@ -35,6 +35,7 @@ export class DungeonEffects {
   private level: string | undefined
   private onLevel = false
   private spraySequence = 0
+  private deaths: (Pick<DeathEffect, 'actorId' | 'x' | 'y'> & { born: number })[] = []
 
   observe(scene: Scene, now: number, animate: boolean) {
     const continuing = animate && scene.playerOnLevel && this.onLevel && scene.levelKey === this.level
@@ -97,9 +98,25 @@ export class DungeonEffects {
 
   projectiles(now: number) { return this.missiles.sample(now) }
 
+  /** A confirmed death replaces pending contact art, including delayed reports. */
+  death(scene: Scene, effect: DeathEffect, now: number) {
+    if (!scene.playerOnLevel || !visible(scene, effect) || scene.cells.get(cellKey(effect.x, effect.y))?.occluder) return
+    this.deaths = this.deaths.filter(d => d.actorId !== effect.actorId && now - d.born < 2)
+    this.deaths.push({ actorId: effect.actorId, x: effect.x, y: effect.y, born: now })
+    this.deaths = this.deaths.slice(-48)
+    this.hits.remove(effect.actorId)
+    this.bursts = this.bursts.filter(b => !this.killed(b, now))
+  }
+
+  private killed(effect: { actorId?: string; x: number; y: number }, now: number) {
+    return this.deaths.some(d => now >= d.born && now - d.born < 2
+      && (effect.actorId ? effect.actorId === d.actorId : effect.x === d.x && effect.y === d.y))
+  }
+
   hit(scene: Scene, effect: HitEffect, now: number) {
     const target = this.target(scene, { ...effect, kind: 'physical' }, now)
     const placed = target ? { ...effect, actorId: combatActorId(target), x: target.x, y: target.y } : effect
+    if (this.killed(placed, now)) return false
     const contact = this.missiles.bind({ ...placed, kind: 'physical' }, now)
     const added = this.hits.spawn(scene, placed, now, contact?.time)
     // Only confirmed damage emits body material. Misses, resisted casts and
@@ -146,6 +163,7 @@ export class DungeonEffects {
       : material === 'stone' || material === 'sand' ? 'earth' : material === 'metal' ? 'physical' : material
     const placed = { ...effect, kind, material, turn: effect.turn ?? scene.turn,
       ...(target ? { x: target.x, y: target.y, actorId: combatActorId(target) } : {}) }
+    if (this.killed(placed, now)) return false
     if (!scene.playerOnLevel || !visible(scene, placed) || scene.cells.get(cellKey(placed.x, placed.y))?.occluder) return false
     const utility = (kind: SpellEffect['kind']) => ['heal', 'buff', 'debuff', 'teleport'].includes(kind)
     const contact = source === 'melee' || utility(placed.kind) ? undefined : this.missiles.bind(placed, now)
@@ -233,6 +251,7 @@ export class DungeonEffects {
   }
 
   tick(scene: Scene, now: number) {
+    this.deaths = this.deaths.filter(d => now - d.born < 2 && visible(scene, d))
     this.spawns.tick(scene, now)
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
@@ -266,5 +285,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.nativeCells.clear(); this.nativeUntil.clear(); this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.deaths = []; this.nativeCells.clear(); this.nativeUntil.clear(); this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

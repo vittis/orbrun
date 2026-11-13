@@ -13,6 +13,21 @@ function room() {
 }
 
 describe('enemy death presentation', () => {
+  it('adjusts death direction independently of density, with radial and forward endpoints', () => {
+    const scene = room(), fx = new DeathEffects()
+    fx.observe(scene, true); fx.spawn(scene, death(), 1)
+    const sample = (outward: number) => fx.sample(scene, 1.16, 1.25, outward).filter(p => !p.ground)
+    const forward = sample(0), radial = sample(1)
+    expect(forward.length).toBe(radial.length)
+    expect(forward.every(p => p.x > 0)).toBe(true)
+    expect(radial.some(p => p.x < -0.1)).toBe(true)
+    expect(radial.some(p => p.y < -0.1)).toBe(true)
+    expect(radial.some(p => p.y > 0.1)).toBe(true)
+    expect(sample(-1)).toEqual(forward)
+    expect(sample(2)).toEqual(radial)
+    expect(sample(NaN)).toEqual(sample(0.35))
+  })
+
   it('scales death gore independently, caps maximum debris and clears an active death when disabled', () => {
     const scene = room(), fx = new DeathEffects()
     fx.observe(scene, true); fx.spawn(scene, death(), 1)
@@ -107,7 +122,6 @@ describe('enemy death presentation', () => {
     const particles = fx.sample(scene, now)
     expect(particles.some(p => p.sprite === 'splat' && p.alpha === 1)).toBe(true)
     expect(particles.some(p => p.sprite === 'gib' && p.alpha === 1)).toBe(true)
-    expect(fx.coversImpact(0, 0, now)).toBe(true)
   })
 
   it('retains a delayed killing blow, then bursts, lands and fades without timers', () => {
@@ -116,8 +130,6 @@ describe('enemy death presentation', () => {
     fx.spawn(scene, death('bone'), 1.15)
     expect(fx.sample(scene, 1)).toEqual([])
     expect(fx.active).toBe(true)
-    expect(fx.coversImpact(0, 0, 1)).toBe(false)
-    expect(fx.coversImpact(0, 0, 1.2)).toBe(true)
     const burst = fx.sample(scene, 1.2)
     expect(burst.some(p => p.sprite === 'burst')).toBe(true)
     expect(burst.filter(p => p.sprite === 'shard').length).toBeGreaterThan(15)

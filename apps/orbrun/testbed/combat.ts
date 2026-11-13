@@ -106,7 +106,9 @@ function play(kind: string) {
       meleeBumpStrength: Number((document.getElementById('bump-strength') as HTMLSelectElement).value),
       meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value),
       hitGore: Number((document.getElementById('hit-gore') as HTMLSelectElement).value),
-      deathGore: Number((document.getElementById('death-gore') as HTMLSelectElement).value) })
+      deathGore: Number((document.getElementById('death-gore') as HTMLSelectElement).value),
+      hitSprayOutward: Number((document.getElementById('hit-outward') as HTMLSelectElement).value),
+      deathSprayOutward: Number((document.getElementById('death-outward') as HTMLSelectElement).value) })
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)

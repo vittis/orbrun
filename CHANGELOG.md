@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.85 — 2026-11-13
+
+- Added 175% hit bump strength and 125% hit/death gore options.
+- Added independent Hit outward spray and Death outward spray controls. Choose how many particles spread in all directions, with the rest following the blow.
+- Confirmed kills now own contact effects: death VFX replace pending hit particles and flashes, including delayed reports and when death gore is Off. Other actors entering the same cell retain their own hit effects.
+
 ## 0.3.84 — 2026-11-13
 
 - Melee hits land earlier with a stronger body bump, a brief impact hold and a sharp recoil. Hit flashes and material sprays share the new contact timing.

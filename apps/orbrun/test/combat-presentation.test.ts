@@ -33,14 +33,32 @@ describe('combat contact timing', () => {
     presentCombat(renderer, scene, events, [], weapon, 1000, true)
     expect(renderer.bump).toHaveBeenCalledTimes(1)
     expect(renderer.death).toHaveBeenLastCalledWith(death, 1)
+    expect(renderer.hit).not.toHaveBeenCalled()
+    expect(renderer.impact).not.toHaveBeenCalled()
+    expect(vi.mocked(renderer.death!).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(renderer.bump!).mock.invocationCallOrder[0])
     presentCombat(renderer, scene, [events[1]], [], undefined, 2000, true)
     expect(renderer.death).toHaveBeenLastCalledWith(death, 2)
     presentCombat(renderer, scene, events, [], weapon, 3000, false)
     expect(renderer.death).toHaveBeenCalledTimes(2)
   })
+  it('suppresses lethal hit and spell bursts while preserving another actor at the same cell', () => {
+    const { scene, renderer } = harness()
+    const death = deathFor({ kind: 'monster', id: 1, name: 'goblin', tile: 1, height: 0.8, x: 1, y: 0 }, scene.player)
+    presentCombat(renderer, scene, [
+      { kind: 'hit', x: 1, y: 0, actorId: 'id:1', amount: 12 },
+      { kind: 'kill', x: 1, y: 0, actorId: 'id:1', death },
+      { kind: 'hit', x: 1, y: 0, actorId: 'id:2', amount: 5 },
+    ], [{ x: 1, y: 0, actorId: 'id:1', kind: 'fire' }, { x: 2, y: 0, kind: 'cold' }], undefined, 1000, true)
+    expect(renderer.hit).toHaveBeenCalledTimes(1)
+    expect(renderer.hit).toHaveBeenCalledWith(expect.objectContaining({ actorId: 'id:2' }), 1)
+    expect(renderer.impact).toHaveBeenCalledTimes(1)
+    expect(renderer.spell).toHaveBeenCalledExactlyOnceWith({ x: 2, y: 0, kind: 'cold' }, 1)
+    expect(renderer.death).toHaveBeenCalledExactlyOnceWith(death, 1)
+  })
+
   it('aligns the elemental burst and ripple with the body bump', () => {
     const { scene, renderer } = harness()
-    const events = combatText('You slash the goblin for 8! You kill the goblin!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
+    const events = combatText('You slash the goblin for 8!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
     presentCombat(renderer, scene, events, [{ x: 1, y: 0, kind: 'fire' }], 'long sword', 1000, true)
     const contact = bumpTiming().contact
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: true }), 1)
