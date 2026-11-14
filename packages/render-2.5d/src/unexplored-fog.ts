@@ -160,10 +160,14 @@ export class UnexploredFog {
     const field = noiseField(), edge = this.edgePixels!.data, sy = groundDepth(p.tilt)
     for (let py = 0, i = 0; py < height; py++) for (let px = 0; px < width; px++, i += 4) {
       const k = py * width + px
+      // The smoothstep is identically zero on this side of the boundary,
+      // regardless of noise or time. Most of a zoomed-out viewport can be
+      // unexplored: do not evaluate animated noise for those opaque pixels.
+      if (this.coverage[k] <= 0.5) { edge[i + 3] = 255; continue }
       const wx = p.x + (this.origin + (px + 0.5) * spacing - p.width / 2) / p.scale
       const wy = p.y + (this.origin + (py + 0.5) * spacing - p.height / 2) / (p.scale * sy)
       const feather = 0.3 + 0.22 * noise(field, wx * 0.8 + time * 0.22, wy * 0.8 - time * 0.18)
-      edge[i] = edge[i + 1] = edge[i + 2] = 0
+      // RGB stays black in the reused, zero-initialized ImageData.
       edge[i + 3] = 255 * (1 - smooth((this.coverage[k] - 0.5) / feather))
     }
     this.edgeInk.putImageData(this.edgePixels!, 0, 0)

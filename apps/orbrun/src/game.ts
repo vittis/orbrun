@@ -182,6 +182,7 @@ export class GameScreen {
   }
   /** Scene callbacks start both animations at the confirmed update's arrival time. */
   private sceneTime: number | undefined
+  private inputContextDirty = false
   private lastFrame = performance.now()
   private raf = 0
   /** the safety tick while the loop sleeps (IDLE_TICK_MS) */
@@ -339,6 +340,7 @@ export class GameScreen {
       onMinimapClick: () => this.minimapTap(),
       // on the map with nothing of ours up, as the pad's Start opens it there
       onStatsClick: () => {
+        this.prepareInput()
         if (this.ctx.mode !== 'command' || this.session.watching || this.overlays.hasClientOverlay) return
         this.touchAttempt('menu')
         this.runner.execute({ kind: 'ui', op: 'system' })
@@ -370,6 +372,7 @@ export class GameScreen {
       },
       onTouchExtra: (id) => {
         this.inputFrom('touch')
+        this.prepareInput()
         this.runner.execute(touchExtraAction(id, this.ctx))
       },
     })
@@ -442,9 +445,11 @@ export class GameScreen {
     this.unsub.push(
       session.on((e) => {
         if (e.type === 'scene') {
+          this.inputContextDirty = true
           this.wake()
           this.onScene()
         } else if (e.type === 'state') {
+          this.inputContextDirty = true
           this.feedback.observe(session.state, e.msg)
           this.nearDeath.observe(session.state, e.msg, performance.now())
           this.levelUp.observe(session.state, e.msg, performance.now())
@@ -818,25 +823,13 @@ export class GameScreen {
     const st = this.session.state
     // overlays first: the popup's parsed actions and the focus cursor feed the context and the action bar
     // the device first: the overlays decide what to bring up with a server prompt by who spoke last
-    this.overlays.setDevice(this.lastInput)
-    this.overlays.update(st)
+    this.updateContext()
     // The gamedata fetch runs while the game is already talking: the launcher's
     // save-transfer question (a `show_dialog`) comes up with the veil still
     // over the screen. A veil that swallowed the click would strand the player,
     // so while anything of the server's is up it stands behind the overlays.
     this.loading.classList.toggle('behind', !!(st.dialog || st.menus.length || st.ui.length || st.textInput))
-    this.ctx = this.deriveContext(st)
     this.fireHolds(now)
-    // the server reports targeting alone; the runner knows whether its `x` opened it
-    if (this.runner.examining(this.ctx.mode)) this.ctx.examining = true
-    if (this.ctx.mode === 'popup') this.ctx.popupActions = this.overlays.popupActions()
-    if (this.ctx.mode === 'menu') this.ctx.switches = this.overlays.menuSwitches()
-    if (this.ctx.mode === 'popup') this.ctx.switches = this.overlays.popupSwitches()
-    this.overlays.updatePrompt(this.ctx.mode, this.ctx.prompt, this.lastInput)
-    this.overlays.syncFocus(this.ctx)
-    const fi = this.overlays.focusInfo(this.ctx)
-    if (fi) this.ctx.focus = fi
-    this.ctx.pageable = this.overlays.pageable(this.ctx)
     this.trackPack()
     this.trackActions(now, true)
     this.spellFrame()
@@ -979,6 +972,31 @@ export class GameScreen {
       if (this.exploreDone.update(st, this.session.scene)) this.ctxBase.exploreDone = true
     }
     return { ...this.ctxBase }
+  }
+
+  /** A reply may arrive after the last paint but before the next input poll.
+   * Resolve that input against confirmed state now, without waiting for RAF. */
+  private prepareInput() {
+    if (!this.inputContextDirty) return
+    this.session.flushScene()
+    this.updateContext()
+  }
+
+  private updateContext() {
+    this.inputContextDirty = false
+    this.overlays.setDevice(this.lastInput)
+    this.overlays.update(this.session.state)
+    this.ctx = this.deriveContext(this.session.state)
+    // The runner distinguishes examine from other server targeting modes.
+    if (this.runner.examining(this.ctx.mode)) this.ctx.examining = true
+    if (this.ctx.mode === 'popup') this.ctx.popupActions = this.overlays.popupActions()
+    if (this.ctx.mode === 'menu') this.ctx.switches = this.overlays.menuSwitches()
+    if (this.ctx.mode === 'popup') this.ctx.switches = this.overlays.popupSwitches()
+    this.overlays.updatePrompt(this.ctx.mode, this.ctx.prompt, this.lastInput)
+    this.overlays.syncFocus(this.ctx)
+    const fi = this.overlays.focusInfo(this.ctx)
+    if (fi) this.ctx.focus = fi
+    this.ctx.pageable = this.overlays.pageable(this.ctx)
   }
 
   /** The safety tick: a frame after IDLE_TICK_MS asleep, so anything that changed without waking the loop is seen. */
@@ -1276,6 +1294,7 @@ export class GameScreen {
     if (this.quickSettings?.pad(ev)) return
     // a press, a stick or the d-pad is the pad speaking; a stick settling back to centre is not
     if (isPadActivity(ev)) this.inputFrom('pad')
+    this.prepareInput()
     if (this.chat.capturing) {
       this.chat.pad(ev)
       return
@@ -1439,6 +1458,7 @@ export class GameScreen {
   /** A spell on the bar tapped: armed, or spent (spell-bar.ts SpellBar). */
   private spellTap(spell: Spell) {
     this.inputFrom('touch')
+    this.prepareInput()
     // the spell bar's own tap keeps what it lit: its second tap is what spends it
     this.inputActed(false)
     this.spellBar.tap(spell)
@@ -1448,6 +1468,7 @@ export class GameScreen {
   /** The bar's More: every spell, in crawl's cast list (X's Spells). */
   private spellMore() {
     this.inputFrom('touch')
+    this.prepareInput()
     this.inputActed()
     if (this.ctx.mode === 'command') this.openActionTab('spells')
   }
@@ -1499,6 +1520,7 @@ export class GameScreen {
     if (this.quickSettings?.owns(target)) return
     // a key typed into a field is still the keyboard speaking (a server prompt's on-screen keyboard goes away for it)
     this.inputFrom('keyboard')
+    this.prepareInput()
     if (target && isTextEntry(target)) return
     // F2–F5 are Orbrun's own: the pad's four menus, so a player can rebind a button (or anything) to them. A bare
     // F1 goes on to Crawl (keys.ts CODES), which binds it to CMD_GAME_MENU alongside `~`; crawl binds none of these.

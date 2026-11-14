@@ -41,7 +41,9 @@ const surface = (width: number, height: number): Canvas | null => typeof Offscre
  * Texture samples never enter the tile cache, so flicker/afterglows stay fluid. */
 export class DungeonLighting implements SurfaceLighting {
   private canvas: Canvas | null = null
-  private scratch: Canvas | null = null
+  // Walls and sprites alternate sizes. Resizing one shared canvas repeatedly
+  // discards its backing store instead of reusing the allocated surface.
+  private scratch = new Map<string, Canvas>()
   private sourceInk: Canvas | null = null
   private sourceMask: Canvas | null = null
   private scene: Scene | null = null
@@ -49,11 +51,13 @@ export class DungeonLighting implements SurfaceLighting {
   private key = ''
   private reachable: SceneCell[][] = []
   private pad = 0
+  private bounds: SurfaceRect[] = []
   active = false
 
   build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null, position?: ActorPosition,
     receives = (cell: SceneCell) => cell.visibility === 'visible') {
     this.active = false
+    this.bounds = []
     if (!sources.length) return
     const key = sources.map(s => `${s.x},${s.y},${s.radius}`).join(';')
     if (scene !== this.scene || scene.revision !== this.revision || key !== this.key) {
@@ -79,6 +83,8 @@ export class DungeonLighting implements SurfaceLighting {
     if (!ctx) return
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, width, height)
     ctx.translate(this.pad, this.pad)
+    const actors = scene.billboards.filter(b => !nativeSpellArt(b))
+    const actorCells = new Set(actors.map(b => cellKey(b.x, b.y)))
     for (let i = 0; i < sources.length; i++) {
       const source = sources[i], cells = this.reachable[i]
       const q = glowCenter(scene, p, source, tiles, position), radius = glowRadius(source) * p.scale
@@ -108,14 +114,15 @@ export class DungeonLighting implements SurfaceLighting {
         } else mask.rect(r.x, r.y, r.width, r.height)
         // Give standing art headroom in the visibility mask. Its own alpha
         // clips the final light sample, so no rectangular sprite glow leaks.
-        if (scene.billboards.some(b => !nativeSpellArt(b) && b.x === cell.x && b.y === cell.y) || !cell.life?.spawn && (cell.stance === 'upright' || cell.freestanding)) {
+        if (actorCells.has(cellKey(cell.x, cell.y)) || !cell.life?.spawn && (cell.stance === 'upright' || cell.freestanding)) {
           const foot = project(p, cell.x, cell.y + 0.3)
           mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
         }
       }
       // Retain headroom at each drawn position while actors travel between cells.
-      if (position) for (const b of scene.billboards) {
-        if (nativeSpellArt(b) || !cells.some(c => c.x === b.x && c.y === b.y && receives(c))) continue
+      const receiving = new Set(cells.filter(receives).map(c => cellKey(c.x, c.y)))
+      if (position) for (const b of actors) {
+        if (!receiving.has(cellKey(b.x, b.y))) continue
         const anchor = position(b), foot = project(p, anchor.x, anchor.y + 0.3)
         mask.rect(foot.x - p.scale / 2, foot.y - p.scale * 1.2, p.scale, p.scale * 1.2)
       }
@@ -129,23 +136,34 @@ export class DungeonLighting implements SurfaceLighting {
       ink.globalCompositeOperation = 'destination-in'; ink.filter = `blur(${blur}px)`
       ink.drawImage(this.sourceMask, 0, 0); ink.filter = 'none'
       ctx.globalCompositeOperation = 'screen'; ctx.drawImage(this.sourceInk, left, top)
+      // Include the entire source surface plus a filtering texel. This is a
+      // conservative bound, including blurred masks and moving actor headroom.
+      this.bounds.push({ x: left - 1, y: top - 1, width: size + 2, height: size + 2 })
       this.active = true
     }
   }
 
   draw(ctx: Context2d, rect: SurfaceRect, mask?: Canvas, sample = rect) {
     if (!this.active || !this.canvas || rect.width <= 0 || rect.height <= 0) return
+    if (!this.bounds.some(b => sample.x < b.x + b.width && sample.x + sample.width > b.x
+      && sample.y < b.y + b.height && sample.y + sample.height > b.y)) return
     let ink = this.canvas
     if (mask) {
-      this.scratch ??= surface(mask.width, mask.height)
-      if (!this.scratch) return
-      if (this.scratch.width !== mask.width || this.scratch.height !== mask.height) { this.scratch.width = mask.width; this.scratch.height = mask.height }
-      const scratch = this.scratch.getContext('2d') as Context2d | null
+      const key = `${mask.width}:${mask.height}`
+      let canvas = this.scratch.get(key)
+      if (!canvas) {
+        const created = surface(mask.width, mask.height)
+        if (!created) return
+        // A small bounded pool covers terrain and the sprite raster scales.
+        if (this.scratch.size >= 4) this.scratch.delete(this.scratch.keys().next().value!)
+        this.scratch.set(key, canvas = created)
+      }
+      const scratch = canvas.getContext('2d') as Context2d | null
       if (!scratch) return
       scratch.globalCompositeOperation = 'source-over'; scratch.clearRect(0, 0, mask.width, mask.height)
       scratch.drawImage(this.canvas, sample.x + this.pad, sample.y + this.pad, sample.width, sample.height, 0, 0, mask.width, mask.height)
       scratch.globalCompositeOperation = 'destination-in'; scratch.drawImage(mask, 0, 0)
-      ink = this.scratch
+      ink = canvas
     }
     ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.imageSmoothingEnabled = true
     if (mask) ctx.drawImage(ink, rect.x, rect.y, rect.width, rect.height)
@@ -153,5 +171,5 @@ export class DungeonLighting implements SurfaceLighting {
     ctx.restore()
   }
 
-  clear() { this.canvas = this.scratch = this.sourceInk = this.sourceMask = null; this.scene = null; this.reachable = []; this.key = ''; this.revision = -1; this.active = false }
+  clear() { this.canvas = this.sourceInk = this.sourceMask = null; this.scratch.clear(); this.bounds = []; this.scene = null; this.reachable = []; this.key = ''; this.revision = -1; this.active = false }
 }

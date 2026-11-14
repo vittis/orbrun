@@ -123,6 +123,19 @@ describe('confirmed entity movement', () => {
     expect(single.position(second, 1)).toEqual({ x: 1, y: 0 })
   })
 
+  it('keeps stacked anonymous copies distinct while matching a separate moving copy', () => {
+    const m = new DungeonMovement()
+    const a = actor(0, 0, { id: undefined, life: { rate: 1 } })
+    const b = actor(0, 0, { id: undefined, life: { rate: 2 } })
+    const c = actor(2, 0, { id: undefined, life: { rate: 3 } })
+    observe(m, scene(a, b, c), 1)
+    const next = [{ ...a }, { ...b }, { ...c, x: 3 }]
+    observe(m, scene(...next), 2)
+    expect(next.map(b => m.animation(b, 2).time)).toEqual([2, 4, 6])
+    expect(next.map(b => m.position(b, 2).x)).toEqual([0, 0, 2])
+    expect(m.position(next[2], 2.1).x).toBe(3)
+  })
+
   it('snaps new identities, level changes and remote level views', () => {
     for (const change of ['identity', 'level', 'remote'] as const) {
       const m = new DungeonMovement()

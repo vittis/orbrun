@@ -41,3 +41,43 @@ Removed the floating-text renderer, CSS, SVG icon factory, Barlow font/license, 
 Validation: `npm run verify` passed **2,222 unit cases** (two optional-engine skips), with incremental types; full `verify:render` passed **13 browser cases**, all **4,072 raster assertions** and 12 atmosphere assertions. Production build/preview passed separately. The existing native-motion browser regression now also triggers a local hit through the real GameScreen and checks that a world impact still occurs; its focused run passed. Final healing-strength preservation passed typechecking and 100 affected combat/spell cases. Production output contains no popup renderer/styles or Barlow assets.
 
 `REQUIRE_ENGINE=1 npm run e2e` cannot run without `engine/dist/stable/engine.json`; the removed patches have not been validated in a rebuilt WASM engine. The content-based engine recipe automatically changes when patches are removed, so subsequent engine builds will use the new recipe. No deployment was performed.
+
+## Runtime responsiveness pass — 2026-11-14
+
+Compared with `cfb1922` (0.3.118), using local fixtures on macOS arm64, Node 24.11.1 and headless Chromium 158.0.8127.18 at 1280×720. [Machine-readable measurements](responsiveness-performance.json) include sample counts, tail timings and limitations.
+
+| Workload | Before | After |
+|---|---:|---:|
+| Moving room, median draw time | 7.0 ms | 5.2 ms |
+| Moving room with unexplored fog, median draw time | 8.4 ms | 6.5 ms |
+| Confirmed hits every 100 ms with fog, median draw time | 7.3 ms | 5.3 ms |
+| 64 anonymous items, median movement observation | 0.169 ms | 0.054 ms |
+| 256 anonymous items, median movement observation | 2.195 ms | 0.204 ms |
+| 625 anonymous items, median movement observation | 12.496 ms | 0.540 ms |
+
+The browser scenarios each ran for six seconds after 1.5 seconds of warm-up; the existing profiler reports its trailing four-second window. Current code ran before the baseline, sequentially without builds/tests competing for the CPU. Movement measurements use seven alternating A/B samples of 200 observations after warm-up. These are descriptive local measurements, not CI thresholds. The item counts are stress cases, not a claim about typical visible crowds.
+
+Changes:
+
+- Input resolves newly received server state before keyboard/controller/touch routing, including pending scene composition and menu focus. A real-browser regression delivers replies and inputs in one task, confirms `--more--` immediately, selects a newly opened menu, and sends eight movement commands without an intervening paint. Disabling the fix reproduced missed controller/touch confirmations; enabling it passed. Commands remain server-authoritative and do not wait for animations.
+- Held directional and button repeats retain their original cadence across uneven display frames. Missed repeats are discarded after stalls. Deterministic tests cover controller buttons, d-pad and touch arrows, release and stalled frames.
+- Anonymous movement matching uses indexed stationary copies and signature counts instead of repeated full actor scans. Conservative identity matching, stacked copies, visibility, level changes, camera curves and Still behavior remain covered.
+- Lighting skips samples outside all light surfaces, indexes actor occupancy, and retains a bounded pool of four mask canvases to avoid repeated resize allocation. Sampling uses the source footprint, including displaced sprites, and clears stale bounds/resources. Fog avoids noise evaluation where the exploration mask is mathematically fully opaque; black RGB pixels remain in reused ImageData.
+
+Reproduce outside the default test suite:
+
+```sh
+npm run dev -w apps/orbrun -- --host 127.0.0.1 --port 5296 --strictPort
+# In a second terminal, with no other benchmark/test workload running:
+node tools/perf/responsiveness.mjs
+# Optional CPU call stacks:
+PROFILE_CPU=1 node tools/perf/responsiveness.mjs
+# Movement A/B, using a local reference module:
+mkdir -p scratchpad/performance
+git show cfb1922:packages/render-2.5d/src/movement.ts > scratchpad/performance/movement-before.ts
+node_modules/.bin/vite-node tools/perf/movement-replay.ts scratchpad/performance/movement-before.ts
+```
+
+Still rendered only its initial frame in the browser measurement. No long tasks were reported in these scenarios, but headless frame intervals still included 33 ms frames: lower drawing cost is not a locked-60-FPS guarantee. Transport ordering and existing input-before-render scheduling remain unchanged. Network RTT, authenticated play and physical controllers/devices were not measured; no deployment or engine changes were made.
+
+Validation: `npm run test:changed` passed 531 cases in 20 files. Final `npm run verify` passed incremental TypeScript and 2,496 unit cases in 138 files, with two optional-engine cases skipped. `npm run verify:render` passed all 32 browser tests, including the full 4,674-case dungeon raster matrix, retained scenery/fog/spell checks, native reduced motion, Still, and the new immediate-input regression. Browser retries remain zero. No production/build configuration changed, so production/release and separately provisioned engine gates were not run.

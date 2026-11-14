@@ -3,6 +3,43 @@ import { test, result } from './fixtures'
 
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
+test('inputs use server replies immediately between paints, including touch and controller presses', async ({ page }) => {
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  const evidence = await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: {
+      receive(msg: Record<string, unknown>): void
+      walk(): void
+      pad(event: import('../../apps/orbrun/src/gamepad').PadEvent): void
+      snapshot(): { totalFrames: number; sent: unknown[] }
+    } }).__orbrunLiveAnimation
+    const before = fixture.snapshot().totalFrames
+    fixture.walk()
+    // These replies and inputs all occur in one task: no RAF can refresh the
+    // context between them. The actual reducer, controls and Runner are used.
+    fixture.receive({ msg: 'msgs', more: true })
+    fixture.pad({ type: 'press', button: 'A', t: performance.now() })
+    fixture.pad({ type: 'release', button: 'A', t: performance.now(), held: 10 })
+    fixture.receive({ msg: 'msgs', more: false })
+    fixture.receive({ msg: 'msgs', more: true })
+    fixture.pad({ type: 'press', button: 'A', t: performance.now(), touch: true })
+    fixture.pad({ type: 'release', button: 'A', t: performance.now(), held: 10, touch: true })
+    fixture.receive({ msg: 'msgs', more: false })
+    fixture.receive({ msg: 'menu', tag: 'inventory', flags: 0, title: { text: 'Inventory' }, items: [
+      { text: 'a - a dagger', hotkeys: [97], level: 2 },
+    ], total_items: 1 })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }))
+    fixture.receive({ msg: 'close_menu' })
+    for (let i = 0; i < 8; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', bubbles: true, cancelable: true }))
+    const after = fixture.snapshot()
+    return { before, after: after.totalFrames, sent: after.sent }
+  })
+  expect(evidence.after).toBe(evidence.before)
+  expect(evidence.sent.slice(0, 2)).toEqual([{ msg: 'key', keycode: 32 }, { msg: 'key', keycode: 32 }])
+  expect(evidence.sent).toContainEqual({ msg: 'key', keycode: 13 })
+  expect(evidence.sent.slice(-8)).toEqual(Array.from({ length: 8 }, () => ({ msg: 'input', text: 'l' })))
+})
+
 test('inventory transitions preserve live updates, stable hover targets, and immediate closing', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')

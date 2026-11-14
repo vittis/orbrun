@@ -220,7 +220,7 @@ export class GamepadInput {
         const r = this.repeatState.get(b)
         if (r && now >= r.next) {
           r.n++
-          r.next = now + this.opts.buttonRepeatInterval
+          r.next = nextRepeat(r.next, now, this.opts.buttonRepeatInterval)
           this.emit({ type: 'repeat', button: b, n: r.n })
         }
       }
@@ -287,12 +287,19 @@ export class GamepadInput {
     } else if (dir !== null) {
       const r = this.dirRepeat.get(source)
       if (r && now >= r.next) {
-        r.next = now + this.opts.repeatInterval
+        r.next = nextRepeat(r.next, now, this.opts.repeatInterval)
         r.n++
         this.emit(touch ? { type: 'dirRepeat', source, dir, n: r.n, touch } : { type: 'dirRepeat', source, dir, n: r.n })
       }
     }
   }
+}
+
+/** Keep the held cadence anchored across uneven frames. Missed beats are
+ * skipped, never replayed as a burst of commands after a stalled frame. */
+function nextRepeat(due: number, now: number, interval: number): number {
+  const step = Math.max(1, interval)
+  return due + (Math.floor((now - due) / step) + 1) * step
 }
 
 /** Standard-layout slot (index into BUTTON_INDEX) of each raw button, by raw index; -1 is a gap. */

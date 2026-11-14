@@ -62,19 +62,37 @@ export class DungeonMovement {
     }
     // Anonymous art is matched conservatively: reserve stationary copies first,
     // then only pair a unique disappearance/arrival of the same artwork.
+    // Index once: a floor full of anonymous items must not scan and allocate
+    // the entire actor list again for each item on every confirmed step.
+    const signatures = new Map<Billboard, string>()
+    const stationary = new Map<string, string[]>()
+    for (const [id, a] of this.actors) {
+      if (!id.startsWith('anonymous:')) continue
+      const key = `${a.signature}:${a.tween.to.x}:${a.tween.to.y}`
+      const ids = stationary.get(key)
+      if (ids) ids.push(id)
+      else stationary.set(key, [id])
+    }
+    for (const ids of stationary.values()) ids.reverse()
+    const arrivals = new Map<string, number>()
     for (const b of boards) {
       if (assigned.has(b)) continue
       const sig = signature(b)
-      const old = [...this.actors].find(([id, a]) => id.startsWith('anonymous:') && !used.has(id) && a.signature === sig && same(a.tween.to, b))
-      if (old) { assigned.set(b, old[0]); used.add(old[0]) }
+      signatures.set(b, sig)
+      const ids = stationary.get(`${sig}:${b.x}:${b.y}`)
+      const id = ids?.pop()
+      if (id !== undefined) { assigned.set(b, id); used.add(id) }
+      else arrivals.set(sig, (arrivals.get(sig) ?? 0) + 1)
     }
-    const unmatched = boards.filter(b => !assigned.has(b))
-    const previousUnmatched = [...this.actors].filter(([id]) => id.startsWith('anonymous:') && !used.has(id))
-    for (const b of unmatched) {
-      const sig = signature(b)
-      const arrivals = unmatched.filter(other => signature(other) === sig)
-      const departures = previousUnmatched.filter(([, a]) => a.signature === sig)
-      const id = arrivals.length === 1 && departures.length === 1 ? departures[0][0] : `anonymous:${this.nextId++}`
+    const departures = new Map<string, string | null>()
+    for (const [id, a] of this.actors) {
+      if (!id.startsWith('anonymous:') || used.has(id)) continue
+      departures.set(a.signature, departures.has(a.signature) ? null : id)
+    }
+    for (const b of boards) {
+      if (assigned.has(b)) continue
+      const sig = signatures.get(b)!, previous = departures.get(sig)
+      const id = arrivals.get(sig) === 1 && previous != null ? previous : `anonymous:${this.nextId++}`
       assigned.set(b, id); used.add(id)
     }
     this.billboards.clear()
@@ -83,7 +101,7 @@ export class DungeonMovement {
       const previous = candidate?.kind === b.kind ? candidate : undefined
       const tween = this.retarget(previous?.tween, b, scene, now, options, true, b.kind === 'player')
       const rate = b.life?.rate ?? 1
-      const actor: Actor = { kind: b.kind, signature: signature(b), tween,
+      const actor: Actor = { kind: b.kind, signature: signatures.get(b) ?? signature(b), tween,
         origin: previous?.origin ?? { x: b.x, y: b.y },
         time: previous ? previous.time + (now - previous.at) * previous.rate : now * rate, at: now, rate }
       next.set(id, actor)
