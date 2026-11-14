@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.119 — 2026-11-14
+
+- Fixed missed controller and touch confirmations when a server prompt arrives between frames. Fast keyboard input also uses the latest confirmed menu and gameplay state immediately.
+- Kept held movement and action repeats steady across uneven frames without replaying missed commands after a stall.
+- Reduced lighting and fog work and removed repeated actor scans on crowded floors. Local browser measurements showed 23–27% lower median drawing time; server authority, visibility and Still/reduced motion are preserved.
+
 ## 0.3.118 — 2026-11-13
 
 - Stars in unexplored space now use soft circular falloff, slight color and brightness differences, and gentle curved drift. Added a handful of faint, slowly rotating curls while keeping the background black.
