@@ -15,6 +15,7 @@ Orbrun is an npm/TypeScript workspace with a Vite app, Canvas renderers and a Cl
 | `apps/orbrun/src/session.ts` | Connection/state/asset sequencing, scene flushes and lifecycle |
 | `apps/orbrun/src/game.ts` | Gameplay screen, renderer/map lifecycle, input and presentation coordination |
 | `apps/orbrun/src/settings.ts` | Supported preferences, defaults, numeric validation and compatible persistence |
+| `apps/orbrun/src/audio/` | Optional OSP pack loading/caching, worker-isolated matching and bounded Web Audio effects |
 | App controls/HUD/menu modules | Device normalization, contextual commands, menus, targeting, settings and accessibility |
 | `apps/orbrun/src/room/` | Bundled menu scenery rendered through the existing 2.5D renderer |
 | Worker/proxy/build tools | Static hosting, bounded allowlisted proxies, source identity and guarded deployment |
@@ -26,6 +27,38 @@ The reducer mutates GameState; scene revisions and dirty-cell information drive 
 Combat messages and state deltas drive effects. Named spell damage and native effect tiles share the DCSS presentation catalogue in `scene-webtiles/effect-types.ts` ([audit](COMBAT-ELEMENTS.md)). Explicit result classifications override ambiguous/reused native art; Searing Ray deliberately uses fire presentation without changing server damage mechanics. Named spell damage is classified before creature melee grammar, so Prism/force/energy and direct ability results retain their damage element without creating a physical attacker. Casting and status-only messages do not establish a damaging hit. An identified venom brand on the primary weapon is captured when a confirmed player weapon-hit message arrives, providing poison appearance even when lethal strikes omit the status follow-up; it does not assert extra damage or poisoning. Animation cannot delay command transmission, invent damage or hidden actors, change authoritative positions, or infer gameplay outcomes. Existing movement smoothing, wall/corridor behavior, visibility fading, spell traces and combat timing remain renderer responsibilities. Still/reduced-motion settings limit presentation work.
 
 Unexplored fog uses one black starfield throughout the dungeon, with soft circular points, stable per-star variations, gentle curved drift and a handful of faint tapered curls. The separate atmosphere preference disables these decorations while retaining the exploration transition. Cached radial and curl artwork is bounded and released with the renderer. Branch atmosphere metadata and themes remain removed. A shared blurred mask of confirmed ground, raised roofs and wall faces feathers the exploration frontier before actors and markers; decorations fade away near this boundary. Geometry masks and distance fields are bounded and reused while the camera and scene stay unchanged. Hidden cells, actors and map bounds never select its appearance. The master fog preference, Still/reduced motion, remote-level exclusion and fully explored viewport sleep rules remain in force.
+
+## Audio
+
+Audio is opt-in and local to the listener, including spectators. Settings → Audio
+downloads CNC Open Sound Pack explicitly or imports a ZIP, reads only root
+`init.txt`, and provides master/effects volume, single/layered playback, a test
+sound and cache removal. No pack assets or extension scripts ship with Orbrun.
+Only `sound_file_path` and ordered `sound +=` / `sound ^=` rules are interpreted;
+other RC directives, Lua, includes and music are ignored. Missing/invalid rules
+are skipped with bounded diagnostics. This intentionally permits later valid
+rules to supply a sound when a DWEM rule references a missing asset.
+
+`message-occurrences.ts` shares initial-history and rollback-prefix bookkeeping
+between combat and audio. Audio matches original plain-text lines but accepts
+only matches intersecting newly received text. It never deduplicates by turn or
+text alone, predicts from input, reads hidden positions, or waits for rendering.
+Messages received while disabled, hidden, locked or loading are not replayed.
+Session teardown invalidates queued matching/decoding; the app owns its one audio
+context and reusable pack independently of renderer/map lifecycle. Still/reduced
+motion does not mute audio. Hidden tabs suspend it until another user gesture.
+
+A disposable module worker parses ZIPs and runs regexes, with request deadlines
+that terminate stuck workers. Limits: 64 MiB ZIP, 192 MiB expanded data, 4,096
+entries, 8 MiB per entry, 512 KiB text files, 10,000 rules, 2,048-character regexes,
+16,384-character messages, 32 pending message lines and 16 pending effects.
+Effects older than 700 ms are dropped. The decoded cache retains at most 32 MiB;
+samples exceeding 60 seconds or 32 MiB decoded are rejected after browser decode
+(the browser controls temporary decoder allocation). At most eight voices play.
+The selected archive and SHA-256 identity live in the separate `orbrun.audio`
+IndexedDB database; preferences remain in `orbrun.settings`. Cache failures allow
+session-only playback. Refresh replaces content explicitly; no automatic pack
+update, arbitrary URL proxy, music or spatial audio is implemented.
 
 ## Views and controls
 

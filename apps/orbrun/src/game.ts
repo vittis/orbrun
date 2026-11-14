@@ -31,6 +31,7 @@ import { PointerDrag } from './pointer-drag'
 import { requestRenderFrame, cancelFrame } from './frames'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
+import { audio } from './audio/controller'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
 import { LevelUp } from './level-up'
@@ -299,6 +300,7 @@ export class GameScreen {
     this.loop = this.loop.bind(this)
     this.session = session
     this.feedback = new CombatFeedback(session.state)
+    this.unsub.push(audio().attach(session))
     this.nearDeath = new NearDeath(session.state)
     this.levelUp = new LevelUp(session.state)
     this.hooks = hooks

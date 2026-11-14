@@ -2,6 +2,12 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.120 — 2026-11-14
+
+- Added Settings → Audio with opt-in sound effects, master/effects volume and single or layered playback.
+- Download CNC Open Sound Pack or import its ZIP, test a sound, and refresh or remove the pack cached on this device. Missing sound files are reported and skipped.
+- Sounds follow confirmed game messages without replaying initial history or rewritten log lines. Background tabs and departing sessions stop playback; audio remains independent of Still/reduced motion.
+
 ## 0.3.119 — 2026-11-14
 
 - Fixed missed controller and touch confirmations when a server prompt arrives between frames. Fast keyboard input also uses the latest confirmed menu and gameplay state immediately.

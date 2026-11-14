@@ -236,7 +236,7 @@ describe('what left and right do', () => {
    */
   it('lays every offered row out in one of the groups, each with its own line', () => {
     const groups = settingGroups()
-    expect(groups.map((g) => g.group)).toEqual(['View', 'Combat', 'Controls', 'Interface'])
+    expect(groups.map((g) => g.group)).toEqual(['View', 'Combat', 'Audio', 'Controls', 'Interface'])
     for (const g of groups) {
       expect(g.hint.length).toBeGreaterThan(0)
       expect(g.rows.length).toBeGreaterThan(0)

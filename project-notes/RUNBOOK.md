@@ -83,6 +83,16 @@ Exercise the actual app at desktop and narrow/mobile viewport sizes:
 
 DOM/canvas mocks do not prove raster correctness. Spectating does not prove login, character creation, save/restore or physical-controller behavior. Obtain explicitly authorized disposable-account coverage separately, with secrets entered securely and never stored in evidence.
 
+Audio checks use an authored WAV in a synthetic OSP-format ZIP, intercepted HTTP,
+real module workers, IndexedDB and Web Audio decoding/playback. They cover volume
+persistence, cache restore/removal, local import, message rollback and teardown;
+production acceptance applies the shipped CSP explicitly because Vite preview
+does not serve Cloudflare's `_headers`. For a manual check, open Settings → Audio,
+enable Sound effects, download OSP (about 45 MB) or import its ZIP, and select Test
+sound. Pack diagnostics report missing/invalid rules. Check speakers/headphones
+and mobile browser unlocking separately; automated source starts do not prove
+physical audio output. Never add public pack downloads to the automated gates.
+
 ## Fixtures and optional engine
 
 `npm run record -- wss://crawl.dcss.io/socket 60 out.ndjson` captures anonymous spectating. `node tools/record/menus.mjs wss://crawl.dcss.io/socket 30 outdir` records menus. Keep recordings small and free of private credentials/chat where possible. Do not inject malformed traffic into public servers; use mocks.

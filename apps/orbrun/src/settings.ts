@@ -1,6 +1,10 @@
 import type { HintMode } from './gamepad-hints'
 
 export interface Settings {
+  audioEnabled: boolean
+  masterVolume: number
+  effectsVolume: number
+  singleSoundChannel: boolean
   depthTilt: number
   depthZoom: number
   depthAnimate: boolean | 'auto'
@@ -45,6 +49,10 @@ function hintsFrom(saved: Record<string, unknown>): HintMode {
 
 const SETTINGS_KEY = 'orbrun.settings'
 export const defaultSettings: Settings = {
+  audioEnabled: false,
+  masterVolume: 0.7,
+  effectsVolume: 1,
+  singleSoundChannel: true,
   depthTilt: 50,
   depthZoom: 1,
   depthAnimate: 'auto',
@@ -78,6 +86,8 @@ export const defaultSettings: Settings = {
  */
 type NumericSetting = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings]
 const numericDomains: Record<NumericSetting, { min: number; max: number; integer?: boolean; auto?: boolean }> = {
+  masterVolume: { min: 0, max: 1 },
+  effectsVolume: { min: 0, max: 1 },
   depthTilt: { min: 25, max: 85 },
   depthZoom: { min: 0.25, max: 3 },
   depthMovementDuration: { min: 0.04, max: 0.25 },
@@ -140,4 +150,5 @@ export function saveSettings(settings: Settings) {
   } catch {
     // Storage can be disabled or full; preferences remain best-effort.
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('orbrun-settings'))
 }

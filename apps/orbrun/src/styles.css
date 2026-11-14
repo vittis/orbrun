@@ -5254,3 +5254,6 @@ canvas.minimap.hidden,
   .quick-setting-range button { flex-basis: 40px; }
   .quick-setting-range input { height: 32px; }
 }
+
+.audio-status, .audio-details { padding: .5em 1em; overflow-wrap: anywhere; }
+.audio-details p { white-space: pre-wrap; font-size: .85em; }

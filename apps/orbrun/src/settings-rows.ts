@@ -24,6 +24,7 @@ import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from
 const SETTING_GROUPS = [
   ['View', 'Dungeon tilt, zoom, animation and movement.'],
   ['Combat', 'Body impact, blood and material bursts.'],
+  ['Audio', 'Sound effects, volume and sound packs kept on this device.'],
   ['Controls', 'What the keys, the d-pad and the sticks do.'],
   ['Interface', 'What the HUD shows around the view, and how big it is.'],
 ] as const
@@ -204,6 +205,10 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   row('Combat', 'Hit outward spray', 'hitSprayOutward', percentSteps(0, 100), 'Share of hit particles sprayed in all directions. The rest follow the hit direction. 0% is fully directional; 100% spreads all around.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.hitGore === 0),
   row('Combat', 'Death outward spray', 'deathSprayOutward', percentSteps(0, 100), 'Share of death particles sprayed in all directions. The rest follow the killing blow. Independent of hit spray and gore density.', v => Math.round(v * 100) + '%', s => s.depthAnimate === false || s.deathGore === 0),
   row('Combat', 'VFX variation', 'combatVfxVariation', percentSteps(0, 100), 'Variation in particle count, energy, size and spray shape around your hit and death settings. Off uses a consistent burst profile. Each burst stays stable as it animates.', v => v === 0 ? 'Off' : Math.round(v * 100) + '%', s => s.depthAnimate === false || s.hitGore === 0 && s.deathGore === 0),
+  row('Audio', 'Sound effects', 'audioEnabled', [false, true], 'Enable sounds for confirmed game messages. Download OSP or import a pack below. Audio pauses in background tabs.', v => v ? 'On' : 'Off'),
+  row('Audio', 'Master volume', 'masterVolume', percentSteps(0, 100), 'Overall audio volume. Zero mutes playback.', v => Math.round(v * 100) + '%'),
+  row('Audio', 'Effects volume', 'effectsVolume', percentSteps(0, 100), 'Sound effect volume, relative to master volume.', v => Math.round(v * 100) + '%'),
+  row('Audio', 'Effect playback', 'singleSoundChannel', [true, false], 'Single replaces the previous effect; Layered allows up to eight simultaneous effects.', v => v ? 'Single' : 'Layered'),
   // Controls
   row('Controls', 'Hints', 'hints', ['adaptive', 'contextual', 'off'], 'Gamepad prompts in the corner of the view for what is in front of you. Adaptive also teaches the controls until used, across all runs, on a gamepad or a touch screen. Contextual only skips the teaching. Off hides gameplay hints; menu and targeting controls remain.', (v) => ({ adaptive: 'Adaptive', contextual: 'Contextual only', off: 'Off' })[v]),
   // Interface

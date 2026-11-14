@@ -1,3 +1,4 @@
+import { MessageOccurrences } from './message-occurrences'
 import { combatActorId as actorKey, hitIntensity, impactStrength, cellKey, type DeathEffect, type Billboard, type Scene, type SpellEffect, type HitIntensity, type DamageType } from '@orbrun/scene'
 import { formattedStringToText, type GameState, type ServerMessage } from '@orbrun/webtiles'
 import { deathFor } from './death-effects'
@@ -148,9 +149,8 @@ export class CombatFeedback {
   private cues: SpellCue[] = []
   private spells: SpellEffect[] = []
   private previous: ReturnType<CombatFeedback['snapshot']>
-  private lines: string[]
+  private messages: MessageOccurrences
   private ready: boolean
-  private history: boolean
   private presented = false
   private scene: Scene | null = null
   private levelKey: string | undefined
@@ -163,9 +163,8 @@ export class CombatFeedback {
 
   constructor(state: GameState) {
     this.previous = this.snapshot(state)
-    this.lines = state.messages.lines.map(l => plain(l.text))
+    this.messages = new MessageOccurrences(state)
     this.ready = state.player.hp_max > 0
-    this.history = !this.ready
   }
 
   private snapshot(state: GameState) {
@@ -174,6 +173,7 @@ export class CombatFeedback {
   }
 
   observe(state: GameState, msg: ServerMessage) {
+    const freshMessages = this.messages.observe(state, msg)
     if (msg.msg === 'game_client' || msg.msg === 'go_lobby') {
       this.pending = []
       this.cues = []; this.spells = []
@@ -182,8 +182,6 @@ export class CombatFeedback {
       this.meleeAttempts.clear()
       this.presented = false
       this.ready = false
-      this.history = true
-      this.lines = []
       this.previous = this.snapshot(state)
       return
     }
@@ -209,20 +207,10 @@ export class CombatFeedback {
       this.ready = next.max > 0
     }
     if (msg.msg === 'msgs') {
-      const lines = state.messages.lines.map(l => plain(l.text))
-      if (this.ready && this.presented && !this.history && Array.isArray(msg.messages)) {
-        const incoming = msg.messages as { text?: string; turn?: number }[]
-        // Crawl replaces the last line to append another sentence. Read only its suffix.
-        const rollback = Math.min(this.lines.length, Math.max(0, Number(msg.rollback) || 0))
-        const removed = rollback ? this.lines.slice(-rollback).join(' ') : ''
-        const texts = incoming.map(l => plain(String(l?.text ?? '')))
-        const combined = texts.join(' ')
-        const skip = removed && combined.startsWith(removed) ? removed.length : 0
-        let offset = 0
-        for (let i = 0; i < texts.length; i++) {
-          const fresh = texts[i].slice(Math.max(0, skip - offset)).trim()
-          offset += texts[i].length + 1
-          const turn = incoming[i]?.turn ?? state.player.turn
+      if (this.ready && this.presented) {
+        for (const line of freshMessages) {
+          const fresh = line.text.slice(line.freshFrom).trim()
+          const turn = line.turn
           this.cues.push(...spellText(fresh))
           for (const parsed of combatText(fresh)) {
             const event = { ...parsed, turn }
@@ -238,8 +226,6 @@ export class CombatFeedback {
           }
         }
       }
-      if (Array.isArray(msg.messages)) this.history = false
-      this.lines = lines
     }
     this.pending = this.pending.slice(-32)
     this.cues = this.cues.slice(-48)

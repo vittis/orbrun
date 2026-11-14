@@ -162,6 +162,11 @@ remain applicable. See `project-notes` and the release history for changes.
 Acorn (MIT) parses generated gamedata without executing it. Its license is
 in `apps/orbrun/public/licenses/acorn.txt`, shipped at `/licenses/acorn.txt`.
 
+fflate (MIT, Arjun Barrett) reads user-selected sound-pack ZIP archives in a
+browser worker. Its license is shipped at `/licenses/fflate.txt`.
+CNC Open Sound Pack is downloaded from its publisher only on request, or
+imported by the user; its audio assets are not distributed with Orbrun.
+
 ## Dungeon simplification — 2026-11-12
 
 This fork makes the existing 2.5D renderer the sole gameplay view, retains flat supporting maps, removes the exclusive first-person implementation and refreshes its public documentation. Upstream notices and the matching release source offer remain applicable.
