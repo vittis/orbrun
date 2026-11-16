@@ -3,6 +3,31 @@ import { test, result } from './fixtures'
 
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
+test('Shift+numpad sends server run commands when Windows consumes the modifier', async ({ page }) => {
+  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
+  const sent = await page.evaluate(() => {
+    const fixture = (window as unknown as { __orbrunLiveAnimation: { snapshot(): { sent: unknown[] } } }).__orbrunLiveAnimation
+    const before = fixture.snapshot().sent.length
+    const directions = [
+      ['Numpad8', 'ArrowUp'], ['Numpad9', 'PageUp'], ['Numpad6', 'ArrowRight'], ['Numpad3', 'PageDown'],
+      ['Numpad2', 'ArrowDown'], ['Numpad1', 'End'], ['Numpad4', 'ArrowLeft'], ['Numpad7', 'Home'],
+    ]
+    // Reproduce the OS event shape; browser automation does not emulate
+    // Windows' synthetic Shift release when NumLock is overridden.
+    for (const modifierNumLock of [true, false]) {
+      for (const [code, key] of directions) {
+        window.dispatchEvent(new KeyboardEvent('keydown', {
+          code, key, location: KeyboardEvent.DOM_KEY_LOCATION_NUMPAD,
+          modifierNumLock, shiftKey: false, bubbles: true, cancelable: true,
+        }))
+      }
+    }
+    return fixture.snapshot().sent.slice(before)
+  })
+  expect(sent).toEqual([...('KULNJBHYkulnjbhy')].map(text => ({ msg: 'input', text })))
+})
+
 test('inputs use server replies immediately between paints, including touch and controller presses', async ({ page }) => {
   await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
