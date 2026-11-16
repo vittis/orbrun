@@ -28,7 +28,7 @@ npm run build
 npm run preview -w apps/orbrun -- --host 127.0.0.1
 ```
 
-Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; ordinary builds do not provision engine artifacts. `node engine/prepare-menu.mjs` builds the pinned menu engine; `REQUIRE_MENU_ENGINE=1 npm run verify:release` requires its real-browser coverage. The guarded publish hook provisions it automatically. Network/listener/keychain sandbox refusals must be distinguished from application failures.
+Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; ordinary builds do not provision engine artifacts. `node engine/prepare-menu.mjs` restores the pinned engine or builds a changed recipe; `REQUIRE_MENU_ENGINE=1 npm run verify:release` requires its real-browser coverage. The publish hook reuses it automatically. Network/listener/keychain sandbox refusals must be distinguished from application failures.
 
 ## Automated checks: use the smallest relevant gate
 
@@ -101,7 +101,7 @@ Read [engine deployment](../engine/DEPLOYMENT.md) before provisioning: emsdk 6.0
 
 ## Release
 
-Follow [DEPLOYMENT.md](DEPLOYMENT.md). Commit before the guarded dry-run; do not bypass its cleanliness/freshness checks. Preserve unrelated upstream changes and never force-push. After release record exact commit, immutable tag, build/deployment identity, hosted source/version and explicit limitations.
+Follow [DEPLOYMENT.md](DEPLOYMENT.md). Prefer focused checks and manual hosted verification; full release checks and dry-runs are optional. Preserve unrelated upstream changes and never force-push. After release record exact commit, immutable tag, build/deployment identity, hosted source/version and explicit limitations.
 
 
 ## Retained browser fixtures

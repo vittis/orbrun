@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.124 — 2026-11-16
+
+- Replaced the old menu poster with an immediate dungeon entrance and a live-encounter loading hint. Engine loading starts immediately; Still and unsupported browsers retain the quiet entrance without a loading message.
+- Reuse the published, pinned engine for app-only deploys instead of recompiling Crawl. Unchanged local app builds are reused too. Routine publishing no longer runs repeated Git guards or a mandatory full release suite; focused checks and hosted manual verification are the default.
+
 ## 0.3.123 — 2026-11-16
 
 - Replaced the recorded menu video with a live, silent DCSS encounter rendered in the normal 2.5D view. A pinned local engine controls movement, visibility and combat; randomized creatures and seeds vary each encounter.

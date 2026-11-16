@@ -52,3 +52,28 @@ test('production audio worker decodes an OSP-format pack under the shipped CSP',
 })
 
 menuEngineCheck(true)
+
+test('menu entrance appears during a slow engine load and yields to the live scene', async ({ page }) => {
+  const { existsSync } = await import('node:fs')
+  test.skip(!existsSync(new URL('../../apps/orbrun/dist/menu-engine/manifest.json', import.meta.url)), 'Requires the pinned menu engine')
+  let release!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/menu-engine/manifest.json', async route => { await waiting; await route.continue() })
+  await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+  await page.goto('http://127.0.0.1:5287/')
+  await expect(page.locator('.menu-entrance')).toBeVisible()
+  await expect(page.locator('.menu-loading')).toBeVisible()
+  expect(await page.locator('.menu-backdrop').evaluate(el => getComputedStyle(el).backgroundImage)).toBe('none')
+  await page.screenshot({ path: 'test-results/menu-loading-desktop.png' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: 'test-results/menu-loading-narrow.png' })
+  await page.locator('[data-focus="about"]').click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  release()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.menu-backdrop canvas')).toBeVisible({ timeout: 60_000 })
+  await expect(page.locator('.menu-entrance')).toBeHidden()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('.menu-entrance')).toBeVisible()
+  await expect(page.locator('.menu-loading')).toBeHidden()
+})

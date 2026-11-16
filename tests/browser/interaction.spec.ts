@@ -754,7 +754,7 @@ for (const touch of [false, true]) {
   })
 }
 
-test('menu poster remains usable when the engine is unavailable and motion follows preferences', async ({ page }) => {
+test('menu entrance remains usable when the engine is unavailable and motion follows preferences', async ({ page }) => {
   let requests = 0
   await page.route('**/menu-engine/**', route => { requests++; return route.fulfill({ status: 404, body: '' }) })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())

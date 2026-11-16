@@ -19,7 +19,7 @@ Orbrun is an npm/TypeScript workspace with a Vite app, Canvas renderers and a Cl
 | App controls/HUD/menu modules | Device normalization, contextual commands, menus, targeting, settings and accessibility |
 | `apps/orbrun/src/menu-home.ts`, `menu-modal.ts`, `menu-backdrop.ts` | Persistent Polished Crawl home, shared accessible document modal, silent live engine backdrop |
 | `apps/orbrun/src/room/` | Saved scenery and tiles retained for rendering fixtures and static document artwork |
-| Worker/proxy/build tools | Static hosting, bounded allowlisted proxies, source identity and guarded deployment |
+| Worker/proxy/build tools | Static hosting, bounded allowlisted proxies, source identity and incremental deployment |
 
 ## State and presentation
 

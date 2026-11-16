@@ -3,8 +3,9 @@
 The home runs the full DCSS engine in a disposable Web Worker and renders its
 confirmed WebTiles messages with the normal 2.5D renderer and combat presentation.
 It has no account, persistent filesystem, gameplay input handlers or audio.
-`poster.jpg` remains the static fallback and initial loading image; it is a
-renderer frame from the previous menu capture. No video ships or plays.
+A lightweight CSS dungeon entrance appears immediately while the live encounter
+loads. No recorded poster or video ships or plays. The loading hint disappears
+on the first rendered frame, failure, Still or unsupported browsers.
 
 The source is DCSS 0.34.1, commit `1eebc1a2892e1c89776a0d7a10691f8dac8d9796`,
 pinned in `engine/menu-commit`. `engine/wasm/menu-demo.des` is a small authored
@@ -26,13 +27,13 @@ REQUIRE_MENU_ENGINE=1 npm run verify:release
 The Vite plugin serves the local artifact in development and copies only a
 closed set of matching engine and gamedata files into `dist/menu-engine` during
 production builds. The manifest includes the source commit and recipe identity.
-Ordinary builds without artifacts warn and retain the static fallback; guarded
-deployments provision the engine and require current artifacts. There is no
+Ordinary builds without artifacts warn and retain the entrance; deployments
+reuse matching local or published artifacts before compiling a changed engine. There is no
 engine service binding or runtime upstream-version lookup. First load still
 requires downloading these assets; this is not an offline-play offering.
 
 The initial pinned build's full artifact set is approximately 43 MiB before
-HTTP compression. The menu delays loading until it has been visible for 800 ms,
+HTTP compression. The menu starts loading immediately,
 caps rendering at 30 fps/1280×720 pixels, and never requests an engine under
 Still, reduced motion or missing JSPI support. Covered/hidden menus stop issuing
 actions and rendering. Still and teardown release the worker and atlas memory.

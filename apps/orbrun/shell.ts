@@ -23,8 +23,7 @@ const KEPT = [
   /^index\.html$/,
   /^assets\/.+(?<!\.map)$/,
   /^fonts\/.+\.woff2$/,
-  // The home needs only a poster; the demo engine loads independently of the shell cache.
-  /^menu\/poster\.jpg$/,
+  // The home entrance is CSS; the demo engine loads independently of the shell cache.
   // The 2.5D fallback/poster also backs menu documents.
   /^room\/poster\.jpg$/,
   /^icons\/.+\.png$/,

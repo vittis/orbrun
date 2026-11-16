@@ -21,7 +21,15 @@ beforeEach(() => {
 })
 afterEach(() => { view?.destroy(); vi.useRealTimers(); vi.unstubAllGlobals(); document.body.replaceChildren() })
 function create() { const host = document.createElement('div'); document.body.append(host); return view = new MenuBackdrop(host) }
-async function start() { await vi.advanceTimersByTimeAsync(1000) }
+async function start() { await vi.advanceTimersByTimeAsync(0) }
+
+it('starts immediately with an entrance instead of the old recorded poster', async () => {
+  const v = create()
+  expect(v.el.querySelector('.menu-entrance')).not.toBeNull()
+  expect(v.el.dataset.loading).toBe('true')
+  await start()
+  expect(load).toHaveBeenCalledOnce()
+})
 
 it('never loads for initial Still or unsupported browsers, and cancels short visits', async () => {
   settings.depthAnimate = false
@@ -64,10 +72,11 @@ it('aborts a covered load and disposes a late result without starting it', async
   expect(demo.setActive).not.toHaveBeenCalled()
 })
 
-it('keeps the static poster on load/runtime failure without retry storms', async () => {
+it('keeps the entrance without loading text on failure and avoids retry storms', async () => {
   load.mockRejectedValue(new Error('unavailable'))
   const v = create(); await start()
   expect(v.canvas.hidden).toBe(true)
+  expect(v.el.dataset.loading).toBe('false')
   v.cover(true); v.cover(false); await start()
   expect(load).toHaveBeenCalledOnce()
 })

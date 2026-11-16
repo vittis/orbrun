@@ -22,7 +22,6 @@ const BUILT = [
   'room/atlas.json',
   'room/atlas.png',
   'room/poster.jpg',
-  'menu/poster.jpg',
   'menu-engine/manifest.json',
   'room/card.jpg',
   'room/places/lair.json',
@@ -50,7 +49,6 @@ describe('the app kept on the device', () => {
       '/fonts/dejavu-sans-mono-400.woff2',
       '/icons/icon-192.png',
       '/manifest.webmanifest',
-      '/menu/poster.jpg',
       '/orb.png',
       '/room/poster.jpg',
     ])
