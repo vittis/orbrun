@@ -27,10 +27,7 @@ Orbrun connects to standard DCSS WebTiles servers and speaks the same
 WebSocket protocol as the official client. Online, gameplay runs entirely on
 the server. The one exception is `engine/`, which builds upstream DCSS for
 WebAssembly with a small patch set, for offline play; its patches stay under
-DCSS's own GPLv2+ (see `engine/README.md`). Nothing
-version-specific is shipped either — tile ids, enums, flag masks and atlases
-are loaded at runtime from the connected server's own `/gamedata/<version>/`
-files, exactly as the official client loads them.
+DCSS's own GPLv2+ (see `engine/README.md`). Live gameplay loads tile ids, enums, flag masks and atlases from the connected server's own `/gamedata/<version>/` files. The menu separately bundles curated recordings and their exact matching artwork; [recording provenance](apps/orbrun/public/menu/README.md) pins the source commit, server version and asset checksums.
 
 DCSS is Copyright 1997–2025 Linley Henzell, the dev team, and contributors,
 licensed under the GNU General Public License, version 2 or (at your option)

@@ -2,6 +2,13 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.126 — 2026-11-16
+
+- The menu now rotates through three curated recordings of real Crawl gameplay: alchemy in the Lair, ranged combat, and ice magic with allies. The normal 2.5D renderer shows the recorded movement, visibility and confirmed combat effects.
+- Replaced the menu's local engine with bundled state recordings and matching artwork, reducing its uncompressed assets from about 43 MiB to 7 MiB and removing Wasm startup and engine memory requirements.
+- Playback pauses behind screens and hidden tabs; Still and reduced motion retain the quiet entrance. Loading failures leave the menu usable, and old menu-engine downloads are cleared without touching saves.
+- Removed menu engine compilation, provisioning and production artifacts. Online play remains online-only; development-only offline play remains available.
+
 ## 0.3.125 — 2026-11-16
 
 - Speed up live menu startup by loading artwork and the engine together, compiling Wasm alongside data downloads, and keeping versioned assets on the device for repeat visits. Startup no longer waits for a manifest request or downloads Wasm twice.

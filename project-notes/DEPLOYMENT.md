@@ -4,9 +4,9 @@ Production URL: [dcss-client.vittis.workers.dev](https://dcss-client.vittis.work
 
 ## Scope and safeguards
 
-Production serves the client and bounded gamedata/morgue proxies. It offers online play and anonymous spectating on bundled HTTPS/WSS servers. Offline/custom-server UI, ENGINE binding and EVENTS dataset are disabled. Development retains its optional offline integration. The menu-only exception serves a pinned, disposable engine at `/menu-engine/*`; `/engine/*` remains unavailable. Browser game WebSockets connect directly to DCSS; accounts and saves stay there. Deployment and anonymous smoke checks need no player's credentials.
+Production serves the client and bounded gamedata/morgue proxies. It offers online play and anonymous spectating on bundled HTTPS/WSS servers. Offline/custom-server UI, ENGINE binding and EVENTS dataset are disabled. Development retains its optional offline integration. The menu serves bundled recordings and matching artwork at `/menu/*`; both `/engine/*` and the retired `/menu-engine/*` return 404. Browser game WebSockets connect directly to DCSS; accounts and saves stay there. Deployment and anonymous smoke checks need no player's credentials.
 
-Preserve `apps/orbrun/public/_headers`: same-origin executable scripts, blocked inline script attributes, objects and frames, no JavaScript `unsafe-eval`, a narrow `wasm-unsafe-eval` permission for the local engine, nosniff and referrer restrictions. Preserve the Acorn MIT notice at `/licenses/acorn.txt`, all font/DCSS/upstream notices and the exact corresponding-source offer. Packed-art rectangle/version provenance is not a per-tile license certification; [ATTRIBUTION.md](../ATTRIBUTION.md) retains this limitation.
+Preserve `apps/orbrun/public/_headers`: same-origin executable scripts, blocked inline script attributes, objects and frames, no JavaScript `unsafe-eval`, no Wasm evaluation permission, nosniff and referrer restrictions. Preserve the Acorn MIT notice at `/licenses/acorn.txt`, all font/DCSS/upstream notices and the exact corresponding-source offer. Packed-art rectangle/version provenance is not a per-tile license certification; [ATTRIBUTION.md](../ATTRIBUTION.md) retains this limitation.
 
 The proxy validates exact bundled HTTPS host:port destinations before cache lookup, rejects redirects, drops query variants from cache identity and applies deadlines, byte/concurrency limits and bounded development caching. Parser, transport and session queues remain bounded. Residual limits: bundled-host DNS/TLS trust, no DNS pinning, no distributed abuse budget, and no exhaustive semantic validation of every nested protocol field. Generated gamedata syntax/helper changes fail closed. These are independent of renderer choice.
 
@@ -32,15 +32,13 @@ Do not append tests or an asset build to the build command. Wrangler packages ch
 
 `npm run deploy` performs no test suite or repeated Git/network guard. `npm run deploy:guard` remains an optional explicit source-freshness check. The app build is reused when its source fingerprint and output files are unchanged. A fresh Cloudflare checkout still bundles the app once; changing only docs outside embedded pages or tests does not invalidate an existing local bundle.
 
-`engine/prepare-menu.mjs` first uses matching local artifacts. A fresh checkout restores the matching binary and gamedata from production using `engine/menu-cache.json` (source/recipe identity, sizes and SHA-256 hashes). It downloads 21 files concurrently, without installing a C++ toolchain. A network failure retries on the next deploy rather than silently triggering an expensive compilation. Only a changed engine source/recipe compiles Crawl. For that first changed-engine release, the existing provisioning script installs Emscripten/Node/PyYAML under ignored `engine/.work/tools` and needs native C++/make prerequisites.
-
-After publishing a changed engine, run `node engine/record-menu-cache.mjs` and commit its updated cache manifest for subsequent app-only deploys. This is a reusable production artifact cache, not an archival store: reverting to an engine no longer served may require rebuilding. No application secrets or new storage services are required.
+The menu recordings and matching artwork are checked into the repository. `menu-replay-assets.ts` verifies their sizes and SHA-256 hashes during Vite builds. Publishing needs no engine artifact service, Emscripten, prewarm files or engine compilation. Development-only offline builds remain separate.
 
 ## Production checks
 
-Check root and About, the intended version and immutable source links, 2.5D menu/gameplay, anonymous lobby/spectating, supporting flat maps and restoration where local/production fixtures permit, desktop/narrow layouts and Still/reduced motion. Retrieve a representative real versioned gamedata file. Confirm response CSP and rejection of an unlisted proxy host. Avoid disruptive public tests, chat sends and credential use.
+Check root and About, the intended version and immutable source links, 2.5D replay menu/gameplay, anonymous lobby/spectating, supporting flat maps and restoration where local/production fixtures permit, desktop/narrow layouts and Still/reduced motion. Retrieve a representative real versioned gamedata file. Confirm response CSP and rejection of an unlisted proxy host. Avoid disruptive public tests, chat sends and credential use.
 
-Report hardware, authenticated-play, unavailable live games and absent engine artifacts honestly. Capture small evidence without secrets. Do not call deployment successful without observed hosted identity matching the intended release.
+Report hardware, authenticated-play, unavailable live games and unprovisioned development-engine checks honestly. Capture small evidence without secrets. Do not call deployment successful without observed hosted identity matching the intended release.
 
 ## Rollback
 

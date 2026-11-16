@@ -22,7 +22,6 @@ function signature(cwd) {
 export function prepareDeployment({ cwd = root, command = process.env.WRANGLER_COMMAND, build } = {}) {
   const deploying = command !== 'dev'
   const dist = join(cwd, 'apps/orbrun/dist'), stamp = join(dist, '.deploy-build.json')
-  if (deploying && !build) execFileSync(process.execPath, [resolve(cwd, 'engine/prepare-menu.mjs')], { cwd, stdio: 'inherit' })
   const current = signature(cwd)
   try {
     const saved = JSON.parse(readFileSync(stamp, 'utf8'))
@@ -33,7 +32,7 @@ export function prepareDeployment({ cwd = root, command = process.env.WRANGLER_C
   } catch { /* first build or removed output */ }
   if (build) build()
   else execFileSync('npm', ['run', 'build'], { cwd, stdio: 'inherit', shell: process.platform === 'win32',
-    env: { ...process.env, ...(deploying ? { REQUIRE_MENU_ENGINE: '1' } : {}) } })
+    env: process.env })
   if (deploying && existsSync(dist)) {
     const files = readdirSync(dist, { recursive: true, withFileTypes: true })
       .filter(entry => entry.isFile() && entry.name !== '.deploy-build.json')

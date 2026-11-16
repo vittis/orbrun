@@ -11,13 +11,13 @@ Orbrun is an npm/TypeScript workspace with a Vite app, Canvas renderers and a Cl
 | `packages/render-2.5d` | Sole gameplay renderer; raised-wall Canvas projection, visibility, lighting and confirmed animation |
 | `packages/render-2d` | Flat temporary maps, minimap and development reference views |
 | `packages/vault` | Restricted `.des` parsing and bundled scenery compilation |
-| `packages/offline`, `engine/` | Development/offline play plus the isolated, memory-only production menu engine |
+| `packages/offline`, `engine/` | Development-only offline play; never used by the production menu |
 | `apps/orbrun/src/session.ts` | Connection/state/asset sequencing, scene flushes and lifecycle |
 | `apps/orbrun/src/game.ts` | Gameplay screen, renderer/map lifecycle, input and presentation coordination |
 | `apps/orbrun/src/settings.ts` | Supported preferences, defaults, numeric validation and compatible persistence |
 | `apps/orbrun/src/audio/` | Optional OSP pack loading/caching, worker-isolated matching and bounded Web Audio effects |
 | App controls/HUD/menu modules | Device normalization, contextual commands, menus, targeting, settings and accessibility |
-| `apps/orbrun/src/menu-home.ts`, `menu-modal.ts`, `menu-backdrop.ts` | Persistent Polished Crawl home, shared accessible document modal, silent live engine backdrop |
+| `apps/orbrun/src/menu-home.ts`, `menu-modal.ts`, `menu-backdrop.ts` | Persistent Polished Crawl home, shared accessible document modal, silent recorded-gameplay backdrop |
 | `apps/orbrun/src/room/` | Saved scenery and tiles retained for rendering fixtures and static document artwork |
 | Worker/proxy/build tools | Static hosting, bounded allowlisted proxies, source identity and incremental deployment |
 
@@ -93,16 +93,8 @@ HUD geometry uses available grid space. Narrow mouse windows receive readable to
 
 FrontEnd retains session/account/save/RC actions and secondary screens. HomeView owns the persistent compact header and keyed command rows; lobby updates preserve inputs, focus and row identity. Descent IDs are filtered only at the home offering boundary. MenuModal owns document focus containment, restoration and background inertness. About, /about/new and /whats-new enter that same modal; install/Steam remain static documents. News still uses orbrun.newsSeen.
 
-MenuBackdrop owns the static poster, lazy demo loading, preference/visibility listeners and lifecycle. Still and OS reduced motion suppress engine startup and CSS title reflection, even when gameplay animation is explicitly On; switching to Still destroys the demo. Covered/hidden menus stop commands and rendering, allowing at most one in-flight engine action to settle. Teardown aborts loads, terminates the worker, releases renderer/atlases and removes observers. MenuDemo owns a memory-only Crawl worker, its own reducer/scene and the shared Render25d, CombatFeedback, presentCombat and dungeonOptions presentation. It never creates GameScreen, Session, a lobby, input handlers or audio. Crawl's idle acknowledgement paces one action at a time; the bounded controller uses native autofight against confirmed visible enemies and restarts after completion, death or an unexpected prompt. The authored sprint map spawns enemies in its startup epilogue, after Crawl's normal initial LOS clear. See [menu engine provenance](../apps/orbrun/public/menu/README.md). GridHost and HUD fonts/metrics are independent of shell typography.
+MenuBackdrop owns the CSS entrance, lazy recording/artwork loading, preference/visibility listeners and lifecycle. Still and OS reduced motion suppress playback and CSS title reflection, even when gameplay animation is explicitly On; switching to Still releases the demo. Covered/hidden menus pause the playback clock without catch-up and stop rendering. Teardown aborts loads and releases renderer/atlases and observers.
 
-## Menu startup
+MenuDemo owns a separate reducer/scene and the shared Render25d, CombatFeedback, presentCombat and dungeonOptions presentation. ReplayClock feeds ordered recorded state batches, preserving their remaining delay across pauses. Each clip starts from all of its preceding state deltas, with fresh state and combat history; each loop clones messages because reduction may mutate them. The menu never creates an engine, GameScreen, Session, input handlers or audio. The normal home lobby is independent. Three curated real captures share one pinned artwork version; startup fetches only same-origin static data. The build verifies their sizes/hashes, with no engine preparation. HTTP caching uses immutable clip hashes and gamedata versions. The old menu-engine cache is cleaned up without touching development saves. See [recording provenance](../apps/orbrun/public/menu/README.md).
 
-The isolated menu starts its worker and gamedata loading together. Its build and
-gamedata identities are embedded by Vite, so no runtime manifest lookup blocks
-startup. A separate versioned CacheStorage cache holds immutable engine/data
-responses across visits; it retains at most the current and one prior build and
-never shares account/save storage. The JS module uses the normal HTTP cache.
-The engine bridge uses Emscripten's `instantiateWasm` hook, avoiding a second
-internal Wasm fetch; the menu worker compiles cached streaming responses while
-other data loads. Cancellation releases an engine even before artwork is ready.
-The menu canvas is shown without a CSS dimming overlay.
+GridHost and HUD fonts/metrics are independent of shell typography. The menu canvas retains its unfiltered renderer colors, with no CSS dimming overlay.

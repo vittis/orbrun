@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+  "source": {
+    "server": "https://crawl.dcss.io",
+    "game": "Dungeon Crawl Stone Soup 0.34.1-5-gfd259fce64",
+    "captureDate": "2026-11-16",
+    "commit": "fd259fce6465398a06f508afb75072a828756a5b"
+  },
+  "clips": [
+    {
+      "file": "clips/alchemy-8c85f6569d45e216.json",
+      "title": "Alchemy in the Lair",
+      "durationMs": 22596,
+      "sourceRangeMs": [
+        18000,
+        45000
+      ]
+    },
+    {
+      "file": "clips/ranged-d4994ca956903a52.json",
+      "title": "Dungeon skirmish",
+      "durationMs": 18960,
+      "sourceRangeMs": [
+        1000,
+        24000
+      ]
+    },
+    {
+      "file": "clips/ice-15a9d9fba8affb85.json",
+      "title": "Ice and allies",
+      "durationMs": 29287,
+      "sourceRangeMs": [
+        17500,
+        63000
+      ]
+    }
+  ],
+  "assets": {
+    "clips/alchemy-8c85f6569d45e216.json": {
+      "size": 700243,
+      "sha256": "8c85f6569d45e216ff3d7e6bc99d8635c47538d73f3c3b8ccaee6f8c362d91f8"
+    },
+    "clips/ice-15a9d9fba8affb85.json": {
+      "size": 200308,
+      "sha256": "15a9d9fba8affb850d830143c4138e9ff007b449c65433d44747345ddbc3ab82"
+    },
+    "clips/ranged-d4994ca956903a52.json": {
+      "size": 182212,
+      "sha256": "d4994ca956903a5273a6aa3b6d267039e59b847889f0b2b286d08bc910ee013a"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js": {
+      "size": 9710,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/feat.png": {
+      "size": 442232,
+      "sha256": "7c8dc8416add68ce667cca8a44d9e4fe02eb395d9c62a497f232cc0707f3f7ad"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/floor.png": {
+      "size": 656565,
+      "sha256": "16f2ff11511e42286334e828ecb465be13ecd020f3588c77f61b226c4ed9a1c0"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/gui.png": {
+      "size": 413568,
+      "sha256": "593a8de2bd8d1200571cabcc00a08224d6d1d6a0937c8613e2e25f294229abe2"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/icons.png": {
+      "size": 24209,
+      "sha256": "9952aa84466535fe162dc45b61bd4f7136a73d79e2e5fd931215c9f2ac0b5c34"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/main.png": {
+      "size": 759074,
+      "sha256": "4a7529ef73d21241c84bebaeca5985886851f03302143e59b9404f92aecbd8f1"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/player.png": {
+      "size": 1224467,
+      "sha256": "a8b887f16dcb854646af5b0013fdc06249bf3be66784c66512219da0cc1cddcb"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/status-icon-sizes.js": {
+      "size": 2656,
+      "sha256": "5501012d646c71b12f061c628b5ecff9a62004f0e8e56c879fa0fbf209b5beb6"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-feat.js": {
+      "size": 95321,
+      "sha256": "f6c282bcb7da9f75caf6a695c09f4cf069c9b4913ec883943c7496cdf59bc131"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-floor.js": {
+      "size": 133172,
+      "sha256": "f0cb14681861cad6ef18e667c644a004d0f5baf3cbb628b964d52b8844f1e97f"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-gui.js": {
+      "size": 153767,
+      "sha256": "7d30042c69a1b8c81e2fac255adf38e93e79d06a9af86dca2bcbd4750271dc3d"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-icons.js": {
+      "size": 19649,
+      "sha256": "de0542a425bc6f04173b34c014d160fe0699dbc8518c4b8da8bd4b6d7d4eaaf9"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-main.js": {
+      "size": 212944,
+      "sha256": "90162f210f44e0167d52ade2d8cbaa15d97ab336deaa28577e08663996e0b227"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-player.js": {
+      "size": 456195,
+      "sha256": "4a047fa31e996026353b61395ed0d9d3b2115e6a686fb7198d11364baf0f1235"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-wall.js": {
+      "size": 192530,
+      "sha256": "e595efbc946e96cb1b12d7c36250bce6fdcc982db7bf16b26b76282dc48ea050"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/wall.png": {
+      "size": 1437720,
+      "sha256": "186231088e3aac2254c61d705f2d51c3c4ceb7f0cbd0cd7d0043859b8d9e7a46"
+    }
+  }
+}

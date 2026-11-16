@@ -5,7 +5,7 @@
 #   engine/build.sh trunk|stable     # one channel
 #   engine/build.sh <crawl ref>      # any commit, tag or branch
 #
-# The menu channel is pinned by menu-commit. trunk is upstream's master; stable is the
+# trunk is upstream's master; stable is the
 # newest stone_soup-* release branch, looked up on upstream at build time.
 # Each build lands in dist/builds/<commit>-<recipe>/ (recipe.mjs), its
 # gamedata in dist/gamedata/<commit>/, and dist/<channel>/engine.json (a
@@ -37,7 +37,6 @@ git -C "$REPO" fetch --quiet --filter=blob:none --tags --prune origin \
 # the clone's own branches stop at the day it was made.
 resolve() {
     case $1 in
-        menu) ref=$(cat "$ENGINE/menu-commit") ;;
         trunk) ref=origin/master ;;
         stable) ref=origin/$(git -C "$REPO" for-each-ref --format='%(refname:lstrip=3)' \
                     'refs/remotes/origin/stone_soup-*' | sort -V | tail -1) ;;
@@ -88,7 +87,6 @@ build() {
 
     (
         cd "$src/crawl-ref/source"
-        cp wasm/menu-demo.des dat/des/sprint/orbrun_menu.des
         # The native build generates the sources the wasm build compiles
         # (art-data.h, mon-data.h, levcomp, rltiles, tags.lua) and the
         # client's atlas sheets; wasm/generated.mk asks for only those, not

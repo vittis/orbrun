@@ -8,7 +8,7 @@
   //   Build command:  npm ci --include=dev --prefer-offline --no-audit --no-fund
   //   Deploy command: npm run deploy
   // Disable Cloudflare's automatic install so dependencies are installed once.
-  // The deploy hook reuses the pinned engine and unchanged app output.
+  // The deploy hook reuses unchanged app output; menu recordings are checked-in assets.
   // Do not add tests or a second asset build to the Cloudflare build command.
   //
   // The `--include=dev` is required. The build image exports
@@ -23,7 +23,7 @@
   "name": "dcss-client",
   "main": "apps/orbrun/worker/index.ts",
   "compatibility_date": "2025-04-01",
-  // Package changed app inputs; reuse the published menu engine.
+  // Package changed app inputs and verify bundled menu recordings.
   "build": {
     "command": "node tools/build/deploy-build.mjs",
     "watch_dir": ["apps/orbrun/src", "packages"]
@@ -41,7 +41,7 @@
     // page skip it
     "run_worker_first": ["/*", "!/assets/*", "!/fonts/*", "!/room/*", "!/steam/*", "!/icons/*"]
   },
-  // Player-facing play is online-only. The pinned menu engine ships as static assets; no engine Worker or analytics dataset is needed.
+  // Player-facing play is online-only. The menu replays recorded state; no engine Worker or analytics dataset is needed.
   "observability": {
     "enabled": true
   }

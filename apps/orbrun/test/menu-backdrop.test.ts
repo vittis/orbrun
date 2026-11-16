@@ -14,8 +14,8 @@ beforeEach(() => {
   settings = { ...defaultSettings }
   reduced = Object.assign(new EventTarget(), { matches: false })
   vi.stubGlobal('matchMedia', () => reduced)
-  vi.stubGlobal('Worker', class {})
-  vi.stubGlobal('WebAssembly', { Suspending: class {} })
+  vi.stubGlobal('Worker', undefined)
+  vi.stubGlobal('WebAssembly', {})
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
   load.mockResolvedValue(demo)
 })
@@ -23,7 +23,7 @@ afterEach(() => { view?.destroy(); vi.useRealTimers(); vi.unstubAllGlobals(); do
 function create() { const host = document.createElement('div'); document.body.append(host); return view = new MenuBackdrop(host) }
 async function start() { await vi.advanceTimersByTimeAsync(0) }
 
-it('starts immediately with an entrance instead of the old recorded poster', async () => {
+it('starts the recording without Worker or Wasm support', async () => {
   const v = create()
   expect(v.el.querySelector('.menu-entrance')).not.toBeNull()
   expect(v.el.dataset.loading).toBe('true')
@@ -31,13 +31,12 @@ it('starts immediately with an entrance instead of the old recorded poster', asy
   expect(load).toHaveBeenCalledOnce()
 })
 
-it('never loads for initial Still or unsupported browsers, and cancels short visits', async () => {
+it('never loads for initial Still, and cancels short visits', async () => {
   settings.depthAnimate = false
   const v = create(); await start(); expect(load).not.toHaveBeenCalled()
   settings.depthAnimate = true; v.applySettings(); v.cover(true)
   await start(); expect(load).not.toHaveBeenCalled()
-  vi.stubGlobal('WebAssembly', {})
-  v.cover(false); await start(); expect(load).not.toHaveBeenCalled()
+  v.cover(false); await start(); expect(load).toHaveBeenCalledOnce()
 })
 
 it('pauses while covered or hidden, releases the demo for reduced motion, and cleans up listeners', async () => {
@@ -89,11 +88,20 @@ it('times out an unresponsive asset load and aborts it', async () => {
   expect(load).toHaveBeenCalledOnce()
 })
 
-it('releases a loaded demo if starting its worker fails', async () => {
-  demo.setActive.mockImplementationOnce(() => { throw new Error('worker refused') })
+it('releases a loaded demo if starting playback fails', async () => {
+  demo.setActive.mockImplementationOnce(() => { throw new Error('playback failed') })
   const v = create(); await start()
   expect(demo.destroy).toHaveBeenCalledOnce()
   expect(v.canvas.hidden).toBe(true)
   v.cover(true); v.cover(false); await start()
   expect(load).toHaveBeenCalledOnce()
+})
+
+it('removes only retired menu asset caches, preserving development engines and saves', async () => {
+  const remove = vi.fn(async () => true)
+  vi.stubGlobal('caches', { keys: async () => ['orbrun-menu-assets-v1-old', 'orbrun-offline', 'orbrun-shell-v1'], delete: remove })
+  settings.depthAnimate = false
+  create(); await start()
+  expect(remove.mock.calls).toEqual([['orbrun-menu-assets-v1-old']])
+  expect(load).not.toHaveBeenCalled()
 })

@@ -1,4 +1,4 @@
-import { menuEngineCheck } from './menu-engine'
+import { menuReplayCheck } from './menu-replay'
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
@@ -754,9 +754,9 @@ for (const touch of [false, true]) {
   })
 }
 
-test('menu entrance remains usable when the engine is unavailable and motion follows preferences', async ({ page }) => {
+test('menu entrance remains usable when recordings are unavailable and motion follows preferences', async ({ page }) => {
   let requests = 0
-  await page.route('**/menu-engine/**', route => { requests++; return route.fulfill({ status: 404, body: '' }) })
+  await page.route('**/menu/clips/**', route => { requests++; return route.fulfill({ status: 404, body: '' }) })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.addInitScript(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false })) })
   await page.goto('/')
@@ -767,7 +767,7 @@ test('menu entrance remains usable when the engine is unavailable and motion fol
   const shine = page.locator('.crawl-title')
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
   await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
-  await expect.poll(() => requests).toBe(1)
+  await expect.poll(() => requests).toBe(3)
   await expect(canvas).toBeHidden()
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationDuration)).toBe('8s')
   await page.locator('[data-focus="about"]').click()
@@ -778,7 +778,7 @@ test('menu entrance remains usable when the engine is unavailable and motion fol
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.locator('[data-focus="settings"]').click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
-  expect(requests).toBe(1)
+  expect(requests).toBe(3)
 })
 
-menuEngineCheck(false)
+menuReplayCheck(false)

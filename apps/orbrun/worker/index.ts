@@ -30,18 +30,7 @@ interface Env {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname.startsWith('/engine/')) return new Response('Offline play is unavailable on this deployment.', { status: 404 })
-    if (url.pathname.startsWith('/menu-engine/')) {
-      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('method not allowed', { status: 405 })
-      const allowed = /^\/menu-engine\/(?:manifest\.json|builds\/[a-f0-9]{40}-[a-f0-9]{16}\/(?:crawl\.(?:js|wasm|data)|prewarm\/(?:manifest\.json|prewarm\.bin))|gamedata\/[a-f0-9]{40}\/(?:enums\.js|status-icon-sizes\.js|tileinfo-(?:floor|wall|feat|main|player|gui|icons)\.js|(?:floor|wall|feat|main|player|gui|icons)\.png))$/.test(url.pathname)
-      if (!allowed) return new Response('not found', { status: 404 })
-      const response = await env.ASSETS.fetch(request)
-      // Conditional requests have no body; preserve their cache validator response.
-      if (response.status === 304) return response
-      // The static host's SPA fallback is not an engine asset.
-      if (!response.ok || response.headers.get('Content-Type')?.includes('text/html')) return new Response('not found', { status: 404 })
-      return response
-    }
+    if (url.pathname.startsWith('/engine/') || url.pathname.startsWith('/menu-engine/')) return new Response('Offline play is unavailable on this deployment.', { status: 404 })
     if (url.pathname === COUNT_PATH) return countEvent(request, url, env)
     const morgue = url.pathname.startsWith(MORGUE_PROXY_PREFIX)
     if (!morgue && !url.pathname.startsWith(GAMEDATA_PROXY_PREFIX)) return answerPage(request, url, env)

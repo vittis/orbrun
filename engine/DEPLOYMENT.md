@@ -1,6 +1,6 @@
 # Building and deploying the engine
 
-Nothing here vendors Crawl source. The development stable/trunk channels follow upstream; the menu channel is pinned by `menu-commit`. There are two
+Nothing here vendors Crawl source. The development stable/trunk channels follow upstream. There are two
 channels, both resolved on upstream at build time: **trunk** is `master`, and
 **stable** is the newest `stone_soup-*` release branch, as servers run it.
 `build.sh` fetches the commit, applies `patches/`, adds `wasm/`, and builds;
@@ -116,15 +116,8 @@ npx wrangler queues subscription create orbrun-engine-builds --source workersBui
 npx wrangler secret put NOTIFY_EMAIL -c engine/wrangler.jsonc
 ```
 
-## Production menu exception
+## Production boundary
 
-`node engine/prepare-menu.mjs` provisions tools under `.work/tools` and builds the
-pinned `menu` channel when its commit/recipe or files do not match. The guarded
-app deployment invokes it automatically. It does not publish an engine Worker;
-the app packages a closed asset set at `/menu-engine/`. Player-facing offline
-play remains unavailable in production. `wasm/menu-demo.des` supplies the small
-encounter, and `Module.persistent=false` selects MEMFS without IndexedDB. Normal
-offline sessions retain their existing persistent behavior. `onBridgeIdle`
-reports an empty input queue so hosts can pace one action at a time.
-
-See [menu provenance and checks](../apps/orbrun/public/menu/README.md).
+This engine is for development-only offline play. Production gameplay is online-only,
+and its menu uses bundled WebTiles recordings. No engine artifacts or build toolchain
+are provisioned by the application deployment.

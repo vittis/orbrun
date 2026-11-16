@@ -4,7 +4,7 @@ Polished Crawl is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.
 
 [Play or watch](https://dcss-client.vittis.workers.dev/). The hosted build supports online play on the bundled public servers. Offline play and custom servers are development capabilities and are unavailable in this deployment.
 
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.122) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.123) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
 
 ## Getting started
 
@@ -14,7 +14,7 @@ Choose **Watch** to spectate without signing in. Select your server in the compa
 
 ## The dungeon and maps
 
-Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, animation, movement presentation and accessibility controls. **Still** mode limits animation; reduced motion is respected. The home screen runs a silent, disposable local Crawl encounter in the same renderer. Both motion preferences stop it and the title reflection, leaving a static poster. The demo never uses player accounts or saves; unsupported browsers also show the poster. About & credits and What’s new open over the menu without losing typed account details.
+Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, animation, movement presentation and accessibility controls. **Still** mode limits animation; reduced motion is respected. The home screen plays a silent selection of recorded real Crawl gameplay in the same renderer. Both motion preferences stop it and the title reflection, leaving a quiet dungeon entrance. The recordings use no local game engine, player accounts or saves. About & credits and What’s new open over the menu without losing typed account details.
 
 The minimap and temporary level map remain flat. Press `X` for the level map; closing it restores the dungeon. `Ctrl+X` opens the separate **in view** list. Messages, menus, stats, targeting and the monster list remain available. The client never predicts authoritative moves, damage or hidden information.
 

@@ -29,27 +29,11 @@ describe('online Worker boundaries', () => {
     expect(await res.text()).toContain('Offline play is unavailable')
   })
 
-  it('serves only the bounded menu asset paths and rejects SPA fallbacks', async () => {
-    const fetch = vi.fn(async () => new Response('wasm', { headers: { 'Content-Type': 'application/wasm' } }))
-    const assets = { ASSETS: { fetch } }
-    const path = '/menu-engine/builds/' + 'a'.repeat(40) + '-' + 'b'.repeat(16) + '/crawl.wasm'
-    expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(200)
-    fetch.mockClear()
-    for (const path of ['/menu-engine/stable/engine.json', '/menu-engine/saves/Player.cs', '/menu-engine/unknown.js']) {
-      expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(404)
+  it('never serves retired menu engine artifacts, even if an asset host retains them', async () => {
+    const fetch = vi.fn(async () => new Response('stale engine'))
+    for (const path of ['/menu-engine/manifest.json', '/menu-engine/builds/old/crawl.wasm', '/menu-engine/saves/Player.cs']) {
+      expect((await worker.fetch(new Request('https://client.example' + path), { ASSETS: { fetch } })).status).toBe(404)
     }
     expect(fetch).not.toHaveBeenCalled()
-    expect((await worker.fetch(new Request('https://client.example' + path, { method: 'POST' }), assets)).status).toBe(405)
-    fetch.mockResolvedValue(new Response('<html>app', { headers: { 'Content-Type': 'text/html' } }))
-    expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(404)
-  })
-
-  it('preserves a validated menu asset on repeat-visit cache revalidation', async () => {
-    const request = new Request('https://client.example/menu-engine/manifest.json', { headers: { 'If-None-Match': 'engine-v1' } })
-    const fetch = vi.fn(async () => new Response(null, { status: 304, headers: { ETag: 'engine-v1' } }))
-    const response = await worker.fetch(request, { ASSETS: { fetch } })
-    expect(response.status).toBe(304)
-    expect(response.headers.get('ETag')).toBe('engine-v1')
-    expect(fetch).toHaveBeenCalledWith(request)
   })
 })

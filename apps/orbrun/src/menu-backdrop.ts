@@ -2,7 +2,7 @@ import { h } from './dom'
 import { getSettings } from './settings'
 import type { MenuDemo } from './menu-demo'
 
-/** Silent live encounter with an immediate, lightweight dungeon entrance while loading. */
+/** Silent recorded gameplay with an immediate, lightweight dungeon entrance while loading. */
 export class MenuBackdrop {
   readonly el = h('div', { class: 'menu-backdrop', 'aria-hidden': 'true' })
   readonly canvas = h('canvas', { hidden: true })
@@ -18,12 +18,16 @@ export class MenuBackdrop {
   constructor(private host: HTMLElement) {
     this.el.append(this.canvas, h('div', { class: 'menu-entrance' },
       h('div', { class: 'menu-entrance-door' }, h('span', {}, '@')),
-      h('p', { class: 'menu-loading' }, 'Preparing a live encounter…')))
+      h('p', { class: 'menu-loading' }, 'Loading dungeon scenes…')))
     host.prepend(this.el)
     this.media?.addEventListener?.('change', this.applySettings)
     document.addEventListener('visibilitychange', this.applySettings)
     this.observer = new MutationObserver(this.applySettings)
     this.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-ui-motion'] })
+    // Release immutable downloads left by the retired menu engine, never offline saves.
+    if (typeof caches !== 'undefined') void caches.keys().then(names => Promise.all(
+      names.filter(name => name.startsWith('orbrun-menu-assets-v1-')).map(name => caches.delete(name)),
+    )).catch(() => {})
     this.applySettings()
   }
 
@@ -32,8 +36,7 @@ export class MenuBackdrop {
   applySettings = () => {
     const still = getSettings().depthAnimate === false || !!this.media?.matches
     const active = !this.destroyed && !this.covered && !document.hidden && !still
-    const supported = typeof Worker !== 'undefined' && typeof (WebAssembly as { Suspending?: unknown }).Suspending === 'function'
-    this.el.dataset.loading = active && supported && !this.failed ? 'true' : 'false'
+    this.el.dataset.loading = active && !this.failed ? 'true' : 'false'
     this.host.dataset.menuMotion = active ? 'on' : 'off'
     this.demo?.setActive(active)
     if (!active) {
@@ -42,7 +45,7 @@ export class MenuBackdrop {
       if (still) { this.demo?.destroy(); this.demo = null; this.canvas.hidden = true }
       return
     }
-    if (this.demo || this.loading || this.failed || !supported) return
+    if (this.demo || this.loading || this.failed) return
     void this.start()
   }
 
