@@ -75,6 +75,12 @@ describe('server tile semantics for atmosphere', () => {
     expect(tileMotion('GOLD')).toBe('gold')
     expect(tileMotion('DNGN_TREE_3')).toBe('plant')
   })
+  it.each([
+    ['slime creature', 'ooze'], ['jelly', 'ooze'], ['naga', 'serpent'], ['adder', 'serpent'],
+    ['torpor snail', 'serpent'], ['dart slug', 'serpent'], ['ribbon worm', 'serpent'], ['spider', 'skitter'],
+  ] as const)('classifies the body of %s for grounded movement', (name, motion) => {
+    expect(creatureLife(name, {} as FlagWord, monster).motion).toBe(motion)
+  })
   it('changes breathing by sleep/fleeing/wounds and freezes immobilised flying actors', () => {
     const asleep = creatureLife('orc', { STAB: true } as unknown as FlagWord, monster)
     const fleeing = creatureLife('orc', { FLEEING: true } as unknown as FlagWord, monster)

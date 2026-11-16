@@ -15,6 +15,92 @@ function scene(...billboards: Billboard[]): Scene {
 function observe(m: DungeonMovement, s: Scene, now: number, opts = options, center = s.player) { m.observe(s, center, now, opts) }
 
 describe('confirmed entity movement', () => {
+  it('tunes body gestures independently and can remove them without changing travel or idle phases', () => {
+    for (const motion of ['breath', 'ooze', 'serpent', 'fly'] as const) {
+      const m = new DungeonMovement(), a = actor(0, 0, { life: { motion } }), b = { ...a, x: 1 }
+      observe(m, scene(a), 0); observe(m, scene(b), 1)
+      const position = m.position(b, 1.04), idle = m.animation(b, 1.04), normal = m.pose(b, 1.04)
+      const tuned = m.pose(b, 1.04, { movementHopHeight: 2, movementSquash: 0, movementSway: 0.5 })
+      expect(tuned.y).toBeCloseTo(normal.y * 2)
+      expect(tuned.x).toBeCloseTo(normal.x * 0.5)
+      expect(tuned.angle).toBeCloseTo(normal.angle * 0.5)
+      expect(tuned.sx).toBe(1); expect(tuned.sy).toBe(1)
+      const off = m.pose(b, 1.04, { movementHopHeight: 0, movementSquash: 0, movementSway: 0 })
+      for (const key of ['x', 'y', 'angle'] as const) expect(off[key]).toBeCloseTo(0)
+      expect(off.sx).toBe(1); expect(off.sy).toBe(1)
+      expect(m.position(b, 1.04)).toEqual(position)
+      expect(m.animation(b, 1.04)).toEqual(idle)
+      expect(m.position(b, 1.1)).toEqual({ x: 1, y: 0 })
+    }
+  })
+  it.each(['player', 'monster'] as const)('gives a grounded %s a small hop with exact takeoff and landing', kind => {
+    const m = new DungeonMovement(), a = actor(0, 0, { kind }), b = actor(1, 0, { kind })
+    observe(m, scene(a), 0); observe(m, scene(b), 1)
+    expect(m.pose(b, 1)).toEqual({ x: 0, y: 0, sx: 1, sy: 1, angle: 0 })
+    expect(m.pose(b, 1.05).y).toBeCloseTo(0.13)
+    expect(m.pose(b, 1.05).sx * m.pose(b, 1.05).sy).toBeCloseTo(1)
+    expect(m.pose(b, 1.1)).toEqual(m.pose(b, 1))
+    expect(b).toMatchObject({ x: 1, y: 0 })
+  })
+
+  it('keeps slime, serpents, flyers and undead grounded or hovering with distinct gestures', () => {
+    const poses = new Map<string, ReturnType<DungeonMovement['pose']>>()
+    for (const motion of ['ooze', 'serpent', 'fly', 'float', 'undead', 'skitter'] as const) {
+      const m = new DungeonMovement(), a = actor(0, 0, { life: { motion } }), b = { ...a, x: 1 }
+      observe(m, scene(a), 0); observe(m, scene(b), 1)
+      const pose = m.pose(b, 1.04)
+      if (motion !== 'skitter') expect(pose.y).toBe(0)
+      else expect(pose.y).toBeLessThan(0.025)
+      poses.set(motion, pose)
+      expect(m.pose(b, 1.1)).toEqual(m.pose(b, 1))
+    }
+    expect(poses.get('ooze')!.sx).toBeGreaterThan(1.08)
+    expect(poses.get('ooze')!.sy).toBeLessThan(1)
+    expect(poses.get('serpent')!.x).not.toBe(0)
+    expect(poses.get('fly')!.angle).toBeGreaterThan(0)
+    expect(poses.get('undead')!.sy).toBeLessThan(1)
+  })
+
+  it('preserves the body pose through rapid turns without accumulating lift or restarting on unrelated updates', () => {
+    const m = new DungeonMovement()
+    let a = actor()
+    observe(m, scene(a), 0)
+    for (let step = 0; step < 16; step++) {
+      const now = 1 + step * 0.03, b = actor(step % 2, (step + 1) % 2)
+      const before = m.pose(a, now)
+      observe(m, scene(b), now)
+      expect(m.pose(b, now)).toEqual(before)
+      const later = m.pose(b, now + 0.02)
+      observe(m, scene(b), now + 0.01)
+      expect(m.pose(b, now + 0.02)).toEqual(later)
+      expect(later.y).toBeGreaterThanOrEqual(0)
+      expect(later.y).toBeLessThanOrEqual(0.13)
+      a = b
+    }
+    expect(m.pose(a, 2).y).toBe(0)
+  })
+
+  it('suppresses body gestures for held, scenery, lying and non-creature art, and clears them on visibility loss or Still', () => {
+    const rest = { x: 0, y: 0, sx: 1, sy: 1, angle: 0 }
+    for (const extra of [{ life: { held: true } }, { scenery: true }, { lying: true }, { kind: 'item' as const }, { life: { motion: 'still' as const } }]) {
+      const m = new DungeonMovement(), a = actor(0, 0, extra), b = { ...a, x: 1 }
+      observe(m, scene(a), 0); observe(m, scene(b), 1)
+      expect(m.pose(b, 1.05)).toEqual(rest)
+    }
+    for (const change of ['finish', 'disabled', 'hidden', 'level'] as const) {
+      const m = new DungeonMovement(), a = actor(), b = actor(1), s = scene(b)
+      observe(m, scene(a), 0); observe(m, s, 1)
+      expect(m.pose(b, 1.05).y).toBeGreaterThan(0)
+      if (change === 'finish') m.finish()
+      else {
+        if (change === 'hidden') s.cells.get(cellKey(1, 0))!.visibility = 'remembered'
+        if (change === 'level') s.levelKey = 'D:2'
+        observe(m, s, 1.05, { ...options, enabled: change !== 'disabled' })
+      }
+      expect(m.pose(b, 1.05)).toEqual(rest)
+    }
+  })
+
   it.each((['player', 'monster', 'item', 'cloud', 'doll', 'projectile'] as const).flatMap(kind => [1, 4].map(steps => ({ kind, steps }))))('tweens $kind art over $steps cells and lands exactly without changing the scene', ({ kind, steps }) => {
     const m = new DungeonMovement(), a = actor(0, 0, { kind }), b = actor(steps, steps, { kind })
     observe(m, scene(a), 0); observe(m, scene(b), 1)

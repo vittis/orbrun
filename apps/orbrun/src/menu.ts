@@ -1709,6 +1709,11 @@ export class FrontEnd {
     for (const el of panel.rows) {
       el.classList.add('item', 'front-setting')
       el.prepend(h('span', { class: 'marker', 'aria-hidden': 'true' }))
+      // Focus updates the hint and can resize this scroll region. Defer row
+      // focus until click so the pressed label cannot move before mouseup.
+      el.addEventListener('mousedown', ev => {
+        if (ev.button === 0 && !(ev.target as Element).closest('button, a, input, textarea, select')) ev.preventDefault()
+      })
       // Arrow clicks stop bubbling, so share their row's cursor in capture.
       el.addEventListener('click', () => el.focus({ preventScroll: true }), { capture: true })
     }

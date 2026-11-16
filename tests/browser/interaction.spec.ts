@@ -377,6 +377,10 @@ for (const touch of [false, true]) {
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.zoom).toBe(3)
       await quick.getByRole('button', { name: 'Dungeon tilt increase', exact: true }).click()
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.tilt).toBe(55)
+      for (const [label, key, value] of [['Move hop height', 'movementHopHeight', 0.35], ['Move squash', 'movementSquash', 0.55], ['Move sway', 'movementSway', 0.95]] as const) {
+        await quick.getByRole('button', { name: `${label} decrease`, exact: true }).click()
+        await expect.poll(async () => (await result(page)).appliedDungeonOptions[key]).toBe(value)
+      }
       await quick.getByRole('tab', { name: 'Combat', exact: true }).click()
       await quick.getByRole('button', { name: 'Hit bump speed increase', exact: true }).click()
       await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!).meleeBumpSpeed)).toBe(1.2)
@@ -391,6 +395,7 @@ for (const touch of [false, true]) {
       await quick.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption({ label: 'Still' })
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.animate).toBe(false)
       await expect(quick.getByRole('combobox', { name: 'Dungeon movement', exact: true })).toBeDisabled()
+      for (const label of ['Move hop height', 'Move squash', 'Move sway']) await expect(quick.getByRole('slider', { name: label, exact: true })).toBeDisabled()
       await quick.getByRole('tab', { name: 'Combat', exact: true }).click()
       await expect(quick.getByRole('slider', { name: 'Hit bump speed', exact: true })).toBeDisabled()
       expect((await result(page)).sent).toEqual([])
@@ -405,13 +410,16 @@ for (const touch of [false, true]) {
       await quick.getByRole('tab', { name: 'View', exact: true }).click()
       await quick.getByRole('button', { name: 'Reset view', exact: true }).click()
       await expect(quick.getByRole('tab', { name: 'View', exact: true })).toBeFocused()
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions).toMatchObject({ tilt: 50, zoom: 1, meleeBumpStrength: 1.8 })
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions).toMatchObject({ tilt: 50, zoom: 1, meleeBumpStrength: 1.8,
+        movementHopHeight: 0.4, movementSquash: 0.6, movementSway: 1 })
       await page.getByRole('button', { name: 'Open level map', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')
       await quick.getByRole('button', { name: 'Dungeon zoom increase', exact: true }).click()
+      await quick.getByRole('button', { name: 'Move sway increase', exact: true }).click()
       expect((await result(page)).renderer).toBe('Render2d')
       await page.getByRole('button', { name: 'Close view', exact: true }).click()
       await expect.poll(async () => (await result(page)).appliedDungeonOptions?.zoom).toBe(1.05)
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions?.movementSway).toBe(1.05)
       await zoom.focus()
       await zoom.press('Escape')
       await expect(quick.getByRole('button', { name: 'Open quick settings', exact: true })).toHaveAttribute('aria-expanded', 'false')
@@ -492,6 +500,42 @@ test('unexplored atmosphere can be disabled independently, persists in Still and
   await page.getByText('Reset to defaults', { exact: true }).click()
   await expect(fog.locator('.val')).toHaveText('On')
   await expect(atmosphere.locator('.val')).toHaveText('On')
+})
+
+test('movement tuning persists in the narrow settings menu and respects Instant and Still', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.goto('/settings/view')
+  const row = (label: string) => page.locator(`[data-focus="setting:${label}"]`)
+  const gestures = [['Move hop height', '35%', '40%'], ['Move squash', '55%', '60%'], ['Move sway', '95%', '100%']]
+  for (const [label, changed] of gestures) {
+    await page.getByRole('button', { name: `${label} previous`, exact: true }).click()
+    await expect(row(label).locator('.val')).toHaveText(changed)
+  }
+  await page.getByRole('button', { name: 'Dungeon move duration next', exact: true }).click()
+  await expect(row('Dungeon move duration').locator('.val')).toHaveText('110 ms')
+  await page.reload()
+  for (const [label, changed] of gestures) await expect(row(label).locator('.val')).toHaveText(changed)
+  await expect(row('Dungeon move duration').locator('.val')).toHaveText('110 ms')
+  await page.getByRole('button', { name: 'Dungeon movement next', exact: true }).click()
+  for (const [label, changed] of gestures) {
+    await expect(row(label)).toHaveClass(/off/)
+    await page.getByRole('button', { name: `${label} next`, exact: true }).click()
+    await expect(row(label).locator('.val')).toHaveText(changed)
+  }
+  await page.getByRole('button', { name: 'Dungeon movement next', exact: true }).click()
+  await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
+  for (const [label] of gestures) await expect(row(label)).toHaveClass(/off/)
+  await page.getByText('Reset to defaults', { exact: true }).click()
+  for (const [label, , fallback] of gestures) await expect(row(label).locator('.val')).toHaveText(fallback)
+  const bounds = await page.locator('.settings .row .value').evaluateAll(values => values.map(value => {
+    const rect = value.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, viewport: innerWidth }
+  }))
+  for (const rect of bounds) {
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+    expect(rect.right).toBeLessThanOrEqual(rect.viewport)
+  }
 })
 
 test('fine combat controls work in a narrow settings panel and persist across reload', async ({ page }) => {
@@ -594,6 +638,8 @@ test('live sounds follow confirmed message occurrences and stop on screen teardo
   })
   // A real gesture unlocks Web Audio without sending a game command.
   await page.locator('#motion').click()
+  // Close the native select popup before Chromium tears down the context.
+  await page.locator('#motion').press('Escape')
   const receive = (text: string, rollback = 0) => page.evaluate(({ text, rollback }) => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
     fixture.receive({ msg: 'msgs', rollback, messages: [{ text, turn: 1 }] })

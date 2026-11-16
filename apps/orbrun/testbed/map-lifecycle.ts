@@ -42,6 +42,7 @@ const screen = new GameScreen(document.getElementById('app')!, session, {
         animate: dungeonAnimation(settings, matchMedia('(prefers-reduced-motion: reduce)').matches),
         tilt: settings.depthTilt, zoom: settings.depthZoom,
         movement: settings.depthMovement, movementDuration: settings.depthMovementDuration, movementEasing: settings.depthMovementEasing,
+        movementHopHeight: settings.depthMovementHopHeight, movementSquash: settings.depthMovementSquash, movementSway: settings.depthMovementSway,
       }
       const dungeon = new Render25d(options)
       appliedDungeonOptions = { ...options }

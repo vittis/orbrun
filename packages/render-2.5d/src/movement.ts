@@ -2,10 +2,22 @@ import { cellKey, StepCadence, planStep, sampleStep, type StepCurve, type Billbo
 
 export type MovementEasing = 'ease-out' | 'smooth' | 'linear'
 export interface MovementOptions { enabled: boolean; duration: number; easing: MovementEasing }
+export interface MovementAppearance {
+  /** Body lift only, from 0 (off) to 2; never lifts the camera or ground markers. */
+  movementHopHeight?: number
+  /** Movement squash/stretch from 0 to 2, independent of idle breathing. */
+  movementSquash?: number
+  /** Movement sway and banking from 0 to 2, independent of idle hover. */
+  movementSway?: number
+}
 interface Point { x: number; y: number }
 interface Tween { from: Point; to: Point; start: number; duration: number; easing: MovementEasing; curve?: StepCurve }
+interface StridePose { x: number; y: number; sx: number; sy: number; angle: number }
+type Gait = 'hop' | 'ooze' | 'slither' | 'scuttle' | 'glide' | 'shuffle'
+interface Stride { from: StridePose; gait: Gait; direction: number; strength: number }
 interface Actor {
   kind: Billboard['kind']; signature: string; tween: Tween
+  stride?: Stride
   // Snapshot the phase origin and integrate rate changes; mutable scene objects
   // and destination cells must never restart an actor's idle animation.
   origin: Point; time: number; at: number; rate: number
@@ -21,6 +33,51 @@ const identity = (b: Billboard): string | undefined => {
   return id === undefined ? undefined : `${b.kind}:${typeof id}:${id}`
 }
 const signature = (b: Billboard) => JSON.stringify([b.kind, b.tile, b.name, b.lying ?? false])
+const restPose = (): StridePose => ({ x: 0, y: 0, sx: 1, sy: 1, angle: 0 })
+const smooth = (t: number) => t * t * (3 - 2 * t)
+
+function gait(b: Billboard): Gait | undefined {
+  if (b.kind !== 'player' && b.kind !== 'monster' || b.scenery || b.lying || b.life?.held || b.life?.motion === 'still') return
+  if (b.life?.flying) return 'glide'
+  switch (b.life?.motion) {
+    case 'fly': case 'float': case 'swirl': return 'glide'
+    case 'ooze': return 'ooze'
+    case 'serpent': return 'slither'
+    case 'skitter': return 'scuttle'
+    case 'undead': return 'shuffle'
+    case 'plant': return
+    default: return 'hop'
+  }
+}
+
+/** A bounded body gesture, independent of ground travel and the following camera. */
+function stridePose(actor: Actor | undefined, now: number): StridePose {
+  const p = restPose(), stride = actor?.stride, tween = actor?.tween
+  if (!stride || !tween?.duration) return p
+  const t = Math.max(0, (now - tween.start) / tween.duration)
+  if (t >= 1) return p
+  const arc = Math.sin(Math.PI * t) ** 2 * stride.strength
+  const wave = Math.sin(Math.PI * 2 * t) * arc, direction = stride.direction
+  switch (stride.gait) {
+    case 'hop': {
+      p.y = arc * 0.13
+      const landing = t > 0.65 ? Math.sin(Math.PI * (t - 0.65) / 0.35) ** 2 * stride.strength : 0
+      p.sy += arc * 0.025 - landing * 0.045
+      p.sx = 1 / p.sy
+      break
+    }
+    case 'ooze': p.sx += arc * 0.12; p.sy = 1 / p.sx; p.angle = -direction * wave * 0.025; break
+    case 'slither': p.x = wave * 0.025; p.angle = wave * 0.045; break
+    case 'scuttle': p.y = Math.sin(Math.PI * 2 * t) ** 2 * arc * 0.025; p.angle = direction * wave * 0.025; break
+    case 'glide': p.angle = direction * arc * 0.045; break
+    case 'shuffle': p.angle = direction * arc * 0.035; p.sy -= arc * 0.025; break
+  }
+  // A rapid turn starts at the body pose actually on screen. Blend into the
+  // new gesture instead of resetting a hop mid-air or accumulating its height.
+  const blend = smooth(Math.min(1, t * 4))
+  for (const key of ['x', 'y', 'sx', 'sy', 'angle'] as const) p[key] = stride.from[key] + (p[key] - stride.from[key]) * blend
+  return p
+}
 
 export function sampleMovement(tween: Tween, now: number): Point {
   const t = tween.duration ? Math.max(0, Math.min(1, (now - tween.start) / tween.duration)) : 1
@@ -100,8 +157,14 @@ export class DungeonMovement {
       const id = assigned.get(b)!, candidate = this.actors.get(id)
       const previous = candidate?.kind === b.kind ? candidate : undefined
       const tween = this.retarget(previous?.tween, b, scene, now, options, true, b.kind === 'player')
+      const style = gait(b)
+      const stride = !style || !tween.duration ? undefined : tween === previous?.tween ? previous.stride : {
+        from: stridePose(previous, now), gait: style,
+        direction: (tween.to.x - tween.from.x) / Math.max(0.001, distance(tween.from, tween.to)),
+        strength: Math.min(1, distance(tween.from, tween.to)) * (b.life?.wading && !b.life.flying ? 0.55 : 1),
+      }
       const rate = b.life?.rate ?? 1
-      const actor: Actor = { kind: b.kind, signature: signatures.get(b) ?? signature(b), tween,
+      const actor: Actor = { kind: b.kind, signature: signatures.get(b) ?? signature(b), tween, stride,
         origin: previous?.origin ?? { x: b.x, y: b.y },
         time: previous ? previous.time + (now - previous.at) * previous.rate : now * rate, at: now, rate }
       next.set(id, actor)
@@ -151,6 +214,15 @@ export class DungeonMovement {
   }
 
   position(b: Billboard, now: number): Point { return sampleMovement(this.billboards.get(b)?.tween ?? still(b), now) }
+  pose(b: Billboard, now: number, appearance: MovementAppearance = {}): StridePose {
+    const pose = stridePose(this.billboards.get(b), now)
+    pose.y *= appearance.movementHopHeight ?? 1
+    pose.x *= appearance.movementSway ?? 1
+    pose.angle *= appearance.movementSway ?? 1
+    pose.sx = 1 + (pose.sx - 1) * (appearance.movementSquash ?? 1)
+    pose.sy = 1 + (pose.sy - 1) * (appearance.movementSquash ?? 1)
+    return pose
+  }
   animation(b: Billboard, now: number): Point & { time: number } {
     const actor = this.billboards.get(b)
     return actor ? { ...actor.origin, time: actor.time + (now - actor.at) * actor.rate }

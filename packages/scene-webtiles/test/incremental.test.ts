@@ -129,6 +129,33 @@ describe('incremental scene building', () => {
     },
   )
 
+  it('refreshes non-walking player bodies while letting confirmed flight override their gait', () => {
+    const state = fixtureState()
+    state.player.species = 'Human'; state.player.status = []
+    let scene = buildScene(state, gd)
+    for (const [species, motion] of [['Naga', 'serpent'], ['Octopode', 'skitter'], ['Human', 'breath']]) {
+      state.player.species = species
+      scene = buildScene(state, gd, { previous: scene, dirty: { cells: new Set(), mapCleared: false } })
+      expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion, flying: false })
+    }
+    state.player.species = 'Naga'; state.player.status = [{ light: 'Fly', text: 'flying' }]
+    scene = buildScene(state, gd, { previous: scene, dirty: { cells: new Set(), mapCleared: false } })
+    expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion: 'fly', flying: true })
+  })
+
+  it.each([['TRAN_JELLY', 'ooze'], ['TRAN_SPIDER', 'skitter'], ['TRAN_SERPENT', 'serpent'], ['TRAN_DRAGON', 'breath']])(
+    'uses confirmed %s artwork instead of the original species body', (tile, motion) => {
+      const state = fixtureState()
+      state.player.species = 'Naga'; state.player.status = []
+      const mc = [...state.map.cells.values()].find(c => c.x === state.player.pos.x && c.y === state.player.pos.y)!
+      const id = gd.player.id(tile)
+      expect(id).toBeDefined()
+      mc.t!.doll = [[id!, 0]]
+      const scene = buildScene(state, gd)
+      expect(scene.billboards.find(b => b.kind === 'player')!.life).toMatchObject({ motion, flying: false })
+    },
+  )
+
   it.each([
     { light: 'Fly', text: 'flying' },
     { text: 'flying' },

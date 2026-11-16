@@ -67,14 +67,19 @@ describe('Dungeon presentation', () => {
     expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
     adjustSetting(row('Dungeon move duration'), 1)
     adjustSetting(row('Dungeon move easing'), 1)
-    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.14, depthMovementEasing: 'smooth' })
+    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.11, depthMovementEasing: 'smooth' })
+    const gestures = ['Move hop height', 'Move squash', 'Move sway']
+    for (const label of gestures) adjustSetting(row(label), -1)
+    expect(getSettings()).toMatchObject({ depthMovementHopHeight: 0.35, depthMovementSquash: 0.55, depthMovementSway: 0.95 })
     adjustSetting(row('Dungeon movement'), 1)
     expect(getSettings().depthMovement).toBe(false)
     expect(rowOff(row('Dungeon move duration'))).toBe(true)
+    for (const label of gestures) expect(rowOff(row(label))).toBe(true)
     saveSettings({ ...getSettings(), depthMovement: true, depthAnimate: false })
-    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing']) expect(rowOff(row(label))).toBe(true)
+    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing', ...gestures]) expect(rowOff(row(label))).toBe(true)
     resetGroup('View')
-    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
+    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out',
+      depthMovementHopHeight: 0.4, depthMovementSquash: 0.6, depthMovementSway: 1 })
   })
 })
 

@@ -2,6 +2,13 @@
 
 Notable changes to Orbrun, newest first.
 
+## 0.3.121 — 2026-11-15
+
+- Added creature-specific movement: walkers hop, slimes compress, serpents slither, small creatures scuttle, undead shuffle and flyers bank. Rapid moves blend smoothly while the camera stays steady.
+- Added hop height, squash and sway controls in Settings → View and the in-game Tune panel, with finer 10 ms movement timing. Defaults are 40% hop height, 60% squash and 100% sway; Still/reduced motion and confirmed positions remain respected.
+- Removed the circles beneath the player and allies while retaining shadows and targeting indicators.
+- Fixed clicks on settings rows moving out from under the pointer when their hint resized a narrow menu.
+
 ## 0.3.120 — 2026-11-14
 
 - Added Settings → Audio with opt-in sound effects, master/effects volume and single or layered playback.

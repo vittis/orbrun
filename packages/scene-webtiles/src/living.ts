@@ -107,7 +107,7 @@ export function creatureLife(name: string, flags: FlagWord, b: Billboard, tileNa
     : /ZOMBIE|SKELETON|MUMMY|GHOUL|LICH|WIGHT/.test(n) ? 'undead'
     : /JELLY|OOZE|SLIME|BLOB/.test(n) ? 'ooze'
     : /VORTEX|ELEMENTAL|TWISTER|BALL_LIGHTNING/.test(n) ? 'swirl'
-    : /SNAKE|ADDER|VIPER|EEL|TENTACLE|NAGA/.test(n) ? 'serpent'
+    : /SNAKE|ADDER|VIPER|EEL|TENTACLE|NAGA|WORM|SLUG|SNAIL/.test(n) ? 'serpent'
     : /SPIDER|BEE|ANT\b|BEETLE|ROACH|RAT\b|SCORPION/.test(n) ? 'skitter' : 'breath'
   const held = !!(flags.PARALYSED || flags.PETRIFIED || flags.NET || flags.WEB)
   let rate = flags.STAB ? 0.48 : flags.FLEEING ? 2.2 : b.attitude === 'friendly' ? 0.85 : b.attitude !== 'hostile' || flags.MAY_STAB ? 0.65 : 1.25
@@ -147,8 +147,12 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
       // STATUS_AIRBORNE reports actual flight, including innate Djinni flight
       // and its suppression by forms; neither tile flags nor species prove it.
       const flying = state.player.status.some(s => /^fly$/i.test(s.light ?? '') || /^flying(?: \(expiring\))?$/i.test(s.text ?? ''))
+      // Confirmed transformation artwork overrides the normal species body.
+      const body = /^TRAN_/.test(tileName) ? tileName : state.player.species.toUpperCase()
+      const motion: LifeMotion = /JELLY|SLIME/.test(body) ? 'ooze'
+        : /NAGA|SERPENT/.test(body) ? 'serpent' : /SPIDER|OCTOPODE/.test(body) ? 'skitter' : 'breath'
       b.life = {
-        ...b.life, motion: flying ? 'fly' : 'breath', flying, rate: 0.8 + (1 - hp) * 1.2,
+        ...b.life, motion: flying ? 'fly' : motion, flying, rate: 0.8 + (1 - hp) * 1.2,
         amplitude: hp < 0.5 ? 0.8 : 1.1, wading: cell.flags.water,
         held: /paral|petrified|held|net|web/i.test(status),
       }

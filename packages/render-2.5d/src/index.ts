@@ -6,7 +6,7 @@ import {
 import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
 import { DungeonLighting, glowCenter } from './lighting.js'
-import { DungeonMovement, type MovementEasing } from './movement.js'
+import { DungeonMovement, type MovementAppearance, type MovementEasing } from './movement.js'
 import { DungeonEffects, type SpellBurst } from './effects.js'
 import { drawSpellTrace, drawSpellBurst } from './effects-draw.js'
 import { ImpactArt } from './impact-draw.js'
@@ -21,7 +21,7 @@ import { UnexploredFog } from './unexplored-fog.js'
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
 
-export interface Render25dOptions {
+export interface Render25dOptions extends MovementAppearance {
   /** Camera elevation above the ground, clamped to 25–85 degrees. */
   tilt?: number
   /** 0.25–3; 1 fits the full field of view, higher values trade coverage for detail. */
@@ -32,7 +32,7 @@ export interface Render25dOptions {
   unexploredFog?: boolean
   /** Optional stars and faint swirls; disabling them retains the soft frontier. */
   unexploredAtmosphere?: boolean
-  /** Tween confirmed movement; still/reduced-motion mode also disables this. */
+  /** Animate confirmed travel and creature gaits; still/reduced motion disables both. */
   movement?: boolean
   /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
   movementDuration?: number
@@ -90,6 +90,7 @@ export class Render25d implements MapRenderer {
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
+    movementHopHeight: 0.4, movementSquash: 0.6, movementSway: 1,
   }
 
   constructor(options: Render25dOptions = {}) { this.setOptions(options) }
@@ -100,6 +101,9 @@ export class Render25d implements MapRenderer {
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.25, Math.min(3, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
+    for (const [key, fallback] of [['movementHopHeight', 0.4], ['movementSquash', 0.6], ['movementSway', 1]] as const) {
+      this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(0, Math.min(2, this.opts[key])) : fallback
+    }
     for (const [key, min, max, fallback] of [['meleeBumpStrength', 0, 2, 1.75], ['meleeBumpSnap', 0, 1, 0.7], ['hitGore', 0, 2, 1], ['deathGore', 0, 2, 0.5], ['combatVfxVariation', 0, 1, 0.25]] as const) {
       this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(min, Math.min(max, this.opts[key])) : fallback
     }
@@ -433,7 +437,10 @@ export class Render25d implements MapRenderer {
       if (this.opts.animate && entry.cell.visibility === 'visible') ctx.globalAlpha *= entry.billboard
         ? this.effects.spawns.entrance(entry.billboard, now) : this.effects.spawns.terrainOpacity(entry.cell, now)
       ctx.translate(q.x, q.y)
-      ctx.scale(1, sy * 0.3)
+      const lift = this.opts.animate && entry.cell.visibility === 'visible' && entry.billboard ? this.movement.pose(entry.billboard, now, this.opts).y : 0
+      const contact = 1 - Math.min(0.25, lift * 1.5)
+      ctx.globalAlpha *= contact
+      ctx.scale(contact, sy * 0.3 * contact)
       const radius = s * (entry.billboard?.kind === 'item' ? 0.3 : 0.43)
       const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius)
       shadow.addColorStop(0, 'rgba(0,0,0,0.28)')
@@ -769,6 +776,11 @@ export class Render25d implements MapRenderer {
     const animation = this.movement.animation(b, time)
     const pose = livingPose({ ...life, rate: 1 }, animation.x, animation.y, animation.time,
       this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
+    if (this.opts.animate && visible && !position.retiring) {
+      const stride = this.movement.pose(b, time, this.opts)
+      pose.x += stride.x; pose.y += stride.y
+      pose.sx *= stride.sx; pose.sy *= stride.sy; pose.angle += stride.angle
+    }
     const opacity = position.fade ?? (this.opts.animate && visible ? this.effects.spawns.entrance(b, time) : 1)
     // Wound flags drive a small guarded lean and uneven breathing. This also
     // works for bloodless creatures without painting red over identifying art.
@@ -807,13 +819,6 @@ export class Render25d implements MapRenderer {
     if (b.lying) {
       this.plane(ctx, p, { ...cell, x: position.x, y: position.y }, b.layers ?? [{ tile: b.tile }], 0.02)
     } else {
-      if (b.kind === 'player' || b.attitude === 'friendly') {
-        ctx.strokeStyle = b.kind === 'player' ? '#e3c88a' : '#8bd0ab'
-        ctx.lineWidth = 1.5
-        ctx.beginPath()
-        ctx.ellipse(q.x, q.y - 1, s * 0.34, s * 0.13, 0, 0, Math.PI * 2)
-        ctx.stroke()
-      }
       ctx.translate(x, foot)
       ctx.translate(size / 2, 0)
       ctx.rotate(pose.angle)

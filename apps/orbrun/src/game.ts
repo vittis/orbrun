@@ -704,6 +704,7 @@ export class GameScreen {
       hitSprayOutward: st.hitSprayOutward, deathSprayOutward: st.deathSprayOutward,
       combatVfxVariation: st.combatVfxVariation,
       movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
+      movementHopHeight: st.depthMovementHopHeight, movementSquash: st.depthMovementSquash, movementSway: st.depthMovementSway,
     }
   }
 
