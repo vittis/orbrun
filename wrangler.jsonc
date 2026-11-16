@@ -41,7 +41,7 @@
     // page skip it
     "run_worker_first": ["/*", "!/assets/*", "!/fonts/*", "!/room/*", "!/steam/*", "!/icons/*"]
   },
-  // This fork deploys online play only. No engine Worker or analytics dataset is needed.
+  // Player-facing play is online-only. The pinned menu engine ships as static assets; no engine Worker or analytics dataset is needed.
   "observability": {
     "enabled": true
   }

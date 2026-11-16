@@ -319,11 +319,13 @@ describe.skipIf(!builtChannels.length)('what the buttons do, on crawl', () => {
     await g.press('L3')
     expect(screen(g).surface).toMatch(/^text:/)
     // the map stays drawn under the search, the minimap still put away as the map puts it, until the search is put away
+    const heldCanvas = g.root.querySelector('canvas.view')
     const minimapHidden = () => g.root.querySelector('canvas.minimap')!.classList.contains('hidden')
     expect(minimapHidden()).toBe(true)
     await g.press('B')
     expect(screen(g).mode).toBe('command')
-    expect(minimapHidden()).toBe(false)
+    expect(g.root.querySelector('canvas.view')).not.toBe(heldCanvas) // restored the dungeon renderer
+    expect(minimapHidden()).toBe(true) // the permanent 2.5D dungeon intentionally hides the minimap
     g = await at('level-map')
     await g.press('R3')
     expect(screen(g).surface).toBe('popup:formatted-scroller')

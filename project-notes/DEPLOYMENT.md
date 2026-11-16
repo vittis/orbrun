@@ -4,9 +4,9 @@ Production URL: [dcss-client.vittis.workers.dev](https://dcss-client.vittis.work
 
 ## Scope and safeguards
 
-Production serves the client and bounded gamedata/morgue proxies. It offers online play and anonymous spectating on bundled HTTPS/WSS servers. Offline/custom-server UI, ENGINE binding and EVENTS dataset are disabled. Development retains its optional offline integration. Browser game WebSockets connect directly to DCSS; accounts and saves stay there. Deployment and anonymous smoke checks need no player's credentials.
+Production serves the client and bounded gamedata/morgue proxies. It offers online play and anonymous spectating on bundled HTTPS/WSS servers. Offline/custom-server UI, ENGINE binding and EVENTS dataset are disabled. Development retains its optional offline integration. The menu-only exception serves a pinned, disposable engine at `/menu-engine/*`; `/engine/*` remains unavailable. Browser game WebSockets connect directly to DCSS; accounts and saves stay there. Deployment and anonymous smoke checks need no player's credentials.
 
-Preserve `apps/orbrun/public/_headers`: same-origin executable scripts, blocked inline script attributes, objects and frames, no `unsafe-eval`, nosniff and referrer restrictions. Preserve the Acorn MIT notice at `/licenses/acorn.txt`, all font/DCSS/upstream notices and the exact corresponding-source offer. Packed-art rectangle/version provenance is not a per-tile license certification; [ATTRIBUTION.md](../ATTRIBUTION.md) retains this limitation.
+Preserve `apps/orbrun/public/_headers`: same-origin executable scripts, blocked inline script attributes, objects and frames, no JavaScript `unsafe-eval`, a narrow `wasm-unsafe-eval` permission for the local engine, nosniff and referrer restrictions. Preserve the Acorn MIT notice at `/licenses/acorn.txt`, all font/DCSS/upstream notices and the exact corresponding-source offer. Packed-art rectangle/version provenance is not a per-tile license certification; [ATTRIBUTION.md](../ATTRIBUTION.md) retains this limitation.
 
 The proxy validates exact bundled HTTPS host:port destinations before cache lookup, rejects redirects, drops query variants from cache identity and applies deadlines, byte/concurrency limits and bounded development caching. Parser, transport and session queues remain bounded. Residual limits: bundled-host DNS/TLS trust, no DNS pinning, no distributed abuse budget, and no exhaustive semantic validation of every nested protocol field. Generated gamedata syntax/helper changes fail closed. These are independent of renderer choice.
 
@@ -21,7 +21,9 @@ Checked-in `wrangler.jsonc` defines the Worker and guarded custom build. Dashboa
 - Build: `npm ci --include=dev --prefer-offline --no-audit --no-fund && npm run typecheck && NODE_ENV=test npm test`.
 - Deploy: `npm run deploy`.
 
-Do not append an asset build to the build command: Wrangler's hook builds once. `--include=dev` overrides Cloudflare's production-only install environment. The `prebuild` dependency check remains a backstop. No application secrets are required; Cloudflare/GitHub publishing authentication must stay outside the repository. Historical token authorization is not permission to change unrelated account resources.
+Do not append an asset build to the build command: Wrangler's hook builds once. `--include=dev` overrides Cloudflare's production-only install environment. The `prebuild` dependency check remains a backstop. The guarded deploy hook provisions the pinned menu engine with `node engine/prepare-menu.mjs` before building assets. It installs build tools under ignored `engine/.work/tools` when missing (Emscripten 6.0.10, Node 25.9.0 and PyYAML 6.0.3) and runs `engine/build.sh menu`. Native C++/make prerequisites remain required. Cache `engine/.work` and `engine/dist` when the build environment supports it. The normal app toolchain stays on Node 24. Missing/stale demo artifacts fail publication; ordinary local/CI builds may explicitly exercise the static fallback.
+
+No application secrets are required; Cloudflare/GitHub publishing authentication must stay outside the repository. Historical token authorization is not permission to change unrelated account resources.
 
 ## Release procedure
 

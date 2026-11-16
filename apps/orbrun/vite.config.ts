@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite'
 import { gamedataProxy } from './gamedata-proxy'
 import { engineFiles } from './engine-files'
+import { menuEngineAssets } from './menu-engine-assets'
 import { sitePages } from './site-pages'
 import { keepShell } from './shell'
 import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
-  plugins: [gamedataProxy(), engineFiles(), sitePages(), keepShell()],
+  plugins: [gamedataProxy(), engineFiles(), menuEngineAssets(), sitePages(), keepShell()],
   server: { port: 5173 },
   preview: { port: 4173 },
   build: {

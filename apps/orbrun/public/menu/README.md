@@ -1,43 +1,49 @@
-# Polished Crawl menu media
+# Live menu encounter
 
-`crawl.webm` is a finished, muted VP9 recording (1280×720, about 24 seconds,
-2.3 MB, no audio track). `poster.jpg` is a genuine frame of the same renderer
-and composition. Only the dungeon canvas is captured: no account names, HUD,
-chat, credentials, debugging overlays or health/magic bars. The right-side
-composition and short fades give a quiet loop join behind the menu.
+The home runs the full DCSS engine in a disposable Web Worker and renders its
+confirmed WebTiles messages with the normal 2.5D renderer and combat presentation.
+It has no account, persistent filesystem, gameplay input handlers or audio.
+`poster.jpg` remains the static fallback and initial loading image; it is a
+renderer frame from the previous menu capture. No video ships or plays.
 
-Source: the existing anonymized fixture
-`packages/webtiles/test/fixtures/cdi-0.34-watch.ndjson`, replayed from 35–57
-seconds with one second of settling on each end. State and combat come from
-its recorded server messages, through the normal reducer, scene builder,
-GameScreen combat presentation and sole Render25d renderer. The final capture
-observed seven confirmed impact events. There is no bot, simulation, network
-play, or second renderer in the production menu.
+The source is DCSS 0.34.1, commit `1eebc1a2892e1c89776a0d7a10691f8dac8d9796`,
+pinned in `engine/menu-commit`. `engine/wasm/menu-demo.des` is a small authored
+Sprint encounter. Its epilogue spawns randomized creatures after Crawl clears
+initial line of sight. Crawl's native autofight supplies movement and attacks;
+the host advances only after an engine idle acknowledgement. Death, a cleared
+room, unexpected prompts and bounded stalled/long runs end the encounter and
+start a fresh seed. Engine/loading failures keep the static fallback.
 
-Pinned gamedata: `acd3d60e20f899c1c8a546953d6ffa0f6c7fe0c8` from
-`https://crawl.dcss.io/gamedata/`. Its parser fixtures are already in the repo.
-DCSS artwork has mixed upstream licensing (mostly public domain/CC0, with
-exceptions); retain the repository's ATTRIBUTION.md and the upstream
-[DCSS license](https://github.com/crawl/crawl/blob/master/LICENSE) and
-[tile provenance](https://github.com/crawl/tiles/blob/master/README.md).
-The capture does not establish a new blanket license for the source art.
-
-Reproduce from the repository root:
+Build from the repository root:
 
 ```sh
-npm run dev -w apps/orbrun -- --host 127.0.0.1 --port 5290 --strictPort
-# In another terminal; requires installed Playwright Chromium:
-node tools/record/menu.mjs http://127.0.0.1:5290
+node engine/prepare-menu.mjs
+# Or with the documented engine toolchain already active:
+sh engine/build.sh menu
+REQUIRE_MENU_ENGINE=1 npm run verify:release
 ```
 
-The capture-only testbed is `apps/orbrun/testbed/menu-recording.html` and `.ts`.
-The script downloads only the pinned tile atlases to a temporary directory,
-serves them to the browser locally, refuses WebSockets, writes finished media,
-and removes temporary files. It never writes another raw gameplay recording.
-VP9 is encoded by Chromium MediaRecorder at a 1.6 Mbit/s target, 30 fps input;
-actual frame timing follows renderer updates. Ordinary builds ship the finished
-assets and never run capture tooling. Playback failure uses the poster.
+The Vite plugin serves the local artifact in development and copies only a
+closed set of matching engine and gamedata files into `dist/menu-engine` during
+production builds. The manifest includes the source commit and recipe identity.
+Ordinary builds without artifacts warn and retain the static fallback; guarded
+deployments provision the engine and require current artifacts. There is no
+engine service binding or runtime upstream-version lookup. First load still
+requires downloading these assets; this is not an offline-play offering.
 
-Production browser checks load the media and local fonts under the shipped CSP;
-interaction checks cover Still, OS reduced motion, hidden/covered menus and
-resumption. Unit checks cover rejection, delayed playback and resource release.
+The initial pinned build's full artifact set is approximately 43 MiB before
+HTTP compression. The menu delays loading until it has been visible for 800 ms,
+caps rendering at 30 fps/1280×720 pixels, and never requests an engine under
+Still, reduced motion or missing JSPI support. Covered/hidden menus stop issuing
+actions and rendering. Still and teardown release the worker and atlas memory.
+The Wasm heap starts at 64 MiB and can grow; this is not a measured total-memory
+budget. Real-device performance remains a separate acceptance step.
+
+DCSS engine source is GPL-2.0-or-later; its matching source is available at
+https://github.com/crawl/crawl/tree/1eebc1a2892e1c89776a0d7a10691f8dac8d9796 .
+The complete bridge, patches, scenario and build recipe are in this release's
+`engine/` directory. Retain [ATTRIBUTION.md](../../../../ATTRIBUTION.md), the
+[upstream license](https://github.com/crawl/crawl/blob/1eebc1a2892e1c89776a0d7a10691f8dac8d9796/LICENSE)
+and [tile provenance](https://github.com/crawl/tiles/blob/master/README.md).
+DCSS artwork has mixed upstream licensing; this does not create a blanket
+license for its source art.

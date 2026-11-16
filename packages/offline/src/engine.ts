@@ -17,12 +17,16 @@ export interface EngineOptions {
   source: EngineSource
   /** Where saves, morgues and caches live. One per channel: IDBFS names its database after it. */
   saveDir: string
+  /** False for disposable demos: no IndexedDB mount or save writes. Defaults to true. */
+  persistent?: boolean
   args: string[]
   /** Text files to put in place before main(), by absolute path: the rc file the args name. Outside the save dir, they last as long as the engine. */
   files?: Record<string, string>
   /** One flush of the engine's output: newline-terminated JSON lines, `*`-prefixed for the server. */
   onOutput(text: string): void
   onExit(code: number): void
+  /** The engine has drained its input queue and is suspended waiting for input. */
+  onIdle?(): void
   onLog?(line: string): void
 }
 
@@ -39,11 +43,13 @@ export type EngineFactory = (mod: EngineModule) => Promise<unknown>
 interface EngineModule {
   arguments: string[]
   saveDir: string
+  persistent: boolean
   wasmBinary: ArrayBuffer
   getPreloadedPackage(): ArrayBuffer
   seedCaches(fs: EngineFS, dir: string): Promise<void>
   preRun: ((mod: EngineModule) => void)[]
   onBridgeOutput(text: string): void
+  onBridgeIdle(): void
   onExit(code: number): void
   onAbort(what: unknown): void
   print(line: string): void
@@ -98,7 +104,7 @@ export async function startEngine(o: EngineOptions): Promise<RunningEngine> {
   }
   // With no IndexedDB (node), pre.js mounts nothing and never calls
   // seedCaches, and preRun cannot wait: read the pack up front.
-  const persistent = typeof indexedDB !== 'undefined'
+  const persistent = o.persistent !== false && typeof indexedDB !== 'undefined'
   const early = persistent ? null : await o.source.read('prewarm/prewarm.bin')
 
   let exited = false
@@ -110,6 +116,7 @@ export async function startEngine(o: EngineOptions): Promise<RunningEngine> {
   const mod: EngineModule = {
     arguments: o.args,
     saveDir: o.saveDir,
+    persistent,
     wasmBinary,
     getPreloadedPackage: () => data,
     // after the save dir is hydrated from IndexedDB, before main()
@@ -130,6 +137,7 @@ export async function startEngine(o: EngineOptions): Promise<RunningEngine> {
       },
     ],
     onBridgeOutput: (text) => o.onOutput(text),
+    onBridgeIdle: () => o.onIdle?.(),
     onExit: exit,
     onAbort: (what) => {
       log(`engine aborted: ${String(what)}`)

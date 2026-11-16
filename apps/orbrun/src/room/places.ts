@@ -3,7 +3,7 @@ import list from './places.json'
 import { readScene, type PlaceFile } from './place-data'
 import { RoomTiles } from './tiles'
 
-/** Recorded scenery retained by development renderer fixtures; the home uses finished video. */
+/** Recorded scenery retained by development renderer fixtures; the home runs a disposable live engine. */
 export type Tint = 'depths' | 'abyss' | 'lair' | 'dungeon' | 'shoals' | 'zot' | 'spider'
 
 export interface PlaceEntry {

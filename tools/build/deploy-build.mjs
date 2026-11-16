@@ -11,7 +11,11 @@ export function prepareDeployment({ cwd = root, command = process.env.WRANGLER_C
   const deploying = command !== 'dev'
   const before = deploying ? assertDeployable(cwd) : null
   if (build) build()
-  else execFileSync('npm', ['run', 'build'], { cwd, stdio: 'inherit', shell: process.platform === 'win32' })
+  else {
+    if (deploying) execFileSync(process.execPath, [resolve(cwd, 'engine/prepare-menu.mjs')], { cwd, stdio: 'inherit' })
+    execFileSync('npm', ['run', 'build'], { cwd, stdio: 'inherit', shell: process.platform === 'win32',
+      env: { ...process.env, ...(deploying ? { REQUIRE_MENU_ENGINE: '1' } : {}) } })
+  }
   if (deploying) {
     const after = assertDeployable(cwd)
     if (before !== after) throw new Error('Deployment refused: HEAD changed during the build. Retry to rebuild the current commit.')

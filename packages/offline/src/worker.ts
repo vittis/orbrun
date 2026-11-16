@@ -7,7 +7,7 @@
 import { startEngine, type EngineFile, type EngineFactory, type RunningEngine } from './engine.js'
 
 export type ToWorker =
-  | { type: 'start'; base: string; saveDir: string; args: string[]; files?: Record<string, string> }
+  | { type: 'start'; base: string; saveDir: string; args: string[]; files?: Record<string, string>; persistent?: boolean }
   | { type: 'control'; json: string }
   | { type: 'keys'; text: string }
 
@@ -15,6 +15,7 @@ export type FromWorker =
   | { type: 'output'; text: string }
   | { type: 'exit'; code: number }
   | { type: 'error'; message: string }
+  | { type: 'idle'; sequence: number }
 
 // the worker's global, typed to the two members used (the app compiles against DOM, not WebWorker)
 const scope = self as unknown as {
@@ -24,6 +25,7 @@ const scope = self as unknown as {
 
 let engine: RunningEngine | null = null
 const early: ToWorker[] = []
+let sequence = 0
 
 scope.onmessage = (e) => {
   const m = e.data
@@ -32,8 +34,13 @@ scope.onmessage = (e) => {
     return
   }
   if (!engine) early.push(m)
-  else if (m.type === 'control') engine.control(m.json)
-  else engine.keys(m.text)
+  else deliver(m)
+}
+
+function deliver(m: Exclude<ToWorker, { type: 'start' }>) {
+  sequence++
+  if (m.type === 'control') engine!.control(m.json)
+  else engine!.keys(m.text)
 }
 
 async function start(m: Extract<ToWorker, { type: 'start' }>) {
@@ -49,9 +56,11 @@ async function start(m: Extract<ToWorker, { type: 'start' }>) {
         },
       },
       saveDir: m.saveDir,
+      persistent: m.persistent,
       args: m.args,
       files: m.files,
       onOutput: (text) => scope.postMessage({ type: 'output', text }),
+      onIdle: () => scope.postMessage({ type: 'idle', sequence }),
       onExit: (code) => scope.postMessage({ type: 'exit', code }),
       onLog: (line) => console.debug('[engine]', line),
     })
@@ -60,7 +69,6 @@ async function start(m: Extract<ToWorker, { type: 'start' }>) {
     return
   }
   for (const q of early.splice(0)) {
-    if (q.type === 'control') engine.control(q.json)
-    else if (q.type === 'keys') engine.keys(q.text)
+    if (q.type !== 'start') deliver(q)
   }
 }

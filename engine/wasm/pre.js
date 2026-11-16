@@ -36,7 +36,7 @@ Module['preRun'] = (Module['preRun'] || []).concat(function () {
     ENV.CRAWL_DIR = dir + '/';
     try { FS.mkdir(dir); } catch (e) { /* exists */ }
     // No IndexedDB (the node cache-bake run): plain MEMFS, nothing persists.
-    if (typeof indexedDB === 'undefined')
+    if (Module['persistent'] === false || typeof indexedDB === 'undefined')
         return;
     FS.mount(IDBFS, {}, dir);
     addRunDependency('bridge-idbfs');

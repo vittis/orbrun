@@ -28,7 +28,7 @@ npm run build
 npm run preview -w apps/orbrun -- --host 127.0.0.1
 ```
 
-Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; the build does not provision offline engine artifacts. Network/listener/keychain sandbox refusals must be distinguished from application failures.
+Open [preview](http://127.0.0.1:4173/). Vite preview includes the gamedata proxy. `apps/orbrun/dist` is generated; ordinary builds do not provision engine artifacts. `node engine/prepare-menu.mjs` builds the pinned menu engine; `REQUIRE_MENU_ENGINE=1 npm run verify:release` requires its real-browser coverage. The guarded publish hook provisions it automatically. Network/listener/keychain sandbox refusals must be distinguished from application failures.
 
 ## Automated checks: use the smallest relevant gate
 
@@ -72,7 +72,7 @@ Security-focused regressions include gamedata parsing, WebSocket connection, pro
 
 Exercise the actual app at desktop and narrow/mobile viewport sizes:
 
-1. Confirm the Polished Crawl recorded backdrop/poster, inline login, document modals, settings, resize and repeated navigation lifecycle. Check Still/OS reduced motion, modal coverage and hidden-tab suspension. No projection selector or first-person setting should remain.
+1. Confirm the Polished Crawl live encounter/static fallback, inline login, document modals, settings, resize and repeated navigation lifecycle. Check Still/OS reduced motion, modal coverage and hidden-tab suspension. No projection selector or first-person setting should remain.
 2. Confirm fresh settings and migrated saved projection settings use Dungeon (2.5D), preserving unrelated preferences.
 3. Open `/watch/cdi`, wait for the anonymous lobby and spectate an active player when available. Check real tiles, HUD, messages, minimap and server-driven updates. Never send chat or gameplay commands to another player's session.
 4. Use deterministic local fixtures to check level-map entry/exit, repeated transitions, cursor/selection, settings changes while open and resize. Check `X` separately from `Ctrl+X`.

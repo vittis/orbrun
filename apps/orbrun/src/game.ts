@@ -9,6 +9,7 @@ import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
 import { dungeonAnimation } from './effects-motion'
+import { dungeonOptions } from './dungeon-options'
 import { Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
 import { GridHost, isPhone } from './grid/host'
@@ -695,17 +696,7 @@ export class GameScreen {
   }
 
   private render25dOptions(st: Settings) {
-    return {
-      tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.reducedMotion),
-      unexploredFog: st.depthFog,
-      unexploredAtmosphere: st.depthAtmosphere,
-      meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
-      hitGore: st.hitGore, deathGore: st.deathGore,
-      hitSprayOutward: st.hitSprayOutward, deathSprayOutward: st.deathSprayOutward,
-      combatVfxVariation: st.combatVfxVariation,
-      movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
-      movementHopHeight: st.depthMovementHopHeight, movementSquash: st.depthMovementSquash, movementSway: st.depthMovementSway,
-    }
+    return dungeonOptions(st, this.reducedMotion)
   }
 
   private makeRenderer(): MapRenderer {

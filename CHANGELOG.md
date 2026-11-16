@@ -2,6 +2,13 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.123 — 2026-11-16
+
+- Replaced the recorded menu video with a live, silent DCSS encounter rendered in the normal 2.5D view. A pinned local engine controls movement, visibility and combat; randomized creatures and seeds vary each encounter.
+- Kept the demo separate from accounts, saves, input and audio. It uses disposable memory, pauses behind screens and hidden tabs, and releases its worker and renderer for Still/reduced motion or gameplay.
+- Added a static fallback for unsupported browsers or loading failures. The menu stays usable while demo assets load in the background.
+- Production bundles only the pinned demo engine assets. Player-facing play remains online-only; offline accounts and custom servers remain unavailable.
+
 ## 0.3.122 — 2026-11-16
 
 - Replaced the home menu with Polished Crawl: compact server/login controls, responsive command rows, locally bundled typography and a restrained brass title reflection.

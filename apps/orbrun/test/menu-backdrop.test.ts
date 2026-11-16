@@ -5,71 +5,86 @@ import { defaultSettings } from '../src/settings'
 
 let settings = { ...defaultSettings }
 vi.mock('../src/settings', async original => ({ ...await original<object>(), getSettings: () => settings }))
+const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), destroy: vi.fn() } }))
+vi.mock('../src/menu-demo', () => ({ loadMenuDemo: load }))
 let view: MenuBackdrop
 let reduced: EventTarget & { matches: boolean }
-let play: ReturnType<typeof vi.spyOn>
-let pause: ReturnType<typeof vi.spyOn>
-
 beforeEach(() => {
+  vi.useFakeTimers(); vi.clearAllMocks()
   settings = { ...defaultSettings }
   reduced = Object.assign(new EventTarget(), { matches: false })
   vi.stubGlobal('matchMedia', () => reduced)
+  vi.stubGlobal('Worker', class {})
+  vi.stubGlobal('WebAssembly', { Suspending: class {} })
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
-  play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue()
-  pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
-  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
+  load.mockResolvedValue(demo)
 })
-afterEach(() => { view?.destroy(); vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.replaceChildren() })
+afterEach(() => { view?.destroy(); vi.useRealTimers(); vi.unstubAllGlobals(); document.body.replaceChildren() })
 function create() { const host = document.createElement('div'); document.body.append(host); return view = new MenuBackdrop(host) }
+async function start() { await vi.advanceTimersByTimeAsync(1000) }
 
-it('uses the poster without requesting video for initial Still, then responds to both preferences', async () => {
+it('never loads for initial Still or unsupported browsers, and cancels short visits', async () => {
   settings.depthAnimate = false
-  const v = create()
-  expect(v.video.hasAttribute('src')).toBe(false)
-  expect(play).not.toHaveBeenCalled()
-  settings.depthAnimate = true; v.applySettings()
-  expect(v.video.getAttribute('src')).toBe('/menu/crawl.webm')
-  expect(v.video.muted).toBe(true)
-  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
-  expect(v.video.hidden).toBe(true)
-  expect(v.el.parentElement?.dataset.menuMotion).toBe('off')
-  expect(pause).toHaveBeenCalled()
-  reduced.matches = false; reduced.dispatchEvent(new Event('change'))
-  expect(v.video.hidden).toBe(false)
+  const v = create(); await start(); expect(load).not.toHaveBeenCalled()
+  settings.depthAnimate = true; v.applySettings(); v.cover(true)
+  await start(); expect(load).not.toHaveBeenCalled()
+  vi.stubGlobal('WebAssembly', {})
+  v.cover(false); await start(); expect(load).not.toHaveBeenCalled()
 })
 
-it('parks playback and CSS motion while covered or hidden, releasing listeners and source on teardown', async () => {
-  const v = create()
-  v.cover(true)
+it('pauses while covered or hidden, releases the demo for reduced motion, and cleans up listeners', async () => {
+  const v = create(); await start()
+  expect(load).toHaveBeenCalledTimes(1)
+  expect(demo.setActive).toHaveBeenLastCalledWith(true)
+  v.cover(true); expect(demo.setActive).toHaveBeenLastCalledWith(false)
+  v.cover(false); expect(demo.setActive).toHaveBeenLastCalledWith(true)
+  Object.defineProperty(document, 'hidden', { value: true }); document.dispatchEvent(new Event('visibilitychange'))
+  expect(demo.setActive).toHaveBeenLastCalledWith(false)
+  Object.defineProperty(document, 'hidden', { value: false }); document.dispatchEvent(new Event('visibilitychange'))
+  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
   expect(v.el.parentElement?.dataset.menuMotion).toBe('off')
-  v.cover(false)
-  Object.defineProperty(document, 'hidden', { value: true })
-  document.dispatchEvent(new Event('visibilitychange'))
-  expect(v.el.parentElement?.dataset.menuMotion).toBe('off')
+  expect(demo.destroy).toHaveBeenCalledTimes(1)
+  reduced.matches = false; reduced.dispatchEvent(new Event('change')); await start()
+  expect(load).toHaveBeenCalledTimes(2)
   v.destroy()
-  expect(v.video.hasAttribute('src')).toBe(false)
-  const before = play.mock.calls.length
-  reduced.dispatchEvent(new Event('change')); document.dispatchEvent(new Event('visibilitychange'))
-  await Promise.resolve()
-  expect(play).toHaveBeenCalledTimes(before)
+  const calls = demo.setActive.mock.calls.length
+  document.dispatchEvent(new Event('visibilitychange')); reduced.dispatchEvent(new Event('change'))
+  await start(); expect(demo.setActive).toHaveBeenCalledTimes(calls)
   expect(v.el.isConnected).toBe(false)
 })
 
-it('keeps a usable poster after rejected autoplay or media error', async () => {
-  play.mockRejectedValue(new Error('autoplay denied'))
-  const v = create()
-  await Promise.resolve(); await Promise.resolve()
-  expect(v.video.hidden).toBe(true)
-  v.video.dispatchEvent(new Event('error'))
-  const before = play.mock.calls.length
-  v.cover(true); v.cover(false)
-  expect(play).toHaveBeenCalledTimes(before)
+it('aborts a covered load and disposes a late result without starting it', async () => {
+  let finish!: (value: typeof demo) => void
+  load.mockReturnValue(new Promise(resolve => { finish = resolve }))
+  const v = create(); await start()
+  const signal = load.mock.calls[0][1] as AbortSignal
+  v.cover(true); expect(signal.aborted).toBe(true)
+  finish(demo); await start()
+  expect(demo.destroy).toHaveBeenCalledOnce()
+  expect(demo.setActive).not.toHaveBeenCalled()
 })
 
-it('pauses a delayed play resolution after the menu has been destroyed', async () => {
-  let finish!: () => void
-  play.mockReturnValue(new Promise<void>(resolve => { finish = resolve }))
-  const v = create()
-  v.destroy(); pause.mockClear(); finish(); await Promise.resolve()
-  expect(pause).toHaveBeenCalled()
+it('keeps the static poster on load/runtime failure without retry storms', async () => {
+  load.mockRejectedValue(new Error('unavailable'))
+  const v = create(); await start()
+  expect(v.canvas.hidden).toBe(true)
+  v.cover(true); v.cover(false); await start()
+  expect(load).toHaveBeenCalledOnce()
+})
+
+it('times out an unresponsive asset load and aborts it', async () => {
+  load.mockImplementation((_canvas, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason))))
+  create(); await start(); await vi.advanceTimersByTimeAsync(60_000)
+  expect(load.mock.calls[0][1].aborted).toBe(true)
+  view.cover(true); view.cover(false); await start()
+  expect(load).toHaveBeenCalledOnce()
+})
+
+it('releases a loaded demo if starting its worker fails', async () => {
+  demo.setActive.mockImplementationOnce(() => { throw new Error('worker refused') })
+  const v = create(); await start()
+  expect(demo.destroy).toHaveBeenCalledOnce()
+  expect(v.canvas.hidden).toBe(true)
+  v.cover(true); v.cover(false); await start()
+  expect(load).toHaveBeenCalledOnce()
 })

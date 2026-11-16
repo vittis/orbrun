@@ -23,7 +23,7 @@ const BUILT = [
   'room/atlas.png',
   'room/poster.jpg',
   'menu/poster.jpg',
-  'menu/crawl.webm',
+  'menu-engine/manifest.json',
   'room/card.jpg',
   'room/places/lair.json',
   'room/places/lair.png',
@@ -64,7 +64,7 @@ describe('the app kept on the device', () => {
     expect(network).toContain('/room/card.jpg')
     expect(network).not.toContain('/')
     expect(network).not.toContain('/about')
-    expect(network).toContain('/menu/crawl.webm')
+    expect(network).toContain('/menu-engine/manifest.json')
     expect(network).not.toContain('/assets/index-AbC123.js.map')
     for (const f of shellFiles(BUILT)) expect(network).not.toContain(f)
   })

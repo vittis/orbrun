@@ -28,4 +28,19 @@ describe('online Worker boundaries', () => {
     expect(res.status).toBe(404)
     expect(await res.text()).toContain('Offline play is unavailable')
   })
+
+  it('serves only the bounded menu asset paths and rejects SPA fallbacks', async () => {
+    const fetch = vi.fn(async () => new Response('wasm', { headers: { 'Content-Type': 'application/wasm' } }))
+    const assets = { ASSETS: { fetch } }
+    const path = '/menu-engine/builds/' + 'a'.repeat(40) + '-' + 'b'.repeat(16) + '/crawl.wasm'
+    expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(200)
+    fetch.mockClear()
+    for (const path of ['/menu-engine/stable/engine.json', '/menu-engine/saves/Player.cs', '/menu-engine/unknown.js']) {
+      expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(404)
+    }
+    expect(fetch).not.toHaveBeenCalled()
+    expect((await worker.fetch(new Request('https://client.example' + path, { method: 'POST' }), assets)).status).toBe(405)
+    fetch.mockResolvedValue(new Response('<html>app', { headers: { 'Content-Type': 'text/html' } }))
+    expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(404)
+  })
 })

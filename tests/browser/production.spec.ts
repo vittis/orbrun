@@ -1,7 +1,8 @@
+import { menuEngineCheck } from './menu-engine'
 import { expect } from '@playwright/test'
 import { test } from './fixtures'
 
-test('production shell loads silent recorded media and local fonts under CSP, with only bundled online play', async ({ page }) => {
+test('production shell loads local fonts under CSP and offers only bundled online play', async ({ page }) => {
   const { readFileSync } = await import('node:fs')
   const csp = /Content-Security-Policy: (.+)/.exec(readFileSync(new URL('../../apps/orbrun/public/_headers', import.meta.url), 'utf8'))![1]
   await page.route('http://127.0.0.1:5287/**', async route => {
@@ -12,9 +13,7 @@ test('production shell loads silent recorded media and local fonts under CSP, wi
   await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
   await page.goto('http://127.0.0.1:5287/')
   await expect(page.getByRole('heading', { name: 'Polished Crawl' })).toBeVisible()
-  const video = page.locator('.menu-backdrop video')
-  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).currentTime > .1)).toBe(true)
-  expect(await video.evaluate(el => ({ muted: (el as HTMLVideoElement).muted, width: (el as HTMLVideoElement).videoWidth }))).toEqual({ muted: true, width: 1280 })
+  await expect(page.locator('.menu-backdrop')).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => ['700 30px "Barlow Condensed"', '400 15px "IBM Plex Sans"', '500 18px "IBM Plex Mono"'].every(font => document.fonts.check(font)))).toBe(true)
   await expect(page.getByRole('combobox', { name: 'Server' }).locator('option')).not.toContainText(['Offline'])
@@ -51,3 +50,5 @@ test('production audio worker decodes an OSP-format pack under the shipped CSP',
   await page.getByText('Test sound', { exact: true }).click()
   await expect.poll(() => audioStarts(page)).toBe(1)
 })
+
+menuEngineCheck(true)

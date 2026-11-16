@@ -1,3 +1,4 @@
+import { menuEngineCheck } from './menu-engine'
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
@@ -753,40 +754,31 @@ for (const touch of [false, true]) {
   })
 }
 
-test('menu video and title sleep for Still, OS reduced motion, modals and hidden tabs', async ({ page, context }) => {
+test('menu poster remains usable when the engine is unavailable and motion follows preferences', async ({ page }) => {
+  let requests = 0
+  await page.route('**/menu-engine/**', route => { requests++; return route.fulfill({ status: 404, body: '' }) })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
-  await page.addInitScript(() => {
-    const account = { serverId: 'cdi', username: 'motion-test' }
-    localStorage.setItem('orbrun.accounts', JSON.stringify([account])); localStorage.setItem('orbrun.account', JSON.stringify(account))
-    localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false }))
-  })
+  await page.addInitScript(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false })) })
   await page.goto('/')
-  const video = page.locator('.menu-backdrop video')
-  await expect(video).not.toHaveAttribute('src')
-  await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
-  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused && (el as HTMLVideoElement).currentTime > .1)).toBe(true)
-  expect(await video.evaluate(el => ({ muted: (el as HTMLVideoElement).muted, width: (el as HTMLVideoElement).videoWidth, height: (el as HTMLVideoElement).videoHeight }))).toEqual({ muted: true, width: 1280, height: 720 })
+  await page.waitForTimeout(1000)
+  expect(requests).toBe(0)
+  const canvas = page.locator('.menu-backdrop canvas')
+  await expect(canvas).toBeHidden()
   const shine = page.locator('.crawl-title')
+  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
+  await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
+  await expect.poll(() => requests).toBe(1)
+  await expect(canvas).toBeHidden()
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationDuration)).toBe('8s')
   await page.locator('[data-focus="about"]').click()
-  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
-  const at = await video.evaluate(el => (el as HTMLVideoElement).currentTime)
-  await page.waitForTimeout(250) // Real quiet window: decoder and decoration must remain parked.
-  expect(await video.evaluate(el => (el as HTMLVideoElement).currentTime)).toBe(at)
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
   await page.keyboard.press('Escape')
-  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused)).toBe(true)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(video).toBeHidden()
-  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await expect(video).toBeVisible()
-  // CDP visibility emulation isn't available in all Chromium builds; dispatch the actual listener with a hidden document.
-  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')) })
-  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
-  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')) })
-  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused)).toBe(true)
   await page.locator('[data-focus="settings"]').click()
-  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  expect(requests).toBe(1)
 })
+
+menuEngineCheck(false)
