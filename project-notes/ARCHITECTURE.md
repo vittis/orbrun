@@ -94,3 +94,15 @@ HUD geometry uses available grid space. Narrow mouse windows receive readable to
 FrontEnd retains session/account/save/RC actions and secondary screens. HomeView owns the persistent compact header and keyed command rows; lobby updates preserve inputs, focus and row identity. Descent IDs are filtered only at the home offering boundary. MenuModal owns document focus containment, restoration and background inertness. About, /about/new and /whats-new enter that same modal; install/Steam remain static documents. News still uses orbrun.newsSeen.
 
 MenuBackdrop owns the static poster, lazy demo loading, preference/visibility listeners and lifecycle. Still and OS reduced motion suppress engine startup and CSS title reflection, even when gameplay animation is explicitly On; switching to Still destroys the demo. Covered/hidden menus stop commands and rendering, allowing at most one in-flight engine action to settle. Teardown aborts loads, terminates the worker, releases renderer/atlases and removes observers. MenuDemo owns a memory-only Crawl worker, its own reducer/scene and the shared Render25d, CombatFeedback, presentCombat and dungeonOptions presentation. It never creates GameScreen, Session, a lobby, input handlers or audio. Crawl's idle acknowledgement paces one action at a time; the bounded controller uses native autofight against confirmed visible enemies and restarts after completion, death or an unexpected prompt. The authored sprint map spawns enemies in its startup epilogue, after Crawl's normal initial LOS clear. See [menu engine provenance](../apps/orbrun/public/menu/README.md). GridHost and HUD fonts/metrics are independent of shell typography.
+
+## Menu startup
+
+The isolated menu starts its worker and gamedata loading together. Its build and
+gamedata identities are embedded by Vite, so no runtime manifest lookup blocks
+startup. A separate versioned CacheStorage cache holds immutable engine/data
+responses across visits; it retains at most the current and one prior build and
+never shares account/save storage. The JS module uses the normal HTTP cache.
+The engine bridge uses Emscripten's `instantiateWasm` hook, avoiding a second
+internal Wasm fetch; the menu worker compiles cached streaming responses while
+other data loads. Cancellation releases an engine even before artwork is ready.
+The menu canvas is shown without a CSS dimming overlay.

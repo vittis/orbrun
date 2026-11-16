@@ -43,4 +43,13 @@ describe('online Worker boundaries', () => {
     fetch.mockResolvedValue(new Response('<html>app', { headers: { 'Content-Type': 'text/html' } }))
     expect((await worker.fetch(new Request('https://client.example' + path), assets)).status).toBe(404)
   })
+
+  it('preserves a validated menu asset on repeat-visit cache revalidation', async () => {
+    const request = new Request('https://client.example/menu-engine/manifest.json', { headers: { 'If-None-Match': 'engine-v1' } })
+    const fetch = vi.fn(async () => new Response(null, { status: 304, headers: { ETag: 'engine-v1' } }))
+    const response = await worker.fetch(request, { ASSETS: { fetch } })
+    expect(response.status).toBe(304)
+    expect(response.headers.get('ETag')).toBe('engine-v1')
+    expect(fetch).toHaveBeenCalledWith(request)
+  })
 })

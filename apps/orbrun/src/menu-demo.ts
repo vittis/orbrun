@@ -1,5 +1,5 @@
 import { browserIo, loadGamedata, type Gamedata } from '@orbrun/gamedata'
-import { createEngineWorker, type FromWorker, type ToWorker } from '@orbrun/offline'
+import { cachedAssetFetch, createEngineWorker, type FromWorker, type ToWorker } from '@orbrun/offline'
 import { Render25d } from '@orbrun/render-2.5d'
 import { emptyScene, type Scene } from '@orbrun/scene'
 import { buildScene } from '@orbrun/scene-webtiles'
@@ -9,6 +9,7 @@ import { presentCombat } from './combat-presentation'
 import { dungeonOptions } from './dungeon-options'
 import { getSettings } from './settings'
 import { MENU_RC, menuArgs, MenuDemoController } from './menu-demo-controller'
+import manifest from 'virtual:menu-engine'
 
 export interface MenuDemo {
   setActive(active: boolean): void
@@ -16,30 +17,43 @@ export interface MenuDemo {
 }
 
 const ROOT = '/menu-engine'
+const CACHE_PREFIX = 'orbrun-menu-assets-v1-'
 
 /** Load only this deployment's pinned assets. Never visits the offline lobby or account storage. */
 export async function loadMenuDemo(canvas: HTMLCanvasElement, signal: AbortSignal, failed: () => void): Promise<MenuDemo> {
-  const response = await fetch(`${ROOT}/manifest.json`, { signal })
-  if (!response.ok) throw new Error('Menu engine unavailable')
-  const manifest = await response.json() as { protocol: number; build: string; gamedata: string }
-  if (manifest.protocol !== 1 || !/^[a-f0-9]{40}-[a-f0-9]{16}$/.test(manifest.build) || !/^[a-f0-9]{40}$/.test(manifest.gamedata)) {
+  signal.throwIfAborted()
+  if (!manifest || manifest.protocol !== 1 || !/^[a-f0-9]{40}-[a-f0-9]{16}$/.test(manifest.build) || !/^[a-f0-9]{40}$/.test(manifest.gamedata)) {
     throw new Error('Invalid menu engine manifest')
   }
-  const data = await loadGamedata({ base: ROOT, version: manifest.gamedata, io: browserIo(), signal })
-  if (signal.aborted) { data.dispose(); throw signal.reason }
-  try { return new LiveMenuDemo(canvas, data, `${ROOT}/builds/${manifest.build}/`, failed) }
-  catch (error) { data.dispose(); throw error }
+  const cache = CACHE_PREFIX + manifest.build
+  // Retain the current and one prior engine cache; never touch offline saves or other app caches.
+  if (typeof caches !== 'undefined') void caches.keys().then(names => Promise.all(
+    names.filter(name => name.startsWith(CACHE_PREFIX) && name !== cache).slice(0, -1).map(name => caches.delete(name)),
+  )).catch(() => {})
+  // The worker can reach its first idle map while the independent artwork is loading.
+  const demo = new LiveMenuDemo(canvas, `${ROOT}/builds/${manifest.build}/`, cache, failed)
+  const abort = () => demo.destroy()
+  signal.addEventListener('abort', abort, { once: true })
+  try {
+    signal.throwIfAborted()
+    const data = await loadGamedata({ base: ROOT, version: manifest.gamedata, io: browserIo(cachedAssetFetch(cache)), signal })
+    demo.setData(data)
+    signal.throwIfAborted()
+    return demo
+  } catch (error) { demo.destroy(); throw error }
+  finally { signal.removeEventListener('abort', abort) }
 }
 
 /** Owns exactly one engine and one instance of the normal dungeon renderer. No DOM input or audio. */
 class LiveMenuDemo implements MenuDemo {
   private worker: Worker | null = null
-  private renderer: Render25d
+  private renderer: Render25d | null = null
+  private data: Gamedata | null = null
   private state = initialState()
   private scene: Scene = emptyScene()
   private feedback = new CombatFeedback(this.state)
   private controller = new MenuDemoController()
-  private resize: ResizeObserver
+  private resize: ResizeObserver | null = null
   private active = false
   private destroyed = false
   private dirty = false
@@ -53,21 +67,28 @@ class LiveMenuDemo implements MenuDemo {
   private watchdog: ReturnType<typeof setTimeout> | undefined
   private restart = false
 
-  constructor(private canvas: HTMLCanvasElement, private data: Gamedata, private base: string, private failed: () => void) {
+  constructor(private canvas: HTMLCanvasElement, private base: string, private assetCache: string, private failed: () => void) {
+    this.boot()
+  }
+
+  setData(data: Gamedata) {
+    if (this.destroyed) { data.dispose(); throw new Error('Menu engine stopped while loading') }
+    this.data = data
     this.renderer = this.makeRenderer()
     this.resize = new ResizeObserver(() => { this.fit(); this.wake() })
-    this.resize.observe(canvas)
+    this.resize.observe(this.canvas)
     this.fit()
   }
 
   private makeRenderer() {
     const renderer = new Render25d({ ...dungeonOptions(getSettings(), false), minibars: null })
     renderer.mount(this.canvas)
-    renderer.setTiles(this.data)
+    renderer.setTiles(this.data!)
     return renderer
   }
 
   private fit() {
+    if (!this.renderer) return
     // Bound fill cost on large/HiDPI displays; CSS composes the scene behind the command column.
     const rect = this.canvas.getBoundingClientRect()
     const scale = Math.min(1, 1280 / Math.max(1, rect.width), 720 / Math.max(1, rect.height))
@@ -81,8 +102,8 @@ class LiveMenuDemo implements MenuDemo {
 
   private startEncounter() {
     this.worker?.terminate()
-    this.renderer.destroy()
-    this.renderer = this.makeRenderer()
+    this.renderer?.destroy()
+    if (this.data) this.renderer = this.makeRenderer()
     this.fit()
     this.state = initialState()
     reduce(this.state, { msg: 'game_started' })
@@ -112,7 +133,7 @@ class LiveMenuDemo implements MenuDemo {
     }
     worker.onerror = () => this.fail()
     const seed = crypto.getRandomValues(new Uint32Array(1))[0]
-    this.post({ type: 'start', base: new URL(this.base, location.href).href, persistent: false,
+    this.post({ type: 'start', base: new URL(this.base, location.href).href, persistent: false, assetCache: this.assetCache,
       saveDir: '/menu-demo', args: menuArgs(seed), files: { '/menu.rc': MENU_RC } })
     this.send({ type: 'control', json: JSON.stringify({ msg: 'attach', primary: true }) }, 60_000)
   }
@@ -146,7 +167,7 @@ class LiveMenuDemo implements MenuDemo {
   }
 
   private flush() {
-    if (!this.dirty || !this.state.map.cells.size) return
+    if (!this.data || !this.dirty || !this.state.map.cells.size) return
     this.scene = buildScene(this.state, this.data, { previous: this.scene, dirty: { cells: this.state.dirtyCells, mapCleared: this.state.mapCleared } })
     this.state.dirtyCells.clear()
     this.state.mapCleared = false
@@ -154,7 +175,7 @@ class LiveMenuDemo implements MenuDemo {
   }
 
   private schedule() {
-    if (this.destroyed || !this.active || !this.idle || this.timer !== undefined) return
+    if (this.destroyed || !this.data || !this.active || !this.idle || this.timer !== undefined) return
     this.timer = setTimeout(() => {
       this.timer = undefined
       if (!this.active || this.destroyed) return
@@ -174,7 +195,7 @@ class LiveMenuDemo implements MenuDemo {
 
   private frame = (now: number) => {
     this.raf = 0
-    if (!this.active || this.destroyed) return
+    if (!this.active || this.destroyed || !this.renderer) return
     if (now - this.lastFrame >= 1000 / 30) {
       this.lastFrame = now
       this.flush()
@@ -204,7 +225,7 @@ class LiveMenuDemo implements MenuDemo {
     } else {
       clearTimeout(this.timer); this.timer = undefined
       cancelAnimationFrame(this.raf); this.raf = 0
-      this.renderer.setOptions({ animate: false })
+      this.renderer?.setOptions({ animate: false })
       // A single in-flight turn may finish; its effects are not replayed on resume.
       this.feedback = new CombatFeedback(this.state)
     }
@@ -220,9 +241,9 @@ class LiveMenuDemo implements MenuDemo {
     cancelAnimationFrame(this.raf)
     this.worker?.terminate()
     this.worker = null
-    this.resize.disconnect()
-    this.renderer.destroy()
-    this.data.dispose()
+    this.resize?.disconnect()
+    this.renderer?.destroy()
+    this.data?.dispose()
     this.canvas.hidden = true
   }
 }

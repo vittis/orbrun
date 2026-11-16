@@ -2,6 +2,12 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.125 — 2026-11-16
+
+- Speed up live menu startup by loading artwork and the engine together, compiling Wasm alongside data downloads, and keeping versioned assets on the device for repeat visits. Startup no longer waits for a manifest request or downloads Wasm twice.
+- Fix repeat visits incorrectly receiving a 404 when the browser revalidates an unchanged menu asset.
+- Remove the menu's dark overlay so the scene displays the renderer's raw colors and lighting. Still/reduced motion and disposable save-free gameplay remain intact.
+
 ## 0.3.124 — 2026-11-16
 
 - Replaced the old menu poster with an immediate dungeon entrance and a live-encounter loading hint. Engine loading starts immediately; Still and unsupported browsers retain the quiet entrance without a loading message.

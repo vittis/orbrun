@@ -48,3 +48,11 @@ The complete bridge, patches, scenario and build recipe are in this release's
 and [tile provenance](https://github.com/crawl/tiles/blob/master/README.md).
 DCSS artwork has mixed upstream licensing; this does not create a blanket
 license for its source art.
+
+Startup URLs are pinned in the app bundle, avoiding a manifest request. Artwork,
+engine data and streaming Wasm compilation overlap. Immutable data and atlas
+responses are kept in a separate `orbrun-menu-assets-v1-<build>` CacheStorage
+cache; the current and one previous build are retained. The small engine JS
+module uses the browser's normal HTTP/module cache. Cache denial or eviction
+falls back to downloads. This stores only immutable assets, never saves or
+encounter state. The menu adds no opacity or color overlay to the live canvas.

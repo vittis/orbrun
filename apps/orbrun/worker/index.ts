@@ -36,6 +36,8 @@ export default {
       const allowed = /^\/menu-engine\/(?:manifest\.json|builds\/[a-f0-9]{40}-[a-f0-9]{16}\/(?:crawl\.(?:js|wasm|data)|prewarm\/(?:manifest\.json|prewarm\.bin))|gamedata\/[a-f0-9]{40}\/(?:enums\.js|status-icon-sizes\.js|tileinfo-(?:floor|wall|feat|main|player|gui|icons)\.js|(?:floor|wall|feat|main|player|gui|icons)\.png))$/.test(url.pathname)
       if (!allowed) return new Response('not found', { status: 404 })
       const response = await env.ASSETS.fetch(request)
+      // Conditional requests have no body; preserve their cache validator response.
+      if (response.status === 304) return response
       // The static host's SPA fallback is not an engine asset.
       if (!response.ok || response.headers.get('Content-Type')?.includes('text/html')) return new Response('not found', { status: 404 })
       return response

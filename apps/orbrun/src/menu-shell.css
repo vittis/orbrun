@@ -4,8 +4,8 @@
 @font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2'); }
 
 .polished-shell { --cw: 12px; --ch: 22px; --fs: 18px; --fit: 0px; --mono: 'IBM Plex Mono', monospace; color: #d6d7c9; }
-.polished-shell.polished::before { background: linear-gradient(90deg, #060b08f2 0%, #060b08df 31%, #060b0870 60%, #060b0830), linear-gradient(#050a08b0, transparent 28%, transparent 75%, #050a08b0); }
-.menu-backdrop { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #080e0a; }
+.polished-shell.polished::before { content: none; }
+.menu-backdrop { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #000; }
 .menu-backdrop canvas { position: absolute; width: 100%; height: 100%; left: 18%; }
 .menu-backdrop canvas[hidden] { display: block; visibility: hidden; }
 .menu-entrance { position: absolute; inset: 0 0 0 36%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; background: radial-gradient(ellipse, #515a2524, transparent 65%); }

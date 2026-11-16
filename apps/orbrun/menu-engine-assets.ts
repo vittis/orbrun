@@ -32,6 +32,14 @@ export function menuEngineAssets(): Plugin {
   let assets: ReturnType<typeof load> | undefined
   return {
     name: 'orbrun-menu-engine',
+    resolveId(id) { if (id === 'virtual:menu-engine') return '\0virtual:menu-engine' },
+    load(id) {
+      if (id !== '\0virtual:menu-engine') return
+      // Pin startup URLs in the hashed app bundle: repeat visits need no manifest round trip.
+      let manifest = null
+      try { manifest = load().manifest } catch { /* ordinary builds may omit the engine */ }
+      return `export default ${JSON.stringify(manifest)}`
+    },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = req.url?.split('?')[0]

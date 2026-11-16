@@ -5,9 +5,10 @@
  * so an idle game costs this thread nothing.
  */
 import { startEngine, type EngineFile, type EngineFactory, type RunningEngine } from './engine.js'
+import { cachedAssetFetch } from './asset-cache.js'
 
 export type ToWorker =
-  | { type: 'start'; base: string; saveDir: string; args: string[]; files?: Record<string, string>; persistent?: boolean }
+  | { type: 'start'; base: string; saveDir: string; args: string[]; files?: Record<string, string>; persistent?: boolean; assetCache?: string }
   | { type: 'control'; json: string }
   | { type: 'keys'; text: string }
 
@@ -45,12 +46,19 @@ function deliver(m: Exclude<ToWorker, { type: 'start' }>) {
 
 async function start(m: Extract<ToWorker, { type: 'start' }>) {
   const url = (file: string) => new URL(file, m.base).href
+  const read = m.assetCache ? cachedAssetFetch(m.assetCache) : fetch
   try {
     engine = await startEngine({
       source: {
         factory: async () => ((await import(/* @vite-ignore */ url('crawl.js'))) as { default: EngineFactory }).default,
+        compile: m.assetCache ? async () => {
+          const res = await read(url('crawl.wasm'))
+          if (!res.ok) throw new Error(`crawl.wasm: HTTP ${res.status}`)
+          return typeof WebAssembly.compileStreaming === 'function'
+            ? WebAssembly.compileStreaming(res) : WebAssembly.compile(await res.arrayBuffer())
+        } : undefined,
         read: async (file: EngineFile) => {
-          const res = await fetch(url(file))
+          const res = await read(url(file))
           if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`)
           return res.arrayBuffer()
         },
