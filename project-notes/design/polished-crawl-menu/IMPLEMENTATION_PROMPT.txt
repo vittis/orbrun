@@ -1,0 +1,98 @@
+Implement the approved Polished Crawl menu redesign in this repository.
+
+This is an implementation request. Inspect the current checkout, preserve unrelated work, complete the redesign and its appropriate verification, and report the result. Do not deploy or publish. Do not create a second menu behind a flag or retain the superseded menu as a fallback. The user explicitly authorizes removing obsolete menu code, styles, assets, and redundant tests to leave the project slimmer.
+
+REFERENCE ARTIFACTS
+
+Read project-notes/design/polished-crawl-menu/mockup.html in a browser. It is the final standalone visual reference; the initial example is signed in. Its Log out control shows the compact inline login. Both footer links open working modal previews. CRAWL has a left-to-right reflective highlight approximately every eight seconds.
+
+Also inspect:
+- project-notes/design/polished-crawl-menu/mockup-source.html — editable HTML fragment.
+- project-notes/design/polished-crawl-menu/menu-desktop.png — initial desktop state.
+- project-notes/design/polished-crawl-menu/menu-mobile.png — narrow state.
+- project-notes/design/polished-crawl-menu/about-modal.png — modal layout.
+
+These artifacts are design references, NOT production components. Do not ship their inline base64 screenshot, placeholder handlers, host/Tweak integration, sample release notes, inherited demonstration styles, or hardcoded account/game data. The mockup currently contains a STILL gameplay capture, not a recorded video. The fonts in the mockup load from Google Fonts; the production implementation should use locally bundled, licensed font files and existing CSP conventions.
+
+The reference was prepared in /Users/vittis/.codex/worktrees/b76c/dcss-client. If you work in another checkout, use its equivalent repository-relative paths and make sure these artifacts are present before starting. Do not infer the final design from earlier mockups.
+
+APPROVED DESIGN
+
+1. Name: Polished Crawl. Exact main subtitle: "Classic Crawl, with a 2.5D perspective and enhanced visual effects." Keep this descriptive subtitle under the title. Do not restore generic explanations beneath menu options or a separate hover-help paragraph. Real contextual subtitles ARE required: saved-character details, live-player counts, and genuine loading/error state.
+
+2. Dark full-screen gameplay backdrop; left-aligned title and menu; enough shading behind text to read it. Preserve the reference's overall spacing and emphasis, but use a responsive layout, not its fixed stage dimensions or screenshot-specific crop coordinates. The actual 2.5D dungeon should remain clearly visible on the right. Support narrow screens and touch without clipping, horizontal overflow, or shrinking text to fit.
+
+3. Typography: the reference combines a strong Barlow Condensed title, IBM Plex Sans descriptive/modal copy, and IBM Plex Mono menu commands and compact account controls. POLISHED is smaller, spaced, and muted; CRAWL is large with a warm brass gradient and restrained depth. Keep display typography scoped to the app shell. Do not replace measured gameplay/HUD glyph fonts or alter GridHost metrics as a side effect.
+
+4. Title shine: an angled, narrow reflected-light band sweeps LEFT TO RIGHT across the CRAWL letterforms only, then rests. Reference timing is an eight-second cycle with roughly a 1.3-second sweep after a long quiet interval. It must not flash the whole title, move the layout, or become a constant shimmer. Use a lightweight CSS treatment or equivalent; no new canvas/RAF loop just for the logo. Preserve a readable static brass title when animation is disabled. Honor existing Still settings AND prefers-reduced-motion, respond when either changes, and suspend decorative work when hidden, covered by a modal, or unmounted. Keep the accessible title "Polished Crawl" without announcing duplicate decorative letters.
+
+5. Account area: a thin, unobtrusive WebTiles-style row at the top. Server picker on the left; User, Pass, Log in on the right; small Register and Forgot password links beneath when signed out. Once signed in, show username and Log out. Keep the top area compact, with labels beside inputs where space allows, and adequate touch targets at narrow/coarse-pointer sizes. Use the existing server/account infrastructure, including supported account management and custom-server flows; keep these reachable without adding footer entries. Preserve registration/recovery and reconnect/error handling. Never fake authentication or invent supported recovery endpoints.
+
+6. Main menu: retain the existing leading-symbol and contextual-row idiom. Example only:
+   > Play DCSS 0.34                                      (edit rc)
+   > Continue DCSS trunk                                (edit rc)
+     vittiSXX the Grappler, Troll Fighter XL11
+   { Watch
+     1 playing
+   ? Settings
+   Keep edit rc a separate focusable action, not a nested button. Use the real server's offered versions, availability, RC ids, and existing save-detection precedence. Never hardcode the example version, user, character, count, or server. Do not display Continue unless supported by existing confirmed account/save evidence. Distinguish disconnected/loading/unknown from zero or no save. Retain stable row identity/order/focus as lobby data updates.
+
+7. Remove Play Descent and Continue Descent from the redesigned home offerings. Filter these intentionally at the app's game-offering/presentation boundary using verified game identity; do not corrupt protocol parsing or broadly delete shared game-link handling. Preserve ordinary DCSS stable/trunk offerings and the intended handling of other supported DCSS versions.
+
+8. Footer: ONLY About & credits and What's new. No Still control, View gameplay, How to play, account shortcut, or other legacy footer items. Existing motion settings remain available through Settings; removing the footer control does not remove accessibility preferences.
+
+9. About & credits and What's new open accessible MODALS OVER THE MENU, not a new document page. Reuse the actual repository content and credits; the mockup's modal prose is only a layout example. Use one shared modal primitive with separate content, meaningful headings, a close button, Escape/back behavior, focus containment/restoration, background input isolation, and bounded scrolling for long content. Preserve the server/account selection and form state across opening/closing and lobby refreshes. Preserve news-read tracking with its compatible storage key; opening What's new is what marks it read. Support keyboard, gamepad cancel/navigation, touch, and the existing back behavior. Pause background video and decorative shine while covered. Do not redirect menu clicks to /about or /about/new.
+
+10. No server-specific contextual banners, victory/death cards, MOTD, or statistics feed. Keep live Watch information and saved-character context; these are functional menu data, not the rejected server-news feature.
+
+BACKGROUND PLAYBACK
+
+Use a short, curated, muted recording of genuine gameplay rendered by this project's existing 2.5D renderer; approximately 20–30 seconds is a useful starting point. This is the preferred implementation direction from the design discussion. Do not add a live bot, server connection, simulation, offline engine, or a second gameplay renderer merely to animate the menu.
+
+Capture a calm sequence showing movement, raised walls/depth, and a brief confirmed combat effect; remove HUD, chat, account information, and debug overlays. Compose action so the menu stays readable and the loop has a quiet join. Anonymous spectating must remain read-only; never send chat or gameplay commands to another player's game. Use deterministic local recorded fixtures where suitable, preserving genuine renderer output rather than drawing an imitation.
+
+Bundle a compressed finished media asset and a real poster frame. Keep raw recordings, credentials, chat, and capture logs out of Git as required by RUNBOOK.md; document asset provenance/capture recipe and licensing. Show the poster immediately; video loading or autoplay rejection must never block login/menu interaction. Use muted inline playback, handle play() rejection, pause when the tab/menu is hidden, a modal covers it, or gameplay starts, and release resources/listeners on teardown. Still/reduced motion keeps the poster and disables the shine; no persistent rendering/timer loop should remain in those states. Respect existing preference semantics without changing gameplay animation behavior. Audio must remain silent and must not initialize the optional gameplay sound pack.
+
+There is no video in the reference bundle yet. Producing and validating the curated clip is implementation work. A real poster is a graceful runtime fallback, not grounds to report video playback completed when the clip is absent.
+
+ARCHITECTURE AND CODE MAP
+
+First read AGENTS.md, project-notes/ARCHITECTURE.md, project-notes/RUNBOOK.md, and the current code. Paths below are orientation, not permission to rewrite unrelated subsystems:
+- apps/orbrun/src/menu.ts: FrontEnd, showHome(), current row construction/save descriptions, RC editor, account flows, document/news presentation, FocusNav integration, RoomView ownership, teardown.
+- apps/orbrun/src/main.ts: menu/game/session orchestration and routing hooks.
+- apps/orbrun/src/session.ts and servers.ts: session sequencing and compatible account/server/save persistence.
+- packages/webtiles/src/state.ts: server-authoritative lobby and game-link state; preserve its contracts.
+- apps/orbrun/src/focus.ts: front-end FocusNav. Do not confuse it with menu-nav.ts, which also serves server-driven in-game menus.
+- apps/orbrun/src/room/view.ts, room/room-25d.ts, room/places.ts: existing menu scenery, layout measurement, visibility/reduced-motion handling, and cleanup.
+- apps/orbrun/src/settings.ts and effects-motion.ts: established motion settings. saveSettings currently sets document.documentElement.dataset.uiMotion from depthAnimate; preserve preference/storage semantics and also handle initial persisted settings.
+- apps/orbrun/src/news.ts, markdown.ts, ABOUT.md, CHANGELOG.md: content rendering and orbrun.newsSeen persistence.
+- apps/orbrun/src/site.ts, servers.ts routes, apps/orbrun/site-pages.ts, worker/index.ts: page/routing/build/Worker contracts that must stay consistent if legacy document screens change.
+- apps/orbrun/src/styles.css, public/fonts, index.html: shell styling, fonts and public identity.
+
+Use focused modules with clear owners, not a bigger monolithic menu.ts or a new generic UI framework. Separate the home view and its incremental updates, existing session/account actions, a shared modal host/content, and a small disposable media/backdrop owner. Choose the smallest split that removes coupling; do not create one module per trivial row. Reuse existing safe DOM/markdown/input utilities. Keep state derivation separate from DOM styling; do not create a second account/session/store or protocol reducer.
+
+Lobby refresh must not replace focused inputs, wipe typed text, steal focus, close an RC editor/modal, or duplicate listeners. Guard stale asynchronous work when switching servers or destroying the menu. Block gameplay/global menu shortcuts while typing and while a modal owns input. Bind the compact header to real authentication, never to the mockup's local-only handlers. Treat error, reconnect, logout, and registration state as real flows.
+
+Lifecycle is explicit: one owner creates/updates/disposes each DOM subtree, video, observer, media-query listener, and event subscription. Keep shell typography/layout independent of the retired RoomView measurement side effects: it currently provides --cw/--ch/--fs variables and an onfit callback, so audit consumers before removing it.
+
+Brand the new shell and relevant app-facing metadata Polished Crawl; retain honest DCSS/Orbrun attribution and licenses. Do not mechanically rename npm workspace packages, @orbrun imports, repository URLs, backend identifiers, or existing orbrun.* storage keys. Existing preferences, accounts, cookies, RC associations, and news-read state must continue working.
+
+Preserve server-authoritative gameplay, confirmed combat/visibility, the sole 2.5D gameplay renderer, flat supporting maps/minimap, and production's online-only boundary. The redesign is not permission to change game rules, render hidden information, remove development engines indiscriminately, or change deployment policy.
+
+CLEAN REPLACEMENT / REMOVAL
+
+Replace the old home presentation. Remove its superseded splash text, hint panel, footer rows, ornamental title styles/fonts, unused home-specific navigation paths, and duplicate About/news screen implementations where no longer consumed. Audit and remove obsolete room/scenery assets, renderer initialization, room-packing/build hooks, fixtures, and tests ONLY when all remaining consumers are migrated or gone. Room rendering and document helpers can have secondary-screen/test consumers; trace those first. Keep functional account, save, RC, watch, settings, exit-report, accessibility, and deployment behavior reachable.
+
+Resolve existing /about, /about/new and /whats-new entry points deliberately. Prefer routing app entry points to the new modal state instead of retaining a second in-app document screen. Keep direct URLs/back behavior coherent, and update static-page generation, sitemap, metadata and Worker responses together if routes are retired or redirected. Do not break unrelated install/Steam/help documents or create silent 404s. Shared content may remain for externally reachable documents without duplicating the in-app modal UI.
+
+Do not paste the mockup's accumulated CSS or leave old styles underneath new overrides. Introduce scoped, intentional shell styles; delete unused selectors/imports/assets. Self-host only needed font families/weights with licenses; retain gameplay fonts still used by HUD/grid rendering. Update focused documentation to describe the final ownership and remove stale menu descriptions. No generic cleanup outside this scope, no legacy feature flag, no fallback to the superseded home menu.
+
+VERIFICATION / ACCEPTANCE
+
+Follow the current AGENTS.md rather than blindly repeating gates. During editing use changed/focused tests. At completion run npm run verify once, plus npm run verify:browser for this UI/input/lifecycle change. If renderer, scenery, artwork, or rendering fixtures change, use npm run verify:render INSTEAD of browser smoke. Routing/embedded-document/build/production-flag changes require npm run verify:production. Shared config/dependency/test-harness changes require npm run verify:release once; it subsumes its constituent gates, so avoid redundant runs. Deployment tooling changes additionally need npm run test:deploy. Do not deploy. Engine coverage is separate and missing artifacts must be reported as a limitation.
+
+Add/adjust the smallest meaningful regressions for real behavior: dynamic server/account switching, correct Play/Continue/RC identity, Descent omission without losing DCSS entries, inline form submission and shortcut isolation, stable focus during updates, modal focus/cancel/back and news-seen behavior, motion preferences, media failure/teardown, and resource suspension while hidden or covered. Keep automated gates independent of public servers; use deterministic fixtures and zero browser retries. Use fake time for unit timing and retain deliberate real-browser quiet windows to prove animation sleeps. Do not add cosmetic copy-counting tests or wall-clock performance assertions to CI.
+
+Inspect desktop and narrow mouse/touch layouts in a real browser. Confirm the poster/video and fonts load under production CSP, the title shine runs left-to-right only at intervals, Still and OS reduced motion suppress it and playback, both modals open in place and close cleanly, and repeated menu/game/modal transitions do not leak resources. Existing game/HUD/map/RC/settings behavior must still pass appropriate retained checks. Do not claim live account, physical-device, or deployment acceptance from local fixtures.
+
+Finish with a concise summary of the final behavior, files/subsystems replaced or removed, verification commands/results, and any remaining limitations. Specifically state whether the recorded clip was produced and validated. No production source was changed while preparing this design bundle.
