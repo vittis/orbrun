@@ -55,7 +55,7 @@ describe('cloudflare web analytics beacon', () => {
 describe('the beacon on the site’s pages', () => {
   const page = (beacon?: string) => {
     const window = new Window()
-    const doc = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about')!, window as never, beacon), 'text/html')
+    const doc = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about/install')!, window as never, beacon), 'text/html')
     return Array.from(doc.querySelectorAll(`script[src="${SRC}"]`))
   }
 

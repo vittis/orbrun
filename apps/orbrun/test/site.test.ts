@@ -25,6 +25,8 @@ describe('the site’s pages', () => {
     const generate = sitePages().generateBundle
     if (typeof generate !== 'function') throw new Error('missing site build hook')
     generate.call({ emitFile: (asset: { fileName: string; source: string }) => assets.set(asset.fileName, asset.source) } as never, {} as never, {}, false)
+    expect(assets.has('about.html')).toBe(false)
+    expect(assets.has('about/new.html')).toBe(false)
     expect(assets.get('site-controls.js')).toBe(fs.readFileSync(path.join(here, '..', 'site/site.js'), 'utf8'))
     const window = new Window()
     try {
@@ -38,7 +40,7 @@ describe('the site’s pages', () => {
         expect(executable[0].hasAttribute('defer')).toBe(true)
         for (const data of doc.querySelectorAll('script[type="application/ld+json"]')) expect(() => JSON.parse(data.textContent!)).not.toThrow()
         expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/issues"]')).not.toBeNull()
-        expect(html).not.toContain('cloudflare-online-v1.118/issues')
+        expect(html).not.toContain('cloudflare-online-v1.119/issues')
       }
       const headers = fs.readFileSync(path.join(here, '..', 'public/_headers'), 'utf8')
       expect(headers).toContain("script-src 'self'; script-src-attr 'none'")
@@ -56,7 +58,7 @@ describe('the site’s pages', () => {
   })
 
   it('tells pages from the app’s screens from nothing at all', () => {
-    for (const p of ['/', '/about', '/about/new', '/about/steam', '/about/install']) expect(addressKind(p), p).toBe('page')
+    for (const p of ['/', '/about/steam', '/about/install']) expect(addressKind(p), p).toBe('page')
     for (const p of ['/connection-check', '/connection-check.html', '/settings', '/settings/camera', '/accounts/add', '/watch', '/watch/cdi', '/watch/cdi/bob', '/play/cdi/dcss-0.34', '/play/cdi/orbrun/dcss-0.34', '/login/cdi', '/register/crg', '/accounts/versions/cdi', '/accounts/rc/cdi/dcss-0.34', '/accounts/rc/offline', '/accounts/cdi', '/accounts/offline', '/accounts/morgues/cdi', '/accounts/morgues/offline/20261025-160942', '/whats-new'])
       expect(addressKind(p), p).toBe('app')
     for (const p of ['/wp-admin', '/about/nope', '/about/controls', '/about/how-it-works', '/index.php', '/play', '/settings/controls/gamepad/x', '/versions/cdi', '/accounts/versions', '/accounts/rc', '/accounts/rc/cdi/dcss-0.34/more', '/accounts/morgues', '/accounts/morgues/cdi/1/2']) expect(addressKind(p), p).toBe('none')
@@ -99,30 +101,28 @@ describe('the site’s pages', () => {
     expect(jumps.length).toBeGreaterThan(0)
     for (const id of jumps) expect(doc.querySelector(`.doc h2${id}`), id!).not.toBeNull()
     // a changelog's releases are not worth a list
-    const news = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about/new')!, window as never), 'text/html')
-    expect(news.querySelector('.contents')).toBeNull()
     void window.happyDOM.close()
   })
 
   it('presents the current 2.5D product with accessible document navigation and shipped scenery', () => {
     const window = new Window()
-    const doc = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about')!, window as never), 'text/html')
+    const doc = new window.DOMParser().parseFromString(sitePageHtml(pageAt('/about/install')!, window as never), 'text/html')
     expect(doc.querySelector('.skip')?.getAttribute('href')).toBe('#main')
     const jumps = Array.from(doc.querySelectorAll('.contents a'), (a) => a.getAttribute('href'))
     expect(jumps.length).toBeGreaterThan(0)
     for (const id of jumps) expect(doc.querySelector(`.doc h2${id}`), id!).not.toBeNull()
-    expect(doc.querySelector('ul.pad-list .keys svg')).not.toBeNull()
     const poster = doc.querySelector('.hero img')!
     expect(poster.getAttribute('src')).toBe('/room/poster.jpg')
     expect(fs.existsSync(path.join(here, '..', 'public', poster.getAttribute('src')!))).toBe(true)
     expect(doc.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(`${SITE_URL}/room/card.jpg`)
-    expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.118"]')).not.toBeNull()
+    expect(doc.querySelector('a[href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.119"]')).not.toBeNull()
     void window.happyDOM.close()
   })
 
   it('lists every page in the sitemap, and points robots.txt at it', () => {
     const xml = sitemapXml(PAGES)
-    for (const p of PAGES) expect(xml).toContain(`<loc>${SITE_URL}${p.path === '/' ? '/' : p.path}</loc>`)
+    for (const p of PAGES.filter(p => !p.modal)) expect(xml).toContain(`<loc>${SITE_URL}${p.path === '/' ? '/' : p.path}</loc>`)
+    expect(xml).not.toContain('<loc>' + SITE_URL + '/about</loc>')
     expect(robotsTxt()).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`)
     expect(robotsTxt()).toMatch(/Disallow: \/gamedata-proxy\//)
   })

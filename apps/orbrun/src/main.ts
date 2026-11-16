@@ -339,7 +339,7 @@ function scheduleRetry(s: Session) {
   }
   const account = accountOf(s)
   const chosen = getChosenAccount()
-  if (!account || !chosen || chosen.serverId !== account.serverId || chosen.username !== account.username) return
+  if (account ? !chosen || chosen.serverId !== account.serverId || chosen.username !== account.username : !lobby) return
   clearRetry()
   const wait = Math.min(RETRY_MS * 2 ** retries, RETRY_MAX_MS)
   retries++
@@ -625,7 +625,7 @@ function showHome() {
   // the connection first, then the screen: the chosen account's line then says "connecting…" in the frame it is
   // first drawn in, rather than growing a status a moment later and shifting the screen sideways
   warm()
-  l.showHome()
+  l.homeRoute()
 }
 
 /** The home screen of the account `s` belongs to, following that connection. */
@@ -791,7 +791,7 @@ window.addEventListener('popstate', () => applyRoute(parseRoute()))
 keepEngines(
   () => !!(game || starting) || session?.state.phase === 'loading' || session?.state.phase === 'playing',
   // resting: the home screen and nothing over it (an exit report is its own view), so a reload loses nothing
-  () => !game && !starting && !boot && !intent && lobby?.view === 'home',
+  () => !game && !starting && !boot && !intent && lobby?.view === 'home' && !lobby.goesBack,
 )
 applyRoute(parseRoute())
 

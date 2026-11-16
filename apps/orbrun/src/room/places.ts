@@ -3,59 +3,26 @@ import list from './places.json'
 import { readScene, type PlaceFile } from './place-data'
 import { RoomTiles } from './tiles'
 
-/**
- * The places the front end stands in (place-data.ts): moments of real
- * games, frozen by the film tooling (tools/build/places.mjs, on the
- * film-record branch) and listed in
- * places.json. The front screen stands in the next of the `cycle` each time
- * the front end opens, so every visit is somewhere else. The screens off it
- * (What's new, the account's, Settings, Watch) stand in stills of their own
- * over it (menu.ts Backdrop).
- */
+/** Recorded scenery retained by development renderer fixtures; the home uses finished video. */
 export type Tint = 'depths' | 'abyss' | 'lair' | 'dungeon' | 'shoals' | 'zot' | 'spider'
 
 export interface PlaceEntry {
   id: string
   /** where the game stood, for the room's label */
   place: string
-  /** the veil laid over the place so the menus read on it (styles.css `.room-veil`) */
+  /** Tint metadata retained for the scenery fixture. */
   tint: Tint
-  /** the front screen stands in it, in its turn */
+  /** Original recording selection metadata. */
   cycle?: boolean
 
 }
 
 export const PLACES: readonly PlaceEntry[] = list as PlaceEntry[]
-const CYCLE = PLACES.filter((p) => p.cycle)
 
 export function placeById(id: string): PlaceEntry | undefined {
   return PLACES.find((p) => p.id === id)
 }
 
-
-const TURN_KEY = 'orbrun.roomPlace'
-
-/**
- * The place this visit of the front screen stands in: the one after last
- * visit's, round the cycle. Remembered on the device only as a convenience;
- * with no storage every visit starts at a place of its own anyway.
- */
-export function nextHomePlace(): PlaceEntry {
-  let last = -1
-  try {
-    const i = CYCLE.findIndex((p) => p.id === localStorage.getItem(TURN_KEY))
-    last = i >= 0 ? i : Math.floor(Math.random() * CYCLE.length) - 1
-  } catch {
-    last = Math.floor(Math.random() * CYCLE.length) - 1
-  }
-  const next = CYCLE[(last + 1) % CYCLE.length]
-  try {
-    localStorage.setItem(TURN_KEY, next.id)
-  } catch {
-    /* no storage: the next visit picks again */
-  }
-  return next
-}
 
 /** A place loaded: the renderer's tiles, the level, and view centre. */
 export interface LoadedPlace {

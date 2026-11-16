@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="dark" />
-    <title>Orbrun - Dungeon Crawl Stone Soup</title>
+    <title>Polished Crawl - Dungeon Crawl Stone Soup</title>
     <!-- the title, description, canonical and cards below are the home page's; the build writes each of
          the other pages (src/site.ts PAGES) with its own in their place (site-pages.ts) -->
     <meta
@@ -20,9 +20,9 @@
          Forks deployed elsewhere should update the domain below and SITE_URL in src/site.ts. -->
     <link rel="canonical" href="https://dcss-client.vittis.workers.dev/" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Orbrun" />
+    <meta property="og:site_name" content="Polished Crawl" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:title" content="Orbrun - Dungeon Crawl Stone Soup" />
+    <meta property="og:title" content="Polished Crawl - Dungeon Crawl Stone Soup" />
     <meta
       property="og:description"
       content="Play Dungeon Crawl Stone Soup in a 2.5D dungeon with keyboard, gamepad or touch controls. Online WebTiles play and anonymous spectating."
@@ -35,7 +35,7 @@
     <meta property="og:image:height" content="720" />
     <meta property="og:image:alt" content="The bundled front room rendered in Dungeon 2.5D" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Orbrun - Dungeon Crawl Stone Soup" />
+    <meta name="twitter:title" content="Polished Crawl - Dungeon Crawl Stone Soup" />
     <meta
       name="twitter:description"
       content="Play Dungeon Crawl Stone Soup in a 2.5D dungeon with keyboard, gamepad or touch controls. Online WebTiles play and anonymous spectating."
@@ -49,14 +49,14 @@
           {
             "@type": "WebSite",
             "@id": "https://dcss-client.vittis.workers.dev/#website",
-            "name": "Orbrun",
+            "name": "Polished Crawl",
             "url": "https://dcss-client.vittis.workers.dev/",
             "inLanguage": "en"
           },
           {
             "@type": ["WebApplication", "VideoGame"],
             "@id": "https://dcss-client.vittis.workers.dev/#app",
-            "name": "Orbrun",
+            "name": "Polished Crawl",
             "url": "https://dcss-client.vittis.workers.dev/",
             "description": "Play Dungeon Crawl Stone Soup in a 2.5D dungeon with keyboard, gamepad or touch controls. Online WebTiles play and anonymous spectating.",
             "image": "https://dcss-client.vittis.workers.dev/room/poster.jpg",
@@ -71,21 +71,19 @@
             "license": "https://www.gnu.org/licenses/agpl-3.0.html",
             "isBasedOn": { "@type": "VideoGame", "name": "Dungeon Crawl Stone Soup", "url": "https://crawl.develz.org/" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-            "sameAs": ["https://github.com/vittis/orbrun/tree/cloudflare-online-v1.118"],
+            "sameAs": ["https://github.com/vittis/orbrun/tree/cloudflare-online-v1.119"],
             "isPartOf": { "@id": "https://dcss-client.vittis.workers.dev/#website" }
           }
         ]
       }
     </script>
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="application-name" content="Orbrun" />
-    <meta name="apple-mobile-web-app-title" content="Orbrun" />
+    <meta name="application-name" content="Polished Crawl" />
+    <meta name="apple-mobile-web-app-title" content="Polished Crawl" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <!-- the wordmark's face (styles.css @font-face) is asked for here, with the stylesheet, not when the
-         title is first laid out by the bundle: a round trip later, with the title already on screen in the
-         fallback face -->
-    <link rel="preload" href="/fonts/grenze-gotisch-700-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Local shell title face; gameplay keeps its measured DejaVu fonts. -->
+    <link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/dejavu-sans-mono-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/dejavu-sans-mono-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/src/styles.css" />
@@ -106,18 +104,18 @@
   <body>
     <div id="app"></div>
     <main id="page" hidden>
-      <nav aria-label="Orbrun">
-        <a href="/">Orbrun</a>
+      <nav aria-label="Polished Crawl">
+        <a href="/">Polished Crawl</a>
         <a href="/about">About</a>
         <a href="/about/new">What’s new</a>
         <a href="/about/steam">Add to Steam</a>
         <a href="/about/install">Add to Home Screen</a>
-        <a href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.118">Source</a>
+        <a href="https://github.com/vittis/orbrun/tree/cloudflare-online-v1.119">Source</a>
       </nav>
       <!--page-->
-      <h1>Orbrun - Dungeon Crawl Stone Soup</h1>
+      <h1>Polished Crawl - Dungeon Crawl Stone Soup</h1>
       <p>
-        Orbrun is an unofficial client for
+        Polished Crawl is an unofficial client for
         <a href="https://crawl.develz.org">Dungeon Crawl Stone Soup (DCSS)</a>
         with a 2.5D dungeon view. It connects to the public WebTiles
         servers with the same protocol as the official client, and draws the
@@ -126,7 +124,7 @@
       </p>
       <p>
         If you play WebTiles, this is your game, your account, your rc file
-        and your keys. There is nothing to install and no Orbrun account:
+        and your keys. There is nothing to install and no Polished Crawl account:
         pick a bundled server, log in or spectate, and play online in the browser.
       </p>
       <h2>What it does</h2>
@@ -140,13 +138,13 @@
         <li>Runs from your Steam library on a Steam Deck, or from a phone’s or tablet’s home screen.</li>
       </ul>
       <p>
-        <a href="/about">Read more about Orbrun</a>,
+        <a href="/about">Read more about Polished Crawl</a>,
         <a href="/about/new">see what’s new</a>,
         <a href="/about/steam">add it to Steam</a>, or
         <a href="/about/install">add it to your home screen</a>.
       </p>
       <!--/page-->
-      <noscript><p><strong>Orbrun needs JavaScript and Canvas 2D to play.</strong></p></noscript>
+      <noscript><p><strong>Polished Crawl needs JavaScript and Canvas 2D to play.</strong></p></noscript>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

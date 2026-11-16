@@ -17,7 +17,8 @@ Orbrun is an npm/TypeScript workspace with a Vite app, Canvas renderers and a Cl
 | `apps/orbrun/src/settings.ts` | Supported preferences, defaults, numeric validation and compatible persistence |
 | `apps/orbrun/src/audio/` | Optional OSP pack loading/caching, worker-isolated matching and bounded Web Audio effects |
 | App controls/HUD/menu modules | Device normalization, contextual commands, menus, targeting, settings and accessibility |
-| `apps/orbrun/src/room/` | Bundled menu scenery rendered through the existing 2.5D renderer |
+| `apps/orbrun/src/menu-home.ts`, `menu-modal.ts`, `menu-backdrop.ts` | Persistent Polished Crawl home, shared accessible document modal, silent recorded backdrop |
+| `apps/orbrun/src/room/` | Saved scenery and tiles retained for rendering fixtures and static document artwork |
 | Worker/proxy/build tools | Static hosting, bounded allowlisted proxies, source identity and guarded deployment |
 
 ## State and presentation
@@ -87,3 +88,9 @@ HUD geometry uses available grid space. Narrow mouse windows receive readable to
 ## Verification
 
 `npm run verify` is the fast development gate: incremental types and retained units. Isolated Vitest projects separate ordinary units from real-Git deployment tooling; changed/watch commands support the editing loop. The browser smoke profile samples all nine rendering concerns; render/release verification keeps the complete matrix. Playwright starts only the needed dev/preview servers, with at most two workers and no retries. Release verification builds once and includes production acceptance. CI routes PR changes conservatively and runs the complete gate on main. See [RUNBOOK.md](RUNBOOK.md) and [AGENTS.md](../AGENTS.md) for commands and selection limits. Optional engine execution remains separate.
+
+## Polished Crawl shell
+
+FrontEnd retains session/account/save/RC actions and secondary screens. HomeView owns the persistent compact header and keyed command rows; lobby updates preserve inputs, focus and row identity. Descent IDs are filtered only at the home offering boundary. MenuModal owns document focus containment, restoration and background inertness. About, /about/new and /whats-new enter that same modal; install/Steam remain static documents. News still uses orbrun.newsSeen.
+
+MenuBackdrop owns one muted inline video and poster, one media-query listener, one preference observer and visibility handling. Still and OS reduced motion suppress video and CSS title reflection, even when gameplay animation is explicitly On. Covered/hidden menus pause; teardown removes listeners and releases media. It never creates a gameplay renderer or audio pack. Capture tooling replays the existing anonymous fixture through GameScreen; see [capture provenance](../apps/orbrun/public/menu/README.md). GridHost and HUD fonts/metrics are independent of shell typography.

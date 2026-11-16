@@ -598,6 +598,7 @@ export function parseRoute(href: string = window.location.href): Route {
   const parts = pathname.split('/').filter(Boolean).map(decode)
   if (!parts.length) return { kind: 'home' }
   const menu = parts.join('/').toLowerCase()
+  if (menu === 'about' || menu === 'about/new') return { kind: 'menu', path: menu }
   if (MENU_PATH.test(menu)) return { kind: 'menu', path: menu }
   // an account's Other versions (`/accounts/versions/cdi#orbrun`): who, as a play address says it; there are no
   // versions to pick on this device

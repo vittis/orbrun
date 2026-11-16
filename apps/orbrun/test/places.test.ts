@@ -2,10 +2,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { cellKey, emptyScene, type Scene } from '@orbrun/scene'
 import { readScene, sceneTileIds, writeScene, type PlaceFile, type PlaceScene } from '../src/room/place-data'
-import { nextHomePlace, placeCenter, PLACES } from '../src/room/places'
+import { placeCenter, PLACES } from '../src/room/places'
 import { RoomTiles } from '../src/room/tiles'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -41,10 +41,7 @@ describe('the places', () => {
     }
   })
 
-  it('give the front screen more than one to go round', () => {
-    expect(PLACES.filter((p) => p.cycle).length).toBeGreaterThan(1)
-    expect(new Set(PLACES.map((p) => p.id)).size).toBe(PLACES.length)
-  })
+
 })
 
 describe('a place file', () => {
@@ -73,20 +70,5 @@ describe('a place file', () => {
   it('centres on the saved place cell', () => {
     const c = placeCenter({ center: { x: 4, y: -2 } })
     expect(c).toMatchObject({ x: 4, y: -2 })
-  })
-})
-
-describe('the front screen', () => {
-  // happy-dom's localStorage has no working methods
-  beforeEach(() => {
-    const store = new Map<string, string>()
-    vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) })
-  })
-
-  it('stands somewhere else each visit, round the cycle', () => {
-    const cycle = PLACES.filter((p) => p.cycle).map((p) => p.id)
-    const seen = cycle.map(() => nextHomePlace().id)
-    expect(new Set(seen).size).toBe(cycle.length)
-    expect(nextHomePlace().id).toBe(seen[0])
   })
 })

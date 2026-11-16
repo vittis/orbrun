@@ -72,7 +72,7 @@ Security-focused regressions include gamedata parsing, WebSocket connection, pro
 
 Exercise the actual app at desktop and narrow/mobile viewport sizes:
 
-1. Confirm 2.5D menu scenery, settings, resize and repeated navigation lifecycle. No projection selector or first-person setting should remain.
+1. Confirm the Polished Crawl recorded backdrop/poster, inline login, document modals, settings, resize and repeated navigation lifecycle. Check Still/OS reduced motion, modal coverage and hidden-tab suspension. No projection selector or first-person setting should remain.
 2. Confirm fresh settings and migrated saved projection settings use Dungeon (2.5D), preserving unrelated preferences.
 3. Open `/watch/cdi`, wait for the anonymous lobby and spectate an active player when available. Check real tiles, HUD, messages, minimap and server-driven updates. Never send chat or gameplay commands to another player's session.
 4. Use deterministic local fixtures to check level-map entry/exit, repeated transitions, cursor/selection, settings changes while open and resize. Check `X` separately from `Ctrl+X`.

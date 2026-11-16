@@ -685,3 +685,108 @@ test('live sounds follow confirmed message occurrences and stop on screen teardo
   await page.waitForTimeout(150)
   expect(await audioStarts(page)).toBe(3)
 })
+
+for (const touch of [false, true]) {
+  test.describe(touch ? 'Polished menu touch' : 'Polished menu desktop', () => {
+    test.use({ viewport: touch ? { width: 328, height: 960 } : { width: 1016, height: 780 }, hasTouch: touch })
+    test('keeps inline auth, keyed rows and modal focus stable as the lobby changes', async ({ page }) => {
+      const sockets: import('@playwright/test').WebSocketRoute[] = []
+      const sent: { msg: string; username?: string; password?: string }[] = []
+      const send = (socket: import('@playwright/test').WebSocketRoute, msgs: object[]) => socket.send(JSON.stringify({ msgs }))
+      await page.route('**/morgue-proxy/**', route => route.fulfill({ status: 404, body: '' }))
+      await page.routeWebSocket(/wss?:\/\//, socket => {
+        sockets.push(socket)
+        send(socket, [{ msg: 'lobby_complete' }])
+        socket.onMessage(raw => {
+          const m = JSON.parse(String(raw)); sent.push(m)
+          if (m.msg === 'login') send(socket, [
+            { msg: 'login_success', username: m.username },
+            { msg: 'set_game_links', content: '<span><a href="#play-dcss-0.34">DCSS 0.34</a><a class="edit_rc_link" data-game_id="stable-rc">(edit rc)</a></span><span><a href="#play-dcss-web-trunk">DCSS trunk</a><a class="edit_rc_link" data-game_id="trunk-rc">(edit rc)</a></span><span><a href="#play-descent-web-trunk">Descent</a></span>' },
+            { msg: 'lobby_complete' },
+          ])
+        })
+      })
+      await page.addInitScript(() => {
+        const account = { serverId: 'cdi', username: 'menu-test' }
+        localStorage.setItem('orbrun.accounts', JSON.stringify([account])); localStorage.setItem('orbrun.account', JSON.stringify(account))
+        localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false }))
+      })
+      await page.goto('/')
+      const user = page.getByRole('textbox', { name: 'User', exact: true }), pass = page.getByLabel('Pass', { exact: true })
+      await user.fill('menu-test'); await pass.fill('fixture-password')
+      const handle = await pass.elementHandle()
+      send(sockets.at(-1)!, [{ msg: 'lobby_entry', id: 1, username: 'viewer', game_id: 'dcss-0.34' }, { msg: 'lobby_complete' }])
+      await expect(pass).toBeFocused(); await expect(pass).toHaveValue('fixture-password')
+      expect(await handle!.evaluate(el => el === document.activeElement)).toBe(true)
+      for (const id of ['about', 'news']) {
+        const trigger = page.locator(`[data-focus="${id}"]`)
+        await trigger.click()
+        await expect(page.getByRole('dialog')).toBeVisible()
+        await expect(page.locator('.polished-home')).toHaveAttribute('inert', '')
+        send(sockets.at(-1)!, [{ msg: 'lobby_complete' }])
+        await page.keyboard.press('Shift+Tab')
+        expect(await page.getByRole('dialog').evaluate(el => el.contains(document.activeElement))).toBe(true)
+        await page.keyboard.press('Escape')
+        await expect(page.getByRole('dialog')).toHaveCount(0)
+        await expect(trigger).toBeFocused()
+        await expect(pass).toHaveValue('fixture-password')
+      }
+      expect(await page.evaluate(() => localStorage.getItem('orbrun.newsSeen'))).toBeTruthy()
+      await pass.press('Enter')
+      await expect(page.locator('[data-focus="play:dcss-0.34"]')).toBeVisible()
+      await expect(page.locator('.polished-commands')).not.toContainText('Descent')
+      expect(sent.filter(m => m.msg === 'login')).toEqual([{ msg: 'login', username: 'menu-test', password: 'fixture-password' }])
+      const play = page.locator('[data-focus="play:dcss-web-trunk"]'); await play.focus()
+      const node = await play.elementHandle()
+      send(sockets.at(-1)!, [{ msg: 'lobby_entry', id: 2, username: 'menu-test', game_id: 'dcss-web-trunk', char: 'TrFi', xl: '11', place: 'Lair:2' }])
+      await expect(play).toContainText('Continue')
+      expect(await node!.evaluate(el => el === document.activeElement)).toBe(true)
+      expect(await page.locator('.polished-home').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      await page.evaluate(() => document.fonts.ready)
+      await page.screenshot({ path: `test-results/polished-${touch ? 'mobile' : 'desktop'}.png` })
+      await page.locator('[data-focus="about"]').click()
+      await page.screenshot({ path: `test-results/polished-modal-${touch ? 'mobile' : 'desktop'}.png` })
+      await page.goBack()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(page.locator('.polished-home')).not.toHaveAttribute('inert', '')
+    })
+  })
+}
+
+test('menu video and title sleep for Still, OS reduced motion, modals and hidden tabs', async ({ page, context }) => {
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.addInitScript(() => {
+    const account = { serverId: 'cdi', username: 'motion-test' }
+    localStorage.setItem('orbrun.accounts', JSON.stringify([account])); localStorage.setItem('orbrun.account', JSON.stringify(account))
+    localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false }))
+  })
+  await page.goto('/')
+  const video = page.locator('.menu-backdrop video')
+  await expect(video).not.toHaveAttribute('src')
+  await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
+  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused && (el as HTMLVideoElement).currentTime > .1)).toBe(true)
+  expect(await video.evaluate(el => ({ muted: (el as HTMLVideoElement).muted, width: (el as HTMLVideoElement).videoWidth, height: (el as HTMLVideoElement).videoHeight }))).toEqual({ muted: true, width: 1280, height: 720 })
+  const shine = page.locator('.crawl-title')
+  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationDuration)).toBe('8s')
+  await page.locator('[data-focus="about"]').click()
+  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
+  const at = await video.evaluate(el => (el as HTMLVideoElement).currentTime)
+  await page.waitForTimeout(250) // Real quiet window: decoder and decoration must remain parked.
+  expect(await video.evaluate(el => (el as HTMLVideoElement).currentTime)).toBe(at)
+  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
+  await page.keyboard.press('Escape')
+  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused)).toBe(true)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(video).toBeHidden()
+  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
+  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(video).toBeVisible()
+  // CDP visibility emulation isn't available in all Chromium builds; dispatch the actual listener with a hidden document.
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')) })
+  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')) })
+  await expect.poll(() => video.evaluate(el => !(el as HTMLVideoElement).paused)).toBe(true)
+  await page.locator('[data-focus="settings"]').click()
+  await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
+})

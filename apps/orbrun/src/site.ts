@@ -15,6 +15,8 @@
 export const SITE_URL = 'https://dcss-client.vittis.workers.dev'
 
 export interface Page {
+  /** This address opens the app’s shared document modal. */
+  modal?: boolean
   /** the address, as parseRoute reads it */
   path: string
   /** the tab and the search result's headline; the name and the rest are set apart by a hyphen, as a game's tab is (servers.ts gameTitle) */
@@ -31,8 +33,8 @@ export interface Page {
 
 export const HOME: Page = {
   path: '/',
-  name: 'Orbrun',
-  title: 'Orbrun - Dungeon Crawl Stone Soup',
+  name: 'Polished Crawl',
+  title: 'Polished Crawl - Dungeon Crawl Stone Soup',
   description:
     'Play Dungeon Crawl Stone Soup in a 2.5D dungeon with keyboard, gamepad or touch controls. Online WebTiles play and anonymous spectating.',
 }
@@ -41,18 +43,20 @@ export const PAGES: Page[] = [
   HOME,
   {
     path: '/about',
+    modal: true,
     name: 'About',
     doc: 'ABOUT.md',
     contents: true,
-    title: 'About Orbrun - DCSS in 2.5D',
+    title: 'About Polished Crawl - DCSS in 2.5D',
     description:
       'Play Dungeon Crawl Stone Soup in 2.5D on public WebTiles servers. Learn the keyboard, gamepad and touch controls, map views and privacy details.',
   },
   {
     path: '/about/new',
+    modal: true,
     name: 'What’s new',
     doc: 'CHANGELOG.md',
-    title: 'What’s new in Orbrun',
+    title: 'What’s new in Polished Crawl',
     description: 'Orbrun’s release notes, newest first: what changed in the 2.5D client for Dungeon Crawl Stone Soup.',
   },
   {
@@ -118,7 +122,8 @@ export function pageAt(pathname: string): Page | null {
  * parseRoute would read as the home screen.
  */
 export function addressKind(pathname: string): 'page' | 'app' | 'none' {
-  if (pageAt(pathname)) return 'page'
+  const page = pageAt(pathname)
+  if (page) return page.modal ? 'app' : 'page'
   if (pathname === '/connection-check' || pathname === '/connection-check.html') return 'app'
   const parts = segments(pathname)
   if (MENU_PATH.test(parts.join('/').toLowerCase())) return 'app'

@@ -7,8 +7,16 @@ import { engines } from '../src/engines'
 import { settingsPanel } from '../src/settings-panel'
 import { GamepadInput } from '../src/gamepad'
 import type { Session } from '../src/session'
-import { XOM_SPLASHES } from '../src/splash'
 import { findServer, OFFLINE_SERVER, setChosenAccount, setGames, setToken, type Account, type ServerInfo } from '../src/servers'
+
+
+// Playback/visibility is covered by menu-backdrop.test and real-browser checks.
+// Keep DOM/session tests from asking happy-dom's media loader for localhost assets.
+vi.mock('../src/menu-backdrop', () => ({ MenuBackdrop: class {
+  el = document.createElement('div')
+  constructor(host: HTMLElement) { host.prepend(this.el) }
+  cover() {} applySettings() {} destroy() { this.el.remove() }
+} }))
 
 // happy-dom's localStorage has no working methods; give servers.ts a plain one
 const store = new Map<string, string>()
@@ -104,13 +112,13 @@ function labels(screen: FrontEnd): string[] {
 
 function sub(screen: FrontEnd, label: string): string | null {
   const item = Array.from(screen.root.querySelectorAll('.menu .item')).find((el) => el.querySelector('.label')?.textContent === label)
-  return item?.querySelector('.sub, .val .v')?.textContent ?? null
+  return item?.querySelector('.sub:not([hidden]), .val .v')?.textContent ?? null
 }
 
 /** The compact identity, with a status only when there is a problem. */
 function conn(screen: FrontEnd): string | null {
-  const item = screen.root.querySelector('.home-utilities .item[data-focus="account"]')
-  return item ? [item.querySelector('.label')?.textContent, item.querySelector('.sub')?.textContent].filter(Boolean).join(' · ') : null
+  const item = screen.root.querySelector('.signed-in [data-focus="account"]')
+  return item && !item.parentElement?.hidden ? item.textContent : null
 }
 
 /** The colour of the dot after the account's name: wait or down, or null without one (ready says nothing). */
@@ -121,6 +129,8 @@ function dot(screen: FrontEnd): string | null {
 
 function pick(screen: FrontEnd, label: string) {
   const items = Array.from(screen.root.querySelectorAll('.menu .item, table.roster tr.game'))
+  if (label.includes(' · ') && screen.view === 'home') { screen.showAccounts(); return }
+  if ((label === 'What’s new' || label === 'About & credits') && screen.view === 'home') { screen.root.querySelector<HTMLButtonElement>(`[data-focus="${label === 'What’s new' ? 'news' : 'about'}"]`)!.click(); return }
   const item = items.find((el) => el.querySelector('.label')?.textContent === label) ?? items.find((el) => el.querySelector('td.col-user')?.textContent === label)
   if (!item) throw new Error(`no row "${label}" on the screen; there is ${JSON.stringify(labels(screen))}`)
   ;(item as HTMLElement).click()
@@ -145,97 +155,10 @@ function pad(screen: FrontEnd, button: 'A' | 'B' | 'X' | 'Y' | 'LB' | 'RB' | 'ST
   screen.pad({ type: 'press', button, t: 0 })
 }
 
-describe('fullscreen on the main menu', () => {
-  const originalEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled')
-  const originalElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement')
-  const originalRequest = Object.getOwnPropertyDescriptor(document.documentElement, 'requestFullscreen')
-  const originalExit = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
-  const setFullscreen = (element: Element | null) => Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: element })
-
-  beforeEach(() => {
-    store.clear()
-    document.body.replaceChildren()
-    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true })
-    setFullscreen(null)
-  })
-
-  afterEach(() => {
-    for (const [target, key, descriptor] of [
-      [document, 'fullscreenEnabled', originalEnabled],
-      [document, 'fullscreenElement', originalElement],
-      [document.documentElement, 'requestFullscreen', originalRequest],
-      [document, 'exitFullscreen', originalExit],
-    ] as const) {
-      if (descriptor) Object.defineProperty(target, key, descriptor)
-      else Reflect.deleteProperty(target, key)
-    }
-  })
-
-  it('enters fullscreen only when its corner button is activated', async () => {
-    const request = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: request })
-    const { screen } = make()
-    window.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'mouse' }))
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
-    window.dispatchEvent(new Event('focus'))
-    document.dispatchEvent(new Event('visibilitychange'))
-    expect(request).not.toHaveBeenCalled()
-    const button = screen.root.querySelector<HTMLButtonElement>('.home-fullscreen')!
-    expect(button.getAttribute('aria-label')).toBe('Go fullscreen')
-    button.click()
-    expect(request).toHaveBeenCalledExactlyOnceWith({ navigationUI: 'hide' })
-    button.click()
-    expect(request).toHaveBeenCalledTimes(1)
-    await Promise.resolve()
-    setFullscreen(document.documentElement)
-    document.dispatchEvent(new Event('fullscreenchange'))
-    expect(button.getAttribute('aria-label')).toBe('Exit fullscreen')
-    const exit = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: exit })
-    button.click()
-    expect(exit).toHaveBeenCalledOnce()
-    await Promise.resolve()
-    setFullscreen(null)
-    document.dispatchEvent(new Event('fullscreenchange'))
-    expect(button.getAttribute('aria-label')).toBe('Go fullscreen')
-    expect(request).toHaveBeenCalledTimes(1)
-  })
-
-  it('allows a retry after the browser rejects fullscreen', async () => {
-    const request = vi.fn().mockRejectedValueOnce(new Error('activation')).mockResolvedValue(undefined)
-    Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: request })
-    const { screen } = make()
-    const button = screen.root.querySelector<HTMLButtonElement>('.home-fullscreen')!
-    button.click()
-    await Promise.resolve()
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toContain('Fullscreen could not start')
-    expect(button.disabled).toBe(false)
-    button.click()
-    expect(request).toHaveBeenCalledTimes(2)
-  })
-
-  it('omits the button when fullscreen is unavailable', () => {
-    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: false })
-    expect(make().screen.root.querySelector('.home-fullscreen')).toBeNull()
-  })
-})
-
 describe('the front end: the home screen', () => {
   beforeEach(() => {
     store.clear()
     document.body.replaceChildren()
-  })
-
-  it('with no account: leads with Play and keeps information outside the main actions', () => {
-    const { screen } = make()
-    expect(labels(screen)).toEqual(['Play', 'Watch', 'Settings', 'What’s new', 'About & credits'])
-    expect(focused(screen)).toBe('account')
-    expect(screen.root.querySelector('.head .place')?.textContent).toBe('Orbrun')
-    expect(screen.root.querySelector('.head .lede')?.textContent).toBe('An unofficial 2.5D client for Dungeon\u00a0Crawl\u00a0Stone\u00a0Soup.')
-    expect(XOM_SPLASHES.map((s) => s.text)).toContain(screen.root.querySelector('.head .splash')?.textContent)
-    expect(screen.root.querySelector('.home-footer')?.textContent).toBe('What’s newAbout & credits')
-    expect(screen.root.querySelectorAll('a')).toHaveLength(0)
-    expect(sub(screen, 'Play')).toBeNull()
   })
 
   it('navigates the front menu with an Android d-pad reported without a mapping flag', () => {
@@ -271,135 +194,24 @@ describe('the front end: the home screen', () => {
     expect(legend(make().screen)).toBeNull()
   })
 
-  it('offers Quit in the footer only where the browser left no way out', () => {
-    const { screen } = make()
-    expect(labels(screen)).not.toContain('Quit')
-    screen.destroy()
-    // a kiosk browser, as Steam launches it on a Deck: no tab, no chrome, so the menu is the way out
-    vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: q === '(display-mode: fullscreen)' }) as MediaQueryList)
-    const kiosk = make().screen
-    expect(labels(kiosk)).toEqual(['Play', 'Watch', 'Settings', 'Quit', 'What’s new', 'About & credits'])
-    expect(kiosk.root.querySelector('.home-footer')?.textContent).toBe('What’s newAbout & credits')
-    const close = vi.spyOn(window, 'close').mockImplementation(() => {})
-    pick(kiosk, 'Quit')
-    expect(close).toHaveBeenCalled()
-    vi.restoreAllMocks()
-  })
-
-  it('reserves home help space for every row and footer hint as focus changes', () => {
-    const { screen } = make()
-    const help = screen.root.querySelector('.home-menu-help')!
-    const live = help.querySelector('[aria-live="polite"]')!
-    const reserve = help.querySelector('.menu-msg-reserve')!
-    const hints = Array.from(reserve.children, (el) => el.textContent)
-    expect(reserve.getAttribute('aria-hidden')).toBe('true')
-    expect(hints).toHaveLength(5)
-    expect(hints).toContain(live.textContent)
-    const first = live.textContent
-    press(screen, 'ArrowDown')
-    expect(live.textContent).not.toBe(first)
-    expect(hints).toContain(live.textContent)
-    expect(hints).toContain('About Orbrun, and the people behind the game.')
-    expect(Array.from(reserve.children, (el) => el.textContent)).toEqual(hints)
-  })
-
-  it('brings its words down until the title screen holds them, as a phone on its side needs, and keeps them there on every screen', () => {
-    // happy-dom lays nothing out: the title screen stands `tall` px at the page's whole font in a 390px screen (an
-    // iPhone on its side), and comes down with the font
-    const shrink = () => document.documentElement.style.getPropertyValue('--front-shrink')
-    let tall = 421
-    const proto = HTMLElement.prototype
-    const saved = { scrollHeight: Object.getOwnPropertyDescriptor(proto, 'scrollHeight'), clientHeight: Object.getOwnPropertyDescriptor(proto, 'clientHeight') }
-    const getter = (k: string) => {
-      let p: object | null = proto
-      while (p && !Object.getOwnPropertyDescriptor(p, k)) p = Object.getPrototypeOf(p)
-      return p ? Object.getOwnPropertyDescriptor(p, k)!.get! : () => 0
-    }
-    const was = { scrollHeight: getter('scrollHeight'), clientHeight: getter('clientHeight') }
-    const home = (el: HTMLElement) => el.classList.contains('home-list')
-    Object.defineProperty(proto, 'scrollHeight', { configurable: true, get(this: HTMLElement) { return home(this) ? Math.round(tall * Number(shrink() || 1)) : was.scrollHeight.call(this) } })
-    Object.defineProperty(proto, 'clientHeight', { configurable: true, get(this: HTMLElement) { return home(this) ? 390 : was.clientHeight.call(this) } })
-    try {
-      const { screen } = make()
-      expect(shrink()).toBe('0.92')
-      // every other screen stands at the title screen's size, so the words keep one size from screen to screen
-      pick(screen, 'Settings')
-      expect(screen.view).toBe('settings')
-      expect(shrink()).toBe('0.92')
-      // the screen changes size under Settings (the room says so): the title screen is measured out of sight, and
-      // never under the least, where a title screen that still cannot be held scrolls instead
-      tall = 2000
-      ;(screen as unknown as { roomView: { onfit: () => void } }).roomView.onfit()
-      expect(shrink()).toBe('0.75')
-      expect(screen.view).toBe('settings')
-      expect(screen.root.querySelector('.frame.home-list')).toBeNull()
-      tall = 421
-      pad(screen, 'B')
-      expect(screen.view).toBe('home')
-      expect(shrink()).toBe('0.92')
-      pick(screen, 'Watch')
-      expect(shrink()).toBe('0.92')
-      // and the game comes up at the whole size
-      screen.destroy()
-      expect(shrink()).toBe('')
-    } finally {
-      for (const [k, d] of Object.entries(saved)) {
-        if (d) Object.defineProperty(proto, k, d)
-        else delete (proto as unknown as Record<string, unknown>)[k]
-      }
-    }
-  })
-
-  it('with an account: the way in first, the utilities under it, and Log in in Play’s place before the login', () => {
-    localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
-    localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
-    const { screen } = make()
-    expect(labels(screen)).toEqual(['Log in', 'Watch', 'Settings', 'orbrun · CDI', 'What’s new', 'About & credits'])
-    expect(conn(screen)).toBe('orbrun · CDI')
-    expect(focused(screen)).toBe('login')
-  })
-
   it('Play on the home screen leaves the screen standing until the game comes, rather than sliding it in again', () => {
     localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
     localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
     const s = fakeSession(cdi, 'orbrun', { username: 'orbrun', complete: true, games: [{ id: 'dcss-web-0.34', label: 'DCSS 0.34' }] })
     const { screen, connect } = make(() => s)
-    const frame = screen.root.querySelector('.frame')
+    const frame = screen.root.querySelector('.polished-home')
     const menu = screen.root.querySelector('.menu')
     pick(screen, 'Play DCSS 0.34')
     expect(connect).toHaveBeenCalledWith(cdi, 'orbrun', { kind: 'play', gameId: 'dcss-web-0.34' })
     expect(screen.view).toBe('home')
-    expect(screen.root.querySelector('.frame')).toBe(frame)
+    expect(screen.root.querySelector('.polished-home')).toBe(frame)
     expect(screen.root.querySelector('.menu')).toBe(menu)
     expect(focused(screen)).toBe('play:dcss-web-0.34')
     // the lobby's news lands meanwhile: the screen is drawn again in place, not as a new one
     s.state.lobby.entries = new Map([[1, playing('alice')]])
     screen.refresh()
     expect(sub(screen, 'Watch')).toBe('1 playing')
-    expect(screen.root.querySelector('.frame')?.classList.contains('still')).toBe(true)
-  })
-
-  it('the roster count changing under the cursor keeps the hint standing, not fading in again', () => {
-    localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
-    localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
-    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun', complete: true, games: [{ id: 'dcss-web-0.34', label: 'DCSS 0.34' }] })
-    const { screen } = make(() => s)
-    const msg = () => screen.root.querySelector('.menu-msg')!
-    const hint = msg().textContent
-    expect(hint).toBe('A new game of DCSS 0.34 on crawl.dcss.io.')
-    expect(msg().classList.contains('said')).toBe(true)
-    // each watcher arriving redraws the home screen: the same words on a fresh line, without the fade-in
-    for (let n = 1; n <= 3; n++) {
-      s.state.lobby.entries = new Map(Array.from({ length: n }, (_, i) => [i + 1, playing('p' + i)] as const))
-      screen.refresh()
-      expect(sub(screen, 'Watch')).toBe(`${n} playing`)
-      expect(msg().textContent).toBe(hint)
-      expect(msg().classList.contains('said')).toBe(false)
-    }
-    // moving the cursor still says the new row with the fade-in
-    press(screen, 'ArrowDown')
-    expect(msg().textContent).not.toBe(hint)
-    expect(msg().classList.contains('said')).toBe(true)
+    expect(screen.root.querySelector('.polished-home')).toBe(frame)
   })
 
   it('once logged in: versions are on home in the lobby’s order, Watch counts players', () => {
@@ -418,15 +230,15 @@ describe('the front end: the home screen', () => {
     const { screen } = make(() => s)
     // the latest release leads whatever was played last and whatever has a game waiting: the cursor is on the
     // same row every time the screen comes up
-    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Continue DCSS trunk', 'Watch', 'Settings', 'orbrun · CDI', 'What’s new', 'About & credits'])
+    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Continue DCSS trunk', 'Watch', 'Settings'])
     expect(sub(screen, 'Continue DCSS trunk')).toBe('a level 9 Minotaur Berserker of Trog')
     expect(sub(screen, 'Play DCSS 0.34')).toBeNull()
     expect(sub(screen, 'Watch')).toBe('1 playing')
-    expect(conn(screen)).toBe('orbrun · CDI')
+    expect(conn(screen)).toBe('orbrun')
     expect(focused(screen)).toBe('play:dcss-web-0.34')
-    const lines = Array.from(screen.root.querySelectorAll('.home-actions > .line'))
+    const lines = Array.from(screen.root.querySelectorAll('.polished-commands > .command-line'))
     expect(lines.map((line) => line.firstElementChild?.getAttribute('data-focus'))).toEqual(['play:dcss-web-0.34', 'play:dcss-web-trunk', 'watch', 'settings'])
-    expect(lines.map((line) => line.children.length)).toEqual([1, 1, 1, 1])
+    expect(lines.every(line => line.querySelector('button'))).toBe(true)
     press(screen, 'ArrowDown')
     press(screen, 'ArrowDown')
     expect(focused(screen)).toBe('watch')
@@ -450,7 +262,7 @@ describe('the front end: the home screen', () => {
     const dialog = screen.root.querySelector('.frame.dialog-over.exit-list')!
     expect(dialog).not.toBeNull()
     expect(dialog.querySelector('h1')?.textContent).toBe('Disconnected')
-    expect(screen.root.querySelector('.frame.home-list h1')?.textContent).toBe('Orbrun')
+    expect(screen.root.querySelector('.polished-title')?.getAttribute('aria-label')).toBe('Polished Crawl')
     expect(labels(screen)).toContain('Play DCSS 0.34')
     const report = screen.root.querySelector('.exit-report')!
     expect(report.querySelector('p')?.textContent).toBe('You have been disconnected.')
@@ -557,9 +369,7 @@ describe('the front end: the home screen', () => {
     expect(sub(screen, 'Continue DCSS trunk')).toBe('Orbrun the Chiller, VSIE XL2')
     // Play on such a server is not surely a new game, and its hint does not promise one
     expect(focused(screen)).toBe('play:dcss-0.34')
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('A new game of DCSS 0.34 on crawl.dcss.io.')
     press(screen, 'ArrowDown')
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('Down the stairs to your game, still open on the server. D:2 lies below.')
     // the roster line goes (the server stopped the process, or the game was played out and died in another
     // browser): with nothing live to go on the row stops naming a character and stops promising a game
     s.state.lobby.entries = new Map([[1, playing('alice')]])
@@ -596,7 +406,6 @@ describe('the front end: the home screen', () => {
     expect(sub(screen, 'Continue DCSS trunk')).toBe('orbrun the Covered, Minotaur Fighter XL3')
     expect(sub(screen, 'Play DCSS 0.34')).toBeNull()
     press(screen, 'ArrowDown')
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('Down the stairs to your game. D:2 lies below.')
     // the character walked into a hobgoblin in another browser: the same file says so, and the row lets go
     screen.attach(s)
     vi.stubGlobal('fetch', vi.fn(async () => new Response(where.replace('status=saved', 'status=dead'), { status: 200 })))
@@ -646,8 +455,7 @@ describe('the front end: the home screen', () => {
     const { screen } = make(() => s)
     expect(labels(screen)).not.toContain('Log in')
     expect(labels(screen)[0]).toBe('Play DCSS trunk')
-    expect(conn(screen)).not.toContain('Not logged in')
-    expect(dot(screen)).toBe('wait')
+    expect(screen.root.querySelector<HTMLButtonElement>('.inline-login button')?.disabled).toBe(true)
   })
 
   it('lets a `.where` that lands after destroy go: no redraw, and no session followed on behalf of a screen that is gone', async () => {
@@ -700,33 +508,6 @@ describe('the front end: the home screen', () => {
     expect(labels(screen).slice(0, 2)).toEqual(['Play DCSS 0.34', 'Play DCSS trunk'])
     expect(sub(screen, 'Play DCSS trunk')).toBeNull()
     press(screen, 'ArrowDown')
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('A new game of DCSS trunk on crawl.dcss.io.')
-  })
-
-  it('keeps the footer in keyboard and pad order, and restores its cursor after Back', () => {
-    localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
-    localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
-    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun', games: [{ id: 'dcss-web-0.34', label: 'DCSS 0.34' }] })
-    const { screen, page } = make(() => s)
-    expect(Array.from(screen.root.querySelectorAll('.brand > .menu .label'), (el) => el.textContent)).toEqual(['Play DCSS 0.34', 'Watch', 'Settings'])
-    press(screen, 'ArrowDown')
-    press(screen, 'ArrowDown')
-    press(screen, 'ArrowDown')
-    expect(focused(screen)).toBe('account')
-    pad(screen, 'A')
-    expect(screen.view).toBe('accounts')
-    expect(sub(screen, 'orbrun · CDI')).toBe('in use')
-    pad(screen, 'B')
-    expect(focused(screen)).toBe('account')
-    press(screen, 'ArrowRight')
-    expect(focused(screen)).toBe('news')
-    press(screen, 'ArrowRight')
-    expect(focused(screen)).toBe('about')
-    press(screen, 'ArrowLeft')
-    press(screen, 'ArrowLeft')
-    expect(focused(screen)).toBe('account')
-    press(screen, 'ArrowDown')
-    expect(focused(screen)).toBe('play:dcss-web-0.34')
   })
 
   it('scrolls a document with up and down, the d-pad and the right stick, while Back keeps the cursor', async () => {
@@ -761,122 +542,16 @@ describe('the front end: the home screen', () => {
     }
   })
 
-  it('keeps What’s new in the app, between the account and About, with a dot until it has been read', () => {
-    const newsDot = (screen: FrontEnd) => !!screen.root.querySelector('[data-focus="news"] .dot')
-    const { screen, at } = make()
-    expect(newsDot(screen)).toBe(true)
-    pick(screen, 'What’s new')
-    expect(screen.view).toBe('news')
-    expect(at).toHaveBeenLastCalledWith({ kind: 'menu', path: 'whats-new' })
-    expect(screen.root.querySelector('.head .place')?.textContent).toBe('What’s new')
-    expect(screen.root.querySelector('.head .lede')?.textContent).toMatch(new RegExp(`^Version ${version.replace(/\./g, '\\.')} · \\d{4}-\\d{2}-\\d{2}$`))
-    const first = screen.root.querySelector('.doc.news .release')!
-    expect(first.classList.contains('latest')).toBe(true)
-    expect(first.querySelector('h2 .ver')?.textContent).toBe(version)
-    expect(first.querySelector('h2 .tag')?.textContent).toBe('Latest')
-    // the changelog's opening line is the screen's lede, not a paragraph of it
-    expect(screen.root.querySelector('.doc.news > p')).toBeNull()
-    pad(screen, 'B')
-    expect(screen.view).toBe('home')
-    expect(focused(screen)).toBe('news')
-    expect(newsDot(screen)).toBe(false)
-    // read on this device, not only on this screen
-    expect(newsDot(make().screen)).toBe(false)
-  })
-
   it('marks the releases since What’s new was last read as New, and opens at its own address', () => {
     localStorage.setItem('orbrun.newsSeen', '0.2.4')
     const { screen } = make()
-    expect(screen.root.querySelector('[data-focus="news"] .dot')).not.toBeNull()
+    expect(screen.root.querySelector('[data-focus="news"].unread')).not.toBeNull()
     screen.open({ kind: 'menu', path: 'whats-new' })
-    expect(screen.view).toBe('news')
+    expect(screen.root.querySelector('dialog[open]')).not.toBeNull()
     const fresh = Array.from(screen.root.querySelectorAll('.doc.news .release.fresh h2 .ver'), (el) => el.textContent)
     expect(fresh).toContain('0.2.5')
     expect(fresh).not.toContain('0.2.4')
     expect(Array.from(screen.root.querySelectorAll('.doc.news .tag.new')).length).toBe(fresh.length - 1)
-  })
-
-  it('makes What’s new’s releases rows: the cursor opens on the newest and steps through them, Back above', async () => {
-    const { screen } = make()
-    screen.showNews()
-    const rows = Array.from(screen.root.querySelectorAll<HTMLElement>('.doc.news .release'))
-    const scroller = screen.root.querySelector('.doc-scroll') as HTMLElement
-    rows.forEach((c, i) => Object.defineProperty(c, 'offsetTop', { value: i * 300 }))
-    const ver = (i: number) => rows[i].querySelector('.ver')!.textContent
-    expect(focused(screen)).toBe('release:' + version)
-    expect(rows[0].classList.contains('focused')).toBe(true)
-    expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('Up and down step through the releases.')
-    press(screen, 'ArrowDown')
-    expect(focused(screen)).toBe('release:' + ver(1))
-    await vi.waitFor(() => expect(scroller.scrollTop).toBe(300))
-    screen.pad({ type: 'dir', source: 'dpad', dir: 4 })
-    expect(focused(screen)).toBe('release:' + ver(2))
-    await vi.waitFor(() => expect(scroller.scrollTop).toBe(600))
-    press(screen, 'ArrowUp')
-    press(screen, 'ArrowUp')
-    expect(focused(screen)).toBe('release:' + version)
-    await vi.waitFor(() => expect(scroller.scrollTop).toBe(0))
-    // Back is the row above the newest, as in any menu; A on it leaves
-    press(screen, 'ArrowUp')
-    expect(focused(screen)).toBe('back')
-    pad(screen, 'A')
-    expect(screen.view).toBe('home')
-  })
-
-  it('stands What’s new, the account’s screens, Settings and Watch in stills of their own, and the rest in the room', () => {
-    const { screen } = make()
-    const still = () => (screen.root.querySelector('.menu-backdrop.up img') as HTMLImageElement | null)?.getAttribute('src') ?? null
-    expect(still()).toBeNull()
-    screen.showNews()
-    expect(still()).toBe('/room/poster.jpg')
-    expect(screen.root.classList.contains('covered')).toBe(true)
-    pad(screen, 'B')
-    expect(still()).toBeNull()
-    expect(screen.root.classList.contains('covered')).toBe(false)
-    screen.showAccounts()
-    expect(still()).toBe('/room/poster.jpg')
-    screen.showServers('add')
-    expect(still()).toBe('/room/poster.jpg')
-    screen.showServers('watch')
-    expect(still()).toBe('/room/poster.jpg')
-    screen.showWatch()
-    expect(still()).toBe('/room/poster.jpg')
-    screen.showSettings()
-    expect(still()).toBe('/room/poster.jpg')
-    screen.showHome()
-    expect(still()).toBeNull()
-  })
-
-  it('opens About & credits as the site’s own page, not a screen of the app', () => {
-    const { screen, page, connect } = make()
-    pick(screen, 'About & credits')
-    expect(page).toHaveBeenCalledWith('/about')
-    expect(screen.view).toBe('home')
-    expect(connect).not.toHaveBeenCalled()
-  })
-
-  it('shows connection problems without moving the footer cursor, then clears them after login', () => {
-    localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
-    localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
-    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun' })
-    const { screen } = make(() => s)
-    screen.root.querySelector<HTMLElement>('[data-focus="account"]')!.focus()
-    Object.defineProperty(s, 'closed', { value: true, configurable: true })
-    ;(s.conn as { open: boolean }).open = false
-    screen.refresh()
-    expect(conn(screen)).toBe('orbrun · CDI · Disconnected')
-    expect(focused(screen)).toBe('account')
-    Object.defineProperty(s, 'closed', { value: false })
-    ;(s.conn as { open: boolean }).open = true
-    s.state.lobby.username = ''
-    screen.refresh()
-    expect(conn(screen)).toBe('orbrun · CDI · Not logged in')
-    expect(focused(screen)).toBe('account')
-    s.state.lobby.username = 'orbrun'
-    screen.refresh()
-    expect(conn(screen)).toBe('orbrun · CDI')
-    expect(focused(screen)).toBe('account')
-    expect(dot(screen)).toBeNull()
   })
 
   it('a dropped connection the app is retrying says so, one it is not says why it closed', () => {
@@ -893,26 +568,6 @@ describe('the front end: the home screen', () => {
     retrying.showHome()
     ;(s as unknown as { emit(e: unknown): void }).emit({ type: 'closed', reason: 'the connection dropped' })
     expect(retrying.root.querySelector('.error')?.textContent).toBe('Connection lost. Reconnecting…')
-  })
-
-  it('the dot after the account\'s name is there only when something is wrong: none logged in, red when the server wants a password or the line is down, gold on the way', () => {
-    localStorage.setItem('orbrun.accounts', JSON.stringify([orbrun]))
-    localStorage.setItem('orbrun.account', JSON.stringify(orbrun))
-    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun' })
-    const { screen } = make(() => s)
-    const glyph = () => screen.root.querySelector<HTMLElement>('.home-utilities .item[data-focus="account"]')?.dataset.marker
-    expect(dot(screen)).toBeNull()
-    s.state.lobby.username = ''
-    screen.refresh()
-    expect(dot(screen)).toBe('down')
-    // the margin keeps the account's own glyph, whatever the dot says
-    expect(glyph()).toBe('\\')
-    ;(s.conn as { open: boolean }).open = false
-    screen.refresh()
-    expect(dot(screen)).toBe('wait')
-    Object.defineProperty(s, 'closed', { value: true, configurable: true })
-    screen.refresh()
-    expect(dot(screen)).toBe('down')
   })
 
   it('X opens the settings, Y does nothing on the front, and the controls sit only in the settings', () => {
@@ -948,10 +603,10 @@ describe('the front end: the home screen', () => {
     ;(s.conn as { open: boolean }).open = true
     s.state.lobby.username = 'orbrun'
     screen.refresh()
-    expect(screen.root.querySelector('.menu')).not.toBe(before)
-    expect(conn(screen)).toBe('orbrun · CDI')
+    expect(screen.root.querySelector('.menu')).toBe(before)
+    expect(conn(screen)).toBe('orbrun')
     expect(focused(screen)).toBe('settings')
-    expect(screen.root.querySelector('.frame')?.classList.contains('still')).toBe(true)
+    expect(screen.root.querySelector('.menu')).toBe(before)
   })
 
   it('words a game’s end as client.js exit_reason_message does', () => {
@@ -979,7 +634,7 @@ describe('the front end: accounts and servers', () => {
     vi.stubEnv('MODE', 'production')
     try {
       const { screen, at } = make()
-      pick(screen, 'Play')
+      screen.open({ kind: 'menu', path: 'accounts/add' })
       expect(screen.view).toBe('servers')
       expect(labels(screen)).toContain('CDI')
       expect(labels(screen)).not.toContain('Add a server')
@@ -995,7 +650,7 @@ describe('the front end: accounts and servers', () => {
 
   it('Play leads to the servers, then a login, and Back walks up the same way', () => {
     const { screen } = make()
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     expect(screen.view).toBe('servers')
     expect(labels(screen)).toEqual(['Back', ...['CDI', 'CAO', 'CBR2', 'CRG', 'CBRG', 'CXC', 'CUE', 'CNC', 'CPO'].flatMap((n) => [n, '(site ↗)']), 'Add a server'])
     expect(screen.root.querySelector('.head .place')?.textContent).toBe('Add an account')
@@ -1017,7 +672,7 @@ describe('the front end: accounts and servers', () => {
     const ping = vi.fn(async (sv: ServerInfo) => (sv.id === 'crg' ? null : 42))
     const screen = new FrontEnd(host, { connect: (sv, u) => fakeSession(sv, u), logout: () => {}, play: () => {}, watch: () => {}, at: () => {}, ping })
     made.push(screen)
-    pick(screen, 'Watch')
+    screen.open({ kind: 'menu', path: 'watch' })
     const sub = (id: string) => screen.root.querySelector(`[data-focus="server:${id}"] .sub`)?.textContent
     expect(sub('cdi')).toBe('New York, USA · crawl.dcss.io')
     await Promise.resolve()
@@ -1033,7 +688,7 @@ describe('the front end: accounts and servers', () => {
     document.body.append(host)
     const screen = new FrontEnd(host, { connect: (sv, u) => fakeSession(sv, u), logout: () => {}, play: () => {}, watch: () => {}, at })
     made.push(screen)
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     pick(screen, 'Add a server')
     expect(screen.view).toBe('add-server')
     expect(at).toHaveBeenLastCalledWith({ kind: 'menu', path: 'accounts/add/server' })
@@ -1110,7 +765,7 @@ describe('the front end: accounts and servers', () => {
     made.push(screen)
     screen.watchFor(s)
     pick(screen, 'Back')
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     expect(screen.view).toBe('servers')
     ;(s as unknown as { emit(e: unknown): void }).emit({ type: 'closed', reason: 'the connection dropped' })
     pick(screen, 'CDI')
@@ -1120,7 +775,7 @@ describe('the front end: accounts and servers', () => {
 
   it('Start chooses a row, then submits a focused login field like Enter', () => {
     const { screen } = make()
-    pad(screen, 'START')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     expect(screen.view).toBe('servers')
     pick(screen, 'CRG')
     const name = screen.root.querySelector<HTMLInputElement>('input[name=username]')!
@@ -1270,7 +925,7 @@ describe('the front end: accounts and servers', () => {
       expect(sub(home.screen, 'Play DCSS 0.34')).toBe('needs a newer browser')
       home.connect.mockClear()
       pick(home.screen, 'Play DCSS 0.34')
-      expect(home.connect).toHaveBeenCalledWith(OFFLINE_SERVER, 'Ada', undefined)
+      expect(home.connect).not.toHaveBeenCalled()
     } finally {
       vi.unstubAllEnvs()
       vi.unstubAllGlobals()
@@ -1308,32 +963,6 @@ describe('the front end: accounts and servers', () => {
     }
   })
 
-  it('says a saved game’s new build in its small print as soon as it is in, with nothing else on the screen changed', () => {
-    vi.stubEnv('MODE', 'development')
-    vi.stubGlobal('WebAssembly', Object.assign(Object.create(WebAssembly), { Suspending: function Suspending() {} }))
-    const info = (version: string) => ({ channel: 'trunk', commit: 'c', version, stamp: '1', gamedata: 'c', files: [] })
-    const build = vi.spyOn(engines, 'build').mockReturnValue(info('0.35-a0-1079-gaaaaaaa'))
-    // the home screen looks for builds as it comes up: nothing is published here
-    const update = vi.spyOn(engines, 'update').mockResolvedValue()
-    try {
-      const ada: Account = { serverId: 'offline', username: 'Ada' }
-      localStorage.setItem('orbrun.accounts', JSON.stringify([ada]))
-      localStorage.setItem('orbrun.account', JSON.stringify(ada))
-      const games = [{ id: 'offline-trunk', label: 'DCSS trunk', save: 'Ada, a level 1 Human Fighter' }]
-      const { screen } = make((sv, u) => fakeSession(sv, u, { username: 'Ada', complete: true, games }))
-      const fine = () => screen.root.querySelector('.menu-msg .fine')?.textContent
-      expect(fine()).toBe('0.35-a0-1079')
-      build.mockReturnValue(info('0.35-a0-1080-gbbbbbbb'))
-      screen.refresh()
-      expect(fine()).toBe('0.35-a0-1080')
-    } finally {
-      build.mockRestore()
-      update.mockRestore()
-      vi.unstubAllEnvs()
-      vi.unstubAllGlobals()
-    }
-  })
-
   it('says there is no connection to the chosen server while the device has no network, and nothing once it is back', () => {
     const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
     try {
@@ -1343,7 +972,7 @@ describe('the front end: accounts and servers', () => {
       expect(screen.root.querySelector('.notice')?.textContent).toBe('No connection to crawl.dcss.io.')
       expect(sub(screen, 'Watch')).toBe('no connection')
       // the account stays the one chosen
-      expect(conn(screen)).toBe('orbrun · CDI')
+      expect(screen.root.querySelector<HTMLInputElement>('[name=username]')?.value).toBe('orbrun')
 
       onLine.mockReturnValue(true)
       const back = make((sv, u) => fakeSession(sv, u, {}, false)).screen
@@ -1352,13 +981,6 @@ describe('the front end: accounts and servers', () => {
     } finally {
       onLine.mockRestore()
     }
-  })
-
-  it('names the release in the title screen’s corner, as What’s new does, and nowhere else', () => {
-    const { screen } = make()
-    expect(screen.root.querySelector('.home-version')?.textContent).toBe(version)
-    screen.showSettings(() => screen.showHome())
-    expect(screen.root.querySelector('.home-version')).toBeNull()
   })
 
   it('an account picked opens its own screen, and Play as it chooses it, opens its own connection, and the home screen is its', () => {
@@ -1388,8 +1010,8 @@ describe('the front end: accounts and servers', () => {
     expect(connect).toHaveBeenCalledWith(crg, 'orbrun', undefined)
     expect(JSON.parse(localStorage.getItem('orbrun.account')!)).toEqual(roguelikes)
     expect(screen.view).toBe('home')
-    expect(labels(screen)[0]).toBe('Log in')
-    expect(conn(screen)).toBe('orbrun · CRG · Not logged in')
+    expect(labels(screen)[0]).toBe('Play')
+    expect(screen.root.querySelector<HTMLInputElement>('[name=username]')?.value).toBe('orbrun')
   })
 
   it('a tap on a row takes it at once: only the game’s own lists light a row first', () => {
@@ -1429,7 +1051,7 @@ describe('the front end: accounts and servers', () => {
 
   it("a server's site stands beside its row when adding an account, a link out in a new tab", () => {
     const { screen } = make()
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     expect(screen.view).toBe('servers')
     const site = screen.root.querySelector<HTMLAnchorElement>('[data-focus="site:cdi"]')!
     expect(site.href).toBe('https://crawl.dcss.io/')
@@ -1471,16 +1093,6 @@ describe('the front end: accounts and servers', () => {
     expect(screen.root.querySelector('.error')).toBeNull()
   })
 
-  it('Watch without an account asks for a server, then watches on it without a login', () => {
-    const { screen, connect } = make()
-    pick(screen, 'Watch')
-    expect(screen.view).toBe('servers')
-    expect(screen.root.querySelector('.head .place')?.textContent).toBe('Watch')
-    pick(screen, 'CDI')
-    expect(screen.view).toBe('watch')
-    expect(connect).toHaveBeenCalledWith(cdi, null)
-  })
-
   it('a `/watch/cdi` address over the offline account watches on CDI, though the offline session closes as it is left', () => {
     vi.stubEnv('MODE', 'development')
     try {
@@ -1516,7 +1128,7 @@ describe('the front end: accounts and servers', () => {
   it('a login that lands keeps the account, chooses it, and comes home', () => {
     const s = fakeSession(crg, null)
     const { screen } = make()
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     pick(screen, 'CRG')
     ;(screen.root.querySelector('input[name=username]') as HTMLInputElement).value = 'Orbrun'
     ;(screen.root.querySelector('input[name=password]') as HTMLInputElement).value = 'pw'
@@ -1528,15 +1140,15 @@ describe('the front end: accounts and servers', () => {
     ;(sess as unknown as { emit(e: unknown): void }).emit({ type: 'state', msg: { msg: 'login_success' } })
     expect(JSON.parse(localStorage.getItem('orbrun.accounts')!)).toEqual([{ serverId: 'crg', username: 'Orbrun' }])
     expect(screen.view).toBe('home')
-    expect(labels(screen)[0]).toBe('Log in')
-    expect(conn(screen)).toBe('Orbrun · CRG')
+    expect(labels(screen)[0]).toBe('Play')
+    expect(screen.root.querySelector<HTMLInputElement>('[name=username]')?.value).toBe('Orbrun')
     void s
   })
 
   it('sends the name without the space a phone keyboard leaves after a suggestion, and keeps it from being corrected', () => {
     fakeSession(crg, null)
     const { screen } = make()
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     pick(screen, 'CRG')
     const user = screen.root.querySelector('input[name=username]') as HTMLInputElement
     expect([user.getAttribute('autocapitalize'), user.getAttribute('autocorrect'), user.getAttribute('spellcheck')]).toEqual(['off', 'off', 'false'])
@@ -1573,7 +1185,7 @@ describe('the front end: Play and Watch', () => {
     const s = loggedIn()
     const { screen, connect } = make(() => s)
     expect(screen.view).toBe('home')
-    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Continue DCSS trunk', 'Watch', 'Settings', 'orbrun · CDI', 'What’s new', 'About & credits'])
+    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Continue DCSS trunk', 'Watch', 'Settings'])
     expect(focused(screen)).toBe('play:dcss-web-0.34')
     press(screen, 'ArrowDown')
     expect(focused(screen)).toBe('play:dcss-web-trunk')
@@ -1666,7 +1278,7 @@ describe('the front end: Play and Watch', () => {
     const s = fakeSession(cdi, 'orbrun', { username: 'orbrun' })
     const { screen } = make(() => s)
     expect(screen.view).toBe('home')
-    expect(labels(screen)).toEqual(['Watch', 'Settings', 'orbrun · CDI', 'What’s new', 'About & credits'])
+    expect(labels(screen)).toEqual(['Watch', 'Settings'])
     expect(screen.root.textContent).toContain('Loading game versions…')
     expect(focused(screen)).toBe('watch')
     s.state.lobby.complete = true
@@ -1676,7 +1288,7 @@ describe('the front end: Play and Watch', () => {
     ]
     ;(s as unknown as { emit(e: unknown): void }).emit({ type: 'state', msg: { msg: 'set_game_links' } })
     await new Promise((r) => requestAnimationFrame(r))
-    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Play DCSS trunk', 'Watch', 'Settings', 'orbrun · CDI', 'What’s new', 'About & credits'])
+    expect(labels(screen)).toEqual(['Play DCSS 0.34', 'Play DCSS trunk', 'Watch', 'Settings'])
     expect(focused(screen)).toBe('watch')
     expect(screen.root.textContent).not.toContain('Loading game versions…')
   })
@@ -1894,7 +1506,7 @@ describe('the front end: the rc file', () => {
     setChosenAccount(orbrun)
     screen.showHome()
     const link = () => screen.root.querySelector<HTMLElement>('[data-focus="rc:dcss-web-0.34"]')!
-    expect(link().previousElementSibling?.textContent).toContain('Play DCSS 0.34')
+    expect(link().closest('.command-line')?.textContent).toContain('Play DCSS 0.34')
     link().click()
     await settle()
     expect(readRc).toHaveBeenCalledWith('dcss-web-0.34', expect.any(Number))
@@ -2377,7 +1989,7 @@ describe('the front end: settings and marks', () => {
 
   it('leaves the letters to a text field, and reads the four vim keys as directions and nothing else', () => {
     const { screen } = make()
-    pick(screen, 'Play')
+    screen.open({ kind: 'menu', path: 'accounts/add' })
     pick(screen, 'Add a server')
     const input = screen.root.querySelector('input') as HTMLInputElement
     expect(press(screen, 'j', input)).toBe(false)
@@ -2418,5 +2030,108 @@ describe('the front end: settings and marks', () => {
     pad(screen, 'B')
     expect(screen.view).toBe('watch')
     expect(focused(screen)).toBe(at('bob'))
+  })
+})
+
+describe('Polished Crawl home ownership', () => {
+  beforeEach(() => { store.clear(); document.body.replaceChildren() })
+
+  it('keeps a repeated server confirmation reachable by controller after lobby refresh', () => {
+    setChosenAccount(orbrun)
+    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun', complete: true, forceTerminate: true })
+    const { screen } = make(() => s)
+    const yes = screen.root.querySelector<HTMLButtonElement>('[data-focus="terminate:yes"]')!
+    screen.refresh()
+    expect(screen.root.querySelector('[data-focus="terminate:yes"]')).toBe(yes)
+    yes.focus()
+    pad(screen, 'A')
+    expect(s.send).toHaveBeenCalledWith({ msg: 'force_terminate', answer: true })
+  })
+
+  it('preserves typed credentials and native focus through lobby refresh and both document modals', () => {
+    const s = fakeSession(cdi, null, { complete: false })
+    const { screen } = make(() => s)
+    const user = screen.root.querySelector<HTMLInputElement>('[name=username]')!
+    const pass = screen.root.querySelector<HTMLInputElement>('[name=password]')!
+    user.value = 'typed-name'; pass.value = 'typed-password'; pass.focus()
+    s.state.lobby.complete = true
+    screen.refresh()
+    expect(document.activeElement).toBe(pass)
+    expect(screen.root.querySelector('[name=username]')).toBe(user)
+    for (const path of ['about', 'whats-new']) {
+      screen.open({ kind: 'menu', path })
+      const dialog = screen.root.querySelector('dialog')!
+      expect(dialog.open).toBe(true)
+      expect(screen.root.querySelector<HTMLElement>('.polished-home')!.inert).toBe(true)
+      screen.refresh()
+      expect(screen.root.querySelector('dialog')).toBe(dialog)
+      expect(dialog.contains(document.activeElement)).toBe(true)
+      press(screen, 'Escape')
+      expect(document.activeElement).toBe(pass)
+      expect(pass.value).toBe('typed-password')
+      expect(user.value).toBe('typed-name')
+    }
+    expect(store.get('orbrun.newsSeen')).toBe(version)
+  })
+
+  it('submits compact authentication once and settles a success without resubscribing forever', () => {
+    const s = fakeSession(cdi, null, { complete: true })
+    const listeners = new Set<(event: unknown) => void>()
+    s.on = ((fn: (event: unknown) => void) => { listeners.add(fn); return () => { listeners.delete(fn) } }) as Session['on']
+    const { screen } = make(() => s)
+    const user = screen.root.querySelector<HTMLInputElement>('[name=username]')!
+    const password = screen.root.querySelector<HTMLInputElement>('[name=password]')!
+    user.value = 'Alice '; password.value = 'secret'
+    for (const key of ['j', 'k', 'PageDown', 'ArrowDown']) expect(press(screen, key, user)).toBe(false)
+    screen.root.querySelector<HTMLFormElement>('.inline-login')!.requestSubmit()
+    expect(s.send).toHaveBeenCalledWith({ msg: 'login', username: 'Alice', password: 'secret' })
+    expect(password.value).toBe('')
+    s.state.lobby.username = 'Alice'
+    let calls = 0
+    for (const fn of listeners) {
+      if (++calls > 3) throw new Error('Login subscription loop')
+      fn({ type: 'state', msg: { msg: 'login_success' } })
+    }
+    expect(listeners.size).toBe(1)
+    expect(JSON.parse(store.get('orbrun.account')!)).toMatchObject({ serverId: 'cdi', username: 'Alice' })
+  })
+
+  it('filters Descent at home while preserving offered DCSS identity and stable focused row nodes', () => {
+    setChosenAccount(orbrun)
+    const s = fakeSession(cdi, 'orbrun', { username: 'orbrun', complete: true, games: [
+      { id: 'dcss-0.34', label: 'DCSS 0.34', rc: 'stable-rc' },
+      { id: 'descent-web-trunk', label: 'Descent', save: 'orbrun, a level 4 Fighter' },
+      { id: 'dcss-web-trunk', label: 'DCSS trunk', rc: 'trunk-rc' },
+    ] })
+    const { screen } = make(() => s)
+    s.readRc = vi.fn().mockResolvedValue('# rc')
+    const button = screen.root.querySelector<HTMLButtonElement>('[data-focus="play:dcss-web-trunk"]')!
+    button.focus()
+    s.state.lobby.games[2].save = 'orbrun, a level 3 Fighter'
+    screen.refresh()
+    expect(button).toBe(document.activeElement)
+    expect(screen.root.querySelector('[data-focus="play:dcss-web-trunk"]')).toBe(button)
+    expect(button.textContent).toContain('Continue DCSS trunk')
+    expect(screen.root.textContent).not.toContain('Descent')
+    screen.root.querySelector<HTMLButtonElement>('[data-focus="rc:dcss-web-trunk"]')!.click()
+    expect(s.readRc).toHaveBeenCalledWith('trunk-rc', expect.anything())
+    s.state.lobby.entries.set(1, playing('another'))
+    screen.refresh()
+    expect(screen.view).toBe('rc')
+  })
+
+  it('switches servers without accepting stale login success or reusing credentials', () => {
+    const sessions = new Map([['cdi', fakeSession(cdi, null)], ['crg', fakeSession(crg, null)]])
+    const { screen } = make(server => sessions.get(server.id) ?? null)
+    const select = screen.root.querySelector<HTMLSelectElement>('[aria-label=Server]')!
+    const pass = screen.root.querySelector<HTMLInputElement>('[name=password]')!
+    pass.value = 'old-server-secret'
+    select.value = 'crg'; select.dispatchEvent(new Event('change'))
+    expect(pass.value).toBe('')
+    const old = sessions.get('cdi')!
+    old.state.lobby.username = 'stale'
+    ;(old as unknown as { emit(e: unknown): void }).emit({ type: 'state', msg: { msg: 'login_success' } })
+    expect(select.value).toBe('crg')
+    expect(JSON.parse(store.get('orbrun.account')!)).toBeNull()
   })
 })

@@ -1,6 +1,15 @@
 # What's new
 
-Notable changes to Orbrun, newest first.
+Notable changes to Polished Crawl (built on Orbrun), newest first.
+
+## 0.3.122 — 2026-11-16
+
+- Replaced the home menu with Polished Crawl: compact server/login controls, responsive command rows, locally bundled typography and a restrained brass title reflection.
+- Added a silent recorded 2.5D gameplay backdrop with an immediate poster. Still, reduced motion, hidden tabs and covering screens suspend decorative playback.
+- About & credits and What's new now share an accessible modal while preserving typed credentials, selection, focus and compatible news-read tracking. Existing direct URLs open the same modal.
+- Kept server-confirmed saves and separate RC actions stable during lobby updates, and removed Descent from home offerings. Existing account management, registration, recovery, settings and watch flows remain available.
+- Removed the old animated menu room, splash, drag treatment and duplicate news screen. Gameplay, server authority, storage keys and production's online-only boundary are unchanged.
+- Included the Shift+numpad running fix with Num Lock from the preceding main-branch update.
 
 ## 0.3.121 — 2026-11-15
 
