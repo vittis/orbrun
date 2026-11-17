@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { MenuBackdrop } from '../src/menu-backdrop'
-import { defaultSettings } from '../src/settings'
+import { defaultSettings, saveSettings } from '../src/settings'
 
 let settings = { ...defaultSettings }
-vi.mock('../src/settings', async original => ({ ...await original<object>(), getSettings: () => settings }))
-const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), destroy: vi.fn() } }))
+vi.mock('../src/settings', async original => ({ ...await original<object>(), getSettings: () => settings,
+  saveSettings: vi.fn(next => { settings = next; window.dispatchEvent(new Event('orbrun-settings')) }) }))
+const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
 vi.mock('../src/menu-demo', () => ({ loadMenuDemo: load }))
 let view: MenuBackdrop
 let reduced: EventTarget & { matches: boolean }
@@ -29,6 +30,29 @@ it('starts the recording without Worker or Wasm support', async () => {
   expect(v.el.dataset.loading).toBe('true')
   await start()
   expect(load).toHaveBeenCalledOnce()
+})
+
+it('previews tilt on input, preserves other settings, and hides controls outside active playback', async () => {
+  settings.depthZoom = 1.5
+  const v = create(), slider = v.el.querySelector<HTMLInputElement>('input[type="range"]')!
+  const controls = slider.closest<HTMLElement>('label')!
+  expect(controls.hidden).toBe(true)
+  await start()
+  expect(controls.hidden).toBe(false)
+  expect(slider.closest('[aria-hidden="true"]')).toBeNull()
+  slider.value = '72'; slider.dispatchEvent(new Event('input', { bubbles: true }))
+  expect(saveSettings).toHaveBeenLastCalledWith({ ...defaultSettings, depthZoom: 1.5, depthTilt: 72 })
+  expect(slider.getAttribute('aria-valuetext')).toBe('72 degrees')
+  expect(demo.refresh).toHaveBeenCalled()
+  v.cover(true); expect(controls.hidden).toBe(true)
+  settings.depthTilt = 35
+  v.cover(false); expect(controls.hidden).toBe(false); expect(slider.value).toBe('35')
+  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
+  expect(controls.hidden).toBe(true)
+  v.destroy()
+  const refreshes = demo.refresh.mock.calls.length
+  window.dispatchEvent(new Event('orbrun-settings'))
+  expect(demo.refresh).toHaveBeenCalledTimes(refreshes)
 })
 
 it('never loads for initial Still, and cancels short visits', async () => {

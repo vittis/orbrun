@@ -151,6 +151,8 @@ define(function () {
 
     fg_flags.flags.S_UNDER = 0x00040000;
     fg_flags.flags.FLYING  = 0x00080000;
+    fg_flags.flags.S_UNDER_GOOD     = [0, 0x1000000],
+    fg_flags.flags.S_UNDER_ARTEFACT = [0, 0x2000000],
 
     // 4 mutually exclusive flags for behaviour.
     fg_flags.exclusive_flags.push({
@@ -210,6 +212,8 @@ define(function () {
     var bg_flags = { flags: {}, exclusive_flags: [] };
     bg_flags.flags.MM_UNSEEN  = 0x00020000;
     bg_flags.flags.UNSEEN     = 0x00040000;
+    bg_flags.flags.INVIS            = [0, 0x040];
+    bg_flags.flags.REMEMBERED_INVIS = [0, 0x080];
     bg_flags.exclusive_flags.push({
         mask       : 0x00180000,
         CURSOR1    : 0x00180000,

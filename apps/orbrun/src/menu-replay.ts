@@ -25,7 +25,8 @@ export function readReplay(value: unknown, version: string): ReplayClip {
 
 /** One recorded batch at a time. Pauses retain their remaining delay; no catch-up bursts. */
 export class ReplayClock {
-  private clip = 0
+  private clip = -1
+  private order: number[] = []
   private frame = 0
   private active = false
   private destroyed = false
@@ -34,12 +35,25 @@ export class ReplayClock {
   private timer: ReturnType<typeof setTimeout> | undefined
 
   constructor(private clips: ReplayClip[], private reset: (messages: ServerMessage[]) => void,
-    private apply: (messages: ServerMessage[]) => void, private failed: () => void) {
+    private apply: (messages: ServerMessage[]) => void, private failed: () => void, private random = Math.random) {
     if (!clips.length) throw new Error('Empty menu playlist')
     this.begin()
   }
 
   private begin() {
+    if (!this.order.length) {
+      this.order = this.clips.map((_, i) => i)
+      for (let i = this.order.length - 1; i > 0; i--) {
+        const j = Math.floor(this.random() * (i + 1))
+        ;[this.order[i], this.order[j]] = [this.order[j], this.order[i]]
+      }
+      // Every clip gets a turn; a new shuffle cannot repeat the last one immediately.
+      if (this.order.length > 1 && this.order[0] === this.clip) {
+        const j = 1 + Math.floor(this.random() * (this.order.length - 1))
+        ;[this.order[0], this.order[j]] = [this.order[j], this.order[0]]
+      }
+    }
+    this.clip = this.order.shift()!
     this.frame = 0
     // The reducer may mutate nested message data. Every loop starts with fresh messages.
     this.reset(structuredClone(this.clips[this.clip].initial))
@@ -54,7 +68,6 @@ export class ReplayClock {
       try {
         const frames = this.clips[this.clip].frames
         if (this.frame === frames.length) {
-          this.clip = (this.clip + 1) % this.clips.length
           this.begin()
         } else {
           this.apply(structuredClone(frames[this.frame++].messages))

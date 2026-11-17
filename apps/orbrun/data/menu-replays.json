@@ -1,117 +1,117 @@
 {
   "format": 1,
-  "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+  "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
   "source": {
-    "server": "https://crawl.dcss.io",
-    "game": "Dungeon Crawl Stone Soup 0.34.1-5-gfd259fce64",
-    "captureDate": "2026-11-16",
-    "commit": "fd259fce6465398a06f508afb75072a828756a5b"
+    "server": "https://crawl-br.roguelikes.gg",
+    "game": "Dungeon Crawl Stone Soup 0.35-a0-1570-g3d2b70d1f1",
+    "captureDate": "2026-11-17",
+    "commit": "3d2b70d1f1"
   },
   "clips": [
     {
-      "file": "clips/alchemy-8c85f6569d45e216.json",
-      "title": "Alchemy in the Lair",
-      "durationMs": 22596,
-      "sourceRangeMs": [
-        18000,
-        45000
-      ]
-    },
-    {
-      "file": "clips/ranged-d4994ca956903a52.json",
-      "title": "Dungeon skirmish",
-      "durationMs": 18960,
+      "file": "clips/lair-yaks-42365f92e453af4b.json",
+      "title": "Yaks in the Lair",
+      "durationMs": 24474,
       "sourceRangeMs": [
         1000,
-        24000
+        30000
       ]
     },
     {
-      "file": "clips/ice-15a9d9fba8affb85.json",
-      "title": "Ice and allies",
-      "durationMs": 29287,
+      "file": "clips/lair-gastronok-b4dcf5c328f557e4.json",
+      "title": "Wolves and Gastronok",
+      "durationMs": 32988,
       "sourceRangeMs": [
-        17500,
-        63000
+        30000,
+        66000
+      ]
+    },
+    {
+      "file": "clips/lair-snakes-a7062cc3fa6be188.json",
+      "title": "Snakes in the Lair",
+      "durationMs": 25649,
+      "sourceRangeMs": [
+        66000,
+        92253
       ]
     }
   ],
   "assets": {
-    "clips/alchemy-8c85f6569d45e216.json": {
-      "size": 700243,
-      "sha256": "8c85f6569d45e216ff3d7e6bc99d8635c47538d73f3c3b8ccaee6f8c362d91f8"
+    "clips/lair-yaks-42365f92e453af4b.json": {
+      "size": 249138,
+      "sha256": "42365f92e453af4b9bdb59a0e8137c28e62b53b7141ebe8285a06dc664c65836"
     },
-    "clips/ice-15a9d9fba8affb85.json": {
-      "size": 200308,
-      "sha256": "15a9d9fba8affb850d830143c4138e9ff007b449c65433d44747345ddbc3ab82"
+    "clips/lair-gastronok-b4dcf5c328f557e4.json": {
+      "size": 469221,
+      "sha256": "b4dcf5c328f557e44194db1d123437086e024d53f2b4b0120eac5d32fabf1152"
     },
-    "clips/ranged-d4994ca956903a52.json": {
-      "size": 182212,
-      "sha256": "d4994ca956903a5273a6aa3b6d267039e59b847889f0b2b286d08bc910ee013a"
+    "clips/lair-snakes-a7062cc3fa6be188.json": {
+      "size": 741650,
+      "sha256": "a7062cc3fa6be1888ed05745b071747877d48397190e0c6f633fffe4d2dada30"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js": {
-      "size": 9710,
-      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/enums.js": {
+      "size": 9918,
+      "sha256": "1878596297e3e89ebe46fe399e5a3e2c5177e403e3310e6c2d26d2fe9cf41bc5"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/feat.png": {
-      "size": 442232,
-      "sha256": "7c8dc8416add68ce667cca8a44d9e4fe02eb395d9c62a497f232cc0707f3f7ad"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/feat.png": {
+      "size": 755457,
+      "sha256": "6e758b40e931fb269c6b90693a23a9f5a5406a35908aeeb1fc93c4b2524ed32d"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/floor.png": {
-      "size": 656565,
-      "sha256": "16f2ff11511e42286334e828ecb465be13ecd020f3588c77f61b226c4ed9a1c0"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/floor.png": {
+      "size": 1225129,
+      "sha256": "4e5132bef181fa454e488f8b85b5f489942fb3e40d940ec349160c1baad5e155"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/gui.png": {
-      "size": 413568,
-      "sha256": "593a8de2bd8d1200571cabcc00a08224d6d1d6a0937c8613e2e25f294229abe2"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/gui.png": {
+      "size": 735549,
+      "sha256": "bc8742da098748bd1996ab3ef8ea03c6b6ba0553a3cefc43cbee4abaf1cfdd58"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/icons.png": {
-      "size": 24209,
-      "sha256": "9952aa84466535fe162dc45b61bd4f7136a73d79e2e5fd931215c9f2ac0b5c34"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/icons.png": {
+      "size": 45935,
+      "sha256": "a1eb5468cddf5acf83cc66010d41f22be0468f17540e606e09978cd103a72f89"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/main.png": {
-      "size": 759074,
-      "sha256": "4a7529ef73d21241c84bebaeca5985886851f03302143e59b9404f92aecbd8f1"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/main.png": {
+      "size": 1381708,
+      "sha256": "0208a0d2c2fa8173589cb0c6533ce72d2592e3c2a007fb88073e58dd84515bf1"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/player.png": {
-      "size": 1224467,
-      "sha256": "a8b887f16dcb854646af5b0013fdc06249bf3be66784c66512219da0cc1cddcb"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/player.png": {
+      "size": 2407997,
+      "sha256": "3132bab7db54be5bd57fbe8c5967f50a381d4cca741a9abc971e8b470931724a"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/status-icon-sizes.js": {
-      "size": 2656,
-      "sha256": "5501012d646c71b12f061c628b5ecff9a62004f0e8e56c879fa0fbf209b5beb6"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/status-icon-sizes.js": {
+      "size": 3093,
+      "sha256": "37ab80f1355005fddf88cf3f0b2671081b15f5675cc766b915a15aeefaf9f452"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-feat.js": {
-      "size": 95321,
-      "sha256": "f6c282bcb7da9f75caf6a695c09f4cf069c9b4913ec883943c7496cdf59bc131"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-feat.js": {
+      "size": 97892,
+      "sha256": "d13fa1c1ffd7fe8d7149d309a55f089de1019ceae1943ec393f22c44a1f9cf1d"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-floor.js": {
-      "size": 133172,
-      "sha256": "f0cb14681861cad6ef18e667c644a004d0f5baf3cbb628b964d52b8844f1e97f"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-floor.js": {
+      "size": 138429,
+      "sha256": "06fcd6efad677d6264d291081e2669e07079c9472bb6fb6db12cd4ff3f9fc40f"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-gui.js": {
-      "size": 153767,
-      "sha256": "7d30042c69a1b8c81e2fac255adf38e93e79d06a9af86dca2bcbd4750271dc3d"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-gui.js": {
+      "size": 158123,
+      "sha256": "91ba808e1156eef5db7dbf2d50fb497ba029d325ffb58716b20785c045837687"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-icons.js": {
-      "size": 19649,
-      "sha256": "de0542a425bc6f04173b34c014d160fe0699dbc8518c4b8da8bd4b6d7d4eaaf9"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-icons.js": {
+      "size": 21674,
+      "sha256": "c2955d942f8cb3d70e73b76bbdef2cde26222a4227ad2f8158884d14576585e2"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-main.js": {
-      "size": 212944,
-      "sha256": "90162f210f44e0167d52ade2d8cbaa15d97ab336deaa28577e08663996e0b227"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-main.js": {
+      "size": 226539,
+      "sha256": "7e03d3e9012e79745965182635439f2238a42254682f24c63ae50a91f889b1bb"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-player.js": {
-      "size": 456195,
-      "sha256": "4a047fa31e996026353b61395ed0d9d3b2115e6a686fb7198d11364baf0f1235"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-player.js": {
+      "size": 495462,
+      "sha256": "7dd6798eb546a5547aca8d6796c605a09940505f30e1b4807aa450052d07e32e"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-wall.js": {
-      "size": 192530,
-      "sha256": "e595efbc946e96cb1b12d7c36250bce6fdcc982db7bf16b26b76282dc48ea050"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/tileinfo-wall.js": {
+      "size": 197786,
+      "sha256": "d3806ae5fb7cfd49a91f19355a8a10de0f6e63039372467b24e7f240cd067888"
     },
-    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/wall.png": {
-      "size": 1437720,
-      "sha256": "186231088e3aac2254c61d705f2d51c3c4ceb7f0cbd0cd7d0043859b8d9e7a46"
+    "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/wall.png": {
+      "size": 2192537,
+      "sha256": "aa751cac96c01a61376a29f8f286b73ca5e693cb5729b4a05a641e8104bd32cb"
     }
   }
 }
