@@ -11,6 +11,26 @@ function world(visibility: SceneCell['visibility'] = 'visible') {
 }
 
 describe('LOS brightness transitions', () => {
+  it('reuses settled fields and invalidates cached samples through fades, finish and scene changes', () => {
+    const { fade, scene, cell } = world()
+    const neighbour: SceneCell = { ...cell, x: 1, visibility: 'remembered' }
+    scene.cells.set(cellKey(1, 0), neighbour)
+    fade.observe(scene, 0, false)
+    const settled = fade.surface(cell, 0)
+    expect(fade.surface(cell, 5)).toBe(settled)
+    neighbour.visibility = 'visible'; fade.observe(scene, 6, true)
+    const start = fade.surface(cell, 6)
+    expect(fade.surface(cell, 6)).toBe(start)
+    expect(sampleVisibility(fade.surface(cell, 6.11), 1, 0.5)).toBeCloseTo(MEMORY_DARKNESS / 4)
+    fade.finish()
+    expect(fade.surface(cell, 6.11)).toBe(0)
+    neighbour.visibility = 'remembered'; fade.observe(scene, 7, true)
+    fade.surface(cell, 7.1)
+    const end = fade.surface(cell, 7.23)
+    expect(sampleVisibility(end, 1, 0.5)).toBeCloseTo(MEMORY_DARKNESS / 2)
+    expect(fade.surface(cell, 10)).toBe(end)
+  })
+
   it('joins straight and diagonal boundaries continuously while retaining cell-centre brightness', () => {
     const { fade, scene, cell } = world()
     for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {

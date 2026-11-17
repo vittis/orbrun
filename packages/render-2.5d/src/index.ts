@@ -223,6 +223,7 @@ export class Render25d implements MapRenderer {
   }
 
   private terrainLighting(cell: SceneCell, face = false): SurfaceLighting | undefined {
+    if (!this.lighting.active) return undefined
     const shade = this.visibility.surface(cell, this.frameTime, face)
     if (typeof shade === 'number') return this.surfaceLighting(cell)
     const exposure = this.tiles.visibility.mask(shade, true)
@@ -351,7 +352,13 @@ export class Render25d implements MapRenderer {
     // Build known receiving surfaces; the continuous exposure mask below
     // attenuates boundary light without clipping it to individual LOS tiles.
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
-      () => true)
+      cell => {
+        // Reachability is cached for the scene revision. Include newly visible
+        // receivers before their exposure starts rising on subsequent frames.
+        if (cell.visibility === 'visible' || this.visibility.moving(cell, now)) return true
+        const shade = this.visibility.surface(cell, now)
+        return typeof shade === 'number' ? shade < MEMORY_DARKNESS : shade.some(value => value < MEMORY_DARKNESS)
+      })
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
@@ -409,16 +416,18 @@ export class Render25d implements MapRenderer {
       this.plane(ctx, p, cell, [{ tile: fade.terrain.featureTile }], 0, false); ctx.restore()
     }
 
-    ctx.save(); ctx.beginPath()
-    for (const cell of cells) if (!cell.occluder && this.visibility.surface(cell, now) === 0) {
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(rect.x, rect.y, rect.width, rect.height)
-    }
-    ctx.clip(); this.lighting.draw(ctx, { x: 0, y: 0, width: this.width, height: this.height }); ctx.restore()
-    for (const cell of cells) if (!cell.occluder) {
-      const shade = this.visibility.surface(cell, now)
-      if (shade === 0 || typeof shade === 'number' && shade >= MEMORY_DARKNESS) continue
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      this.terrainLighting(cell)?.draw(ctx, rect)
+    if (this.lighting.active) {
+      ctx.save(); ctx.beginPath()
+      for (const cell of cells) if (!cell.occluder && this.visibility.surface(cell, now) === 0) {
+        const rect = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(rect.x, rect.y, rect.width, rect.height)
+      }
+      ctx.clip(); this.lighting.draw(ctx, { x: 0, y: 0, width: this.width, height: this.height }); ctx.restore()
+      for (const cell of cells) if (!cell.occluder) {
+        const shade = this.visibility.surface(cell, now)
+        if (shade === 0 || typeof shade === 'number' && shade >= MEMORY_DARKNESS) continue
+        const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
+        this.terrainLighting(cell)?.draw(ctx, rect)
+      }
     }
     if (this.lighting.active) this.active = true
     this.waterSurface(ctx, p, cells, time)

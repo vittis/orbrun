@@ -1,6 +1,6 @@
 import type { TileSource } from '@orbrun/scene'
 import type { SurfaceRect } from './projection.js'
-import { MEMORY_DARKNESS, type VisibilityShade } from './visibility.js'
+import { MEMORY_DARKNESS, settledVisibility, type VisibilityShade } from './visibility.js'
 import { VisibilityShading } from './visibility-shading.js'
 
 export type Context2d = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
@@ -74,10 +74,11 @@ export class TileCache {
     const shade = Math.round(Math.max(0.2, Math.min(1, light)) * 16) / 16
     const field = typeof memory === 'object' ? memory : undefined
     const darkness = typeof memory === 'boolean' ? memory ? MEMORY_DARKNESS : 0 : typeof memory === 'number' ? Math.max(0, Math.min(1, memory)) : 0
-    const fading = !!field || darkness !== 0 && darkness !== MEMORY_DARKNESS
+    const cachedField = field && settledVisibility(field) ? field : undefined
+    const fading = !!field && !cachedField || darkness !== 0 && darkness !== MEMORY_DARKNESS
     const cachedMemory = !fading && darkness === MEMORY_DARKNESS
     const cachedFlash = fading ? undefined : flash
-    const key = JSON.stringify([layers, shade, cachedMemory, flat, cachedFlash, thin, rasterScale])
+    const key = JSON.stringify([layers, shade, cachedMemory, flat, cachedFlash, thin, rasterScale, cachedField])
     let surface = this.entries.get(key)
     if (!surface) {
       const size = flat ? 32 : 96, origin = flat ? 0 : 32
@@ -112,6 +113,10 @@ export class TileCache {
       if (cachedMemory) {
         c.fillStyle = `rgba(0,0,0,${MEMORY_DARKNESS})`
         c.fillRect(0, 0, size, size)
+      }
+      if (cachedField) {
+        const mask = this.visibility.mask(cachedField)
+        if (mask) { c.imageSmoothingEnabled = true; c.drawImage(mask, 0, 0, size, size) }
       }
       if (cachedFlash) {
         c.fillStyle = `rgba(${cachedFlash.r},${cachedFlash.g},${cachedFlash.b},${cachedFlash.a / 255})`

@@ -104,7 +104,9 @@ export async function visibilityChecks(source: TileSource) {
   }
   const entries = (cache as unknown as { entries: Map<string, unknown> }).entries.size
   checks++
-  if (!alphaPreserved || !transparent || entries > 2) failures.push({ name: 'continuous shading preserves alpha, flash ordering and cache bounds', alphaPreserved, transparent, entries })
+  // The half-memory and full-memory spatial patterns now retain their shaded
+  // rasters; intermediate fade values still share the unshaded cache entry.
+  if (!alphaPreserved || !transparent || entries > 3) failures.push({ name: 'continuous shading preserves alpha, flash ordering and cache bounds', alphaPreserved, transparent, entries })
   cache.clear()
   // Breathing can use an enlarged cached raster. The LOS tint must cover its
   // full surface while preserving alpha and the same atlas-space footprint.

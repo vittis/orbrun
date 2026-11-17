@@ -1,0 +1,160 @@
+{
+  "browser": "158.0.8127.18",
+  "node": "v24.11.1",
+  "platform": "darwin/arm64",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "dpr": 2
+  },
+  "warmupFrames": 20,
+  "results": [
+    {
+      "scenario": "map-idle",
+      "variant": "96dc64e",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 0,
+      "renderMs": {
+        "mean": 7.83999999264876,
+        "p50": 7.799999952316284,
+        "p95": 8.600000023841858
+      },
+      "frameIntervalMs": {
+        "mean": 121.46271186440678,
+        "p50": 83.40000000000055,
+        "p95": 100.10000000000036
+      },
+      "allocations": {
+        "canvases": 0,
+        "pixelBuffers": 0,
+        "uploadedPixels": 0
+      }
+    },
+    {
+      "scenario": "map-idle",
+      "variant": "2501952",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 6960,
+      "renderMs": {
+        "mean": 9.40833332935969,
+        "p50": 9.300000011920929,
+        "p95": 10.099999964237213
+      },
+      "frameIntervalMs": {
+        "mean": 92.08715254237288,
+        "p50": 99.89999999999964,
+        "p95": 100.10000000000036
+      },
+      "allocations": {
+        "canvases": 0,
+        "pixelBuffers": 0,
+        "uploadedPixels": 0
+      }
+    },
+    {
+      "scenario": "map-idle",
+      "variant": "current",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 0,
+      "renderMs": {
+        "mean": 8.343333333730698,
+        "p50": 8.199999988079071,
+        "p95": 9.400000035762787
+      },
+      "frameIntervalMs": {
+        "mean": 91.23908474576271,
+        "p50": 83.40000000000146,
+        "p95": 100.09999999999854
+      },
+      "allocations": {
+        "canvases": 0,
+        "pixelBuffers": 0,
+        "uploadedPixels": 0
+      }
+    },
+    {
+      "scenario": "map-los",
+      "variant": "96dc64e",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 1590,
+      "renderMs": {
+        "mean": 7.916666665673256,
+        "p50": 7.800000011920929,
+        "p95": 8.800000011920929
+      },
+      "frameIntervalMs": {
+        "mean": 88.97976271186435,
+        "p50": 83.40000000000146,
+        "p95": 100
+      },
+      "allocations": {
+        "canvases": 1,
+        "pixelBuffers": 0,
+        "uploadedPixels": 0
+      }
+    },
+    {
+      "scenario": "map-los",
+      "variant": "2501952",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 8444,
+      "renderMs": {
+        "mean": 16.803333334128062,
+        "p50": 16.80000001192093,
+        "p95": 20.69999998807907
+      },
+      "frameIntervalMs": {
+        "mean": 99.431186440678,
+        "p50": 100,
+        "p95": 100.09999999999854
+      },
+      "allocations": {
+        "canvases": 9964,
+        "pixelBuffers": 9964,
+        "uploadedPixels": 40812544
+      }
+    },
+    {
+      "scenario": "map-los",
+      "variant": "current",
+      "cells": 1089,
+      "samples": 60,
+      "scratchComposites": 7632,
+      "renderMs": {
+        "mean": 9.853333335121473,
+        "p50": 9.799999952316284,
+        "p95": 11.099999964237213
+      },
+      "frameIntervalMs": {
+        "mean": 92.65152542372886,
+        "p50": 99.90000000000146,
+        "p95": 100.09999999999854
+      },
+      "allocations": {
+        "canvases": 2,
+        "pixelBuffers": 1,
+        "uploadedPixels": 2205648
+      }
+    }
+  ],
+  "date": "2026-11-17",
+  "references": {
+    "96dc64e": "before spatial LOS shading",
+    "2501952": "regressed spatial LOS shading",
+    "current": "optimized spatial LOS shading in this change"
+  },
+  "command": "LOS_PERF_FRAMES=60 LOS_PERF_SCENARIOS=map-idle,map-los node tools/perf/los-shading.mjs http://127.0.0.1:5297 96dc64e 2501952",
+  "methodology": [
+    "Sequential local headless Chromium runs with no concurrent build or test workload.",
+    "A visible 1280\u00d7720 canvas at DPR 2; synthetic 33\u00d733 explored map, 7-cell LOS radius, bundled floor artwork, no starfield or explicit lights.",
+    "Each case warms 20 frames, measures 60 rendered frames, and uses requestAnimationFrame; LOS cases alternate a one-cell LOS-centre shift every six simulated frames.",
+    "Canvas allocations, pixel-buffer allocations and pixel uploads count OffscreenCanvas work after warm-up. Scratch composites count terrain or actor rasters returned from the shared fading scratch surface.",
+    "Render timings are local CPU submission measurements, not device FPS guarantees. Headless frame intervals include browser raster/compositor work and scheduling variance.",
+    "The idle renderer is driven deliberately even when otherwise sleeping, to represent an unchanged LOS boundary while another visual effect keeps frames active."
+  ]
+}

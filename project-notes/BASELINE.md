@@ -81,3 +81,26 @@ node_modules/.bin/vite-node tools/perf/movement-replay.ts scratchpad/performance
 Still rendered only its initial frame in the browser measurement. No long tasks were reported in these scenarios, but headless frame intervals still included 33 ms frames: lower drawing cost is not a locked-60-FPS guarantee. Transport ordering and existing input-before-render scheduling remain unchanged. Network RTT, authenticated play and physical controllers/devices were not measured; no deployment or engine changes were made.
 
 Validation: `npm run test:changed` passed 531 cases in 20 files. Final `npm run verify` passed incremental TypeScript and 2,496 unit cases in 138 files, with two optional-engine cases skipped. `npm run verify:render` passed all 32 browser tests, including the full 4,674-case dungeon raster matrix, retained scenery/fog/spell checks, native reduced motion, Still, and the new immediate-input regression. Browser retries remain zero. No production/build configuration changed, so production/release and separately provisioned engine gates were not run.
+
+## LOS shading regression — 2026-11-17
+
+Spatial LOS shading in `2501952` put every nonuniform boundary tile through the fading scratch raster on every redraw, even after visibility settled. Each render also rebuilt the same nine neighbour samples in multiple passes. Exact floating-point fade values selected new 64×64 mask canvases and pixel buffers, so the nominally bounded mask cache still allocated heavily as fades changed. The terrain lighting pass additionally sampled boundary exposure when no light was active.
+
+[Local measurements](los-shading-performance.json), with a visible 1280×720/DPR-2 canvas, a 1,089-cell explored map and a moving circular LOS frontier:
+
+| Median renderer CPU time | Before smoothing | Regressed smoothing | Optimized smoothing |
+|---|---:|---:|---:|
+| Unchanged LOS, forced redraw | 7.8 ms | 9.3 ms | 8.2 ms |
+| Changing LOS | 7.8 ms | 16.8 ms | 9.8 ms |
+
+Over 60 unchanged-LOS frames the regressed renderer performed 6,960 unnecessary scratch composites; the optimized renderer performed none. Over 60 changing-LOS frames, new OffscreenCanvas allocations fell from 9,964 to 2, pixel-buffer allocations from 9,964 to 1, and uploaded mask pixels from 40.8 million to 2.2 million. The remaining smoothing cost is measurable; these local headless CPU timings do not establish physical-device FPS or eliminate browser scheduling/raster variability. A separate alternating idle comparison measured 9.4–9.5 ms before the fix and 8.1–8.2 ms after it.
+
+The fix caches settled terrain rasters, retains settled neighbour fields and samples active fades once per cell/frame. Two small reusable, independently filtered mask buffers handle changing darkness and exposure. Lighting work is skipped when inactive; confirmed visible/fading receivers and remembered boundary exposure retain the existing reachability checks. Deterministic resource-reuse and cache-invalidation regressions protect the allocation behavior without wall-clock assertions.
+
+Reproduce outside the default test suite, with this checkout's strict loopback server running:
+
+```sh
+LOS_PERF_FRAMES=60 LOS_PERF_SCENARIOS=map-idle,map-los node tools/perf/los-shading.mjs http://127.0.0.1:5297 96dc64e 2501952
+```
+
+The tool extracts historical renderer sources into temporary ignored workspace folders and removes them afterward. Omit the environment overrides to include the authored room and measure 120 frames per case.
