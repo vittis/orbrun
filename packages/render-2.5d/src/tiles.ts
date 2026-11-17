@@ -27,10 +27,18 @@ export class TileCache {
   private entries = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
   private pixels = 0
   private fading = new Map<number, HTMLCanvasElement | OffscreenCanvas>()
+  private fieldRasters: (HTMLCanvasElement | OffscreenCanvas)[] = []
+  private frameFields = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+  private fieldCursor = 0
   source: TileSource | null = null
   readonly visibility = new VisibilityShading()
 
-  clear() { this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear() }
+  beginFrame() { this.frameFields.clear(); this.fieldCursor = 0 }
+
+  clear() {
+    this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear()
+    this.fieldRasters = []; this.beginFrame()
+  }
 
   draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean | number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, rasterScale = 1): boolean {
     const surface = this.composite(layers, light, memory, false, flash, false, rasterScale)
@@ -116,7 +124,7 @@ export class TileCache {
       }
       if (cachedField) {
         const mask = this.visibility.mask(cachedField)
-        if (mask) { c.imageSmoothingEnabled = true; c.drawImage(mask, 0, 0, size, size) }
+        if (mask) { c.imageSmoothingEnabled = true; c.drawImage(mask.canvas, mask.x, mask.y, mask.width, mask.height, 0, 0, size, size) }
       }
       if (cachedFlash) {
         c.fillStyle = `rgba(${cachedFlash.r},${cachedFlash.g},${cachedFlash.b},${cachedFlash.a / 255})`
@@ -136,11 +144,21 @@ export class TileCache {
     if (fading) {
       // Shade a reusable scratch surface, preserving sprite alpha and flash
       // ordering without quantized cache entries for every animation frame.
-      let fadingSurface = this.fading.get(surface.width)
+      const fieldKey = field ? JSON.stringify([key, field, flash]) : undefined
+      if (fieldKey) {
+        const cached = this.frameFields.get(fieldKey)
+        if (cached) return cached
+      }
+      // A terrain raster remains immutable after submission for this frame.
+      // Rewriting one shared canvas forces Chrome to preserve its earlier
+      // draws. Reuse the pool on following frames.
+      const slot = field && this.fieldCursor < 512 ? this.fieldCursor++ : undefined
+      let fadingSurface = slot !== undefined ? this.fieldRasters[slot] : this.fading.get(surface.width)
       if (!fadingSurface) {
         fadingSurface = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(surface.width, surface.height)
           : Object.assign(document.createElement('canvas'), { width: surface.width, height: surface.height })
-        this.fading.set(surface.width, fadingSurface)
+        if (slot !== undefined) this.fieldRasters[slot] = fadingSurface
+        else this.fading.set(surface.width, fadingSurface)
       }
       const c = fadingSurface.getContext('2d') as Context2d | null
       if (!c) return surface
@@ -150,7 +168,7 @@ export class TileCache {
       const mask = field && this.visibility.mask(field)
       if (mask) {
         c.imageSmoothingEnabled = true
-        c.drawImage(mask, 0, 0, surface.width, surface.height)
+        c.drawImage(mask.canvas, mask.x, mask.y, mask.width, mask.height, 0, 0, surface.width, surface.height)
       } else {
         c.fillStyle = `rgba(0,0,0,${darkness})`; c.fillRect(0, 0, surface.width, surface.height)
       }
@@ -158,6 +176,7 @@ export class TileCache {
         c.fillStyle = `rgba(${flash.r},${flash.g},${flash.b},${flash.a / 255})`
         c.fillRect(0, 0, surface.width, surface.height)
       }
+      if (fieldKey && slot !== undefined) this.frameFields.set(fieldKey, fadingSurface)
       return fadingSurface
     }
     return surface

@@ -104,3 +104,32 @@ LOS_PERF_FRAMES=60 LOS_PERF_SCENARIOS=map-idle,map-los node tools/perf/los-shadi
 ```
 
 The tool extracts historical renderer sources into temporary ignored workspace folders and removes them afterward. Omit the environment overrides to include the authored room and measure 120 frames per case.
+
+## LOS movement GPU regression — 2026-11-17
+
+The earlier allocation fix did not remove repeated canvas write/read dependencies. Each fading boundary tile rewrote a shared terrain scratch canvas after submitting it to the main canvas. Exposure masks also updated individual CPU-backed canvases. Those dependencies remained expensive in hardware Chrome even when renderer CPU submission fit below 8.3 ms. The earlier headless browser used SwiftShader with software Canvas/compositing, so its CPU timings were insufficient evidence for a 120 Hz target.
+
+[Hardware Chrome measurements](los-moving-performance.json) record the backend explicitly. A moving large-map test reproduced median frame intervals of **8.3 ms before smoothing** and **16.7 ms after the first fix**.
+
+The final comparison uses the actual GameScreen scheduler at 1280×720/DPR 2, including HUD, movement, camera following, fog, lighting and confirmed LOS updates every 90 ms:
+
+| Trailing 240-frame window | Previous fix | Batched/pool renderer |
+|---|---:|---:|
+| Median frame interval | 8.4 ms | 8.3 ms |
+| 95th-percentile frame interval | 17.3 ms | 9.3 ms |
+| Maximum frame interval | 17.6 ms | 9.4 ms |
+| Median game-loop CPU work | 5.4 ms | 4.2 ms |
+
+The previous fix reported 69 dropped frames in its retained window. The final window's maximum interval stayed below the 12.5 ms threshold for a missed 120 Hz frame. A separate comparison with the pre-smoothing renderer also delivered 8.3 ms median intervals. These are local synthetic-fixture results on Apple M3 Pro/Metal, not a guarantee for every gameplay scene or device.
+
+The fix batches changing 9×9 mask fields into one atlas update before drawing. Gutters continue the sampled field so filtering cannot create seams at tile borders. Terrain and lighting use bounded pools instead of rewriting a submitted canvas; identical terrain composites share an immutable raster within a frame. Regression tests protect upload batching, resource reuse, frame-local raster isolation, matching filtered edges, and the retained raster/visibility behavior.
+
+Reproduce with a strict loopback Vite server and normal hardware Chrome:
+
+```sh
+LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome LOS_PERF_SCENARIOS=map-moving,room-moving node tools/perf/los-shading.mjs http://127.0.0.1:5297 96dc64e 5759923
+# Actual GameScreen, optionally substituting a local historical renderer snapshot:
+LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome PERF_DPR=2 RESPONSIVENESS_SCENARIOS=moving-los-fog node tools/perf/responsiveness.mjs http://127.0.0.1:5297
+```
+
+Moving standalone cases warm their movement/fade paths for 1.5 seconds and measure three seconds with a fixed 90 ms update cadence independent of FPS. The GameScreen tool retains its six-second observation and trailing frame window. Both tools report the GPU backend; keep performance evidence outside the default suite and do not substitute software-headless FPS for hardware acceptance.

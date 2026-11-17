@@ -34,6 +34,11 @@ const session = {
   }, send: (msg: unknown) => { sent.push(msg); if (sent.length > 32) sent.shift() }, deviceRc: () => null,
 } as unknown as Session
 const params = new URLSearchParams(location.search)
+const updateLOS = () => {
+  if (!params.has('los')) return
+  for (const cell of scene.cells.values()) cell.visibility = cell.x + cell.y * 0.65 < (scene.player.x === 11 ? 10 : 11) ? 'remembered' : 'visible'
+}
+updateLOS()
 const nativeMotion = params.has('native-motion')
 const initialMotion = params.get('motion') ?? (nativeMotion ? 'auto' : 'on')
 let settings: Settings = { ...defaultSettings, depthAnimate: initialMotion === 'auto' ? 'auto' : initialMotion === 'on', hints: 'off' }
@@ -97,6 +102,7 @@ document.getElementById('hit')!.addEventListener('click', () => hit())
 const walk = () => {
   const x = scene.player.x === 11 ? 12 : 11, y = 5
   scene.player = { x, y }
+  updateLOS()
   scene.billboards = scene.billboards.map(b => b.kind === 'player' ? { ...b, x, y } : b)
   scene.revision++; moves++
   state.map.viewCenter = { x, y }

@@ -1,0 +1,417 @@
+{
+  "date": "2026-11-17",
+  "references": {
+    "previousFix": "5759923 (applied to main as 85bfdc0)",
+    "beforeSmoothing": "96dc64e",
+    "current": "GPU mask atlas and immutable per-frame raster pools in this change"
+  },
+  "methodology": [
+    "Normal installed Chrome, hardware acceleration verified through CDP SystemInfo: Apple M3 Pro / ANGLE Metal, Canvas and GPU compositing enabled.",
+    "Full GameScreen fixture at 1280\u00d7720 and DPR 2, with HUD, fog, lighting, camera following, movement and confirmed LOS changes every 90 ms.",
+    "Each GameScreen variant warms 1.5 seconds, then runs 6 seconds. The existing frame profiler reports its trailing 240 frames; total snapshot frame counts also include warm-up.",
+    "Historical renderer imports are replaced only inside the local fixture response. No live server, gameplay account, or physical input is involved.",
+    "Frame intervals, not the diagnostic title Hz estimate or CPU submission time alone, establish local 120 Hz delivery. Headless SwiftShader timings from the previous pass did not exercise hardware GPU scheduling.",
+    "The earlier standalone hardware reproduction is retained only for the original and prior-fix renderers; its intermediate candidate is omitted."
+  ],
+  "previousFixComparison": {
+    "gpu": {
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Version 26.6.2 (Build 25G83))",
+      "features": {
+        "2d_canvas": "enabled",
+        "direct_rendering_display_compositor": "disabled_off_ok",
+        "gpu_compositing": "enabled",
+        "multiple_raster_threads": "enabled_on",
+        "opengl": "enabled_on",
+        "rasterization": "enabled",
+        "skia_graphite": "enabled_on",
+        "trees_in_viz": "disabled_off",
+        "video_decode": "enabled",
+        "video_encode": "enabled",
+        "webgl": "enabled",
+        "webgpu": "enabled",
+        "webnn": "disabled_off"
+      }
+    },
+    "viewport": "1280x720",
+    "dpr": 2,
+    "browser": "157.0.8103.79",
+    "node": "v24.11.1",
+    "platform": "darwin/arm64",
+    "results": [
+      {
+        "variant": "baseline",
+        "scenario": "moving-los-fog",
+        "snapshot": {
+          "frames": 742,
+          "totalFrames": 742,
+          "hits": 0,
+          "moves": 66,
+          "maxPlayerDrift": 0.234375,
+          "impacts": 0,
+          "sent": [],
+          "messages": 0,
+          "listeners": 3,
+          "playerOnLevel": true,
+          "xl": 3,
+          "playerProjection": {
+            "x": 639.765625,
+            "y": 423.5,
+            "scale": 36.54605952848374
+          },
+          "uniqueActorFrames": 0,
+          "pixelSamples": 0,
+          "clockAdvances": true,
+          "animating": true,
+          "reduced": false,
+          "motion": true,
+          "nativeMotion": false,
+          "destroyed": false
+        },
+        "report": "\u25bc bad  69 of 240 frames dropped (render 8ms)\n240f 2.6s   n   last    p50    p95    max\ninterval  240    8.3    8.4   17.3   17.6\nbody      240    4.6    5.4    6.1    8.3\nscene     240    0.0    0.0    0.2    0.4\npresent   240    0.0    0.0    0.0    0.1\nui        240    0.1    0.1    0.3    0.5\nrender    240    4.5    5.2    5.6    7.8\nworst 8.3ms 1.7s back: scene 0.2  present 0.0  ui 0.3  render 7.8  [scene]\nlong tasks 0, max 0ms\nrtt         0    0.0    0.0    0.0    0.0\nnet up  in 0/s 0.0KB/s  out 0/s",
+        "timings": {
+          "interval": {
+            "samples": 240,
+            "p50Ms": 8.4,
+            "p95Ms": 17.3,
+            "maxMs": 17.6
+          },
+          "body": {
+            "samples": 240,
+            "p50Ms": 5.4,
+            "p95Ms": 6.1,
+            "maxMs": 8.3
+          },
+          "render": {
+            "samples": 240,
+            "p50Ms": 5.2,
+            "p95Ms": 5.6,
+            "maxMs": 7.8
+          }
+        }
+      },
+      {
+        "variant": "current",
+        "scenario": "moving-los-fog",
+        "snapshot": {
+          "frames": 905,
+          "totalFrames": 905,
+          "hits": 0,
+          "moves": 66,
+          "maxPlayerDrift": 0.234375,
+          "impacts": 0,
+          "sent": [],
+          "messages": 0,
+          "listeners": 3,
+          "playerOnLevel": true,
+          "xl": 3,
+          "playerProjection": {
+            "x": 639.765625,
+            "y": 423.5,
+            "scale": 36.546059528483624
+          },
+          "uniqueActorFrames": 0,
+          "pixelSamples": 0,
+          "clockAdvances": true,
+          "animating": true,
+          "reduced": false,
+          "motion": true,
+          "nativeMotion": false,
+          "destroyed": false
+        },
+        "report": "\u2013 fair  loop 4.2ms every frame\n240f 2.0s   n   last    p50    p95    max\ninterval  240    8.4    8.3    9.3    9.4\nbody      240    4.3    4.2    4.8    6.0\nscene     240    0.0    0.0    0.2    0.3\npresent   240    0.0    0.0    0.1    0.1\nui        240    0.1    0.1    0.3    0.4\nrender    240    4.2    4.0    4.4    5.3\nworst 6.0ms 1.5s back: scene 0.3  present 0.0  ui 0.4  render 5.3  [scene]\nlong tasks 0, max 0ms\nrtt         0    0.0    0.0    0.0    0.0\nnet up  in 0/s 0.0KB/s  out 0/s",
+        "timings": {
+          "interval": {
+            "samples": 240,
+            "p50Ms": 8.3,
+            "p95Ms": 9.3,
+            "maxMs": 9.4
+          },
+          "body": {
+            "samples": 240,
+            "p50Ms": 4.2,
+            "p95Ms": 4.8,
+            "maxMs": 6.0
+          },
+          "render": {
+            "samples": 240,
+            "p50Ms": 4.0,
+            "p95Ms": 4.4,
+            "maxMs": 5.3
+          }
+        }
+      }
+    ]
+  },
+  "originalRendererComparison": {
+    "gpu": {
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Version 26.6.2 (Build 25G83))",
+      "features": {
+        "2d_canvas": "enabled",
+        "direct_rendering_display_compositor": "disabled_off_ok",
+        "gpu_compositing": "enabled",
+        "multiple_raster_threads": "enabled_on",
+        "opengl": "enabled_on",
+        "rasterization": "enabled",
+        "skia_graphite": "enabled_on",
+        "trees_in_viz": "disabled_off",
+        "video_decode": "enabled",
+        "video_encode": "enabled",
+        "webgl": "enabled",
+        "webgpu": "enabled",
+        "webnn": "disabled_off"
+      }
+    },
+    "viewport": "1280x720",
+    "dpr": 2,
+    "browser": "157.0.8103.79",
+    "node": "v24.11.1",
+    "platform": "darwin/arm64",
+    "results": [
+      {
+        "variant": "baseline",
+        "scenario": "moving-los-fog",
+        "snapshot": {
+          "frames": 898,
+          "totalFrames": 898,
+          "hits": 0,
+          "moves": 66,
+          "maxPlayerDrift": 0.234375,
+          "impacts": 0,
+          "sent": [],
+          "messages": 0,
+          "listeners": 3,
+          "playerOnLevel": true,
+          "xl": 3,
+          "playerProjection": {
+            "x": 639.765625,
+            "y": 423.5,
+            "scale": 36.54605952848374
+          },
+          "uniqueActorFrames": 0,
+          "pixelSamples": 0,
+          "clockAdvances": true,
+          "animating": true,
+          "reduced": false,
+          "motion": true,
+          "nativeMotion": false,
+          "destroyed": false
+        },
+        "report": "\u25b2 good  139Hz\n240f 2.0s   n   last    p50    p95    max\ninterval  240    8.4    8.3    8.8   16.3\nbody      240    3.3    3.4    3.8    4.1\nscene     240    0.0    0.0    0.2    0.3\npresent   240    0.0    0.0    0.0    0.1\nui        240    0.1    0.1    0.2    0.4\nrender    240    3.2    3.2    3.6    3.7\nworst 4.1ms 1.3s back: scene 0.2  present 0.0  ui 0.2  render 3.7  [scene]\nlong tasks 0, max 0ms\nrtt         0    0.0    0.0    0.0    0.0\nnet up  in 0/s 0.0KB/s  out 0/s",
+        "timings": {
+          "interval": {
+            "samples": 240,
+            "p50Ms": 8.3,
+            "p95Ms": 8.8,
+            "maxMs": 16.3
+          },
+          "body": {
+            "samples": 240,
+            "p50Ms": 3.4,
+            "p95Ms": 3.8,
+            "maxMs": 4.1
+          },
+          "render": {
+            "samples": 240,
+            "p50Ms": 3.2,
+            "p95Ms": 3.6,
+            "maxMs": 3.7
+          }
+        }
+      },
+      {
+        "variant": "current",
+        "scenario": "moving-los-fog",
+        "snapshot": {
+          "frames": 905,
+          "totalFrames": 905,
+          "hits": 0,
+          "moves": 66,
+          "maxPlayerDrift": 0.234375,
+          "impacts": 0,
+          "sent": [],
+          "messages": 0,
+          "listeners": 3,
+          "playerOnLevel": true,
+          "xl": 3,
+          "playerProjection": {
+            "x": 639.765625,
+            "y": 423.5,
+            "scale": 36.54605952848374
+          },
+          "uniqueActorFrames": 0,
+          "pixelSamples": 0,
+          "clockAdvances": true,
+          "animating": true,
+          "reduced": false,
+          "motion": true,
+          "nativeMotion": false,
+          "destroyed": false
+        },
+        "report": "\u25b2 good  137Hz\n240f 2.0s   n   last    p50    p95    max\ninterval  240    8.3    8.3    9.3    9.5\nbody      240    3.9    4.0    4.5    4.9\nscene     240    0.0    0.0    0.2    0.3\npresent   240    0.0    0.0    0.1    0.1\nui        240    0.2    0.1    0.3    0.4\nrender    240    3.7    3.8    4.2    4.4\nworst 4.9ms 1.8s back: scene 0.3  present 0.0  ui 0.2  render 4.3  [scene]\nlong tasks 0, max 0ms\nrtt         0    0.0    0.0    0.0    0.0\nnet up  in 0/s 0.0KB/s  out 0/s",
+        "timings": {
+          "interval": {
+            "samples": 240,
+            "p50Ms": 8.3,
+            "p95Ms": 9.3,
+            "maxMs": 9.5
+          },
+          "body": {
+            "samples": 240,
+            "p50Ms": 4.0,
+            "p95Ms": 4.5,
+            "maxMs": 4.9
+          },
+          "render": {
+            "samples": 240,
+            "p50Ms": 3.8,
+            "p95Ms": 4.2,
+            "maxMs": 4.4
+          }
+        }
+      }
+    ]
+  },
+  "hardwareReproduction": {
+    "gpu": {
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Version 26.6.2 (Build 25G83))",
+      "features": {
+        "2d_canvas": "enabled",
+        "direct_rendering_display_compositor": "disabled_off_ok",
+        "gpu_compositing": "enabled",
+        "multiple_raster_threads": "enabled_on",
+        "opengl": "enabled_on",
+        "rasterization": "enabled",
+        "skia_graphite": "enabled_on",
+        "trees_in_viz": "disabled_off",
+        "video_decode": "enabled",
+        "video_encode": "enabled",
+        "webgl": "enabled",
+        "webgpu": "enabled",
+        "webnn": "disabled_off"
+      }
+    },
+    "browser": "157.0.8103.79",
+    "results": [
+      {
+        "scenario": "map-moving",
+        "variant": "96dc64e",
+        "cells": 1089,
+        "samples": 361,
+        "warmup": "1500 ms moving",
+        "movementCadenceMs": 90,
+        "scratchComposites": 10830,
+        "frameWorkMs": {
+          "mean": 2.941551246966682,
+          "p50": 2.900000035762787,
+          "p95": 3.199999988079071
+        },
+        "renderMs": {
+          "mean": 2.914681440575301,
+          "p50": 2.899999976158142,
+          "p95": 3.100000023841858
+        },
+        "frameIntervalMs": {
+          "mean": 8.330555555555556,
+          "p50": 8.300000000000182,
+          "p95": 9.299999999999272
+        },
+        "allocations": {
+          "canvases": 0,
+          "pixelBuffers": 0,
+          "uploadedPixels": 0
+        }
+      },
+      {
+        "scenario": "map-moving",
+        "variant": "5759923",
+        "cells": 1089,
+        "samples": 190,
+        "warmup": "1500 ms moving",
+        "movementCadenceMs": 90,
+        "scratchComposites": 27360,
+        "frameWorkMs": {
+          "mean": 6.538421053321738,
+          "p50": 6.5,
+          "p95": 7
+        },
+        "renderMs": {
+          "mean": 6.488421052380612,
+          "p50": 6.400000035762787,
+          "p95": 6.899999976158142
+        },
+        "frameIntervalMs": {
+          "mean": 15.873015873015868,
+          "p50": 16.69999999999891,
+          "p95": 25
+        },
+        "allocations": {
+          "canvases": 0,
+          "pixelBuffers": 0,
+          "uploadedPixels": 7907040
+        }
+      },
+      {
+        "scenario": "room-moving",
+        "variant": "96dc64e",
+        "cells": 170,
+        "samples": 353,
+        "warmup": "1500 ms moving",
+        "movementCadenceMs": 90,
+        "scratchComposites": 5648,
+        "frameWorkMs": {
+          "mean": 4.852124644913012,
+          "p50": 4.800000011920929,
+          "p95": 5.200000047683716
+        },
+        "renderMs": {
+          "mean": 4.826062322169458,
+          "p50": 4.800000011920929,
+          "p95": 5.100000023841858
+        },
+        "frameIntervalMs": {
+          "mean": 8.501704545454551,
+          "p50": 8.30000000000291,
+          "p95": 9.299999999999272
+        },
+        "allocations": {
+          "canvases": 0,
+          "pixelBuffers": 0,
+          "uploadedPixels": 14225900
+        }
+      },
+      {
+        "scenario": "room-moving",
+        "variant": "5759923",
+        "cells": 170,
+        "samples": 199,
+        "warmup": "1500 ms moving",
+        "movementCadenceMs": 90,
+        "scratchComposites": 9154,
+        "frameWorkMs": {
+          "mean": 6.086432163140283,
+          "p50": 6.099999964237213,
+          "p95": 6.5
+        },
+        "renderMs": {
+          "mean": 6.0427135693368,
+          "p50": 6,
+          "p95": 6.400000035762787
+        },
+        "frameIntervalMs": {
+          "mean": 15.105050505050501,
+          "p50": 16.600000000002183,
+          "p95": 17.5
+        },
+        "allocations": {
+          "canvases": 0,
+          "pixelBuffers": 0,
+          "uploadedPixels": 12505558
+        }
+      }
+    ]
+  },
+  "commands": [
+    "LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome PERF_DPR=2 RESPONSIVENESS_SCENARIOS=moving-los-fog RESPONSIVENESS_BASELINE=/@fs/ABSOLUTE_SNAPSHOT/packages/render-2.5d/src/index.ts node tools/perf/responsiveness.mjs http://127.0.0.1:5297",
+    "LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome LOS_PERF_SCENARIOS=map-moving,room-moving node tools/perf/los-shading.mjs http://127.0.0.1:5297 96dc64e 5759923"
+  ]
+}

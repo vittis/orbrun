@@ -6,15 +6,26 @@ import { chromium } from 'playwright'
 
 const origin = new URL(process.argv[2] ?? 'http://127.0.0.1:5296')
 if (!['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname)) throw new Error('Use a local fixture server')
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({ headless: process.env.LOS_PERF_HEADFUL !== '1', channel: process.env.LOS_PERF_BROWSER || undefined })
 try {
   const results = []
-  for (const scenario of ['moving', 'moving-fog', 'combat-fog', 'still']) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+  const scenarios = (process.env.RESPONSIVENESS_SCENARIOS ?? 'moving,moving-fog,combat-fog,still').split(',')
+  if (scenarios.some(s => !['moving', 'moving-fog', 'moving-los-fog', 'combat-fog', 'still'].includes(s))) throw new Error('Unknown responsiveness scenario')
+  const variants = process.env.RESPONSIVENESS_BASELINE ? ['baseline', 'current'] : ['current']
+  for (const variant of variants) for (const scenario of scenarios) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: Number(process.env.PERF_DPR ?? 1) })
     const errors = []
+    if (variant === 'baseline') await page.route('**/testbed/live-animation.ts', async route => {
+      const response = await route.fetch(), source = await response.text()
+      const pattern = /import \{ Render25d \} from [^;]+;/
+      if (!pattern.test(source)) throw new Error('Renderer import was not found in the fixture')
+      const body = source.replace(pattern, () => `import { Render25d } from ${JSON.stringify(process.env.RESPONSIVENESS_BASELINE)};`)
+      await route.fulfill({ response, body })
+    })
     page.on('pageerror', error => errors.push(error.message))
-    await page.goto(new URL(`/testbed/live-animation.html?perf&motion=${scenario === 'still' ? 'still' : 'on'}${scenario.includes('fog') ? '&fog' : ''}`, origin).href)
+    await page.goto(new URL(`/testbed/live-animation.html?perf&motion=${scenario === 'still' ? 'still' : 'on'}${scenario.includes('fog') ? '&fog' : ''}${scenario.includes('los') ? '&los' : ''}`, origin).href)
     await page.waitForFunction(() => !!window.__orbrunLiveAnimation)
+    await page.bringToFront()
     await page.waitForTimeout(1500)
     const cdp = await page.context().newCDPSession(page)
     if (process.env.PROFILE_CPU) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.start') }
@@ -44,8 +55,9 @@ try {
       }).sort((a, b) => b.ms - a.ms).slice(0, 20)
     }
     if (errors.length) throw new Error(`${scenario}: ${errors.join('; ')}`)
-    results.push({ scenario, ...result })
+    results.push({ variant, scenario, ...result })
     await page.close()
   }
-  console.log(JSON.stringify({ viewport: '1280x720', browser: browser.version(), node: process.version, platform: `${process.platform}/${process.arch}`, results }, null, 2))
+  const system = await browser.newBrowserCDPSession(), { gpu } = await system.send('SystemInfo.getInfo')
+  console.log(JSON.stringify({ gpu: { renderer: gpu.auxAttributes.glRenderer, features: gpu.featureStatus }, viewport: '1280x720', dpr: Number(process.env.PERF_DPR ?? 1), browser: browser.version(), node: process.version, platform: `${process.platform}/${process.arch}`, results }, null, 2))
 } finally { await browser.close() }

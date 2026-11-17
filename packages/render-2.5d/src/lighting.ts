@@ -44,6 +44,8 @@ export class DungeonLighting implements SurfaceLighting {
   // Walls and sprites alternate sizes. Resizing one shared canvas repeatedly
   // discards its backing store instead of reusing the allocated surface.
   private scratch = new Map<string, Canvas>()
+  private terrainScratch: Canvas[] = []
+  private terrainCursor = 0
   private sourceInk: Canvas | null = null
   private sourceMask: Canvas | null = null
   private scene: Scene | null = null
@@ -57,6 +59,7 @@ export class DungeonLighting implements SurfaceLighting {
   build(scene: Scene, p: Projection, sources: Emitter[], time: number, animate: boolean, tiles?: TileSource | null, position?: ActorPosition,
     receives = (cell: SceneCell) => cell.visibility === 'visible') {
     this.active = false
+    this.terrainCursor = 0
     this.bounds = []
     if (!sources.length) return
     const key = sources.map(s => `${s.x},${s.y},${s.radius}`).join(';')
@@ -143,26 +146,35 @@ export class DungeonLighting implements SurfaceLighting {
     }
   }
 
-  draw(ctx: Context2d, rect: SurfaceRect, mask?: Canvas, sample = rect) {
+  draw(ctx: Context2d, rect: SurfaceRect, mask?: Canvas, sample = rect,
+    maskRect = mask ? { x: 0, y: 0, width: mask.width, height: mask.height } : undefined) {
     if (!this.active || !this.canvas || rect.width <= 0 || rect.height <= 0) return
     if (!this.bounds.some(b => sample.x < b.x + b.width && sample.x + sample.width > b.x
       && sample.y < b.y + b.height && sample.y + sample.height > b.y)) return
     let ink = this.canvas
-    if (mask) {
-      const key = `${mask.width}:${mask.height}`
-      let canvas = this.scratch.get(key)
+    if (mask && maskRect) {
+      const { width, height } = maskRect
+      const key = `${width}:${height}`
+      const slot = (maskRect.width !== mask.width || maskRect.height !== mask.height) && this.terrainCursor < 256
+        ? this.terrainCursor++ : undefined
+      let canvas = slot !== undefined ? this.terrainScratch[slot] : this.scratch.get(key)
       if (!canvas) {
-        const created = surface(mask.width, mask.height)
+        const created = surface(width, height)
         if (!created) return
         // A small bounded pool covers terrain and the sprite raster scales.
-        if (this.scratch.size >= 4) this.scratch.delete(this.scratch.keys().next().value!)
-        this.scratch.set(key, canvas = created)
+        canvas = created
+        if (slot !== undefined) this.terrainScratch[slot] = canvas
+        else {
+          if (this.scratch.size >= 4) this.scratch.delete(this.scratch.keys().next().value!)
+          this.scratch.set(key, canvas)
+        }
       }
       const scratch = canvas.getContext('2d') as Context2d | null
       if (!scratch) return
-      scratch.globalCompositeOperation = 'source-over'; scratch.clearRect(0, 0, mask.width, mask.height)
-      scratch.drawImage(this.canvas, sample.x + this.pad, sample.y + this.pad, sample.width, sample.height, 0, 0, mask.width, mask.height)
-      scratch.globalCompositeOperation = 'destination-in'; scratch.drawImage(mask, 0, 0)
+      scratch.globalCompositeOperation = 'source-over'; scratch.clearRect(0, 0, width, height)
+      scratch.drawImage(this.canvas, sample.x + this.pad, sample.y + this.pad, sample.width, sample.height, 0, 0, width, height)
+      scratch.globalCompositeOperation = 'destination-in'
+      scratch.drawImage(mask, maskRect.x, maskRect.y, width, height, 0, 0, width, height)
       ink = canvas
     }
     ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.imageSmoothingEnabled = true
@@ -171,5 +183,8 @@ export class DungeonLighting implements SurfaceLighting {
     ctx.restore()
   }
 
-  clear() { this.canvas = this.sourceInk = this.sourceMask = null; this.scratch.clear(); this.bounds = []; this.scene = null; this.reachable = []; this.key = ''; this.revision = -1; this.active = false }
+  clear() {
+    this.canvas = this.sourceInk = this.sourceMask = null; this.scratch.clear(); this.terrainScratch = []; this.terrainCursor = 0
+    this.bounds = []; this.scene = null; this.reachable = []; this.key = ''; this.revision = -1; this.active = false
+  }
 }

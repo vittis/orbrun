@@ -14,7 +14,7 @@ import { DeathArt } from './death-draw.js'
 import { DungeonDeaths, type DeathParticle } from './death.js'
 import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallHeight, wallRoof } from './wall-depth.js'
-import { DungeonVisibility, MEMORY_DARKNESS } from './visibility.js'
+import { DungeonVisibility, MEMORY_DARKNESS, type VisibilityShade } from './visibility.js'
 import { DungeonArrival } from './arrival.js'
 import { UnexploredFog } from './unexplored-fog.js'
 
@@ -228,7 +228,7 @@ export class Render25d implements MapRenderer {
     if (typeof shade === 'number') return this.surfaceLighting(cell)
     const exposure = this.tiles.visibility.mask(shade, true)
     if (!exposure) return this.surfaceLighting(cell)
-    return { draw: (ctx, rect) => this.lighting.draw(ctx, rect, exposure) }
+    return { draw: (ctx, rect) => this.lighting.draw(ctx, rect, exposure.canvas, rect, exposure) }
   }
 
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1) {
@@ -272,6 +272,7 @@ export class Render25d implements MapRenderer {
     if (!ctx) return
     const time = this.opts.animate ? now : 0
     this.frameTime = now
+    this.tiles.beginFrame()
     const p = this.projection(), s = p.scale, sy = groundDepth(p.tilt)
     this.active = this.movement.cameraMoving(now)
     if (this.opts.animate) for (const ripple of this.life.ripples) {
@@ -364,6 +365,16 @@ export class Render25d implements MapRenderer {
     ctx.imageSmoothingEnabled = this.opts.filterScaling
     this.unexploredFog(ctx, p, time)
     const cells = this.cells.filter(c => this.inFrame(p, c))
+    if (this.tiles.source) {
+      const fields: VisibilityShade[] = []
+      for (const cell of cells) {
+        const shade = this.visibility.surface(cell, now)
+        if (typeof shade === 'number') continue
+        fields.push(shade)
+        if (cell.occluder) fields.push(this.visibility.surface(cell, now, true))
+      }
+      this.tiles.visibility.prepare(fields, this.lighting.active)
+    }
     const fogGeometry = this.opts.unexploredFog ? cells.map(cell => {
       const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
       if (!cell.occluder) return ground
