@@ -73,6 +73,35 @@ it('stops on a failed frame and rejects executable or mismatched recording conte
     { ...clip(0), frames: [{ after: -1, messages: [] }] }]) expect(() => readReplay(bad, version)).toThrow()
 })
 
+it('switches recordings and artwork versions immediately, loops the selection, and preserves pauses', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
+  const second = { ...clip(10), version: 'b'.repeat(40) }
+  const reset = vi.fn(), apply = vi.fn(), failed = vi.fn()
+  const clock = new ReplayClock([clip(0), second], reset, apply, failed, () => .999)
+  clock.setActive(true)
+  await vi.advanceTimersByTimeAsync(50)
+  clock.select(1)
+  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
+  await vi.advanceTimersByTimeAsync(99); expect(apply).not.toHaveBeenCalled()
+  await vi.advanceTimersByTimeAsync(1); expect(apply).toHaveBeenLastCalledWith(second.frames[0].messages)
+  await vi.advanceTimersByTimeAsync(1800)
+  expect(reset).toHaveBeenCalledTimes(3)
+  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
+  clock.setActive(false)
+  clock.select(0)
+  expect(reset).toHaveBeenLastCalledWith(clip(0).initial, version)
+  const count = apply.mock.calls.length
+  await vi.advanceTimersByTimeAsync(5000); expect(apply).toHaveBeenCalledTimes(count)
+  clock.select(null); clock.setActive(true)
+  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
+  await vi.advanceTimersByTimeAsync(1900)
+  expect(reset).toHaveBeenLastCalledWith(clip(0).initial, version)
+  expect(() => clock.select(-1)).toThrow(RangeError)
+  clock.destroy(); clock.select(1)
+  expect(vi.getTimerCount()).toBe(0)
+  expect(failed).not.toHaveBeenCalled()
+})
+
 it('curates state-only clips with complete preceding deltas and bounded idle gaps', () => {
   const records = [
     { t: 0, m: { msg: 'game_client', version, content: '<script>' } },
@@ -87,21 +116,23 @@ it('curates state-only clips with complete preceding deltas and bounded idle gap
   expect(() => curate(records, 0, 5000)).toThrow('Missing initial state')
 })
 
-it('bundles matching artwork and three genuine moving/combat sequences that replay identically twice', async () => {
+it('bundles matching artwork and moving/combat sequences that replay identically twice', async () => {
   verifyMenuReplays()
   const root = new URL('../public/menu/', import.meta.url)
-  const data = await loadGamedata({ base: 'fixture://menu', version: manifest.version, skipImages: true,
-    io: { fetchText: async url => readFileSync(new URL(url.replace('fixture://menu/', ''), root), 'utf8'), loadImage: async () => { throw Error('unexpected images') } } })
+  const versions = await Promise.all([...new Set(manifest.clips.map(clip => clip.version))].map(version =>
+    loadGamedata({ base: 'fixture://menu', version, skipImages: true,
+      io: { fetchText: async url => readFileSync(new URL(url.replace('fixture://menu/', ''), root), 'utf8'), loadImage: async () => { throw Error('unexpected images') } } })))
   try {
-    expect(manifest.clips).toHaveLength(3)
+    expect(manifest.clips.length).toBeGreaterThan(0)
     for (const entry of manifest.clips) {
-      const recording = readReplay(JSON.parse(readFileSync(new URL(entry.file, root), 'utf8')), manifest.version)
+      const data = versions.find(data => data.version === entry.version)!
+      const recording = readReplay(JSON.parse(readFileSync(new URL(entry.file, root), 'utf8')), entry.version)
       const original = structuredClone(recording)
       const run = () => {
         const state = initialState(); reduce(state, { msg: 'game_started' })
         for (const message of structuredClone(recording.initial)) reduce(state, message)
         let scene = buildScene(state, data)
-        expect(scene.playerOnLevel).toBe(true)
+        expect(scene.playerOnLevel, entry.title).toBe(true)
         const feedback = new CombatFeedback(state), positions = new Set<string>()
         let events = 0, now = 0
         for (const frame of structuredClone(recording.frames)) {
@@ -111,14 +142,16 @@ it('bundles matching artwork and three genuine moving/combat sequences that repl
           now += frame.after; events += feedback.flush(scene, now).length
           feedback.takeSpells()
           positions.add(JSON.stringify(state.player.pos))
-          expect(scene.playerOnLevel).toBe(true)
+          expect(scene.playerOnLevel, entry.title).toBe(true)
         }
-        expect(events).toBeGreaterThan(0)
-        expect(positions.size).toBeGreaterThan(2)
+        expect(events, entry.title).toBeGreaterThan(0)
+        // The Djinni holds position throughout the fight against Jeremiah.
+        if (entry.title === 'Stand against Jeremiah') expect(positions.size).toBe(1)
+        else expect(positions.size, entry.title).toBeGreaterThan(2)
         return state
       }
       expect(run()).toEqual(run())
       expect(recording).toEqual(original)
     }
-  } finally { data.dispose() }
+  } finally { for (const data of versions) data.dispose() }
 }, 20000)

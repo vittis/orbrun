@@ -12,6 +12,7 @@ import manifest from '../data/menu-replays.json'
 
 export interface MenuDemo {
   setActive(active: boolean): void
+  chooseRecording(file: string | null): void
   refresh(): void
   destroy(): void
 }
@@ -22,24 +23,25 @@ export async function loadMenuDemo(canvas: HTMLCanvasElement, signal: AbortSigna
   const loading = new AbortController()
   const abort = () => loading.abort()
   signal.addEventListener('abort', abort, { once: true })
-  let data: Gamedata | undefined
+  const data = new Map<string, Gamedata>()
   try {
     const [, clips] = await Promise.all([
-      loadGamedata({ base: '/menu', version: manifest.version, io: browserIo(), signal: loading.signal }).then(loaded => {
+      Promise.all([...new Set(manifest.clips.map(clip => clip.version))].map(version =>
+        loadGamedata({ base: '/menu', version, io: browserIo(), signal: loading.signal }).then(loaded => {
         if (loading.signal.aborted) { loaded.dispose(); loading.signal.throwIfAborted() }
-        data = loaded
-      }),
+        data.set(version, loaded)
+      }))),
       Promise.all(manifest.clips.map(async clip => {
         const response = await fetch('/menu/' + clip.file, { signal: loading.signal })
         if (!response.ok) throw new Error('Menu recording unavailable')
         const text = await response.text()
         if (text.length > 2 * 1024 * 1024) throw new Error('Menu recording too large')
-        return readReplay(JSON.parse(text), manifest.version)
+        return readReplay(JSON.parse(text), clip.version)
       })),
     ])
     signal.throwIfAborted()
-    return new RecordedMenuDemo(canvas, data!, clips, failed)
-  } catch (error) { loading.abort(); data?.dispose(); throw error }
+    return new RecordedMenuDemo(canvas, data, clips, failed)
+  } catch (error) { loading.abort(); for (const loaded of data.values()) loaded.dispose(); throw error }
   finally { signal.removeEventListener('abort', abort) }
 }
 
@@ -56,18 +58,22 @@ class RecordedMenuDemo implements MenuDemo {
   private dirty = true
   private raf = 0
   private lastFrame = -Infinity
+  private data!: Gamedata
 
-  constructor(private canvas: HTMLCanvasElement, private data: Gamedata, clips: ReplayClip[], private failed: () => void) {
+  constructor(private canvas: HTMLCanvasElement, private versions: Map<string, Gamedata>, clips: ReplayClip[], private failed: () => void) {
     try {
-      this.clock = new ReplayClock(clips, messages => this.reset(messages), messages => this.apply(messages), () => this.fail())
+      this.clock = new ReplayClock(clips, (messages, version) => this.reset(messages, version), messages => this.apply(messages), () => this.fail())
       this.resize = new ResizeObserver(() => { this.fit(); this.wake() })
       this.resize.observe(canvas)
     } catch { this.clock?.destroy(); this.renderer?.destroy(); this.resize?.disconnect(); throw new Error('Menu playback failed to initialize') }
   }
 
-  private reset(messages: ServerMessage[]) {
+  private reset(messages: ServerMessage[], version: string) {
     this.renderer?.destroy()
     this.renderer = null
+    const data = this.versions.get(version)
+    if (!data) throw new Error('Menu recording artwork unavailable')
+    this.data = data
     this.state = initialState()
     reduce(this.state, { msg: 'game_started' })
     for (const message of messages) reduce(this.state, message)
@@ -151,6 +157,13 @@ class RecordedMenuDemo implements MenuDemo {
     this.wake()
   }
 
+  chooseRecording(file: string | null) {
+    if (this.destroyed) return
+    const index = file === null ? null : manifest.clips.findIndex(clip => clip.file === file)
+    if (index === -1) return
+    this.clock.select(index)
+  }
+
   private fail() { this.destroy(); this.failed() }
 
   destroy() {
@@ -160,7 +173,7 @@ class RecordedMenuDemo implements MenuDemo {
     cancelAnimationFrame(this.raf)
     this.resize?.disconnect()
     this.renderer?.destroy()
-    this.data.dispose()
+    for (const data of this.versions.values()) data.dispose()
     this.canvas.hidden = true
   }
 }

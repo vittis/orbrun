@@ -1,6 +1,7 @@
 import { h } from './dom'
 import { getSettings, saveSettings } from './settings'
 import type { MenuDemo } from './menu-demo'
+import manifest from '../data/menu-replays.json'
 
 /** Silent recorded gameplay with an immediate, lightweight dungeon entrance while loading. */
 export class MenuBackdrop {
@@ -8,8 +9,12 @@ export class MenuBackdrop {
   readonly canvas = h('canvas', { hidden: true, 'aria-hidden': 'true' })
   private tilt = h('input', { type: 'range', min: 25, max: 85, step: 1, 'aria-label': 'Dungeon tilt' })
   private tiltValue = h('span', { class: 'menu-replay-angle', 'aria-hidden': 'true' })
-  private controls = h('label', { class: 'menu-replay-controls', hidden: true },
-    h('span', {}, 'Dungeon tilt'), this.tiltValue, this.tilt)
+  private recording = h('select', { 'aria-label': 'Choose recording' },
+    h('option', { value: '' }, 'Shuffle all'),
+    ...manifest.clips.map(clip => h('option', { value: clip.file }, clip.title)))
+  private controls = h('div', { class: 'menu-replay-controls', hidden: true },
+    h('label', { class: 'menu-replay-picker' }, h('span', {}, 'Choose recording'), this.recording),
+    h('label', { class: 'menu-replay-tilt' }, h('span', {}, 'Dungeon tilt'), this.tiltValue, this.tilt))
   private media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
   private observer: MutationObserver
   private covered = false
@@ -26,6 +31,7 @@ export class MenuBackdrop {
     this.tilt.addEventListener('input', () => {
       saveSettings({ ...getSettings(), depthTilt: this.tilt.valueAsNumber })
     })
+    this.recording.addEventListener('change', () => this.demo?.chooseRecording(this.recording.value || null))
     host.prepend(this.el)
     this.media?.addEventListener?.('change', this.applySettings)
     document.addEventListener('visibilitychange', this.applySettings)
@@ -75,6 +81,8 @@ export class MenuBackdrop {
       })
       if (controller.signal.aborted || this.destroyed) { demo.destroy(); return }
       this.demo = demo
+      if (this.recording.value) demo.chooseRecording(this.recording.value)
+      if (this.demo !== demo) return
       demo.setActive(true)
       this.controls.hidden = false
     } catch {

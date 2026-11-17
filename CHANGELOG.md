@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.127 — 2026-11-17
+
+- The main menu shuffles sixteen recordings. Choose a recording to loop a favorite or select Shuffle all to resume the rotation.
+
 ## 0.3.126 — 2026-11-16
 
 - The menu now rotates through three curated recordings of real Crawl gameplay: alchemy in the Lair, ranged combat, and ice magic with allies. The normal 2.5D renderer shows the recorded movement, visibility and confirmed combat effects.

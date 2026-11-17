@@ -6,7 +6,7 @@ import { defaultSettings, saveSettings } from '../src/settings'
 let settings = { ...defaultSettings }
 vi.mock('../src/settings', async original => ({ ...await original<object>(), getSettings: () => settings,
   saveSettings: vi.fn(next => { settings = next; window.dispatchEvent(new Event('orbrun-settings')) }) }))
-const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
+const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), chooseRecording: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
 vi.mock('../src/menu-demo', () => ({ loadMenuDemo: load }))
 let view: MenuBackdrop
 let reduced: EventTarget & { matches: boolean }
@@ -35,7 +35,7 @@ it('starts the recording without Worker or Wasm support', async () => {
 it('previews tilt on input, preserves other settings, and hides controls outside active playback', async () => {
   settings.depthZoom = 1.5
   const v = create(), slider = v.el.querySelector<HTMLInputElement>('input[type="range"]')!
-  const controls = slider.closest<HTMLElement>('label')!
+  const controls = slider.closest<HTMLElement>('.menu-replay-controls')!
   expect(controls.hidden).toBe(true)
   await start()
   expect(controls.hidden).toBe(false)
@@ -53,6 +53,21 @@ it('previews tilt on input, preserves other settings, and hides controls outside
   const refreshes = demo.refresh.mock.calls.length
   window.dispatchEvent(new Event('orbrun-settings'))
   expect(demo.refresh).toHaveBeenCalledTimes(refreshes)
+})
+
+it('chooses a recording immediately, retains the choice across reduced motion, and returns to shuffle', async () => {
+  const v = create(); await start()
+  const picker = v.el.querySelector('select')!
+  const file = picker.options[1].value
+  picker.value = file; picker.dispatchEvent(new Event('change'))
+  expect(demo.chooseRecording).toHaveBeenLastCalledWith(file)
+  expect(load).toHaveBeenCalledOnce()
+  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
+  reduced.matches = false; reduced.dispatchEvent(new Event('change')); await start()
+  expect(demo.chooseRecording).toHaveBeenLastCalledWith(file)
+  picker.value = ''; picker.dispatchEvent(new Event('change'))
+  expect(demo.chooseRecording).toHaveBeenLastCalledWith(null)
+  expect(saveSettings).not.toHaveBeenCalled()
 })
 
 it('never loads for initial Still, and cancels short visits', async () => {

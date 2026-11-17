@@ -27,6 +27,7 @@ export function readReplay(value: unknown, version: string): ReplayClip {
 export class ReplayClock {
   private clip = -1
   private order: number[] = []
+  private selected: number | null = null
   private frame = 0
   private active = false
   private destroyed = false
@@ -34,14 +35,14 @@ export class ReplayClock {
   private due = 0
   private timer: ReturnType<typeof setTimeout> | undefined
 
-  constructor(private clips: ReplayClip[], private reset: (messages: ServerMessage[]) => void,
+  constructor(private clips: ReplayClip[], private reset: (messages: ServerMessage[], version: string) => void,
     private apply: (messages: ServerMessage[]) => void, private failed: () => void, private random = Math.random) {
     if (!clips.length) throw new Error('Empty menu playlist')
     this.begin()
   }
 
   private begin() {
-    if (!this.order.length) {
+    if (this.selected === null && !this.order.length) {
       this.order = this.clips.map((_, i) => i)
       for (let i = this.order.length - 1; i > 0; i--) {
         const j = Math.floor(this.random() * (i + 1))
@@ -53,10 +54,10 @@ export class ReplayClock {
         ;[this.order[0], this.order[j]] = [this.order[j], this.order[0]]
       }
     }
-    this.clip = this.order.shift()!
+    this.clip = this.selected ?? this.order.shift()!
     this.frame = 0
     // The reducer may mutate nested message data. Every loop starts with fresh messages.
-    this.reset(structuredClone(this.clips[this.clip].initial))
+    this.reset(structuredClone(this.clips[this.clip].initial), this.clips[this.clip].version)
     this.remaining = this.clips[this.clip].frames[0].after
   }
 
@@ -87,6 +88,20 @@ export class ReplayClock {
       clearTimeout(this.timer)
       this.timer = undefined
     }
+  }
+
+  /** A temporary manual choice loops until the viewer returns to shuffle. */
+  select(index: number | null) {
+    if (this.destroyed) return
+    if (index !== null && (!Number.isInteger(index) || index < 0 || index >= this.clips.length)) throw new RangeError('Unknown menu recording')
+    clearTimeout(this.timer)
+    this.timer = undefined
+    this.selected = index
+    this.order = []
+    try {
+      this.begin()
+      if (this.active) this.schedule()
+    } catch { this.destroy(); this.failed() }
   }
 
   destroy() { this.destroyed = true; this.active = false; clearTimeout(this.timer) }

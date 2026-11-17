@@ -1,11 +1,36 @@
 {
-  "format": 1,
-  "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
-  "source": {
-    "server": "https://crawl-br.roguelikes.gg",
-    "game": "Dungeon Crawl Stone Soup 0.35-a0-1570-g3d2b70d1f1",
-    "captureDate": "2026-11-17",
-    "commit": "3d2b70d1f1"
+  "format": 2,
+  "sources": {
+    "5d79d81db7552a085647a74860d9842e4beb3d41": {
+      "server": "https://crawl-br.roguelikes.gg",
+      "game": "Dungeon Crawl Stone Soup 0.35-a0-1570-g3d2b70d1f1",
+      "captureDate": "2026-11-17",
+      "commit": "3d2b70d1f1"
+    },
+    "0703b2fa62e821390161d95cf52f9da1183761d4": {
+      "server": "https://crawl.dcss.io",
+      "game": "Dungeon Crawl Stone Soup 0.34.1-5-gfd259fce64",
+      "captureDate": "2026-11-16",
+      "commit": "fd259fce6465398a06f508afb75072a828756a5b"
+    },
+    "8aead0d076b6cf299d5308168248c8053933a821": {
+      "server": "https://crawl.dcss.io",
+      "game": "Dungeon Crawl Stone Soup 0.33.1-14-gd435c25fec",
+      "captureDate": "2026-11-17",
+      "commit": "d435c25fec"
+    },
+    "c81caa56c749218c78414d879e0a05f397694ed3": {
+      "server": "https://crawl.dcss.io",
+      "game": "Dungeon Crawl Stone Soup 0.35-a0-1570-g3d2b70d1f1",
+      "captureDate": "2026-11-17",
+      "commit": "3d2b70d1f1"
+    },
+    "f98aa2753f7c97d60cb6bf568b498824bacb38b7": {
+      "server": "https://crawl.dcss.io",
+      "game": "Dungeon Crawl Stone Soup 0.35-a0-1572-g63a4de4d40",
+      "captureDate": "2026-11-17",
+      "commit": "63a4de4d40"
+    }
   },
   "clips": [
     {
@@ -15,7 +40,8 @@
       "sourceRangeMs": [
         1000,
         30000
-      ]
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
     {
       "file": "clips/lair-gastronok-b4dcf5c328f557e4.json",
@@ -24,7 +50,8 @@
       "sourceRangeMs": [
         30000,
         66000
-      ]
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
     {
       "file": "clips/lair-snakes-a7062cc3fa6be188.json",
@@ -33,6 +60,143 @@
       "sourceRangeMs": [
         66000,
         92253
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
+    },
+    {
+      "file": "clips/djinni-descent-c75f9afa2e5615ca.json",
+      "title": "Djinni descent",
+      "durationMs": 29629,
+      "sourceRangeMs": [
+        1000,
+        30000
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
+    },
+    {
+      "file": "clips/djinni-foxfire-daddaa69d1cc56fb.json",
+      "title": "Foxfire in the Dungeon",
+      "durationMs": 29551,
+      "sourceRangeMs": [
+        48000,
+        78000
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
+    },
+    {
+      "file": "clips/djinni-depths-db5ff5e7c4fa8297.json",
+      "title": "Djinni on Dungeon:3",
+      "durationMs": 23773,
+      "sourceRangeMs": [
+        90500,
+        111859
+      ],
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
+    },
+    {
+      "file": "clips/octopode-vaults-3538aef2ec9a8868.json",
+      "title": "Octopode in the Vaults",
+      "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+      "durationMs": 16683,
+      "sourceRangeMs": [
+        8000,
+        29000
+      ],
+      "captureServer": "CUE (Amsterdam, Netherlands)",
+      "captureDate": "2026-11-17"
+    },
+    {
+      "file": "clips/octopode-lightning-6270a570e5f3488b.json",
+      "title": "Lightning in the Vaults",
+      "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+      "durationMs": 19021,
+      "sourceRangeMs": [
+        66000,
+        93000
+      ],
+      "captureServer": "CUE (Amsterdam, Netherlands)",
+      "captureDate": "2026-11-17"
+    },
+    {
+      "file": "clips/octopode-skirmish-96f80f3418511e15.json",
+      "title": "Vaults skirmish",
+      "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+      "durationMs": 25271,
+      "sourceRangeMs": [
+        93000,
+        119603
+      ],
+      "captureServer": "CUE (Amsterdam, Netherlands)",
+      "captureDate": "2026-11-17"
+    },
+    {
+      "file": "clips/dungeon-foxfire-8384203f4ab6b795.json",
+      "title": "Foxfire at the entrance",
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
+      "durationMs": 27584,
+      "sourceRangeMs": [
+        1000,
+        29000
+      ]
+    },
+    {
+      "file": "clips/dungeon-blastmotes-53dd3419686c4067.json",
+      "title": "Blastmotes on Dungeon:5",
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
+      "durationMs": 27775,
+      "sourceRangeMs": [
+        28000,
+        56000
+      ]
+    },
+    {
+      "file": "clips/jeremiah-4cc03b58ede0d531.json",
+      "title": "Stand against Jeremiah",
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
+      "durationMs": 22884,
+      "sourceRangeMs": [
+        1000,
+        24142
+      ]
+    },
+    {
+      "file": "clips/vaults-troll-a36ac19dd0413940.json",
+      "title": "Deep troll in the Vaults",
+      "version": "8aead0d076b6cf299d5308168248c8053933a821",
+      "durationMs": 14910,
+      "sourceRangeMs": [
+        1200,
+        14800
+      ]
+    },
+    {
+      "file": "clips/swamp-ghoul-14d621d98b0e2a8c.json",
+      "title": "Ghoul in the Swamp",
+      "version": "8aead0d076b6cf299d5308168248c8053933a821",
+      "durationMs": 29763,
+      "sourceRangeMs": [
+        41000,
+        69000
+      ]
+    },
+    {
+      "file": "clips/elf-blademaster-9ac998353319d0c7.json",
+      "title": "Blademaster in the Elven Halls",
+      "version": "c81caa56c749218c78414d879e0a05f397694ed3",
+      "durationMs": 27597,
+      "sourceRangeMs": [
+        19000,
+        48000
+      ]
+    },
+    {
+      "file": "clips/abyss-tormentor-3e8870d7fd219cd3.json",
+      "title": "Tormentor in the Abyss",
+      "version": "f98aa2753f7c97d60cb6bf568b498824bacb38b7",
+      "durationMs": 16206,
+      "sourceRangeMs": [
+        59000,
+        99000
       ]
     }
   ],
@@ -112,6 +276,314 @@
     "gamedata/5d79d81db7552a085647a74860d9842e4beb3d41/wall.png": {
       "size": 2192537,
       "sha256": "aa751cac96c01a61376a29f8f286b73ca5e693cb5729b4a05a641e8104bd32cb"
+    },
+    "clips/djinni-descent-c75f9afa2e5615ca.json": {
+      "size": 356383,
+      "sha256": "c75f9afa2e5615ca9eae8f5470fd5f0d845ac95688ca907001b371cadd1780cc"
+    },
+    "clips/djinni-foxfire-daddaa69d1cc56fb.json": {
+      "size": 672578,
+      "sha256": "daddaa69d1cc56fb989a2406e99d4405470ea4de00242ede5da09e317499603f"
+    },
+    "clips/djinni-depths-db5ff5e7c4fa8297.json": {
+      "size": 921141,
+      "sha256": "db5ff5e7c4fa829766d3435ad7d0a45a5411cfa04d166fcd2b83567e01537fc8"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/enums.js": {
+      "size": 9710,
+      "sha256": "8849de6cb32416e3bf03bb0385ee3a7a0fddc8339d44674d4a1bfac44dc453cc"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/feat.png": {
+      "size": 442232,
+      "sha256": "7c8dc8416add68ce667cca8a44d9e4fe02eb395d9c62a497f232cc0707f3f7ad"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/floor.png": {
+      "size": 656565,
+      "sha256": "16f2ff11511e42286334e828ecb465be13ecd020f3588c77f61b226c4ed9a1c0"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/gui.png": {
+      "size": 413568,
+      "sha256": "593a8de2bd8d1200571cabcc00a08224d6d1d6a0937c8613e2e25f294229abe2"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/icons.png": {
+      "size": 24209,
+      "sha256": "9952aa84466535fe162dc45b61bd4f7136a73d79e2e5fd931215c9f2ac0b5c34"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/main.png": {
+      "size": 759074,
+      "sha256": "4a7529ef73d21241c84bebaeca5985886851f03302143e59b9404f92aecbd8f1"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/player.png": {
+      "size": 1224467,
+      "sha256": "a8b887f16dcb854646af5b0013fdc06249bf3be66784c66512219da0cc1cddcb"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/status-icon-sizes.js": {
+      "size": 2656,
+      "sha256": "5501012d646c71b12f061c628b5ecff9a62004f0e8e56c879fa0fbf209b5beb6"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-feat.js": {
+      "size": 95321,
+      "sha256": "f6c282bcb7da9f75caf6a695c09f4cf069c9b4913ec883943c7496cdf59bc131"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-floor.js": {
+      "size": 133172,
+      "sha256": "f0cb14681861cad6ef18e667c644a004d0f5baf3cbb628b964d52b8844f1e97f"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-gui.js": {
+      "size": 153767,
+      "sha256": "7d30042c69a1b8c81e2fac255adf38e93e79d06a9af86dca2bcbd4750271dc3d"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-icons.js": {
+      "size": 19649,
+      "sha256": "de0542a425bc6f04173b34c014d160fe0699dbc8518c4b8da8bd4b6d7d4eaaf9"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-main.js": {
+      "size": 212944,
+      "sha256": "90162f210f44e0167d52ade2d8cbaa15d97ab336deaa28577e08663996e0b227"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-player.js": {
+      "size": 456195,
+      "sha256": "4a047fa31e996026353b61395ed0d9d3b2115e6a686fb7198d11364baf0f1235"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/tileinfo-wall.js": {
+      "size": 192530,
+      "sha256": "e595efbc946e96cb1b12d7c36250bce6fdcc982db7bf16b26b76282dc48ea050"
+    },
+    "gamedata/0703b2fa62e821390161d95cf52f9da1183761d4/wall.png": {
+      "size": 1437720,
+      "sha256": "186231088e3aac2254c61d705f2d51c3c4ceb7f0cbd0cd7d0043859b8d9e7a46"
+    },
+    "clips/octopode-vaults-3538aef2ec9a8868.json": {
+      "size": 284396,
+      "sha256": "3538aef2ec9a88681796010f1fb4a285d57247cc34d211a9dfbee431e1b30e80"
+    },
+    "clips/octopode-lightning-6270a570e5f3488b.json": {
+      "size": 408002,
+      "sha256": "6270a570e5f3488b99f17a72409e866d311605fc3258b43c1966e8b3d3c345f8"
+    },
+    "clips/octopode-skirmish-96f80f3418511e15.json": {
+      "size": 551508,
+      "sha256": "96f80f3418511e150f51c2b84008ff5495ce2974ac1437ca281db91fac92aefe"
+    },
+    "clips/abyss-tormentor-3e8870d7fd219cd3.json": {
+      "size": 126348,
+      "sha256": "3e8870d7fd219cd3d4e0e1909300f8fb9aa14824c3f5ffb614865963b21877df"
+    },
+    "clips/dungeon-blastmotes-53dd3419686c4067.json": {
+      "size": 493147,
+      "sha256": "53dd3419686c4067b8687ac47bf03ffff94b7262d663227d619c806a21e1688a"
+    },
+    "clips/dungeon-foxfire-8384203f4ab6b795.json": {
+      "size": 236142,
+      "sha256": "8384203f4ab6b79586cc8fdc9e128d125369f28aed7ad31d44cdfd60b4f5491e"
+    },
+    "clips/elf-blademaster-9ac998353319d0c7.json": {
+      "size": 380501,
+      "sha256": "9ac998353319d0c7236c9e847dc770b105211734c3916a50185f0ff80c4bc83d"
+    },
+    "clips/jeremiah-4cc03b58ede0d531.json": {
+      "size": 467573,
+      "sha256": "4cc03b58ede0d5311fc4f8745f0f625894dbd136f14f6d9d5b0413a65166375b"
+    },
+    "clips/swamp-ghoul-14d621d98b0e2a8c.json": {
+      "size": 1283072,
+      "sha256": "14d621d98b0e2a8c763d196c6083c17623d7e1b3e2dfd1bd86cd658ef03c866d"
+    },
+    "clips/vaults-troll-a36ac19dd0413940.json": {
+      "size": 461905,
+      "sha256": "a36ac19dd041394014577d8bbef83d94d4bbd80f1157a65dec6f224e50bdf091"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/enums.js": {
+      "size": 9687,
+      "sha256": "519c3ce27ce28832fbae8eca9e96592cab5a1207e1c012823bc5a28ac5c1bb52"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/feat.png": {
+      "size": 432144,
+      "sha256": "c81a0e28b225c02468e10bfd5aa0c077a29c557ccb05722a280c2c864c03e2cf"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/floor.png": {
+      "size": 637408,
+      "sha256": "cda11444440601f4ceef4d22437d410133602e12fb07a2245b39ab774a2961d7"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/gui.png": {
+      "size": 398561,
+      "sha256": "47aa702b487a9fd40e04ebc7f60255b423e5489029d05db4d13c8f5c2d4f4d30"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/icons.png": {
+      "size": 23437,
+      "sha256": "1d586ef7b83f6ba4f319158a371c016c195f7fd8a329a3e3b98a4910f5e93d9a"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/main.png": {
+      "size": 726174,
+      "sha256": "87a5abcf6d6cb532935258d53d40c75199b9d3013091f5397cb6bf2f1350d0bb"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/player.png": {
+      "size": 1183853,
+      "sha256": "c5183b0a95017961ead5b79a59472b4da32fd1d845e2fb8d11e614efa52fa0d6"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/status-icon-sizes.js": {
+      "size": 2656,
+      "sha256": "5501012d646c71b12f061c628b5ecff9a62004f0e8e56c879fa0fbf209b5beb6"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-feat.js": {
+      "size": 93366,
+      "sha256": "ffed9c1f6e6bad7425292c4fba11f8b34521ac2cb115808a70fd551e8cabfffe"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-floor.js": {
+      "size": 123408,
+      "sha256": "f7ce6a0f1a912c2cd65049be4ca1bb346d6aa9fe2a582a369854f265c8f1801c"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-gui.js": {
+      "size": 149137,
+      "sha256": "9ac87062a5f6c249f80dd49c9b4b8124d3e85f1febf78f621f1c4ced183fa459"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-icons.js": {
+      "size": 18553,
+      "sha256": "779dae61eff1a1daaa9365d7e4d1cf16ecf280891a68b58b92567bb0731d9772"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-main.js": {
+      "size": 196959,
+      "sha256": "6ea40762be10335d979b765d3ca4e62af98ea3b250ead60d0582b913650e6dee"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-player.js": {
+      "size": 448523,
+      "sha256": "b543350f9a3b35b9bcbd25d9370100ebdd00d779594aa2b4e0f00e8fa66e4f97"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/tileinfo-wall.js": {
+      "size": 181301,
+      "sha256": "7aff6db7029f7c28885831047e7f39f955672a06dd7826d46171363dc4fe7fb1"
+    },
+    "gamedata/8aead0d076b6cf299d5308168248c8053933a821/wall.png": {
+      "size": 1387124,
+      "sha256": "b28a8900fbec014603aeed58ec33015c73092c97f6ed534d561e75783c6b9187"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/enums.js": {
+      "size": 9918,
+      "sha256": "1878596297e3e89ebe46fe399e5a3e2c5177e403e3310e6c2d26d2fe9cf41bc5"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/feat.png": {
+      "size": 464777,
+      "sha256": "eb9d9c3f084448cb9308f43ad4dc16a290bb8972445d3a2fa226444cf1e24bf3"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/floor.png": {
+      "size": 678243,
+      "sha256": "59b7938334142f60a55ed0f085b797b816954a66b6e0c2e20ce56cace61b9a23"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/gui.png": {
+      "size": 426730,
+      "sha256": "bf490099efd518049b4581e47244844016ab7aa0c15e50e8f8df537cbd9aee10"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/icons.png": {
+      "size": 31540,
+      "sha256": "cd82b7d08a6dcae9991230b9becbd7c664eebc54bf07852294fc3581df1fb199"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/main.png": {
+      "size": 827551,
+      "sha256": "920b351f6efb8c856b8ffcdcb72f011c6da4853b10d7badd91e8b7f66d267baf"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/player.png": {
+      "size": 1351283,
+      "sha256": "edb33438e907d4004e833691334a96a57d7c17d512f3773a32ff32f18e2f53ed"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/status-icon-sizes.js": {
+      "size": 3093,
+      "sha256": "37ab80f1355005fddf88cf3f0b2671081b15f5675cc766b915a15aeefaf9f452"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-feat.js": {
+      "size": 97892,
+      "sha256": "d13fa1c1ffd7fe8d7149d309a55f089de1019ceae1943ec393f22c44a1f9cf1d"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-floor.js": {
+      "size": 138429,
+      "sha256": "06fcd6efad677d6264d291081e2669e07079c9472bb6fb6db12cd4ff3f9fc40f"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-gui.js": {
+      "size": 158123,
+      "sha256": "91ba808e1156eef5db7dbf2d50fb497ba029d325ffb58716b20785c045837687"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-icons.js": {
+      "size": 21674,
+      "sha256": "c2955d942f8cb3d70e73b76bbdef2cde26222a4227ad2f8158884d14576585e2"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-main.js": {
+      "size": 226539,
+      "sha256": "7e03d3e9012e79745965182635439f2238a42254682f24c63ae50a91f889b1bb"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-player.js": {
+      "size": 495462,
+      "sha256": "7dd6798eb546a5547aca8d6796c605a09940505f30e1b4807aa450052d07e32e"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/tileinfo-wall.js": {
+      "size": 197786,
+      "sha256": "d3806ae5fb7cfd49a91f19355a8a10de0f6e63039372467b24e7f240cd067888"
+    },
+    "gamedata/c81caa56c749218c78414d879e0a05f397694ed3/wall.png": {
+      "size": 1466040,
+      "sha256": "1848b5c0cec0344c4b1cd17ffcabe85665deaf040a8d44be8ad875c66de06151"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/enums.js": {
+      "size": 9918,
+      "sha256": "1878596297e3e89ebe46fe399e5a3e2c5177e403e3310e6c2d26d2fe9cf41bc5"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/feat.png": {
+      "size": 464777,
+      "sha256": "eb9d9c3f084448cb9308f43ad4dc16a290bb8972445d3a2fa226444cf1e24bf3"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/floor.png": {
+      "size": 678243,
+      "sha256": "59b7938334142f60a55ed0f085b797b816954a66b6e0c2e20ce56cace61b9a23"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/gui.png": {
+      "size": 426730,
+      "sha256": "bf490099efd518049b4581e47244844016ab7aa0c15e50e8f8df537cbd9aee10"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/icons.png": {
+      "size": 31540,
+      "sha256": "cd82b7d08a6dcae9991230b9becbd7c664eebc54bf07852294fc3581df1fb199"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/main.png": {
+      "size": 827551,
+      "sha256": "920b351f6efb8c856b8ffcdcb72f011c6da4853b10d7badd91e8b7f66d267baf"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/player.png": {
+      "size": 1351283,
+      "sha256": "edb33438e907d4004e833691334a96a57d7c17d512f3773a32ff32f18e2f53ed"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/status-icon-sizes.js": {
+      "size": 3093,
+      "sha256": "37ab80f1355005fddf88cf3f0b2671081b15f5675cc766b915a15aeefaf9f452"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-feat.js": {
+      "size": 97892,
+      "sha256": "d13fa1c1ffd7fe8d7149d309a55f089de1019ceae1943ec393f22c44a1f9cf1d"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-floor.js": {
+      "size": 138429,
+      "sha256": "06fcd6efad677d6264d291081e2669e07079c9472bb6fb6db12cd4ff3f9fc40f"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-gui.js": {
+      "size": 158123,
+      "sha256": "91ba808e1156eef5db7dbf2d50fb497ba029d325ffb58716b20785c045837687"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-icons.js": {
+      "size": 21674,
+      "sha256": "c2955d942f8cb3d70e73b76bbdef2cde26222a4227ad2f8158884d14576585e2"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-main.js": {
+      "size": 226539,
+      "sha256": "7e03d3e9012e79745965182635439f2238a42254682f24c63ae50a91f889b1bb"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-player.js": {
+      "size": 495462,
+      "sha256": "7dd6798eb546a5547aca8d6796c605a09940505f30e1b4807aa450052d07e32e"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/tileinfo-wall.js": {
+      "size": 197786,
+      "sha256": "d3806ae5fb7cfd49a91f19355a8a10de0f6e63039372467b24e7f240cd067888"
+    },
+    "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/wall.png": {
+      "size": 1466040,
+      "sha256": "1848b5c0cec0344c4b1cd17ffcabe85665deaf040a8d44be8ad875c66de06151"
     }
   }
 }

@@ -1,4 +1,5 @@
 import { menuReplayCheck } from './menu-replay'
+import { readFileSync } from 'node:fs'
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
@@ -755,6 +756,7 @@ for (const touch of [false, true]) {
 }
 
 test('menu entrance remains usable when recordings are unavailable and motion follows preferences', async ({ page }) => {
+  const clipCount = JSON.parse(readFileSync(new URL('../../apps/orbrun/data/menu-replays.json', import.meta.url), 'utf8')).clips.length
   let requests = 0
   await page.route('**/menu/clips/**', route => { requests++; return route.fulfill({ status: 404, body: '' }) })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
@@ -767,7 +769,7 @@ test('menu entrance remains usable when recordings are unavailable and motion fo
   const shine = page.locator('.crawl-title')
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
   await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
-  await expect.poll(() => requests).toBe(3)
+  await expect.poll(() => requests).toBe(clipCount)
   await expect(canvas).toBeHidden()
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationDuration)).toBe('8s')
   await page.locator('[data-focus="about"]').click()
@@ -778,12 +780,50 @@ test('menu entrance remains usable when recordings are unavailable and motion fo
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.locator('[data-focus="settings"]').click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
-  expect(requests).toBe(3)
+  expect(requests).toBe(clipCount)
 })
 
 menuReplayCheck(false)
 
 for (const narrow of [false, true]) {
+  test(`menu recording chooser switches versions without reloading and resets on reload at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
+    await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1280, height: 720 })
+    await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+    await page.addInitScript(() => {
+      Math.random = () => .999
+      localStorage.setItem('orbrun.settings', JSON.stringify({ depthTilt: 65 }))
+    })
+    const assetRequests: string[] = []
+    page.on('request', request => { if (request.url().includes('/menu/')) assetRequests.push(request.url()) })
+    await page.goto('/')
+    const chooser = page.getByRole('combobox', { name: 'Choose recording', exact: true })
+    const canvas = page.locator('.menu-backdrop canvas')
+    await expect(chooser).toBeVisible()
+    await expect(canvas).toBeVisible()
+    await expect(chooser).toHaveValue('')
+    const loaded = assetRequests.length
+    for (const title of ['Octopode in the Vaults', 'Lightning in the Vaults', 'Vaults skirmish', 'Deep troll in the Vaults', 'Blademaster in the Elven Halls', 'Tormentor in the Abyss', 'Stand against Jeremiah', 'Djinni descent']) {
+      const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
+      await chooser.selectOption({ label: title })
+      await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(before)
+      await expect(canvas).toBeVisible()
+    }
+    expect(assetRequests).toHaveLength(loaded)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toEqual({ depthTilt: 65 })
+    await chooser.selectOption({ label: 'Lightning in the Vaults' })
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `test-results/menu-chooser-${narrow ? 'narrow' : 'desktop'}.png` })
+    const chosen = await chooser.inputValue()
+    await page.locator('[data-focus="about"]').click(); await expect(chooser).toBeHidden()
+    await page.keyboard.press('Escape'); await expect(chooser).toHaveValue(chosen)
+    await page.emulateMedia({ reducedMotion: 'reduce' }); await expect(chooser).toBeHidden()
+    await page.emulateMedia({ reducedMotion: 'no-preference' }); await expect(chooser).toBeVisible()
+    await expect(chooser).toHaveValue(chosen)
+    await chooser.selectOption({ label: 'Shuffle all' }); await expect(chooser).toHaveValue('')
+    await chooser.selectOption({ label: 'Djinni descent' })
+    await page.reload(); await expect(chooser).toBeVisible(); await expect(chooser).toHaveValue('')
+  })
+
   test(`menu replay tilt previews and persists with native controls at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
     await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1280, height: 720 })
     await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
