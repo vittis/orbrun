@@ -47,12 +47,21 @@ export class TileCache {
     return true
   }
 
-  /** Extrude the roof's last texel, preserving its edge instead of repeating the wall art. */
+  /** Turn the roof edge down into shallow stonework, keeping texels roughly square. */
   drawWallFace(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting) {
     if (rect.height <= 0) return
     const surface = this.composite(layers, light, memory, true, flash)
     if (!surface) return
-    ctx.drawImage(surface, 0, surface.height - 1, surface.width, 1, rect.x, rect.y, rect.width, rect.height)
+    // Reflect only the adjoining band: the first face row matches the cap,
+    // then the stone shapes continue instead of stretching into vertical lines.
+    // Sampling by face depth also keeps low corridor cutaways from squeezing
+    // an entire tile of artwork into their narrow lip.
+    const depth = Math.min(surface.height, Math.max(1, Math.ceil(surface.width * rect.height / rect.width)))
+    ctx.save()
+    ctx.translate(rect.x, rect.y + rect.height)
+    ctx.scale(1, -1)
+    ctx.drawImage(surface, 0, surface.height - depth, surface.width, depth, 0, 0, rect.width, rect.height)
+    ctx.restore()
     lighting?.draw(ctx, rect)
   }
 

@@ -3,13 +3,13 @@ import { Render25d, fittedScale } from '@orbrun/render-2.5d'
 import { cellKey, emptyScene, type SceneCell, type TileSource } from '@orbrun/scene'
 import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
-/** Catch stretched roofs, repeated face artwork and topology/LOS-dependent sizes. */
+/** Catch stretched roofs/faces, restarted face artwork and topology/LOS-dependent sizes. */
 export async function wallCoherenceChecks() {
   const atlas = document.createElement('canvas'); atlas.width = atlas.height = 32
   const ink = atlas.getContext('2d')!
   ink.fillStyle = '#20c020'; ink.fillRect(0, 0, 32, 32)
-  // The roof's bottom stripe must continue into its extrusion, without
-  // restarting the green body of the texture on the vertical face.
+  // The roof's bottom stripe must join the face before giving way to its
+  // green stonework, rather than stretching the stripe all the way down.
   ink.fillStyle = '#f02020'; ink.fillRect(0, 28, 32, 4)
   const source: TileSource = {
     tile: () => ({ atlas: 'stripe', sx: 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
@@ -49,7 +49,7 @@ export async function wallCoherenceChecks() {
     const body = sample(450, roof.y + roof.height * 0.5)
     assert('roof retains the unstretched original stonework', body[1] > body[0] * 3, body)
     const foot = sample(450, ground.y + ground.height - 2 / dpr)
-    assert('original bottom stripe remains at the wall foot', foot[0] > foot[1] * 3, foot)
+    assert('wall face continues into stonework instead of stretching the edge stripe to its foot', foot[1] > foot[0] * 3, foot)
     const crop = () => ctx.getImageData(Math.round(roof.x * dpr), Math.round(roof.y * dpr), Math.round(roof.width * dpr), Math.round((ground.y + ground.height - roof.y) * dpr)).data
     const before = crop()
     scene.cells.get(cellKey(0, -1))!.visibility = 'remembered'
@@ -109,8 +109,8 @@ export async function wallCoherenceChecks() {
     })
     assert('walls beside the player retain raised stonework and matching picking',
       raisedWalls.every(({ x, body, picked }) => body[1] > body[0] * 3 && picked === cellKey(x, 0)), raisedWalls)
-    assert('walls beside the player retain a shaded vertical face',
-      raisedWalls.every(({ face }) => face[0] > face[1] * 3 && face[0] < above[0] - 40), raisedWalls)
+    assert('walls beside the player retain shaded vertical stonework',
+      raisedWalls.every(({ face }) => face[0] + face[1] > 20 && Math.max(face[0], face[1]) < Math.max(...body.slice(0, 3)) - 40), raisedWalls)
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('wall-coherence-checks')
   }

@@ -214,9 +214,10 @@ controls, persistence, and temporary level-map switching. Browser captures
 check real Canvas rendering at desktop and phone sizes.
 
 Wall coherence checks use striped artwork to verify unstretched roofs and
-edge extrusion with distinct face shading at three tilts, zooms and device
-pixel ratios, with filtering on/off. They also verify original bottom texels, corner/foreground picking and stable
-wall silhouettes when the ground behind them leaves LOS.
+edge continuation with distinct face shading at three tilts, zooms and device
+pixel ratios, with filtering on/off. They also verify the edge stripe gives way
+to stonework instead of stretching down the face, corner/foreground picking and
+stable wall silhouettes when the ground behind them leaves LOS.
 
 ## Extending the mode
 

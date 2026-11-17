@@ -741,8 +741,7 @@ export class Render25d implements MapRenderer {
     if (cell.wallStyle === 'transparent') ctx.globalAlpha = 0.65
     ctx.fillStyle = '#343039'
     ctx.fillRect(surface.x, surface.y, surface.width, surface.height)
-    // The original stonework belongs to the horizontal roof. Extruding its
-    // boundary creates a distinct vertical face without a second copy of the art.
+    // Keep the original cap and continue its edge into shaded stonework.
     const layers = [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))]
     this.tiles.drawPlane(ctx, layers, roof,
       this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), roof)
