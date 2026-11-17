@@ -12,7 +12,9 @@ Higher zoom values deliberately trade coverage for larger tiles.
 Ground rows have 25% extra depth to open horizontal corridors. A low foreground
 lip exposes single-cell passages and stays level along each connected wall row,
 including corners, junctions and widened sections. Back walls and other room walls retain their
-raised silhouettes and coherent artwork. Drawing, picking, lighting and shadows
+raised silhouettes and coherent artwork. In gameplay, cutaways apply only south
+of the player; walls beside or behind them keep their full height, even when a
+narrow passage continues behind that wall row. Drawing, picking, lighting and shadows
 share the same wall height, which stays stable through LOS fades. The preview's
 **Narrow corridors** scene exercises the passage and a north–south junction.
 
@@ -106,13 +108,14 @@ and picking regions.
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.
 - `effects.ts` keeps bounded melee and spell histories on the existing frame
-  clock. Confirmed `MeleeAttack` events identify attacker and defender, with a
-  wind-up, directional lunge, contact and recovery for sword, thrust, axe, blunt
-  or unarmed gestures. Shared timing aligns recoil, bursts, ripples and popups
-  with contact; missed and fully absorbed hits do not create recoil or sparks.
+  clock. Confirmed `CombatBump` events identify player, enemy and ally attackers
+  and defenders. A shared wind-up, lunge and recovery blends overlapping attacks
+  without stacking displacement. Small receiver flinches preserve counterattack
+  direction. Contact aligns hit flashes, sprays and ripples; missed and fully
+  absorbed hits lunge without recoil or damage effects.
   Qualitative light/solid/heavy strength scales contact effects without inferring
   an HP amount. Physical and elemental hits use distinct shapes and colors. The app resolves these from combat
-  feedback and the wielded inventory item, independently of popup settings.
+  feedback and visible actor identities; player attacks also respect the wielded item.
   Disappearing transient spell lights leave faint fire, frost, electrical or
   magical floor traces for 1.25–2.8 seconds, beneath sprites and markers.
   Confirmed `SpellEffect` events also produce upright, depth-sorted bursts for

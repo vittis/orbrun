@@ -1,4 +1,6 @@
 import { cellKey, lightReaches, type DeathEffect, type DeathKind, type Scene } from '@orbrun/scene'
+import { debrisRandom, profileRandom, sampleElementalSpray } from './elemental-spray.js'
+export { debrisRandom } from './elemental-spray.js'
 import type { DeathSprite } from './death-art.js'
 
 export interface DeathParticle {
@@ -13,7 +15,7 @@ export interface DeathParticle {
 }
 
 export const debrisPalettes: Record<DeathKind, readonly (readonly [number, number, number])[]> = {
-  flesh: [[159, 25, 39], [198, 51, 57], [114, 18, 32]],
+  flesh: [[139, 19, 31], [173, 30, 40], [98, 14, 26]],
   bone: [[231, 220, 177], [168, 157, 125], [255, 244, 211]],
   slime: [[132, 206, 55], [190, 236, 86], [61, 133, 49]],
   stone: [[152, 143, 128], [205, 193, 163], [94, 97, 106]],
@@ -27,23 +29,13 @@ export const debrisPalettes: Record<DeathKind, readonly (readonly [number, numbe
 const durations: Record<DeathKind, number> = { flesh: 2.7, bone: 2.2, slime: 2.8, stone: 2.2, spirit: 1.2, fire: 1.2, ice: 1.8, plant: 2.2, insect: 2.6, water: 1.65 }
 interface Burst extends DeathEffect { born: number; seed: number }
 
-/** Mix similar actor IDs thoroughly so consecutive kills get distinct sprays. */
-export function debrisRandom(seed: number) {
-  seed = Math.imul(seed ^ seed >>> 16, 0x21f0aaad)
-  seed = Math.imul(seed ^ seed >>> 15, 0x735a2d97)
-  seed = (seed ^ seed >>> 15) >>> 0
-  return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296 }
-}
-
 /** Bounded, deterministic gore history for the 2.5D dungeon view. */
 export class DungeonDeaths {
   private bursts: Burst[] = []
   private level: string | undefined
   private onLevel = false
+  private sequence = 0
   get active() { return this.bursts.length > 0 }
-  coversImpact(x: number, y: number, now: number) {
-    return this.bursts.some(b => b.x === x && b.y === y && now >= b.born && now - b.born < 0.9)
-  }
 
   observe(scene: Scene, animate: boolean) {
     if (!animate || !scene.playerOnLevel || !this.onLevel || scene.levelKey !== this.level) this.clear()
@@ -56,12 +48,15 @@ export class DungeonDeaths {
     if (!scene.playerOnLevel || cell?.visibility !== 'visible' || cell.occluder || this.bursts.some(b => b.actorId === effect.actorId)) return false
     let seed = 0
     for (const c of effect.actorId) seed = (Math.imul(seed, 31) + c.charCodeAt(0)) >>> 0
-    this.bursts.push({ ...effect, direction: { ...effect.direction }, born: now, seed })
+    this.bursts.push({ ...effect, direction: { ...effect.direction }, born: now, seed: seed ^ Math.imul(this.sequence++, 0x9e3779b9) })
     this.bursts = this.bursts.slice(-24)
     return true
   }
 
-  sample(scene: Scene, now: number): DeathParticle[] {
+  sample(scene: Scene, now: number, gore = 1, outward = 0.35, variation = 0.25): DeathParticle[] {
+    gore = Number.isFinite(gore) ? Math.max(0, Math.min(2, gore)) : 1
+    outward = Number.isFinite(outward) ? Math.max(0, Math.min(1, outward)) : 0.35
+    if (gore === 0) { this.clear(); return [] }
     this.bursts = this.bursts.filter(b => now - b.born < durations[b.kind] && scene.cells.get(cellKey(b.x, b.y))?.visibility === 'visible')
     const particles: DeathParticle[] = []
     for (const b of this.bursts) {
@@ -73,25 +68,32 @@ export class DungeonDeaths {
       const leafy = b.kind === 'plant'
       // Sample the same profile every frame: variation belongs to the death,
       // not the render clock. Keep material-specific art and motion intact.
-      const random = debrisRandom(b.seed)
-      const density = (0.75 + random() * 0.55) * 0.72, energy = (0.75 + random() * 0.6) * 0.62
-      const liftScale = (0.85 + random() * 0.25) * 0.85, sizeScale = (0.85 + random() * 0.3) * 0.87
-      const distribution = Math.floor(random() * 3) // Broad, narrow, or split forward fans.
-      const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : random() * Math.PI * 2)
-        + (random() - 0.5) * 0.6
-      const spread = 0.65 + random() * 1.2, width = 0.6 + random() * 0.5
-      const push = (0.65 + random() * 0.7) * 0.9, originSpread = (0.03 + random() * 0.1) * 0.65
-      const poolCount = 3 + Math.floor(random() * 4), poolScale = (0.8 + random() * 0.4) * 0.7
+      const start = particles.length
+      const random = debrisRandom(b.seed), profile = profileRandom(random, variation)
+      const density = (0.75 + profile() * 0.55) * 1.12 * gore, energy = (0.75 + profile() * 0.6) * 0.95
+      const liftScale = (0.85 + profile() * 0.25) * 0.85, sizeScale = (0.85 + profile() * 0.3) * (0.95 + gore * 0.1)
+      const distribution = Math.floor(profile() * 3) // Broad, narrow, or split forward fans.
+      const heading = (b.direction.x || b.direction.y ? Math.atan2(b.direction.y, b.direction.x) : profile() * Math.PI * 2)
+        + (profile() - 0.5) * 0.6
+      const spread = 0.9 + profile() * 1.4, width = 0.8 + profile() * 0.5
+      const push = (0.65 + profile() * 0.7) * 0.9, originSpread = (0.03 + profile() * 0.1) * 0.65
+      const poolCount = Math.ceil((3 + Math.floor(profile() * 4)) * gore), poolScale = (0.8 + profile() * 0.4) * (0.8 + gore * 0.15)
       // A ragged, coloured impact silhouette replaces the smooth shock ring.
       if (t < 0.12) particles.push({ x: b.x, y: b.y, z: b.height * 0.4, size: (0.24 + Math.floor(t * 35) * 0.045) * sizeScale,
         angle: Math.round(heading / (Math.PI / 2)) * Math.PI / 2, stretch: width,
-        alpha: 1 - t / 0.12, colour: palette[1], sprite: 'burst', ground: false })
+        alpha: 1 - t / 0.12, colour: palette[1], sprite: gory || liquid ? 'splat' : 'burst', ground: false })
       const chunks = Math.round((gory ? 9 : b.kind === 'bone' ? 10 : 7) * density)
-      const count = chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density)
+      const count = Math.min(150, chunks + Math.round(((gory ? 38 : 24) + b.height * 8) * density))
+      const splashCount = Math.round(count * outward), splashPhase = random() * Math.PI * 2
+      let splashIndex = 0
       for (let i = 0; i < count; i++) {
         const large = i < chunks
-        const angle = heading + (random() - 0.5) * spread * (distribution === 0 ? 1.2 : 1)
-          + (distribution === 2 ? i % 2 ? 0.35 : -0.35 : 0)
+        // Interleave chunks and flecks around the body in jittered sectors.
+        // The rest retain the killing blow's forward fan and directional push.
+        const splash = Math.floor((i + 1) * splashCount / count) > Math.floor(i * splashCount / count)
+        const angle = splash ? splashPhase + (splashIndex++ + (random() - 0.5) * 0.4) * Math.PI * 2 / splashCount
+          : heading + (random() - 0.5) * spread * (distribution === 0 ? 1.2 : 1)
+            + (distribution === 2 ? i % 2 ? 0.35 : -0.35 : 0)
         const speed = (large ? 1.2 + random() * 1.6 : 1.6 + random() * 2.5) * energy * (leafy || airy ? 0.65 : 1)
         const weight = b.kind === 'stone' ? 1.35 : leafy ? 0.7 : 1
         const lift = (0.65 + random() * 1.65) * liftScale / weight, z0 = b.height * (0.18 + random() * 0.38)
@@ -99,12 +101,13 @@ export class DungeonDeaths {
         const spin = (random() - 0.5) * 14, fade = 0.8 + random() * 0.2
         const originAngle = random() * Math.PI * 2, originRadius = Math.sqrt(random()) * originSpread
         // A brisk launch with enough travel and residue to read the hit direction.
-        const elapsed = Math.floor(t * 1.15 * 60) / 60
-        const drag = large ? 3.8 : 4.6, drift = (1 - Math.exp(-elapsed * drag)) / drag
+        const elapsed = Math.floor(t * 1.4 * 60) / 60
+        const drag = large ? 3.2 : 3.8, drift = (1 - Math.exp(-elapsed * drag)) / drag
         const swirl = airy ? elapsed * 1.6 : 0
-        const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * width
-        const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * (gory ? 1.3 : 0.8) * push
-        const vy = Math.sin(heading) * along + Math.cos(heading) * across + b.direction.y * (gory ? 1.3 : 0.8) * push
+        const along = Math.cos(angle + swirl - heading) * speed, across = Math.sin(angle + swirl - heading) * speed * (splash ? 1 : width)
+        const directionalPush = splash ? 0 : (gory ? 1.3 : 0.8) * push
+        const vx = Math.cos(heading) * along - Math.sin(heading) * across + b.direction.x * directionalPush
+        const vy = Math.sin(heading) * along + Math.cos(heading) * across + b.direction.y * directionalPush
         const x = b.x + Math.round((Math.cos(originAngle) * originRadius + vx * drift) * 64) / 64
         const y = b.y + Math.round((Math.sin(originAngle) * originRadius + vy * drift) * 64) / 64
         const gravity = 4 * weight
@@ -134,6 +137,7 @@ export class DungeonDeaths {
           y: y - Math.round(vy * 0.045 * Math.exp(-elapsed * drag) * 64) / 64,
           size: size * 0.75, alpha: alpha * 0.7 })
       }
+      const poolStart = particles.length
       // Pools are irregular stamps, with separate flecks; no circular decals.
       if ((gory || liquid) && t > 0.04) for (let i = 0; i < poolCount; i++) {
         const a = random() * Math.PI * 2, reach = (i === 0 ? 0 : 0.15 + random() * 0.48) * poolScale
@@ -148,6 +152,12 @@ export class DungeonDeaths {
           angle, stretch: i === 0 ? 1.25 : 1,
           alpha: Math.max(0, Math.min(1, (duration - t) / 0.45)), colour, sprite: 'splat', ground: true })
       }
+      const elemental = sampleElementalSpray(scene, b, b.direction, b.height, b.tone ?? 'physical', b.intensity,
+        b.seed, t, true, gore, outward, variation)
+      // Keep floor splatter and the elemental signature at maximum gore.
+      const excess = Math.max(0, particles.length - start + elemental.length - 192)
+      if (excess) particles.splice(Math.max(start, poolStart - excess), excess)
+      particles.push(...elemental)
     }
     return particles
   }

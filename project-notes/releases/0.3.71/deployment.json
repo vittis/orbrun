@@ -1,0 +1,24 @@
+{
+  "id": "7eaee5e1-531f-43b3-a3fb-49a96bb6bdea",
+  "source": "wrangler",
+  "strategy": "percentage",
+  "versions": [
+    {
+      "version_id": "f853c2aa-cdc1-44c1-99c1-f0c67142d9d1",
+      "percentage": 100
+    }
+  ],
+  "created_on": "2026-11-13T01:16:05.662881Z",
+  "commit": "fd49071d0456042bef85829dde3f4467031b94d9",
+  "sourceTag": "cloudflare-online-v1.68",
+  "version": "0.3.71",
+  "buildId": "1baa340b-1dd7-4596-a37d-e713a8a4c1fa",
+  "buildConclusion": "success",
+  "githubRunId": 43342559180,
+  "githubConclusion": "success",
+  "initialBuild": {
+    "id": "aa47e335-d77f-44e7-b42d-f63b3ce3514b",
+    "conclusion": "failure",
+    "reason": "Cloudflare internal authentication server error 10500; retried unchanged commit through Workers Builds"
+  }
+}

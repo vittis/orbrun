@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elemental splatter raster checks</title>
+<style>
+body { margin: 24px; background: #101014; color: #ded5bf; font: 14px system-ui, sans-serif }
+#captures { display: grid; grid-template-columns: repeat(auto-fit, 192px); gap: 12px }
+figure { margin: 0; background: #181820; border: 1px solid #454047 } figcaption { padding: 8px }
+canvas { display: block; width: 192px; height: 160px; image-rendering: pixelated } pre { white-space: pre-wrap }
+</style>
+<h1>Distinct elemental hit and death splatters</h1>
+<p>Actual particle sampling and production pixel stamps at small and large dungeon tile sizes.</p>
+<pre id="result">Running…</pre>
+<div id="captures"></div>
+<script type="module" src="./elemental-checks.ts"></script>
+</html>

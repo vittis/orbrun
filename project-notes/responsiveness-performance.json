@@ -1,0 +1,291 @@
+{
+  "date": "2026-11-14",
+  "baselineCommit": "cfb192209a488bde8bde13232020ee39a5df5771",
+  "environment": {
+    "os": "macOS",
+    "arch": "arm64",
+    "node": "24.11.1",
+    "chromium": "158.0.8127.18",
+    "headless": true,
+    "viewport": "1280x720",
+    "build": "Vite development"
+  },
+  "method": {
+    "browser": "One 6-second sample per scenario and revision, 1.5-second warm-up; profiler reports trailing 4 seconds. Current measured before baseline. No parallel tests/builds. Movement every 90 ms; confirmed combat every 100 ms.",
+    "movement": "Seven alternating A/B samples after warm-up, 200 observations per sample; visible anonymous item stress scenes."
+  },
+  "browser": [
+    {
+      "scenario": "moving",
+      "before": {
+        "body": {
+          "samples": 140.0,
+          "lastMs": 6.8,
+          "p50Ms": 7.2,
+          "p95Ms": 8.3,
+          "maxMs": 8.8
+        },
+        "render": {
+          "samples": 140.0,
+          "lastMs": 6.7,
+          "p50Ms": 7.0,
+          "p95Ms": 7.6,
+          "maxMs": 8.3
+        },
+        "frameInterval": {
+          "samples": 140.0,
+          "lastMs": 33.4,
+          "p50Ms": 33.3,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "after": {
+        "body": {
+          "samples": 158.0,
+          "lastMs": 5.3,
+          "p50Ms": 5.4,
+          "p95Ms": 6.2,
+          "maxMs": 8.1
+        },
+        "render": {
+          "samples": 158.0,
+          "lastMs": 5.2,
+          "p50Ms": 5.2,
+          "p95Ms": 5.7,
+          "maxMs": 7.9
+        },
+        "frameInterval": {
+          "samples": 158.0,
+          "lastMs": 16.7,
+          "p50Ms": 33.2,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "afterImpacts": 0,
+      "afterMoves": 66,
+      "afterTotalRenderedFrames": 299
+    },
+    {
+      "scenario": "moving-fog",
+      "before": {
+        "body": {
+          "samples": 175.0,
+          "lastMs": 8.8,
+          "p50Ms": 8.6,
+          "p95Ms": 9.4,
+          "maxMs": 10.7
+        },
+        "render": {
+          "samples": 175.0,
+          "lastMs": 8.6,
+          "p50Ms": 8.4,
+          "p95Ms": 9.0,
+          "maxMs": 9.9
+        },
+        "frameInterval": {
+          "samples": 175.0,
+          "lastMs": 16.6,
+          "p50Ms": 16.7,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "after": {
+        "body": {
+          "samples": 204.0,
+          "lastMs": 6.6,
+          "p50Ms": 6.6,
+          "p95Ms": 7.4,
+          "maxMs": 8.6
+        },
+        "render": {
+          "samples": 204.0,
+          "lastMs": 6.6,
+          "p50Ms": 6.5,
+          "p95Ms": 7.0,
+          "maxMs": 8.1
+        },
+        "frameInterval": {
+          "samples": 204.0,
+          "lastMs": 16.7,
+          "p50Ms": 16.7,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "afterImpacts": 0,
+      "afterMoves": 66,
+      "afterTotalRenderedFrames": 391
+    },
+    {
+      "scenario": "combat-fog",
+      "before": {
+        "body": {
+          "samples": 140.0,
+          "lastMs": 7.7,
+          "p50Ms": 7.4,
+          "p95Ms": 8.0,
+          "maxMs": 9.0
+        },
+        "render": {
+          "samples": 140.0,
+          "lastMs": 7.5,
+          "p50Ms": 7.3,
+          "p95Ms": 7.8,
+          "maxMs": 8.7
+        },
+        "frameInterval": {
+          "samples": 140.0,
+          "lastMs": 33.4,
+          "p50Ms": 33.3,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "after": {
+        "body": {
+          "samples": 158.0,
+          "lastMs": 5.2,
+          "p50Ms": 5.5,
+          "p95Ms": 5.9,
+          "maxMs": 7.3
+        },
+        "render": {
+          "samples": 158.0,
+          "lastMs": 5.2,
+          "p50Ms": 5.3,
+          "p95Ms": 5.7,
+          "maxMs": 7.0
+        },
+        "frameInterval": {
+          "samples": 158.0,
+          "lastMs": 16.7,
+          "p50Ms": 33.2,
+          "p95Ms": 33.4,
+          "maxMs": 33.4
+        }
+      },
+      "afterImpacts": 59,
+      "afterMoves": 0,
+      "afterTotalRenderedFrames": 323
+    },
+    {
+      "scenario": "still",
+      "before": {
+        "body": {
+          "samples": 15.0,
+          "lastMs": 0.2,
+          "p50Ms": 0.3,
+          "p95Ms": 0.4,
+          "maxMs": 0.4
+        },
+        "render": null,
+        "frameInterval": {
+          "samples": 0.0,
+          "lastMs": 0.0,
+          "p50Ms": 0.0,
+          "p95Ms": 0.0,
+          "maxMs": 0.0
+        }
+      },
+      "after": {
+        "body": {
+          "samples": 15.0,
+          "lastMs": 0.3,
+          "p50Ms": 0.3,
+          "p95Ms": 0.5,
+          "maxMs": 0.5
+        },
+        "render": null,
+        "frameInterval": {
+          "samples": 0.0,
+          "lastMs": 0.0,
+          "p50Ms": 0.0,
+          "p95Ms": 0.0,
+          "maxMs": 0.0
+        }
+      },
+      "afterImpacts": 0,
+      "afterMoves": 0,
+      "afterTotalRenderedFrames": 1
+    }
+  ],
+  "movement": [
+    {
+      "actors": 64,
+      "referenceMedianMs": 0.16917125,
+      "currentMedianMs": 0.05398875000000004,
+      "reference": [
+        0.17787521000000026,
+        0.1700354200000001,
+        0.16917125,
+        0.17791958499999994,
+        0.1623508300000003,
+        0.16499270499999966,
+        0.16139792
+      ],
+      "current": [
+        0.06109874999999988,
+        0.056620420000000136,
+        0.05398875000000004,
+        0.05529228999999987,
+        0.04918666499999972,
+        0.04865271000000007,
+        0.05259937499999978
+      ]
+    },
+    {
+      "actors": 256,
+      "referenceMedianMs": 2.1951549999999997,
+      "currentMedianMs": 0.2043685400000004,
+      "reference": [
+        2.1967431250000002,
+        2.1951549999999997,
+        2.1720108349999987,
+        2.1666006249999987,
+        2.1894766649999995,
+        2.2112941650000018,
+        2.203927705000001
+      ],
+      "current": [
+        0.20294708499999956,
+        0.2042970850000006,
+        0.20537020999999867,
+        0.2195333299999993,
+        0.20627707999999984,
+        0.20318687499999896,
+        0.2043685400000004
+      ]
+    },
+    {
+      "actors": 625,
+      "referenceMedianMs": 12.495514375000003,
+      "currentMedianMs": 0.5399541649999992,
+      "reference": [
+        12.495514375000003,
+        12.388308750000006,
+        12.469954585000005,
+        12.529478954999995,
+        12.406768960000008,
+        12.618898749999989,
+        12.52873395999999
+      ],
+      "current": [
+        0.540348329999997,
+        0.5223731250000037,
+        0.5399541649999992,
+        0.5232989600000019,
+        0.5381683299999895,
+        0.5413710449999962,
+        0.5534231249999902
+      ]
+    }
+  ],
+  "limitations": [
+    "Local fixtures only; no public server latency, physical controller or device acceptance.",
+    "Headless browser still reported late frames; render body timings are not end-to-end display latency or a locked-frame-rate guarantee.",
+    "Timing measurements are descriptive, outside automated test assertions."
+  ]
+}

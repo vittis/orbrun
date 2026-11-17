@@ -31,11 +31,13 @@ export interface KeyLike {
   altKey: boolean
   metaKey: boolean
   keyCode?: number
+  getModifierState?(key: string): boolean
 }
 
 /** vim / numpad / arrow keys mapped to absolute compass directions (N=0). */
 const VIM: Record<string, number> = { k: 0, u: 1, l: 2, n: 3, j: 4, b: 5, h: 6, y: 7 }
 const NUMPAD: Record<string, number> = { Numpad8: 0, Numpad9: 1, Numpad6: 2, Numpad3: 3, Numpad2: 4, Numpad1: 5, Numpad4: 6, Numpad7: 7 }
+const NUMPAD_NAVIGATION = ['ArrowUp', 'PageUp', 'ArrowRight', 'PageDown', 'ArrowDown', 'End', 'ArrowLeft', 'Home']
 const ARROWS: Record<string, number> = { ArrowUp: 0, ArrowRight: 2, ArrowDown: 4, ArrowLeft: 6 }
 
 /**
@@ -50,7 +52,14 @@ const ARROWS: Record<string, number> = { ArrowUp: 0, ArrowRight: 2, ArrowDown: 4
 export function directionKey(e: KeyLike): { abs: number; mod: DirKey['mod']; source: KeyDirSource } | null {
   if (e.altKey || e.metaKey) return null
   const mod: DirKey['mod'] = e.ctrlKey ? 'ctrl' : e.shiftKey ? 'shift' : 'none'
-  if (e.code in NUMPAD) return { abs: NUMPAD[e.code], mod, source: 'numpad' }
+  if (e.code in NUMPAD) {
+    const abs = NUMPAD[e.code]
+    // Windows consumes Shift to override NumLock, sending a navigation key
+    // with shiftKey=false. NumLock still being on distinguishes this from a
+    // plain step with NumLock off; no held-key state can get stuck on blur.
+    const numLockShift = e.key === NUMPAD_NAVIGATION[abs] && e.getModifierState?.('NumLock') === true
+    return { abs, mod: mod === 'none' && numLockShift ? 'shift' : mod, source: 'numpad' }
+  }
   if (e.key in ARROWS) return { abs: ARROWS[e.key], mod, source: 'arrows' }
   if (e.key.length === 1) {
     const k = e.key.toLowerCase()

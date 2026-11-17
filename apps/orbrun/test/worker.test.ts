@@ -28,4 +28,12 @@ describe('online Worker boundaries', () => {
     expect(res.status).toBe(404)
     expect(await res.text()).toContain('Offline play is unavailable')
   })
+
+  it('never serves retired menu engine artifacts, even if an asset host retains them', async () => {
+    const fetch = vi.fn(async () => new Response('stale engine'))
+    for (const path of ['/menu-engine/manifest.json', '/menu-engine/builds/old/crawl.wasm', '/menu-engine/saves/Player.cs']) {
+      expect((await worker.fetch(new Request('https://client.example' + path), { ASSETS: { fetch } })).status).toBe(404)
+    }
+    expect(fetch).not.toHaveBeenCalled()
+  })
 })

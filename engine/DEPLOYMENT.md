@@ -1,6 +1,6 @@
 # Building and deploying the engine
 
-Nothing here is a copy of crawl, and no crawl version is pinned. There are two
+Nothing here vendors Crawl source. The development stable/trunk channels follow upstream. There are two
 channels, both resolved on upstream at build time: **trunk** is `master`, and
 **stable** is the newest `stone_soup-*` release branch, as servers run it.
 `build.sh` fetches the commit, applies `patches/`, adds `wasm/`, and builds;
@@ -115,3 +115,9 @@ npx wrangler queues subscription create orbrun-engine-builds --source workersBui
   --events build.succeeded,build.failed,build.canceled
 npx wrangler secret put NOTIFY_EMAIL -c engine/wrangler.jsonc
 ```
+
+## Production boundary
+
+This engine is for development-only offline play. Production gameplay is online-only,
+and its menu uses bundled WebTiles recordings. No engine artifacts or build toolchain
+are provisioned by the application deployment.

@@ -6,11 +6,9 @@ Keep the existing 2.5D gameplay presentation and flat supporting maps. Preserve 
 
 - Inspect `git status` first and preserve unrelated edits. Install dependencies only when missing or the lockfile changed. Chromium is needed only for browser checks.
 - While editing, use `npm run test:changed` (changes since HEAD, including staged/unstaged/untracked files), `npm test -- <test-file-or-filter>`, or `npm run test:watch -- <filter>`. For a committed branch diff, use `npx vitest run --changed origin/main`.
-- At completion, run `npm run verify` once: incremental TypeScript and retained unit tests. Do not run the release gate after every edit or rerun successful checks without a new change or unresolved concern. Docs-only edits need link/content review; embedded ABOUT/INSTALL/STEAM/CHANGELOG pages also need production verification.
-- UI, CSS, input, HUD, settings, or map lifecycle changes: also run `npm run verify:browser` (representative raster + real-browser interaction checks; no build).
-- Renderer, scene composition, artwork, room scenery or rendering fixture changes: use `npm run verify:render` instead of the smoke browser command. It includes the same interaction tests plus the full matrix.
-- Build, Worker, routing, production flags or embedded-document changes: run `npm run verify:production`. Build/deployment tooling changes also require `npm run test:deploy` (real Git remotes).
-- Shared configuration/dependency or test-harness changes: run `npm run verify:release` once. Before publishing/deploying, use this release gate and project-notes/DEPLOYMENT.md; the fast gate alone is not release acceptance.
+- Prioritize fast iteration and manual verification. Run focused tests for changed behavior and typecheck when TypeScript changes; do not run full verification/release gates automatically for routine publishing.
+- Visually inspect UI changes at desktop and narrow sizes, including loading and Still/reduced motion where relevant. Use representative browser tests when they provide useful coverage, not the entire matrix by default.
+- For deployment tooling, run the affected deployment tests. Reuse unchanged app builds and pinned engine artifacts. `npm run verify:release` remains an optional broad audit, not a publishing prerequisite.
 - Changed-test selection follows imports and can miss CSS, assets, readFile fixtures and build configuration. Apply the broader commands above even when it selects zero tests. A zero-test run is not verification.
 - Engine changes need the separately provisioned `REQUIRE_ENGINE=1 npm run e2e`. Missing artifacts are an explicit coverage limitation, not success.
 

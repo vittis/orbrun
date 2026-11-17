@@ -1,7 +1,7 @@
-# The 2.5D front room
+# Retained rendering fixtures and document artwork
 
-The live menu cycles the bundled `places/<id>.json` scenes and matching PNG
-atlases through the same 2.5D renderer as gameplay. Format 2 stores a `center`
+Development rendering fixtures read the bundled `places/<id>.json` scenes and matching PNG
+atlases through the same 2.5D renderer as gameplay. The home menu now uses `public/menu/` media. Format 2 stores a `center`
 cell, classified scene data and tile atlas metadata; each file retains source
 server/version/recording and license provenance. No remote server is needed.
 
@@ -24,4 +24,4 @@ The tileinfo modules of that version are the checked-in fixture under
 version, the atlases and the source rect and offsets of every tile; the
 vault tests check that the room asks for nothing the atlas lacks.
 
-The menu uses the existing 2.5D renderer. The committed poster and social card must be regenerated when the scenery changes. DCSS tile art has mixed provenance: most is public domain/CC0, with exceptions. The atlas records version and source rectangles, not a per-tile license audit. See the repository's ATTRIBUTION.md; do not infer a blanket CC0 license.
+The room fixture uses the existing 2.5D renderer. The committed poster and social card must be regenerated when the scenery changes. DCSS tile art has mixed provenance: most is public domain/CC0, with exceptions. The atlas records version and source rectangles, not a per-tile license audit. See the repository's ATTRIBUTION.md; do not infer a blanket CC0 license.

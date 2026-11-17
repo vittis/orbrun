@@ -1,0 +1,23 @@
+/* Smooth lettering and a small ember burst above the rendered character. */
+.level-up {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+.level-up[hidden] { display: none; }
+.level-up-art {
+  position: absolute;
+  display: block;
+  translate: -50% -100%;
+}
+.level-up-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

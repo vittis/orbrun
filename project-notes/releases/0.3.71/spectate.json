@@ -1,0 +1,9 @@
+{
+  "url": "https://dcss-client.vittis.workers.dev/watch/cdi#andrew",
+  "observed": "Live dungeon, player HUD and combat messages rendered; public lobby listed 17 games. No chat or gameplay commands sent.",
+  "browser": "Chrome desktop",
+  "narrowSettingsViewport": {
+    "width": 390,
+    "height": 844
+  }
+}

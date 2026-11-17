@@ -4,7 +4,6 @@ import type { Context2d } from './tiles.js'
 import { impactStrength } from '@orbrun/scene'
 import type { ImpactArt } from './impact-draw.js'
 import type { ImpactKind } from './impact-art.js'
-
 /** Shaded tile-scale contact art, shared by missiles and direct spell effects. */
 export function drawSpellBurst(ctx: Context2d, p: Projection, burst: SpellBurst, now: number, art: ImpactArt, dpr: number, position = burst) {
   const age = (now - burst.born) / burst.duration

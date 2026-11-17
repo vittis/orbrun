@@ -5,7 +5,7 @@
 #   engine/build.sh trunk|stable     # one channel
 #   engine/build.sh <crawl ref>      # any commit, tag or branch
 #
-# No crawl version is pinned here. trunk is upstream's master; stable is the
+# trunk is upstream's master; stable is the
 # newest stone_soup-* release branch, looked up on upstream at build time.
 # Each build lands in dist/builds/<commit>-<recipe>/ (recipe.mjs), its
 # gamedata in dist/gamedata/<commit>/, and dist/<channel>/engine.json (a

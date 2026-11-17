@@ -1,20 +1,20 @@
-# About Orbrun
+# About Polished Crawl
 
-Orbrun is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.org/) WebTiles client. This fork presents the game in Dungeon (2.5D), with keyboard, gamepad and touch controls.
+Polished Crawl is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.org/) WebTiles client. Built on Orbrun, this client presents the game in Dungeon (2.5D), with keyboard, gamepad and touch controls.
 
 [Play or watch](https://dcss-client.vittis.workers.dev/). The hosted build supports online play on the bundled public servers. Offline play and custom servers are development capabilities and are unavailable in this deployment.
 
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.66) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
+The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.123) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
 
 ## Getting started
 
-Choose **Watch** to spectate without signing in. To play, choose **Play**, select the server where your account lives, then log in or register there. Accounts, saves, rc files and scoreboard entries belong to that DCSS server. There is no separate Orbrun account.
+Choose **Watch** to spectate without signing in. Select your server in the compact header, then log in or register there. Choose **Play** or **Continue** for the offered DCSS version. Your username opens account management; **(edit rc)** opens the server’s RC file. Accounts, saves, rc files and scoreboard entries belong to that DCSS server. There is no separate Polished Crawl account.
 
 [Add to Steam](STEAM.md) explains using the Steam Deck's browser and controller. [Add to Home Screen](INSTALL.md) explains installing the shell on phones, tablets and computers. Online gameplay needs a network connection.
 
 ## The dungeon and maps
 
-Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, animation, movement presentation and accessibility controls. **Still** mode limits animation; reduced motion is respected.
+Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, animation, movement presentation and accessibility controls. **Still** mode limits animation; reduced motion is respected. The home screen plays a silent selection of recorded real Crawl gameplay in the same renderer. Both motion preferences stop it and the title reflection, leaving a quiet dungeon entrance. The recordings use no local game engine, player accounts or saves. About & credits and What’s new open over the menu without losing typed account details.
 
 The minimap and temporary level map remain flat. Press `X` for the level map; closing it restores the dungeon. `Ctrl+X` opens the separate **in view** list. Messages, menus, stats, targeting and the monster list remain available. The client never predicts authoritative moves, damage or hidden information.
 

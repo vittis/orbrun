@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { latestLine, newer, newsDoc } from '../src/news'
+import { newer, newsDoc } from '../src/news'
 
 const MD = ['# What’s new', '', 'Notable changes to Orbrun, newest first.', '', '## 0.2.10 — 2026-10-02', '', '- Ten.', '', '## 0.2.9 — 2026-10-01', '', '- Nine.', '', '## 0.2.8 — 2026-09-30', '', '- Eight.'].join('\n')
 
@@ -10,11 +10,6 @@ describe('What’s new', () => {
     expect(newer('0.3', '0.2.9')).toBe(true)
     expect(newer('0.2.9', '0.2.9')).toBe(false)
     expect(newer('0.2.8', '0.2.9')).toBe(false)
-  })
-
-  it('names the newest release as the site’s page does', () => {
-    expect(latestLine(MD)).toBe('Version 0.2.10 · 2026-10-02')
-    expect(latestLine('# Nothing yet')).toBe('Newest first')
   })
 
   it('draws a card a release, the newest Latest and the ones since the last read New', () => {

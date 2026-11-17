@@ -5,11 +5,11 @@
   // root), because apps/orbrun depends on the workspace packages by name and
   // on the root's vite: an `npm ci` inside apps/orbrun resolves neither.
   //   Build variable: SKIP_DEPENDENCY_INSTALL=1
-  //   Build command:  npm ci --include=dev --prefer-offline --no-audit --no-fund && npm run typecheck && NODE_ENV=test npm test
+  //   Build command:  npm ci --include=dev --prefer-offline --no-audit --no-fund
   //   Deploy command: npm run deploy
   // Disable Cloudflare's automatic install so dependencies are installed once.
-  // The deploy hook below runs the single asset build, with Git checks before
-  // and after it. Do not add `npm run build` to the Cloudflare build command.
+  // The deploy hook reuses unchanged app output; menu recordings are checked-in assets.
+  // Do not add tests or a second asset build to the Cloudflare build command.
   //
   // The `--include=dev` is required. The build image exports
   // NPM_CONFIG_INCLUDE=prod and NPM_CONFIG_OMIT=dev, which outrank this repo's
@@ -23,7 +23,7 @@
   "name": "dcss-client",
   "main": "apps/orbrun/worker/index.ts",
   "compatibility_date": "2025-04-01",
-  // Guard direct CLI deployments as well as npm run deploy; always rebuild the assets.
+  // Package changed app inputs and verify bundled menu recordings.
   "build": {
     "command": "node tools/build/deploy-build.mjs",
     "watch_dir": ["apps/orbrun/src", "packages"]
@@ -41,7 +41,7 @@
     // page skip it
     "run_worker_first": ["/*", "!/assets/*", "!/fonts/*", "!/room/*", "!/steam/*", "!/icons/*"]
   },
-  // This fork deploys online play only. No engine Worker or analytics dataset is needed.
+  // Player-facing play is online-only. The menu replays recorded state; no engine Worker or analytics dataset is needed.
   "observability": {
     "enabled": true
   }

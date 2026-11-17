@@ -336,6 +336,29 @@ describe('whichOf', () => {
 })
 
 describe('directionKey', () => {
+  it.each([
+    ['8', 'ArrowUp', 0], ['9', 'PageUp', 1], ['6', 'ArrowRight', 2], ['3', 'PageDown', 3],
+    ['2', 'ArrowDown', 4], ['1', 'End', 5], ['4', 'ArrowLeft', 6], ['7', 'Home', 7],
+  ] as const)('preserves run for Numpad%s when Windows consumes Shift', (digit, navigation, abs) => {
+    const key = (name: string, numLock: boolean, mods: Mods = {}) => ({
+      ...ev(name, `Numpad${digit}`, mods), getModifierState: (modifier: string) => modifier === 'NumLock' && numLock,
+    })
+    expect(directionKey(key(navigation, true))).toEqual({ abs, mod: 'shift', source: 'numpad' })
+    expect(directionKey(key(navigation, false))).toEqual({ abs, mod: 'none', source: 'numpad' })
+    expect(directionKey(key(digit, true))).toEqual({ abs, mod: 'none', source: 'numpad' })
+    expect(directionKey(key(navigation, false, { shiftKey: true }))).toEqual({ abs, mod: 'shift', source: 'numpad' })
+    expect(directionKey(key(navigation, true, { ctrlKey: true }))).toEqual({ abs, mod: 'ctrl', source: 'numpad' })
+    expect(directionKey(key(navigation, true, { altKey: true }))).toBeNull()
+    expect(directionKey(key(navigation, true, { metaKey: true }))).toBeNull()
+  })
+
+  it('does not infer Shift for dedicated navigation keys or change raw numpad messages', () => {
+    const key = { ...ev('ArrowUp', 'Numpad8'), getModifierState: (modifier: string) => modifier === 'NumLock' }
+    expect(directionKey({ ...key, code: 'ArrowUp' })).toEqual({ abs: 0, mod: 'none', source: 'arrows' })
+    expect(directionKey({ ...key, key: '8', code: 'Digit8' })).toBeNull()
+    expect(keydownMessage(key)).toEqual(cm.key(-1008))
+  })
+
   it('reads numpad by code with any of none / shift / ctrl', () => {
     expect(directionKey(ev('8', 'Numpad8'))).toEqual({ abs: 0, mod: 'none', source: 'numpad' })
     expect(directionKey(ev('ArrowUp', 'Numpad8'))).toEqual({ abs: 0, mod: 'none', source: 'numpad' })

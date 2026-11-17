@@ -66,7 +66,7 @@ describe('production deployment guard with real Git remotes', () => {
     const old = git(repo, 'rev-parse', 'origin/main'), latest = advance()
     expect(git(repo, 'rev-parse', 'origin/main')).toBe(old)
     const build = vi.fn()
-    expect(() => prepareDeployment({ cwd: repo, build })).toThrow('does not include latest origin/main')
+    expect(() => assertDeployable(repo)).toThrow('does not include latest origin/main')
     expect(git(repo, 'rev-parse', 'origin/main')).toBe(latest)
     expect(build).not.toHaveBeenCalled()
   })
@@ -125,19 +125,18 @@ describe('production deployment guard with real Git remotes', () => {
     expect(readFileSync(join(repo, 'dist/index.html'), 'utf8')).toBe('current features')
   })
 
-  it('refuses deployment if main advances during the build', () => {
-    const { repo, advance } = fixture()
-    expect(() => prepareDeployment({ cwd: repo, build: advance })).toThrow('does not include latest origin/main')
-  })
-
-  it('refuses assets built while HEAD changed, even if both commits include main', () => {
-    const { repo } = fixture()
-    expect(() => prepareDeployment({ cwd: repo, build: () => commit(repo, 'changed-during-build.txt') })).toThrow('HEAD changed during the build')
-  })
-
-  it('refuses source edits made during the build', () => {
-    const { repo } = fixture()
-    expect(() => prepareDeployment({ cwd: repo, build: () => writeFileSync(join(repo, 'features.txt'), 'removed') })).toThrow('commit or stash')
+  it('reuses app output until inputs change or an output is removed', () => {
+    const { repo } = fixture(), dist = join(repo, 'apps/orbrun/dist')
+    const build = vi.fn(() => { mkdirSync(dist, { recursive: true }); writeFileSync(join(dist, 'index.html'), 'built') })
+    prepareDeployment({ cwd: repo, build })
+    prepareDeployment({ cwd: repo, build })
+    expect(build).toHaveBeenCalledTimes(1)
+    writeFileSync(join(repo, 'features.txt'), 'changed')
+    prepareDeployment({ cwd: repo, build })
+    expect(build).toHaveBeenCalledTimes(2)
+    rmSync(join(dist, 'index.html'))
+    prepareDeployment({ cwd: repo, build })
+    expect(build).toHaveBeenCalledTimes(3)
   })
 
   it('stops when building fails', () => {

@@ -1,12 +1,13 @@
 import { DungeonProjectiles, type ProjectileContact } from './projectiles.js'
-import { cellKey, combatActorId, creatureMaterial, emittersFor, meleePose, meleeTiming, impactStrength, HitEffects, type HitEffect, type Billboard, type Emitter, type MeleeAttack, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
+import { DungeonSpawns } from './spawns.js'
+import { nativeSpellArt } from './spell-presentation.js'
+import { cellKey, combatActorId, creatureMaterial, emittersFor, bumpPose, bumpTiming, impactStrength, HitEffects, type HitEffect, type DeathEffect, type Billboard, type Emitter, type CombatBump, type Scene, type ProjectileAppearance, type SpellEffect } from '@orbrun/scene'
 import { HIT_SPRAY_DURATION, type HitSpray } from './hit-spray.js'
-import type { MeleeVariant } from './melee-path.js'
 
-export interface MeleeStroke extends MeleeAttack { born: number; duration: number; variant: MeleeVariant }
+export interface BodyBump extends CombatBump { born: number; duration: number }
 export interface SpellTrace { source: Emitter; born: number; duration: number; appearance?: ProjectileAppearance }
 type ImpactSource = 'generic' | 'flash' | 'melee' | 'confirmed'
-export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray }
+export interface SpellBurst extends SpellEffect { born: number; duration: number; source: ImpactSource; material?: ProjectileAppearance['kind']; requested: number; contact?: ProjectileContact; spray?: HitSpray; nativeArtwork?: boolean }
 interface SpellSample { source: Emitter; appearance?: ProjectileAppearance }
 interface ActorPosition { x: number; y: number; at: number; previous?: { x: number; y: number; at: number } }
 interface ProjectileSample { billboard: Billboard; ended?: number }
@@ -20,9 +21,12 @@ const signature = (s: Emitter) => `${s.x},${s.y}:${s.colour.join(',')}`
 /** Small, bounded visual histories. No game rules, prose parsing or timers. */
 export class DungeonEffects {
   readonly hits = new HitEffects()
-  strokes: MeleeStroke[] = []
+  readonly spawns = new DungeonSpawns()
+  bumps: BodyBump[] = []
   traces: SpellTrace[] = []
   bursts: SpellBurst[] = []
+  private nativeCells = new Set<ReturnType<typeof cellKey>>()
+  private nativeUntil = new Map<ReturnType<typeof cellKey>, number>()
   private flashes = new Map<ReturnType<typeof cellKey>, string>()
   private spells = new Map<string, SpellSample>()
   private shots = new Map<string, ProjectileSample>()
@@ -31,7 +35,7 @@ export class DungeonEffects {
   private level: string | undefined
   private onLevel = false
   private spraySequence = 0
-  private meleeVariants = new Map<string, MeleeVariant>()
+  private deaths: (Pick<DeathEffect, 'actorId' | 'x' | 'y'> & { born: number })[] = []
 
   observe(scene: Scene, now: number, animate: boolean) {
     const continuing = animate && scene.playerOnLevel && this.onLevel && scene.levelKey === this.level
@@ -44,7 +48,14 @@ export class DungeonEffects {
       const previous = old && (old.x !== b.x || old.y !== b.y) ? { x: old.x, y: old.y, at: now } : old?.previous
       return [id, { x: b.x, y: b.y, at: now, previous }]
     }))
-    if (animate && scene.playerOnLevel) this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now))
+    if (animate && scene.playerOnLevel) {
+      this.spawns.observe(scene, now, continuing)
+      this.missiles.observe(scene, now, b => this.target(scene, { x: b.x, y: b.y, kind: 'magic' }, now), b => this.spawns.stationary(b))
+    }
+    for (const [key, until] of this.nativeUntil) if (now >= until) this.nativeUntil.delete(key)
+    for (const key of this.nativeCells) this.nativeUntil.set(key, now + PROJECTILE_EXPOSURE)
+    this.nativeCells = new Set(scene.billboards.filter(b => this.nativeArea(b) && visible(scene, b)).map(b => cellKey(b.x, b.y)))
+    for (const cell of scene.cells.values()) if (cell.life?.spawn && cell.visibility === 'visible') this.nativeCells.add(cellKey(cell.x, cell.y))
     const flashes = new Map<ReturnType<typeof cellKey>, string>()
     if (animate && scene.playerOnLevel) for (const cell of scene.cells.values()) {
       const f = cell.flash
@@ -87,9 +98,25 @@ export class DungeonEffects {
 
   projectiles(now: number) { return this.missiles.sample(now) }
 
+  /** A confirmed death replaces pending contact art, including delayed reports. */
+  death(scene: Scene, effect: DeathEffect, now: number) {
+    if (!scene.playerOnLevel || !visible(scene, effect) || scene.cells.get(cellKey(effect.x, effect.y))?.occluder) return
+    this.deaths = this.deaths.filter(d => d.actorId !== effect.actorId && now - d.born < 2)
+    this.deaths.push({ actorId: effect.actorId, x: effect.x, y: effect.y, born: now })
+    this.deaths = this.deaths.slice(-48)
+    this.hits.remove(effect.actorId)
+    this.bursts = this.bursts.filter(b => !this.killed(b, now))
+  }
+
+  private killed(effect: { actorId?: string; x: number; y: number }, now: number) {
+    return this.deaths.some(d => now >= d.born && now - d.born < 2
+      && (effect.actorId ? effect.actorId === d.actorId : effect.x === d.x && effect.y === d.y))
+  }
+
   hit(scene: Scene, effect: HitEffect, now: number) {
     const target = this.target(scene, { ...effect, kind: 'physical' }, now)
     const placed = target ? { ...effect, actorId: combatActorId(target), x: target.x, y: target.y } : effect
+    if (this.killed(placed, now)) return false
     const contact = this.missiles.bind({ ...placed, kind: 'physical' }, now)
     const added = this.hits.spawn(scene, placed, now, contact?.time)
     // Only confirmed damage emits body material. Misses, resisted casts and
@@ -97,7 +124,7 @@ export class DungeonEffects {
     if (added && target) {
       const direction = contact?.direction() ?? (target.kind === 'player' ? { x: 0, y: 0 }
         : { x: target.x - scene.player.x, y: target.y - scene.player.y })
-      this.spell(scene, { ...placed, kind: 'physical' }, now, 'generic', this.sprayFor(target, direction, 'ranged'))
+      this.spell(scene, { ...placed, kind: effect.tone ?? 'physical', intensity: effect.intensity }, now, 'generic', this.sprayFor(target, direction, 'ranged'))
     }
     return added
   }
@@ -132,10 +159,13 @@ export class DungeonEffects {
         || previous && now - previous.at < 0.2 && shot.billboard.x === previous.x && shot.billboard.y === previous.y))
       .map(shot => shot.billboard.life?.projectile).filter((a): a is ProjectileAppearance => !!a)
     const material = art.length && art.every(a => a.kind === art[0].kind) ? art[0].kind : undefined
-    const kind = effect.kind !== 'physical' || !material ? effect.kind
+    // Reused native tiles can mislead (Mercury Arrow uses Sting art). Explicit
+    // damage classifications win; unclassified flashes may still borrow art.
+    const kind = effect.kind !== 'physical' || !material || source === 'confirmed' ? effect.kind
       : material === 'stone' || material === 'sand' ? 'earth' : material === 'metal' ? 'physical' : material
     const placed = { ...effect, kind, material, turn: effect.turn ?? scene.turn,
       ...(target ? { x: target.x, y: target.y, actorId: combatActorId(target) } : {}) }
+    if (this.killed(placed, now)) return false
     if (!scene.playerOnLevel || !visible(scene, placed) || scene.cells.get(cellKey(placed.x, placed.y))?.occluder) return false
     const utility = (kind: SpellEffect['kind']) => ['heal', 'buff', 'debuff', 'teleport'].includes(kind)
     const contact = source === 'melee' || utility(placed.kind) ? undefined : this.missiles.bind(placed, now)
@@ -145,7 +175,9 @@ export class DungeonEffects {
       const sameResult = b.turn !== undefined && placed.turn !== undefined ? b.turn === placed.turn : Math.abs(now - b.requested) < 0.2
       return sameTarget && sameResult
     })
+    const nativeArtwork = !utility(placed.kind) && (this.nativeCovers(scene, effect, now) || this.nativeCovers(scene, placed, now))
     if (existing) {
+      existing.nativeArtwork ||= nativeArtwork
       // Explicit results replace colour guesses and generic damage. One owner,
       // one clock: another report cannot start a differently coloured second hit.
       const intensity = impactStrength(placed.intensity) > impactStrength(existing.intensity) ? placed.intensity : existing.intensity
@@ -167,59 +199,92 @@ export class DungeonEffects {
       return false
     }
     const duration = spray ? HIT_SPRAY_DURATION : utility(placed.kind) || placed.kind === 'drain' ? 0.85 : source === 'melee' ? 0.25 : placed.kind === 'electric' ? 0.5 : 0.4
-    this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray })
+    this.bursts.push({ ...placed, born, requested: now, contact, duration, source, spray, nativeArtwork })
     this.bursts = this.bursts.slice(-48)
     return true
   }
 
-  melee(scene: Scene, attack: MeleeAttack, now: number) {
+  bump(scene: Scene, attack: CombatBump, now: number) {
     const distance = Math.hypot(attack.to.x - attack.from.x, attack.to.y - attack.from.y)
     if (!scene.playerOnLevel || !visible(scene, attack.from) || !visible(scene, attack.to) || distance < 0.5 || distance > 2.9) return false
-    // Multiple reports for a cleave/brand must not stack the same stroke.
-    if (this.strokes.some(s => s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
-    // Choose once per accepted swing; duplicate reports and redraws never roll
-    // again. Keep the previous gesture through rapid combos and short pauses.
-    const key = `${attack.fromId ?? `${attack.from.x},${attack.from.y}`}:${attack.style}`
-    const previous = this.meleeVariants.get(key)
-    const roll = Math.floor(Math.random() * (previous === undefined ? 3 : 2))
-    const variant = (previous === undefined || roll < previous ? roll : roll + 1) as MeleeVariant
-    this.meleeVariants.delete(key)
-    this.meleeVariants.set(key, variant)
-    if (this.meleeVariants.size > 64) this.meleeVariants.delete(this.meleeVariants.keys().next().value!)
-    this.strokes.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: meleeTiming(attack.style).duration, variant })
-    this.strokes = this.strokes.slice(-12)
+    // Multiple reports for a cleave/brand must not stack the same bump.
+    if (this.bumps.some(s => s.fromId === attack.fromId && s.toId === attack.toId && s.from.x === attack.from.x && s.from.y === attack.from.y && s.to.x === attack.to.x && s.to.y === attack.to.y && Math.abs(now - s.born) < 0.09)) return false
+    this.bumps.push({ ...attack, from: { ...attack.from }, to: { ...attack.to }, born: now, duration: bumpTiming(attack.speed).duration })
+    this.bumps = this.bumps.slice(-12)
     if (attack.hit) {
       const effect = { ...attack.to, actorId: attack.toId, kind: attack.tone ?? 'physical', intensity: attack.intensity }
       const target = this.target(scene, effect, now)
       const spray = target ? this.sprayFor(target, { x: attack.to.x - attack.from.x, y: attack.to.y - attack.from.y }, 'melee') : undefined
-      this.spell(scene, effect, now + meleeTiming(attack.style).contact, 'melee', spray)
+      this.spell(scene, effect, now + bumpTiming(attack.speed).contact, 'melee', spray)
     }
     return true
   }
 
-  offset(b: Billboard, now: number) {
+  offset(b: Billboard, now: number, bumpStrength = 1, bumpSnap = 1) {
     let x = 0, y = 0
     if (b.lying || b.scenery || b.life?.held || b.kind !== 'monster' && b.kind !== 'player') return { x, y }
-    for (const stroke of this.strokes) {
-      const age = (now - stroke.born) / stroke.duration
+    const id = combatActorId(b)
+    const lunge = { x: 0, y: 0, weight: 0, peak: 0 }, recoil = { x: 0, y: 0, weight: 0, peak: 0 }
+    for (const bump of this.bumps) {
+      const age = (now - bump.born) / bump.duration
       if (age < 0 || age >= 1) continue
-      const dx = stroke.to.x - stroke.from.x, dy = stroke.to.y - stroke.from.y, length = Math.hypot(dx, dy)
-      const id = combatActorId(b)
-      const attacker = stroke.fromId ? id === stroke.fromId : b.x === stroke.from.x && b.y === stroke.from.y
-      const target = stroke.hit && (stroke.toId ? id === stroke.toId : b.x === stroke.to.x && b.y === stroke.to.y)
-      const pose = meleePose(stroke.style, now - stroke.born)
-      const kick = attacker ? pose.lunge : target ? pose.recoil * (0.6 + impactStrength(stroke.intensity) * 0.4) : 0
-      x += dx / length * kick; y += dy / length * kick
+      const dx = bump.to.x - bump.from.x, dy = bump.to.y - bump.from.y, length = Math.hypot(dx, dy)
+      const attacker = bump.fromId ? id === bump.fromId : b.x === bump.from.x && b.y === bump.from.y
+      const target = bump.hit && (bump.toId ? id === bump.toId : b.x === bump.to.x && b.y === bump.to.y)
+      if (!attacker && !target) continue
+      const pose = bumpPose(now - bump.born, bumpSnap, bump.speed)
+      let opposition = 0
+      if (attacker && pose.lunge > 0) {
+        for (const other of this.bumps) {
+          const reverseSource = bump.toId && other.fromId ? bump.toId === other.fromId
+            : bump.to.x === other.from.x && bump.to.y === other.from.y
+          const reverseTarget = bump.fromId && other.toId ? bump.fromId === other.toId
+            : bump.from.x === other.to.x && bump.from.y === other.to.y
+          if (other === bump || !reverseSource || !reverseTarget) continue
+          opposition = Math.max(opposition, bumpPose(now - other.born, bumpSnap, other.speed).lunge)
+        }
+        // Both bodies meet halfway. Use the opposing pose rather than a flag,
+        // so staggered attacks enter and leave this shorter motion smoothly.
+        const peak = bumpPose(bumpTiming().contact, bumpSnap).lunge
+        pose.lunge *= 1 - 0.5 * Math.min(1, opposition / peak)
+      }
+      const kick = attacker ? pose.lunge : pose.recoil * (0.6 + impactStrength(bump.intensity) * 0.4)
+      const motion = attacker ? lunge : recoil
+      motion.x += dx / length * kick; motion.y += dy / length * kick
+      motion.weight += Math.abs(kick); motion.peak = Math.max(motion.peak, Math.abs(kick))
     }
-    // Rapid actions never accumulate more than a small fraction of a cell.
-    const limit = Math.max(1, Math.hypot(x, y) / 0.18)
+    // Blend cleaves and rapid reports instead of adding their displacement.
+    // New impulses enter at zero weight, so ongoing motion stays continuous.
+    for (const motion of [lunge, recoil]) {
+      const scale = motion.weight > 0 ? motion.peak / motion.weight : 0
+      motion.x *= scale; motion.y *= scale
+    }
+    // A counterattacking body keeps its intention; incoming hits add a tiny
+    // flinch instead of cancelling the lunge or pushing it into another cell.
+    const flinch = 1 - 0.8 * Math.min(1, Math.hypot(lunge.x, lunge.y) / 0.18)
+    x = (lunge.x + recoil.x * flinch) * bumpStrength
+    y = (lunge.y + recoil.y * flinch) * bumpStrength
+    const limit = Math.max(1, Math.hypot(x, y) / 0.32)
     return { x: x / limit, y: y / limit }
   }
 
+  private nativeArea(b: Billboard) {
+    return nativeSpellArt(b) && (b.kind !== 'projectile' || this.spawns.stationary(b))
+  }
+
+  private nativeCovers(scene: Scene, p: { x: number; y: number }, now: number) {
+    return (this.nativeUntil.get(cellKey(p.x, p.y)) ?? -Infinity) > now
+      || scene.billboards.some(b => this.nativeArea(b) && b.x === p.x && b.y === p.y)
+      || !!scene.cells.get(cellKey(p.x, p.y))?.life?.spawn
+  }
+
   tick(scene: Scene, now: number) {
+    this.deaths = this.deaths.filter(d => now - d.born < 2 && visible(scene, d))
+    this.spawns.tick(scene, now)
     this.missiles.tick(scene, now)
     this.hits.tick(scene, now)
     for (const burst of this.bursts) {
+      if (!['heal', 'buff', 'debuff', 'teleport'].includes(burst.kind)) burst.nativeArtwork ||= this.nativeCovers(scene, burst, now)
       if (burst.contact) {
         burst.born = Math.max(burst.requested, burst.contact.time())
         const direction = burst.contact.direction()
@@ -229,7 +294,7 @@ export class DungeonEffects {
       if (target) { burst.x = target.x; burst.y = target.y }
     }
     this.bursts = this.bursts.filter(b => now - b.born < b.duration && visible(scene, b))
-    this.strokes = this.strokes.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
+    this.bumps = this.bumps.filter(s => now - s.born < s.duration && visible(scene, s.from) && visible(scene, s.to))
     this.traces = this.traces.filter(t => now - t.born < t.duration && visible(scene, t.source))
     for (const [key, shot] of this.shots) if (!visible(scene, shot.billboard) || shot.ended !== undefined && now - shot.ended >= PROJECTILE_EXPOSURE) this.shots.delete(key)
     this.traces = this.traces.slice(-48)
@@ -240,7 +305,7 @@ export class DungeonEffects {
   visibleBursts(now: number) {
     const current = new Map<string, SpellBurst>()
     for (const burst of this.bursts) {
-      if (now < burst.born || now - burst.born >= burst.duration) continue
+      if (now < burst.born || now - burst.born >= burst.duration || burst.nativeArtwork && !burst.spray && burst.source !== 'melee') continue
       const key = burst.actorId ?? `cell:${burst.x},${burst.y}`
       const previous = current.get(key)
       if (!previous || burst.born >= previous.born) current.set(key, burst)
@@ -248,5 +313,5 @@ export class DungeonEffects {
     return [...current.values()]
   }
 
-  clear() { this.hits.clear(); this.strokes = []; this.meleeVariants.clear(); this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
+  clear() { this.deaths = []; this.nativeCells.clear(); this.nativeUntil.clear(); this.spawns.clear(); this.hits.clear(); this.bumps = []; this.traces = []; this.bursts = []; this.flashes.clear(); this.spells.clear(); this.shots.clear(); this.missiles.clear(); this.actors.clear(); this.onLevel = false; this.level = undefined }
 }

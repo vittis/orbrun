@@ -58,7 +58,7 @@ export class TabLean {
     // the line stays until the strip turns (or is drawn anew, as the pack's is) or the menu goes
     const watch = () => {
       if (this.line !== line) return
-      if (!strip.isConnected || strip.querySelector('[role="tab"].current') !== from || performance.now() - started > HOLD_MS) this.clear(line)
+      if (!strip.isConnected || strip.closest('.ui-exit') || strip.querySelector('[role="tab"].current') !== from || performance.now() - started > HOLD_MS) this.clear(line)
       else requestAnimationFrame(watch)
     }
     requestAnimationFrame(watch)
@@ -66,7 +66,7 @@ export class TabLean {
 
   /** The strip of the menu on top, with its page up, under a line of its own. */
   private begin(): boolean {
-    const strips = this.root.querySelectorAll<HTMLElement>('.popup .pack-tabs')
+    const strips = this.root.querySelectorAll<HTMLElement>(':scope > .popup .pack-tabs')
     const strip = strips[strips.length - 1]
     const from = strip?.querySelector<HTMLElement>('[role="tab"].current')
     if (!strip || !from || !strip.offsetParent) return false

@@ -27,10 +27,7 @@ Orbrun connects to standard DCSS WebTiles servers and speaks the same
 WebSocket protocol as the official client. Online, gameplay runs entirely on
 the server. The one exception is `engine/`, which builds upstream DCSS for
 WebAssembly with a small patch set, for offline play; its patches stay under
-DCSS's own GPLv2+ (see `engine/README.md`). Nothing
-version-specific is shipped either — tile ids, enums, flag masks and atlases
-are loaded at runtime from the connected server's own `/gamedata/<version>/`
-files, exactly as the official client loads them.
+DCSS's own GPLv2+ (see `engine/README.md`). Live gameplay loads tile ids, enums, flag masks and atlases from the connected server's own `/gamedata/<version>/` files. The menu separately bundles curated recordings and their exact matching artwork; [recording provenance](apps/orbrun/public/menu/README.md) pins the source commit, server version and asset checksums.
 
 DCSS is Copyright 1997–2025 Linley Henzell, the dev team, and contributors,
 licensed under the GNU General Public License, version 2 or (at your option)
@@ -57,15 +54,12 @@ protocol-interoperability requirement.
 
 ## Tile art in the front room
 
-The front end's room (`apps/orbrun/src/room/antechamber.des`) is drawn from
+The retained rendering fixture (`apps/orbrun/src/room/antechamber.des`) is drawn from
 a handful of DCSS's own tiles, packed into `apps/orbrun/public/room/` by
 `tools/build/pack-room.mjs` from one pinned gamedata version (named in that
-tool; `atlas.json` records it and the source of every tile). This is the one
-place Orbrun ships tile art of its own rather than loading the connected
-server's: the room is a build asset the menus stand in before any server is
-spoken to, and gameplay never draws from it. Orbrun's mark is the Orb of
+tool; `atlas.json` records it and the source of every tile). These assets serve rendering fixtures and static document artwork; gameplay loads the connected server’s tiles. Orbrun's mark is the Orb of
 Zot's tile of that same version, cut from its `main.png` into
-`apps/orbrun/public/orb.png`: it stands beside the name on the title screen,
+`apps/orbrun/public/orb.png`: it remains in the existing icons and external artwork,
 and `tools/build/brand.mjs` builds the favicon, the README's wordmark and the
 Steam artwork from it. DCSS's LICENSE states that most tile art is public domain or CC0, with
 exceptions. The atlas records source rectangles and a gamedata version,
@@ -74,7 +68,7 @@ See the upstream [DCSS license](https://github.com/crawl/crawl/blob/master/LICEN
 and [tile licensing notes](https://github.com/crawl/tiles/blob/master/README.md).
 
 The name beside it is set in Grenze Gotisch Bold by Omnibus-Type, under the
-SIL Open Font License 1.1 (`assets/fonts/OFL.txt`): the title screen loads
+SIL Open Font License 1.1 (`assets/fonts/OFL.txt`): the retained static install/Steam pages load
 `apps/orbrun/public/fonts/grenze-gotisch-700-latin.woff2`, and the brand tool
 outlines the word from `assets/fonts/GrenzeGotisch-Bold.ttf` so the wordmark
 and artwork need no font installed to render.
@@ -162,6 +156,17 @@ remain applicable. See `project-notes` and the release history for changes.
 Acorn (MIT) parses generated gamedata without executing it. Its license is
 in `apps/orbrun/public/licenses/acorn.txt`, shipped at `/licenses/acorn.txt`.
 
+fflate (MIT, Arjun Barrett) reads user-selected sound-pack ZIP archives in a
+browser worker. Its license is shipped at `/licenses/fflate.txt`.
+CNC Open Sound Pack is downloaded from its publisher only on request, or
+imported by the user; its audio assets are not distributed with Orbrun.
+
 ## Dungeon simplification — 2026-11-12
 
 This fork makes the existing 2.5D renderer the sole gameplay view, retains flat supporting maps, removes the exclusive first-person implementation and refreshes its public documentation. Upstream notices and the matching release source offer remain applicable.
+
+## Polished Crawl menu
+
+The shell bundles Barlow Condensed (700), IBM Plex Sans (400), and IBM Plex Mono (400/500), under SIL Open Font License 1.1. Their license files are beside the WOFF2s in `apps/orbrun/public/fonts/`. DejaVu Sans Mono remains the gameplay/HUD font. Grenze Gotisch is retained only for external document/README/Steam artwork consumers.
+
+The silent menu video and poster were captured from the repository’s anonymized WebTiles recording using the existing 2.5D renderer. No HUD, chat or credentials are in the media. The pinned source, capture recipe and upstream tile-art licensing are documented in `apps/orbrun/public/menu/README.md`; the mixed upstream tile-art provenance caveat above still applies.

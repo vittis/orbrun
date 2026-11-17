@@ -1,6 +1,321 @@
 # What's new
 
-Notable changes to Orbrun, newest first.
+Notable changes to Polished Crawl (built on Orbrun), newest first.
+
+## 0.3.126 — 2026-11-16
+
+- The menu now rotates through three curated recordings of real Crawl gameplay: alchemy in the Lair, ranged combat, and ice magic with allies. The normal 2.5D renderer shows the recorded movement, visibility and confirmed combat effects.
+- Replaced the menu's local engine with bundled state recordings and matching artwork, reducing its uncompressed assets from about 43 MiB to 7 MiB and removing Wasm startup and engine memory requirements.
+- Playback pauses behind screens and hidden tabs; Still and reduced motion retain the quiet entrance. Loading failures leave the menu usable, and old menu-engine downloads are cleared without touching saves.
+- Removed menu engine compilation, provisioning and production artifacts. Online play remains online-only; development-only offline play remains available.
+
+## 0.3.125 — 2026-11-16
+
+- Speed up live menu startup by loading artwork and the engine together, compiling Wasm alongside data downloads, and keeping versioned assets on the device for repeat visits. Startup no longer waits for a manifest request or downloads Wasm twice.
+- Fix repeat visits incorrectly receiving a 404 when the browser revalidates an unchanged menu asset.
+- Remove the menu's dark overlay so the scene displays the renderer's raw colors and lighting. Still/reduced motion and disposable save-free gameplay remain intact.
+
+## 0.3.124 — 2026-11-16
+
+- Replaced the old menu poster with an immediate dungeon entrance and a live-encounter loading hint. Engine loading starts immediately; Still and unsupported browsers retain the quiet entrance without a loading message.
+- Reuse the published, pinned engine for app-only deploys instead of recompiling Crawl. Unchanged local app builds are reused too. Routine publishing no longer runs repeated Git guards or a mandatory full release suite; focused checks and hosted manual verification are the default.
+
+## 0.3.123 — 2026-11-16
+
+- Replaced the recorded menu video with a live, silent DCSS encounter rendered in the normal 2.5D view. A pinned local engine controls movement, visibility and combat; randomized creatures and seeds vary each encounter.
+- Kept the demo separate from accounts, saves, input and audio. It uses disposable memory, pauses behind screens and hidden tabs, and releases its worker and renderer for Still/reduced motion or gameplay.
+- Added a static fallback for unsupported browsers or loading failures. The menu stays usable while demo assets load in the background.
+- Production bundles only the pinned demo engine assets. Player-facing play remains online-only; offline accounts and custom servers remain unavailable.
+
+## 0.3.122 — 2026-11-16
+
+- Replaced the home menu with Polished Crawl: compact server/login controls, responsive command rows, locally bundled typography and a restrained brass title reflection.
+- Added a silent recorded 2.5D gameplay backdrop with an immediate poster. Still, reduced motion, hidden tabs and covering screens suspend decorative playback.
+- About & credits and What's new now share an accessible modal while preserving typed credentials, selection, focus and compatible news-read tracking. Existing direct URLs open the same modal.
+- Kept server-confirmed saves and separate RC actions stable during lobby updates, and removed Descent from home offerings. Existing account management, registration, recovery, settings and watch flows remain available.
+- Removed the old animated menu room, splash, drag treatment and duplicate news screen. Gameplay, server authority, storage keys and production's online-only boundary are unchanged.
+- Included the Shift+numpad running fix with Num Lock from the preceding main-branch update.
+
+## 0.3.121 — 2026-11-15
+
+- Added creature-specific movement: walkers hop, slimes compress, serpents slither, small creatures scuttle, undead shuffle and flyers bank. Rapid moves blend smoothly while the camera stays steady.
+- Added hop height, squash and sway controls in Settings → View and the in-game Tune panel, with finer 10 ms movement timing. Defaults are 40% hop height, 60% squash and 100% sway; Still/reduced motion and confirmed positions remain respected.
+- Removed the circles beneath the player and allies while retaining shadows and targeting indicators.
+- Fixed clicks on settings rows moving out from under the pointer when their hint resized a narrow menu.
+
+## 0.3.120 — 2026-11-14
+
+- Added Settings → Audio with opt-in sound effects, master/effects volume and single or layered playback.
+- Download CNC Open Sound Pack or import its ZIP, test a sound, and refresh or remove the pack cached on this device. Missing sound files are reported and skipped.
+- Sounds follow confirmed game messages without replaying initial history or rewritten log lines. Background tabs and departing sessions stop playback; audio remains independent of Still/reduced motion.
+
+## 0.3.119 — 2026-11-14
+
+- Fixed missed controller and touch confirmations when a server prompt arrives between frames. Fast keyboard input also uses the latest confirmed menu and gameplay state immediately.
+- Kept held movement and action repeats steady across uneven frames without replaying missed commands after a stall.
+- Reduced lighting and fog work and removed repeated actor scans on crowded floors. Local browser measurements showed 23–27% lower median drawing time; server authority, visibility and Still/reduced motion are preserved.
+
+## 0.3.118 — 2026-11-13
+
+- Stars in unexplored space now use soft circular falloff, slight color and brightness differences, and gentle curved drift. Added a handful of faint, slowly rotating curls while keeping the background black.
+- Added View → Unexplored atmosphere. Turn it off to remove stars and curls while retaining the smooth exploration transition. Its preference persists independently of the master fog setting and supports Still/reduced motion.
+
+## 0.3.117 — 2026-11-13
+
+- Simplified unexplored fog to a black background with small, crisp stars and minimal smooth movement. The same starfield is used throughout the dungeon.
+- Removed cloud rendering, branch palettes, atmosphere metadata and branch-theme preview controls. Kept the soft, rounded exploration boundary, existing fog toggle, Still/reduced motion and confirmed visibility.
+
+## 0.3.116 — 2026-11-13
+
+- Toned down unexplored fog to mostly black space with sparse, restrained branch-colored wisps.
+- Replaced sharp exploration intersections with a shared, softly rounded feather across ground, raised roofs and wall faces. The feather moves gently while actors and gameplay markers remain clear, and wisps fade back to black near the boundary.
+- Retained all branch moods, the existing fog toggle, Still/reduced motion and fully explored viewport sleep behavior. Reuse the bounded geometry mask while the scene and camera remain unchanged.
+
+## 0.3.115 — 2026-11-13
+
+- Replaced barely visible fog circles with a pronounced, continuous veil of rolling smoke, layered billows and curling blue-violet folds. Motion is visible within a moment and stays behind explored terrain.
+- Fog now adapts to the confirmed dungeon branch: earthy dust, verdant Lair mist, marsh vapour, sea haze, icy clouds, sulphurous smoke, spectral mist, arcane fog, Abyss turbulence and a soft sacred haze. Each mood has its own palette, flow speed, curl and shape.
+- Kept the existing Unexplored fog setting, Still/reduced motion, hidden-information boundary and fully explored viewport sleep behavior. The fog uses a bounded reusable raster instead of per-frame particle stamps.
+
+## 0.3.114 — 2026-11-13
+
+- Removed artificial square wall bases beneath ruined columns, statues, idols, gravestones and related scenery. Their original silhouettes now stand directly on the floor with soft ground shadows for depth.
+- Preserved actual wall rendering, server-authoritative terrain and visibility, flat supporting maps, and Still/reduced motion. Added scene-classification and real-browser raster regressions.
+
+## 0.3.113 — 2026-11-13
+
+- Added brief opening and closing fades for inventory, spell lists, descriptions, prompts and client menus. Content and navigation updates retain their presentation clock, while closing windows release focus and input immediately.
+- Added subtle list hover feedback and smoother control, settings-panel and backdrop transitions. Rows and pixel-art tiles keep their positions and scale; Still and reduced motion skip UI transitions.
+- Removed the browser focus outline around the game canvas when control returns from a settings panel, while preserving keyboard play and focus indicators on controls.
+- Preserved the concurrent unexplored-fog and level-up snapshot-clock changes from main.
+
+## 0.3.112 — 2026-11-13
+
+- Added soft, cool mist and sparse drifting motes behind unexplored dungeon terrain. Slow world-anchored motion adds atmosphere while keeping explored terrain and gameplay markers clear.
+- View → Unexplored fog toggles the effect, enabled by default. Still/reduced motion freezes it; fully explored viewports stop its animation loop. Hidden terrain and actors never influence its appearance.
+
+## 0.3.111 — 2026-11-13
+
+- Level-up feedback now uses smooth, understated lettering with a small rising burst of warm embers and a soft 1.8-second fade. It remains above the character and triggers before stat selection; Still/reduced motion show a static label.
+- Removed the shadow overlay during message pauses. System menus and modal backdrops use an even tint instead of darkening the corners.
+
+## 0.3.110 — 2026-11-13
+
+- Made magic death splatter a little shorter and less intense: a 0.65-second maximum instead of 0.8 seconds, about 12% fewer particles, slightly softer opacity and a quicker fade. Retained purple glints, body splatter and per-spawn variation.
+
+## 0.3.109 — 2026-11-13
+
+- Reworked the level-up popup into crisp bitmap lettering over ragged blood-red pixels, hanging drips and bone chips. It follows the rendered character just above their head, including camera motion and resizing.
+- The native level-gain announcement now triggers the popup immediately, before the stat-improvement choice. A delayed XL update never repeats it; history, duplicate announcements and unrelated message channels stay excluded. Still/reduced motion retain a static pixel stamp.
+
+## 0.3.108 — 2026-11-13
+
+- Searing Ray now mixes flame into hit and death splatter. Audited stable/trunk spell, ability and projectile classifications, including Fulsome Fusillade's individual substances, Magic Dart, crystal/stone/metal projectiles, steam, Sirocco and destruction abilities.
+- Shared effect classification keeps native projectiles, spawns and lighting consistent. Ghostly fire and shadowy lightning keep necromantic/magic signatures; physical attacks retain physical debris. Confirmed Mercury Arrow damage overrides its reused poison tile; cold auras now use cold effects.
+- Retained existing blood/material splatter, killing-hit attribution, venom brands, variation defaults, native artwork, visibility and Still/reduced motion. Integrated the concurrent level-up popup release without replacing its changes.
+
+## 0.3.107 — 2026-11-13
+
+- Confirmed character level gains now strike a gold level seal into view, with a brief impact, ember shards and an automatic fade. The popup stays clear of HUD panes, never intercepts input, and uses a static presentation with Still or reduced motion.
+- Loaded characters and duplicate updates do not trigger a celebration. Rapid gains show the latest confirmed level; death, disconnects and run changes clear the popup.
+
+## 0.3.106 — 2026-11-13
+
+- Confirmed hits with an identified venom weapon now include poison bubbles and vapour in hit/death splatter, including lethal strikes that send no separate poison-status sentence.
+- Capture the equipped brand when the server’s hit message arrives, preserving the correct appearance across weapon swaps before rendering. Poison-status messages alone do not create an extra hit; spells, auxiliary attacks, other actors, misses and zero-damage results keep their own feedback.
+
+## 0.3.105 — 2026-11-13
+
+- Electric hits and deaths now emit larger forked blue-white lightning with bright cores and short, changing discharges instead of ice-like shards.
+- Made elemental splatter more present and distinct: fire tongues, frost crystals, bubbling poison and vapour, sharp acid streaks, and luminous purple magic glints. Increased elemental particle size and density while preserving existing total particle limits.
+- Dense hit and death bursts reserve room for their elemental signature; death floor splatter is retained. Existing gore/variation settings, confirmed contact, visibility clipping, Still/reduced motion and spell coverage remain intact.
+
+## 0.3.104 — 2026-11-13
+
+- Fulminant Prism and Iskenderun’s Mystic Blast now mix magic splatter with existing hit and death debris. Extended confirmed-result coverage to Searing Ray, Force Lance, Battlesphere, Orb of Destruction, shadow/energy attacks, Mindburst and Dispel Undead.
+- Added missing elemental results for Hailstorm, creeping frost, Toxic Bog, caustic explosions, plasma, Blinkbolt and related spells/abilities. Explicit chaos-beam elements keep their reported colour.
+- A separate spell result keeps its element when melee hits the same recipient in the same turn. Casts, misses, zero-damage results, hidden targets and Still/reduced motion remain excluded from damaging splatter.
+
+## 0.3.103 — 2026-11-13
+
+- Added `(edit rc)` beside each server-advertised Play version on the main menu. The editor shares the account’s server-side file with original WebTiles, verifies saves, protects unsaved changes and returns to the version link you opened. Each server keeps its own files.
+
+## 0.3.102 — 2026-11-13
+
+- Made the critical-health red corner vignette stronger and extended it from 2.8 to 5.6 seconds, with a brief hold before fading. The center stays clear and reduced-motion intensity remains lowered.
+
+## 0.3.101 — 2026-11-13
+
+- Hit and death splatters mix fire, cold, poison, acid, electricity or magic from the confirmed damaging hit with the creature’s existing blood or material debris. Deaths retain same-turn hit evidence across frames without reusing older attacks or guessing from elemental creature names.
+- Added Combat → VFX variation, defaulting to 25%, for stable per-spawn changes in particle count, energy, size and spray shape. Off keeps a consistent burst profile; visibility, particle limits and Still/reduced motion remain enforced.
+- Combat defaults now use 175% bump strength, 115% speed, 70% snap, 100% hit gore, 50% death gore, and 100%/75% hit/death outward spray. Existing saved overrides remain supported.
+
+## 0.3.100 — 2026-11-13
+
+- Removed the entire miss, shield-block and zero-damage VFX feature, including particle art, animation, stacking state, renderer API and dedicated previews/tests. Normal attack bumps and damaging-hit effects remain.
+
+## 0.3.99 — 2026-11-13
+
+- Removed miss/dodge VFX entirely; confirmed attack bumps remain.
+- Made shield and zero-damage VFX smaller and more distinct: three sideways golden ricochet strokes for shields, and a compact scatter of falling steel chips for armor. Both still accumulate alongside blood with smooth settling and fade.
+
+## 0.3.98 — 2026-11-13
+
+- Replaced defensive combat icons with material VFX: curved wind streaks for dodges, steel armor flecks for zero-damage hits and golden ricochet sparks for shield blocks.
+- Effects expand and settle around the body, keep moving as they fade, and accumulate independently alongside blood and other confirmed combat feedback.
+
+## 0.3.97 — 2026-11-13
+
+- Shield blocks, misses and zero-damage hits now use distinct shield, sidestep and breastplate symbols. Confirmed projectile blocks also get shield feedback without a melee lunge.
+- Defensive popups accumulate independently, including repeated misses, while damaging hits retain their blood/material VFX. Stable positions keep simultaneous results readable.
+- Popups spring upward with a quick overshoot and settle, then lift and smoothly fade. Visibility, recipient removal, death and Still/reduced-motion cleanup remain enforced.
+
+## 0.3.96 — 2026-11-13
+
+- Fixed missing attack bumps when multiple adjacent enemies share a name. Repeated confirmed attempts are distributed across visible matching attackers, including messages arriving across frames.
+- Each reported attempt retains its original hit, miss, shield block or zero-damage result; hidden and out-of-reach creatures stay excluded.
+
+## 0.3.95 — 2026-11-13
+
+- Confirmed shield-blocked melee attacks now trigger the attacker’s body bump and a shield contact cue, including enemy, player and ally attacks. Blocks produce no damage flashes or blood and respect Still/reduced motion.
+
+## 0.3.94 — 2026-11-13
+
+- Keep keyboard focus inside quick settings after Reset or reaching a numeric limit, including browsers that blur disabled controls.
+
+## 0.3.93 — 2026-11-13
+
+- Added a collapsible Tune panel at the left-center of the game screen with every View and Combat setting.
+- Adjust sliders, small −/+ buttons and selectors while watching the dungeon. Changes apply immediately and share the normal saved preferences and reset controls.
+- Keyboard and controller focus stays inside the controls; Escape closes them without sending a gameplay command. The panel scrolls to fit phones and short windows.
+
+## 0.3.92 — 2026-11-13
+
+- Misses now show a bright pale-blue X with trailing whiff marks; zero-damage hits show a gold shield-shaped contact flash. Larger silhouettes, stronger contrast and longer visibility make both outcomes easier to read during combat.
+- Both symbols retain the existing pixel-art outlines and dithered fade, with no blood, floor residue or changes to confirmed combat timing, visibility or reduced-motion behavior.
+
+## 0.3.91 — 2026-11-13
+
+- Confirmed misses show a small grey air-slip; hits that explicitly deal no damage show a muted contact glint. Both use shaded pixel art, follow the recipient and share melee contact timing without blood or damage flashes.
+- The brief feedback respects visibility, death cleanup and Still/reduced motion. Existing damaging hits, server authority, wider Dungeon camera controls and foreground wall cutaways remain intact.
+
+## 0.3.90 — 2026-11-13
+
+- Keep walls beside and behind the player fully raised, including exposed ends next to narrow passages. Corridor cutaways remain in front of the player, with matching wall picking, lighting and shadows.
+
+## 0.3.89 — 2026-11-13
+
+- Expanded Dungeon tilt to 25°–85° and zoom to 25%–300%, keeping 5°/5% adjustment steps.
+- Updated saved-setting validation and renderer limits together so every offered value takes effect.
+
+## 0.3.88 — 2026-11-13
+
+- Mutual melee attacks lunge about half as far at contact, easing smoothly through staggered counterattacks to reduce overlap.
+- Combat settings now adjust in 5% steps, including bump strength, snap, gore and outward spray.
+- Added Hit bump speed from 50% to 200%, defaulting to 100%. Lunges and flinches share the adjusted contact clock with hit flashes and sprays; game turns and input remain unchanged.
+
+## 0.3.87 — 2026-11-13
+
+- Fine-tune Dungeon tilt in 5° steps from 35° to 65° and Dungeon zoom in 5% steps from 80% to 140% using the existing arrows, keyboard or gamepad controls.
+- Existing camera defaults and saved custom preferences are preserved.
+
+## 0.3.86 — 2026-11-13
+
+- Enemies and allies now lunge on confirmed visible melee attacks, including misses and fully absorbed blows.
+- Receivers make a small flinch instead of being pushed away. Simultaneous attacks and cleaves blend smoothly, keeping counterattacks readable without stacking displacement.
+- Preserved contact timing, confirmed actor identity, Still/reduced motion and server-owned positions.
+
+## 0.3.85 — 2026-11-13
+
+- Added 175% hit bump strength and 125% hit/death gore options.
+- Added independent Hit outward spray and Death outward spray controls. Choose how many particles spread in all directions, with the rest following the blow.
+- Confirmed kills now own contact effects: death VFX replace pending hit particles and flashes, including delayed reports and when death gore is Off. Other actors entering the same cell retain their own hit effects.
+
+## 0.3.84 — 2026-11-13
+
+- Melee hits land earlier with a stronger body bump, a brief impact hold and a sharp recoil. Hit flashes and material sprays share the new contact timing.
+- Hit sprays are shorter, faster and denser. Blood uses dark, rounded droplets and irregular splashes instead of pointed, bright fragments; deaths throw heavier bursts and leave richer floor splatter.
+- Combat settings now include independent Hit gore and Death gore levels from Off to 200%, plus bump strength up to 200%. Still/reduced motion and confirmed visibility remain respected.
+
+## 0.3.83 — 2026-11-13
+
+- Continue raised side-wall tops into lowered foreground corners, removing the dark internal step at the join while preserving corridor clearance and exposed wall faces.
+- Check mirrored corners, remembered terrain, unknown boundaries and water edges, including real-pixel coverage across tilt, zoom, filtering and display density.
+
+## 0.3.82 — 2026-11-13
+
+- Stop Djinni spell previews and HP casting costs from triggering the player hit animation. Only confirmed incoming melee/spell damage messages trigger hit feedback; HP expenditure alone does not.
+- Preserve incoming hits when casting and enemy damage occur together, regardless of whether HP or combat messages arrive first.
+
+## 0.3.81 — 2026-11-13
+
+- Keep flying, breathing, swaying and wounded poses continuous across confirmed steps, turns and artwork updates.
+- Smooth hover displacement between pixels and change animation speed without resetting its phase.
+- Preserve the concurrent spell-terrain, spell-atmosphere and wider death-splatter fixes.
+
+## 0.3.80 — 2026-11-13
+
+- Add an all-direction burst of death debris from the body alongside the killing blow’s directional spray.
+- Widen death splatter and increase particle travel so the effect is less concentrated, preserving material styling, visibility clipping and Still mode.
+
+## 0.3.79 — 2026-11-12
+
+- Fix Flame Wave and other explosion glyphs briefly turning floors into raised walls. Transparent/decorative walls also retain their shape beneath spell, cloud and actor glyphs; terrain categories now decide wall geometry.
+- Restore the earlier spell lighting, particles, cloud motion/opacity, residues and impact styling. Keep native fades, fixed area/cloud positions and duplicate-effect suppression.
+- Add protocol-to-raster checks for the glyph-only frame before artwork, visible effects and clearing, with lighting/VFX enabled and Still mode.
+
+## 0.3.78 — 2026-11-12
+
+- Remove all weapon VFX, trails, swing artwork/variations, their preview and obsolete Combat controls.
+- Keep one consistent body bump for all melee weapons, with Hit bump strength and Soft / Firm / Crunchy snap settings. Strength Off plants both actors; old weapon preferences no longer affect bumps.
+- Preserve ordinary blood/material hit splashes, confirmed damage, and the concurrent native spell and terrain-lighting fixes.
+
+## 0.3.77 — 2026-11-12
+
+- Keep native spell artwork and brief entry/exit fades; remove stacked spell light pools, added cloud deformation/particles and cloud floor residue. Spell overlays no longer change nearby terrain lighting masks or slide between cloud cells.
+- Let native area explosions/clouds own their visual effect, without a second generated burst. Smaller standalone spell/contact cues retain confirmed damage feedback, projectile timing, and the concurrent melee/hit-splash improvements.
+- Expand spell raster checks to 16 artwork families, with independent native-shape references and pixel comparisons for terrain/torch stability around Flame Wave, Volatile Blastmotes and clouds.
+
+## 0.3.76 — 2026-11-12
+
+- Show melee swings only for player attacks, with one consistent gesture per weapon family and a shorter version for misses.
+- Give axes a broad directional sweep and thrusts a straight approach; remove randomized variations from the game and preview.
+- Make target hit bumps stronger and faster, with adjustable strength and Soft / Firm / Crunchy snap under Combat settings.
+
+## 0.3.75 — 2026-11-12
+
+- Make confirmed melee and ranged impacts splash naturally around the contact point, with a smaller all-direction spray and a stronger forward majority.
+- Vary splash angles and speed while preserving material artwork, hit timing, visibility clipping and Still/reduced-motion behavior.
+
+## 0.3.74 — 2026-11-12
+
+- Simplify spell entrances and exits to brief opacity fades of the original server artwork.
+- Remove added spawn particle bursts and tile growth/stretching, especially for Flame Wave; preserve fixed explosion positions.
+- Fade departing native clouds and spell terrain, retain very brief server overlays, and verify unchanged sprite shapes and colours in the browser.
+
+## 0.3.73 — 2026-11-12
+
+- Keep complete melee silhouettes at visibility boundaries instead of clipping wide axe strokes and misses to cell rectangles.
+- Treat minotaur headbutts as natural follow-ups, preserving damage feedback without extra axe swings or retargeting same-name enemies.
+- Add an actual dungeon-renderer panel to the melee preview and regression coverage comparing live weapon pixels with the isolated artwork in all eight directions.
+
+## 0.3.72 — 2026-11-12
+
+- Add quick, material-specific entrance effects for Ice Thorns, Fulminant Prism, clouds and stationary spell explosions.
+- Keep Flame Wave's expanding explosion cells anchored instead of joining them into moving projectile paths.
+- Preserve confirmed visibility, Still/reduced motion and ordinary projectile travel; add deterministic spawn lifecycle and browser raster checks.
+
+## 0.3.71 — 2026-11-12
+
+- Make melee strikes more pronounced with opaque, outlined weapon artwork, thicker trails and a solid braided whip.
+- Use one common guard and continuous attack path, with weapon orientation fixed when each swing begins.
+- Add timeline scrubbing and motion guides to the melee preview, including a narrow layout.
+
+## 0.3.70 — 2026-11-12
+
+- Give nine melee weapon families distinct pixel-art gestures, with upright silhouettes, short follow-through and withdrawing thrusts.
+- Add Combat settings for weapon effects, stroke weight, trail length and actor lunge/recoil; expand the melee preview to 27 gestures.
+- Preserve 0.3.69's removal of floating combat text and its streamlined verification workflow.
 
 ## 0.3.69 — 2026-11-12
 

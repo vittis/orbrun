@@ -75,7 +75,7 @@ describe('routes', () => {
   })
 
   it('gives the front end’s screens addresses of their own', () => {
-    for (const path of ['settings', 'settings/camera', 'settings/controls/gamepad', 'accounts', 'accounts/add', 'accounts/add/server', 'watch', 'watch/add', 'whats-new']) {
+    for (const path of ['settings', 'settings/camera', 'settings/controls/gamepad', 'accounts', 'accounts/add', 'accounts/add/server', 'watch', 'watch/add', 'about', 'about/new', 'whats-new']) {
       expect(parseRoute(base + path)).toEqual({ kind: 'menu', path })
       expect(parseRoute(base + path + '/')).toEqual({ kind: 'menu', path })
     }
@@ -159,7 +159,7 @@ describe('routes', () => {
   })
 
   it('ignores paths it does not know', () => {
-    for (const path of ['nowhere', 'play', 'play/cdi', 'play/cdi#orbrun', 'play/cdi/orbrun/dcss-0.34/more', 'watch/nowhere.example', 'watch/cdi/bob/more', 'lobby/cdi', 'about', 'about/new', 'login/cdi/orbrun/more'])
+    for (const path of ['nowhere', 'play', 'play/cdi', 'play/cdi#orbrun', 'play/cdi/orbrun/dcss-0.34/more', 'watch/nowhere.example', 'watch/cdi/bob/more', 'lobby/cdi', 'login/cdi/orbrun/more'])
       expect(parseRoute(base + path)).toEqual({ kind: 'home' })
   })
 
@@ -282,13 +282,13 @@ describe('routes', () => {
       setRoute({ kind: 'play', account: orbrun, gameId: 'dcss-0.34' })
       expect(document.title).toBe('orbrun the Chiller | Vine Stalker - Orbrun')
       setRoute({ kind: 'menu', path: 'settings' })
-      expect(document.title).toBe('Orbrun - Dungeon Crawl Stone Soup')
+      expect(document.title).toBe('Polished Crawl - Dungeon Crawl Stone Soup')
     })
 
     it('names only the app in a window of its own', () => {
       history.replaceState(null, '', '/?fullscreen')
       setRoute({ kind: 'menu', path: 'settings' })
-      expect(document.title).toBe('Orbrun')
+      expect(document.title).toBe('Polished Crawl')
     })
 
     it('leaves for the site’s pages with the launch flags, and in a window of its own without adding to history', () => {
@@ -296,11 +296,11 @@ describe('routes', () => {
       const replace = vi.spyOn(window.location, 'replace').mockImplementation(() => {})
       try {
         history.replaceState(null, '', '/?perf')
-        openPage('/about')
-        expect(assign).toHaveBeenCalledWith('/about?perf')
+        openPage('/about/install')
+        expect(assign).toHaveBeenCalledWith('/about/install?perf')
         history.replaceState(null, '', '/?fullscreen')
-        openPage('/about')
-        expect(replace).toHaveBeenCalledWith('/about?fullscreen')
+        openPage('/about/install')
+        expect(replace).toHaveBeenCalledWith('/about/install?fullscreen')
       } finally {
         assign.mockRestore()
         replace.mockRestore()

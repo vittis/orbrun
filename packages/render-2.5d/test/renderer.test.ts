@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { cellKey, emptyScene, meleeTiming, type SceneCell } from '@orbrun/scene'
+import { cellKey, emptyScene, bumpTiming, type SceneCell, type TileLife } from '@orbrun/scene'
 import { Render25d, fittedScale, project, unproject } from '../src/index.js'
 import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
@@ -8,8 +8,8 @@ import { planeRect } from '../src/projection.js'
 import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
-import * as meleeArt from '../src/melee-draw.js'
-import { wallHeight, WALL_HEIGHT } from '../src/wall-depth.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
+import { wallHeight, wallRoof, WALL_HEIGHT } from '../src/wall-depth.js'
 
 function cell(x: number, y: number, extra: Partial<SceneCell> = {}): SceneCell {
   return { x, y, kind: 'floor', visibility: 'visible', occluder: false, floorTile: 1,
@@ -49,7 +49,7 @@ describe('the north-up projection', () => {
     }
   })
 
-  it.each([35, 50, 65])('round-trips ground coordinates at %s degrees on desktop and phone', degrees => {
+  it.each([25, 35, 50, 65, 85])('round-trips ground coordinates at %s degrees on desktop and phone', degrees => {
     for (const [width, height] of [[1280, 800], [390, 600]]) {
       const tilt = degrees * Math.PI / 180
       const p = { x: -13, y: 27, width, height, tilt, scale: fittedScale(width, height, tilt) }
@@ -69,6 +69,29 @@ describe('the north-up projection', () => {
 })
 
 describe('picking and visibility', () => {
+  it.each(['visible', 'remembered'] as const)('joins a side wall to a lowered %s corner without an internal face', visibility => {
+    const scene = sceneOf(cell(0, -2, { kind: 'wall', occluder: true }), cell(0, -1),
+      cell(0, 0, { kind: 'wall', occluder: true }),
+      cell(1, -1, { kind: 'wall', occluder: true, visibility }),
+      cell(1, 0, { kind: 'wall', occluder: true, visibility }))
+    scene.player.y = -1
+    const p = { x: 0, y: 0, width: 900, height: 700, scale: 42, tilt: Math.PI / 4 }
+    const side = scene.cells.get(cellKey(1, -1))!
+    const south = scene.cells.get(cellKey(1, 0))!
+    const roof = wallRoof(scene, p, side, 1.25)
+    expect(roof.y).toBe(planeRect(p, 1, -1, WALL_HEIGHT, 1.25).y)
+    expect(roof.y + roof.height).toBeCloseTo(wallRoof(scene, p, south, 1.25).y)
+    // Neither the cell's elevation nor the ground footprint changes.
+    expect(wallHeight(scene, side)).toBe(WALL_HEIGHT)
+    expect(wallHeight(scene, south)).toBe(0.08)
+    for (const boundary of [undefined, cell(1, 0), cell(1, 0, { flags: { ...south.flags, water: true } }),
+      { ...south, visibility: 'unseen' as const }, { ...south, kind: 'unknown' as const }]) {
+      scene.cells.delete(cellKey(1, 0))
+      if (boundary) scene.cells.set(cellKey(1, 0), boundary)
+      expect(wallRoof(scene, p, side, 1.25)).toEqual(planeRect(p, 1, -1, WALL_HEIGHT, 1.25))
+    }
+  })
+
   it.each([1, 3, 5])('keeps the foreground wall level across a junction %s cells wide', width => {
     const { r } = renderer()
     const radius = (width - 1) / 2
@@ -103,6 +126,7 @@ describe('picking and visibility', () => {
       return cell(x, y, y === 0 || y === -1 && i === 1 || y === -2 && i === 0
         ? { kind: 'wall', occluder: true } : {})
     })))
+    scene.player.y = -1
     // Match a mixed stone/glass run ending in a corner and widened passage.
     scene.cells.get(cellKey(2 * direction, 0))!.wallStyle = 'transparent'
     const { r } = renderer()
@@ -125,6 +149,7 @@ describe('picking and visibility', () => {
   it.each(['gap', 'unseen', 'unknown'] as const)('stops the cutaway at a %s', boundary => {
     const scene = sceneOf(...[-2, -1, 0].flatMap(y => [0, 1, 2].map(x =>
       cell(x, y, y === 0 || y === -2 && x === 0 ? { kind: 'wall', occluder: true } : {}))))
+    scene.player.y = -1
     const target = scene.cells.get(cellKey(2, 0))!
     expect(wallHeight(scene, target)).toBe(0.08)
     if (boundary === 'gap') scene.cells.delete(cellKey(1, 0))
@@ -133,7 +158,34 @@ describe('picking and visibility', () => {
     expect(wallHeight(scene, target)).toBe(WALL_HEIGHT)
   })
 
-  it.each([30, 35, 50, 65, 75])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
+  it.each([-1, 1])('keeps wall ends beside the player raised in direction %s, reserving cutaways for the foreground', direction => {
+    const cells = [-2, -1, 0, 1].flatMap(y => [0, 1, 2, 3].map(i =>
+      cell(i * direction, y, i > 0 && (y === -2 || y === 0 || y === 1 && i > 1)
+        ? { kind: 'wall', occluder: true } : {})))
+    const scene = sceneOf(...cells)
+    const end = scene.cells.get(cellKey(direction, 0))!
+    const { r } = renderer()
+    r.setOptions({ animate: false })
+    for (const visibility of ['visible', 'remembered'] as const) {
+      for (const c of scene.cells.values()) c.visibility = visibility
+      for (const playerY of [0, 1]) {
+        scene.player.y = playerY
+        scene.revision++; r.setScene(scene); r.render(0)
+        for (const x of [1, 2, 3]) expect(wallHeight(scene, scene.cells.get(cellKey(x * direction, 0))!)).toBe(WALL_HEIGHT)
+        const roof = r.project(end.x, end.y - 0.4, WALL_HEIGHT)
+        expect(r.pick(roof.x, roof.y)).toBe(cellKey(end.x, end.y))
+      }
+      // Entering the northern passage still exposes its floor and low roof.
+      scene.player.y = -1
+      scene.revision++; r.setScene(scene); r.render(0)
+      expect(wallHeight(scene, end)).toBe(0.08)
+      const passage = r.project(end.x, -0.65)
+      expect(r.pick(passage.x, passage.y)).toBe(cellKey(end.x, -1))
+    }
+    r.destroy()
+  })
+
+  it.each([25, 30, 35, 50, 65, 75, 85])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
     const { r } = renderer()
     r.setOptions({ tilt, animate: false })
     const cells = [-2, -1, 0, 1, 2].flatMap(y => [-1, 0, 1].map(x =>
@@ -247,15 +299,40 @@ describe('picking and visibility', () => {
       expect(rect.y + rect.height / 2).toBeCloseTo(body.y + footOffset - scale / 2)
       expect(art).not.toHaveBeenCalled()
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
-      expect(spray.mock.calls.length).toBeLessThanOrEqual(26)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
       const sourceX = (body.x - r.project(0, 0).x) / scale
-      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].x > sourceX && c[3].x < sourceX + 0.4)).toBe(true)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'drop')).toBe(true)
+      expect(spray.mock.calls.some(c => elementalPalettes.magic.includes(c[3].colour))).toBe(true)
+      expect(spray.mock.calls.every(c => Math.abs(c[3].x - sourceX) < 0.08)).toBe(true)
       expect(order.indexOf('recipient')).toBeLessThan(order.indexOf('projectile'))
       expect(order.indexOf('projectile')).toBeLessThan(order.indexOf('spray'))
       spray.mockClear(); r.render(1.8)
       expect(spray).not.toHaveBeenCalled()
       expect(r.animating).toBe(false)
     } finally { actor.mockRestore(); projectile.mockRestore(); art.mockRestore(); spray.mockRestore(); r.destroy() }
+  })
+
+  it.each([0, 1])('cancels lethal hit VFX even with death gore at %s', deathGore => {
+    const { r } = renderer()
+    const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
+    const debris = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
+    try {
+      const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
+      scene.billboards = [{ id: 7, kind: 'monster', name: 'goblin', tile: 2, x: 1, y: 0, height: 1 }]
+      r.setScene(scene, 0); r.setOptions({ deathGore, hitGore: 2 })
+      r.hit({ x: 1, y: 0, actorId: 'id:7' }, 1.05)
+      r.death({ actorId: 'id:7', x: 1, y: 0, height: 1, kind: 'flesh', direction: { x: 1, y: 0 } }, 1)
+      r.render(1.08)
+      const deathCount = debris.mock.calls.length
+      expect(deathCount > 0).toBe(deathGore > 0)
+      debris.mockClear()
+      r.hit({ x: 1, y: 0, actorId: 'id:7' }, 1.05)
+      r.impact(1, 0, 1, 1.05)
+      r.spell({ x: 1, y: 0, actorId: 'id:7', kind: 'fire' }, 1.05)
+      r.render(1.08)
+      expect(debris.mock.calls.length).toBe(deathCount)
+      expect(art).not.toHaveBeenCalled()
+    } finally { art.mockRestore(); debris.mockRestore(); r.destroy() }
   })
 
   it('replaces coalesced melee, flash, wound and elemental impacts with one material spray at contact', () => {
@@ -268,8 +345,8 @@ describe('picking and visibility', () => {
       r.setScene(scene, 0)
       scene.cells.get(cellKey(1, 0))!.flash = { r: 120, g: 180, b: 255, a: 100 }
       scene.revision++; r.setScene(scene, 1)
-      r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, toId: 'id:7', style: 'slash', hit: true }, 1)
-      const contact = 1 + meleeTiming('slash').contact
+      r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, toId: 'id:7', hit: true }, 1)
+      const contact = 1 + bumpTiming().contact
       r.impact(1, 0, 0.6, contact)
       r.spell({ x: 1, y: 0, actorId: 'id:7', kind: 'cold' }, contact)
       r.render(contact - 0.01)
@@ -278,8 +355,19 @@ describe('picking and visibility', () => {
       r.render(contact + 0.03)
       expect(art).not.toHaveBeenCalled()
       expect(spray.mock.calls.length).toBeGreaterThanOrEqual(8)
-      expect(spray.mock.calls.length).toBeLessThanOrEqual(26)
-      expect(spray.mock.calls.every(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      expect(spray.mock.calls.length).toBeLessThanOrEqual(48)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'drop' && c[3].colour[0] > c[3].colour[1])).toBe(true)
+      expect(spray.mock.calls.some(c => c[3].sprite === 'shard' && elementalPalettes.cold.includes(c[3].colour))).toBe(true)
+      const normalCount = spray.mock.calls.length
+      spray.mockClear(); r.setOptions({ hitGore: 2, deathGore: 0 }); r.render(contact + 0.03)
+      expect(spray.mock.calls.length).toBeGreaterThan(normalCount)
+      spray.mockClear(); r.setOptions({ hitGore: 0, deathGore: 2 }); r.render(contact + 0.03)
+      expect(spray).not.toHaveBeenCalled()
+      r.death({ actorId: 'id:7', x: 1, y: 0, height: 1, kind: 'flesh', direction: { x: 1, y: 0 } }, contact)
+      r.render(contact + 0.03)
+      expect(spray.mock.calls.length).toBeGreaterThan(normalCount)
+      spray.mockClear(); r.setOptions({ deathGore: 0 }); r.render(contact + 0.03)
+      expect(spray).not.toHaveBeenCalled()
       r.render(contact + 0.8)
       expect(r.animating).toBe(false)
     } finally { art.mockRestore(); spray.mockRestore(); r.destroy() }
@@ -345,7 +433,7 @@ describe('picking and visibility', () => {
     const scene = sceneOf(cell(0, 0), cell(1, 0))
     scene.billboards = [{ id: 'player', x: 0, y: 0, kind: 'player', tile: 2, height: 1, life: { motion: 'still' } }]
     r.setScene(scene, 0)
-    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 1)
+    r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, hit: true }, 1)
     r.render(1.1)
     const q = r.projectBillboard(scene.billboards[0]), base = r.project(0, 0)
     expect(q.x).toBeGreaterThan(base.x)
@@ -355,47 +443,44 @@ describe('picking and visibility', () => {
     expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
     expect(r.animating).toBe(false)
     r.setOptions({ animate: false })
-    r.melee({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, style: 'slash', hit: true }, 2)
+    r.bump({ from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, hit: true }, 2)
     r.render(2.1)
     expect(r.projectBillboard(scene.billboards[0])).toEqual(r.project(0, 0))
     expect(r.animating).toBe(false)
   })
 
-  it.each([false, true])('anchors swings and impacts to the moving sprites, including incoming=%s', incoming => {
-    const draw = vi.spyOn(meleeArt, 'drawMelee').mockImplementation(() => {})
-    const spray = vi.spyOn(DeathArt.prototype, 'draw').mockImplementation(() => {})
-    const { r } = renderer()
-    try {
-      r.setOptions({ center: { x: 1, y: 0 }, movementDuration: 0.2, movementEasing: 'linear' })
-      const start = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
-      start.billboards = [
-        { x: 0, y: 0, kind: 'player', tile: 2, height: 1 },
-        { id: 7, x: 2, y: 0, kind: 'monster', tile: 3, height: 1 },
-      ]
-      r.setScene(start, 0)
-      const player = { ...start.billboards[0], x: 1 }, enemy = start.billboards[1]
-      const scene = { ...start, revision: 1, player: { x: 1, y: 0 }, billboards: [player, enemy] }
-      r.setScene(scene, 1)
-      r.melee({ from: incoming ? enemy : player, to: incoming ? player : enemy,
-        fromId: incoming ? 'id:7' : 'player', toId: incoming ? 'player' : 'id:7', style: 'slash', hit: true }, 1)
-      for (const time of [1.1, 1.18]) {
-        r.render(time)
-        const anchors = draw.mock.calls.at(-1)![2]
-        expect(r.project(anchors.from.x, anchors.from.y)).toEqual(r.projectBillboard(incoming ? enemy : player))
-        expect(r.project(anchors.to.x, anchors.to.y)).toEqual(r.projectBillboard(incoming ? player : enemy))
-      }
-      // The player is still finishing a step; using its confirmed cell would float ahead.
-      const anchors = draw.mock.calls[0][2]
-      expect((incoming ? anchors.to : anchors.from).x).toBeLessThan(player.x)
-      expect(spray).toHaveBeenCalled()
-    } finally { draw.mockRestore(); spray.mockRestore(); r.destroy() }
+  it.each([35, 50, 65])('bumps along each attack direction at %s° and draws no weapon art when planted', tilt => {
+    for (const [x, y] of [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]) {
+      const { r, ctx } = renderer()
+      r.setOptions({ tilt, meleeBumpStrength: 0 })
+      const scene = sceneOf(cell(0, 0), cell(x, y))
+      const player = { x: 0, y: 0, kind: 'player' as const, tile: 2, height: 1, life: { motion: 'still' as const } }
+      scene.billboards = [player]
+      r.setScene(scene, 0)
+      const calls = () => Object.fromEntries(Object.entries(ctx).filter(([, v]) => vi.isMockFunction(v)).map(([key, v]) => [key, structuredClone(v.mock.calls)]))
+      const clear = () => Object.values(ctx).forEach(v => { if (vi.isMockFunction(v)) v.mockClear() })
+      clear(); r.render(1.1)
+      const resting = calls()
+      r.bump({ from: player, to: { x, y }, hit: false }, 1)
+      clear(); r.render(1.1)
+      expect(calls()).toEqual(resting)
+      expect(r.animating).toBe(false)
+      r.setOptions({ meleeBumpStrength: 1 })
+      r.render(1.1)
+      const from = r.project(0, 0), to = r.project(x, y), shown = r.projectBillboard(player)
+      const dx = shown.x - from.x, dy = shown.y - from.y
+      expect(dx * (to.x - from.x) + dy * (to.y - from.y)).toBeGreaterThan(0)
+      expect(dx * (to.y - from.y) - dy * (to.x - from.x)).toBeCloseTo(0)
+      expect(r.pick(shown.x, shown.y - 15)).toBe(cellKey(0, 0))
+      r.destroy()
+    }
   })
 
   it('does not keep rendering for offscreen melee or expired spell residue', () => {
     const { r } = renderer()
     const scene = sceneOf(cell(0, 0), cell(100, 100), cell(101, 100))
     r.setScene(scene, 0)
-    r.melee({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, style: 'crush', hit: true }, 1)
+    r.bump({ from: { x: 100, y: 100 }, to: { x: 101, y: 100 }, hit: true }, 1)
     r.render(1.1)
     expect(r.animating).toBe(false)
     const bolt = { x: 0, y: 0, kind: 'cloud' as const, tile: 2, height: 1,
@@ -426,6 +511,22 @@ describe('picking and visibility', () => {
     r.render(1.09)
     expect(order).toEqual([3, 2])
     draw.mockRestore()
+  })
+
+  it('keeps cloud cells fixed instead of tweening anonymous or identified artwork between cells', () => {
+    for (const id of [undefined, 7]) {
+      const { r } = renderer()
+      const scene = sceneOf(cell(0, 0), cell(1, 0))
+      const cloud = { id, x: 0, y: 0, kind: 'cloud' as const, tile: 8, height: 1, life: { motion: 'cloud' as const } }
+      r.setScene({ ...scene, billboards: [cloud] }, 0)
+      const moved = { ...cloud, x: 1 }
+      r.setScene({ ...scene, revision: 1, billboards: [moved] }, 1)
+      r.render(1.03)
+      expect(r.projectBillboard(moved)).toEqual(r.project(1, 0))
+      r.setOptions({ animate: false })
+      expect(r.animating).toBe(false)
+      r.destroy()
+    }
   })
 
   it('moves sprite picking and contact shadows together while retaining the confirmed destination', () => {
@@ -542,7 +643,7 @@ describe('picking and visibility', () => {
 
   it('stops animation in still mode and releases scene state on destroy', () => {
     const { r } = renderer()
-    r.setScene(sceneOf(cell(0, 0, { cloud: 8 })))
+    r.setScene(sceneOf(cell(0, 0, { life: { motion: 'flame', lights: [{ colour: [255, 158, 64], radius: 3, power: 0.5, pulse: 'fire' }] } })))
     r.render(0)
     expect(r.animating).toBe(true)
     r.setOptions({ animate: false })
@@ -577,6 +678,78 @@ describe('picking and visibility', () => {
   })
 })
 
+describe('actor animation continuity', () => {
+  // Observe transforms at the sprite draw, excluding ground shadows and fog.
+  function spritePose(r: Render25d, ctx: Record<string, unknown>, time: number) {
+    let pose: number[][] | undefined
+    const draw = vi.spyOn(TileCache.prototype, 'draw').mockImplementation(() => {
+      pose = [vi.mocked(ctx.translate).mock.calls.slice(-3).flat(),
+        vi.mocked(ctx.rotate).mock.calls.at(-1)!, vi.mocked(ctx.scale).mock.calls.at(-1)!] as number[][]
+      return true
+    })
+    try { r.render(time) } finally { draw.mockRestore() }
+    expect(pose).toBeDefined()
+    return pose!
+  }
+
+  it.each(['breath', 'fly', 'float', 'serpent', 'ooze', 'undead', 'skitter'] as const)(
+    'keeps %s and wound poses continuous through steps, turns and mutable artwork updates', motion => {
+      const { r, ctx } = renderer()
+      const scene = sceneOf(...[-1, 0, 1, 2].flatMap(y => [-1, 0, 1, 2].map(x => cell(x, y))))
+      const actor = { kind: 'player' as const, x: 0, y: 0, tile: 2, height: 1,
+        damage: 'heavily_damaged' as const, life: { motion, rate: 0.8 } }
+      scene.billboards = [actor]
+      r.setScene(scene, 0)
+      const transforms = (time: number) => {
+        return spritePose(r, ctx, time)
+      }
+      for (const [x, y, time] of [[1, 0, 1], [1, 1, 1.04], [0, 1, 1.07], [0, 0, 1.3]]) {
+        const before = transforms(time)
+        actor.x = x; actor.y = y; actor.tile++
+        scene.player = { x, y }; scene.revision++
+        r.setScene(scene, time)
+        const after = transforms(time)
+        expect(after.map(values => values.length)).toEqual(before.map(values => values.length))
+        after.forEach((values, i) => values.forEach((value, j) => expect(value).toBeCloseTo(before[i][j] as number, 9)))
+      }
+      r.destroy()
+    })
+
+  it('changes animation speed without jumping phase, including long-running sessions', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0))
+    const actor = { kind: 'player' as const, x: 0, y: 0, tile: 2, height: 1, life: { motion: 'breath' as const, rate: 0.8 } }
+    scene.billboards = [actor]
+    r.setScene(scene, 10000)
+    const scale = (time: number) => {
+      return spritePose(r, ctx, time)[2][1]
+    }
+    const before = scale(10001)
+    actor.life.rate = 1.6; scene.revision++
+    r.setScene(scene, 10001)
+    expect(scale(10001)).toBeCloseTo(before, 10)
+    expect(Math.abs(scale(10001.001) - before)).toBeLessThan(0.0002)
+    expect(scale(10001.1)).not.toBeCloseTo(before, 4)
+  })
+
+  it('keeps hover displacement subpixel between frames and schedules flag-only flight', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0))
+    scene.billboards = [{ kind: 'player', x: 0, y: 0, tile: 2, height: 1, life: { flying: true } }]
+    r.setScene(scene, 0)
+    const foot = (time: number) => {
+      return spritePose(r, ctx, time)[0][1]
+    }
+    const a = foot(1), b = foot(1.001)
+    expect(Math.abs(b - a)).toBeGreaterThan(0)
+    expect(Math.abs(b - a)).toBeLessThan(0.01)
+    expect(r.animating).toBe(true)
+    r.setOptions({ animate: false })
+    expect(foot(2)).toBe(foot(3))
+    expect(r.animating).toBe(false)
+  })
+})
+
 describe('environmental lighting', () => {
   it('centres room-sized light pools on standing artwork rather than the cell beneath it', () => {
     const scene = sceneOf(cell(0, 0))
@@ -595,13 +768,13 @@ describe('environmental lighting', () => {
     expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
-  it('smooths breathing from crisp enlarged pixels and honours still mode and explicit smoothing', () => {
+  it.each<TileLife>([{ motion: 'breath' }, { motion: 'fly' }, { motion: 'serpent' }, { flying: true }])('smooths $motion idle poses from crisp enlarged pixels and honours still mode and explicit smoothing', life => {
     const { r } = renderer(), samples: { smooth: boolean; rasterScale: number }[] = []
     const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, _layers, _x, _y, _size, _light, _memory, _flash, _lighting, _sample, rasterScale = 1) => {
       samples.push({ smooth: ctx.imageSmoothingEnabled, rasterScale }); return true
     })
     const scene = sceneOf(cell(0, 0))
-    scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life: { motion: 'breath' } }]
+    scene.billboards = [{ kind: 'player', tile: 2, x: 0, y: 0, height: 1, life }]
     r.setScene(scene); r.setOptions({ animate: false, filterScaling: false }); r.render(1)
     r.setOptions({ animate: true }); r.render(2)
     r.setOptions({ filterScaling: true }); r.render(3)

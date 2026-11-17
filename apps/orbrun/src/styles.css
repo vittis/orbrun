@@ -1,7 +1,4 @@
-/* The one face for every word but the wordmark, as WebTiles serves it (webserver/static/fonts), plus the bold it
-   leaves the browser to fake: DejaVu Sans Mono 2.37 whole, self-hosted (public/fonts, DEJAVU-LICENSE.txt), so a Deck
-   and a Mac draw the same letters instead of whatever each has installed. Both weights are preloaded from index.html;
-   `swap` shows the fallback for the moment either is late, and the grid measures again when it lands (grid/host.ts). */
+@import "./menu-shell.css";
 @font-face {
   font-family: 'DejaVu Sans Mono';
   font-style: normal;
@@ -28,6 +25,8 @@
   --menu-hover-in: 60ms;
   /* a chosen screen is on the glass before the hand leaves the mouse: the move reads, it does not wait */
   --frame-in: 140ms;
+  --ui-feedback: 90ms;
+  --ui-panel: 130ms;
   --panel: rgba(8, 10, 14, 0.78);
   --panel-border: rgba(255, 255, 255, 0.12);
   --accent: #ffd45c;
@@ -81,11 +80,7 @@ body {
   background: #000;
   color: #ddd;
   font-family: var(--mono);
-  /* --phone-shrink: on a phone, in a game, the menus come down as far as the grid's text did (game.ts shrinkText);
-     --front-shrink: the front end's words come down until the title screen holds them, on every screen of it
-     (menu.ts fitHome); --phone-text: a phone's words outside a game, smaller than a desktop's (in a game,
-     --phone-shrink sizes them) */
-  font-size: calc(15px * var(--ui-scale) * var(--phone-shrink, var(--phone-text, 1)) * var(--front-shrink, 1));
+  font-size: calc(15px * var(--ui-scale) * var(--phone-shrink, var(--phone-text, 1)));
   font-weight: var(--text-weight);
   overflow: hidden;
 }
@@ -197,130 +192,6 @@ select {
     linear-gradient(90deg, rgba(3, 2, 6, 0.9) 0%, rgba(3, 2, 6, 0.8) 40%, rgba(3, 2, 6, 0.45) 56%, rgba(3, 2, 6, 0.12) 74%, rgba(3, 2, 6, 0.06) 100%),
     linear-gradient(180deg, rgba(3, 2, 6, 0.45), transparent 25%, transparent 70%, rgba(3, 2, 6, 0.7));
 }
-/* the title screen has no column: its shade hangs off the menu itself (.home-actions::before) */
-.home:has(> .frame.home-list)::before {
-  content: none;
-}
-
-/* the room behind the screen (room/view.ts): a place of a real game, drawn by the game's renderer; in once its first frame is drawn */
-canvas.room {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  z-index: 0;
-  opacity: 0;
-  transition: opacity 600ms ease;
-  touch-action: none;
-  cursor: grab;
-}
-canvas.room.in {
-  opacity: 1;
-}
-/* the veil over the room (room/view.ts): the place it stands in dimmed and tinted as the site's acts on the same
-   places are (site/site.css .act.field), so the menus read on a bright level as on a dark one */
-.room-veil {
-  position: absolute;
-  inset: 0;
-  /* at the room's level, after it in the page: over the room, and under the menus' shade (.home::before) */
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(rgba(7, 7, 11, 0.6), rgba(7, 7, 11, 0.3) 30%, rgba(7, 7, 11, 0.3) 70%, rgba(7, 7, 11, 0.8));
-}
-.room-veil[data-tint='depths'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(30, 18, 12, 0.45) 30%, rgba(30, 18, 12, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='lair'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(26, 30, 8, 0.45) 30%, rgba(26, 30, 8, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='dungeon'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(12, 22, 14, 0.5) 30%, rgba(12, 22, 14, 0.5) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='abyss'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(18, 12, 34, 0.4) 30%, rgba(18, 12, 34, 0.4) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='shoals'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(10, 22, 30, 0.45) 30%, rgba(10, 22, 30, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='zot'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(30, 10, 26, 0.45) 30%, rgba(30, 10, 26, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.room-veil[data-tint='spider'] {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(22, 16, 26, 0.5) 30%, rgba(22, 16, 26, 0.5) 70%, rgba(7, 7, 11, 0.85));
-}
-
-/* a place of the dungeon a screen stands in over the room (menu.ts Backdrop): a still of a real game, the site's own,
-   dimmed and tinted as the site's act on it is (site/site.css .act.field), fading in over the room and out again */
-.menu-backdrop {
-  position: absolute;
-  inset: 0;
-  /* after the room's veil in the page, so over it (the still has its own), and under the menus' shade */
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 500ms ease;
-}
-.menu-backdrop.up {
-  opacity: 1;
-}
-.menu-backdrop img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  image-rendering: pixelated;
-}
-.menu-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-.menu-backdrop[data-tint='depths']::after {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(30, 18, 12, 0.45) 30%, rgba(30, 18, 12, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.menu-backdrop[data-tint='lair']::after {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(26, 30, 8, 0.45) 30%, rgba(26, 30, 8, 0.45) 70%, rgba(7, 7, 11, 0.85));
-}
-.menu-backdrop[data-tint='dungeon']::after {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(12, 22, 14, 0.5) 30%, rgba(12, 22, 14, 0.5) 70%, rgba(7, 7, 11, 0.85));
-}
-.menu-backdrop[data-tint='abyss']::after {
-  background: linear-gradient(rgba(7, 7, 11, 0.7), rgba(18, 12, 34, 0.4) 30%, rgba(18, 12, 34, 0.4) 70%, rgba(7, 7, 11, 0.85));
-}
-/* a still is no room: nothing to take hold of */
-.screen.home.covered {
-  cursor: default;
-}
-@media (prefers-reduced-motion: reduce) {
-  .menu-backdrop {
-    transition: none;
-  }
-}
-
-/* the room is taken hold of anywhere it shows, not only where the canvas is left bare (room/view.ts attachPointer): the whole screen offers the open hand, and the menus take their own cursor back */
-.screen.home {
-  cursor: grab;
-}
-.screen.home.looking,
-.screen.home.looking * {
-  cursor: grabbing;
-  user-select: none;
-}
-/* what the menus keep for themselves (the same list as MENU_SELECTOR): a press there is theirs, so it must not offer the hand */
-.screen.home .osk,
-.screen.home .doc-scroll,
-.screen.home .roster-scroll,
-.screen.home .settings-scroll,
-.screen.home .bindings-sheet {
-  cursor: default;
-}
-@media (prefers-reduced-motion: reduce) {
-  canvas.room {
-    transition: none;
-  }
-}
 
 .frame {
   position: absolute;
@@ -331,7 +202,7 @@ canvas.room.in {
   flex-direction: column;
   animation: frame-in var(--frame-in) cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-/* where the frame holds nothing, a press reaches the room behind it (a drag looks around); the words keep theirs */
+/* Secondary screens route input through their content. */
 .frame {
   pointer-events: none;
 }
@@ -638,15 +509,13 @@ canvas.room.in {
 .frame.menu-frame .brand .head {
   margin-bottom: 0.6rem;
 }
-/* a screen's name in the wordmark's face and the About pages' gold, the line under it set as their small caps;
-   no gold wash behind it, which in the menus says where the cursor is */
-.frame.menu-frame:not(.home-list) .brand .head .place {
-  font: 700 clamp(2.4rem, 6vw, 3.2rem)/1.05 'Grenze Gotisch', var(--mono);
+.frame.menu-frame .brand .head .place {
+  font: 700 clamp(2.4rem, 6vw, 3.2rem)/1.05 'Barlow Condensed', sans-serif;
   letter-spacing: 0;
   color: var(--gold-bright);
   text-shadow: 0 2px 18px #000;
 }
-.frame.menu-frame:not(.home-list) .brand .head .lede {
+.frame.menu-frame .brand .head .lede {
   margin-top: 0.45rem;
   font: 700 0.85rem/1.5 var(--mono);
   letter-spacing: 0.14em;
@@ -721,121 +590,6 @@ a.item.beside {
 .frame.menu-frame .item.beside.focused,
 .frame.menu-frame .item.beside:hover {
   color: var(--color-15);
-}
-/* A title screen: unboxed game actions, with identity and information below.
-   Keep visual and focus order identical. */
-/* a finger dragged over the title screen looks around the room even where the words cover it (an upright phone's
-   whole screen); the browser would take the drag as a pan and cancel it, and the screen never scrolls (fitHome) */
-.frame.home-list {
-  touch-action: none;
-}
-.frame.home-list .brand {
-  width: 38rem;
-  min-width: 0;
-  min-height: 100%;
-  gap: 0.65rem;
-}
-/* the title floats in the middle of the air above the menu: as far from the top as from Play */
-.frame.home-list .brand .head {
-  margin: auto 0;
-}
-/* the rows' shade, wherever the menu stands: from just over the first row down past the screen's foot and out past
-   its left edge, fading up toward the title and off to the right, so the room shows above the menu on a phone held
-   upright, and above and beside it on a wide screen. Shadows of a line along the rows' top, since a shadow paints
-   without adding to what the frame scrolls: each is `r - S` `S - t` blur `S`, for a shade from `t` over the rows to
-   `r` past their right, with `S` past any screen. Three, each fainter, further out and softer than the last, so the
-   shade has no edge to see: the first keeps to the words, the others reach by the screen's short side, a long
-   fade on a desktop and a short one on a phone */
-.frame.home-list .home-actions {
-  position: relative;
-}
-.frame.home-list .home-actions::before {
-  --far: 100vmax;
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 0;
-  z-index: -1;
-  pointer-events: none;
-  box-shadow:
-    calc(-1 * var(--far)) calc(var(--far) - 1rem) 8rem var(--far) rgba(3, 2, 6, 0.4),
-    calc(11vmin - var(--far)) calc(var(--far) - 7vmin) 32vmin var(--far) rgba(3, 2, 6, 0.3),
-    calc(25vmin - var(--far)) calc(var(--far) - 14vmin) 57vmin var(--far) rgba(3, 2, 6, 0.25);
-}
-/* the wordmark's own face, latin range only, self-hosted (public/fonts, from Google Fonts, OFL): Grenze Gotisch Bold.
-   Preloaded from index.html so it is usually in hand before the title is laid out; when it is not, `block` keeps the
-   title blank for the moment rather than drawing it in the mono fallback and reshaping it (wider, taller, the lede
-   pushed down) when the face lands. The title fades in with the room anyway, so a blank beat reads as the fade. */
-@font-face {
-  font-family: 'Grenze Gotisch';
-  font-style: normal;
-  font-weight: 700;
-  font-display: block;
-  src: url('/fonts/grenze-gotisch-700-latin.woff2') format('woff2');
-}
-.frame.home-list .brand .head .place {
-  font-family: 'Grenze Gotisch', var(--mono);
-  font-weight: 700;
-  /* the wordmark never steps down for a narrow or a short window: it holds the same share of the
-     width all the way down, so the floor is what a 320px screen can take (the lockup is about 3.6em
-     wide with the orb) and the ceiling is the desktop size */
-  font-size: clamp(4.5rem, 13vw, 7.5rem);
-  line-height: 1.1;
-  letter-spacing: 0;
-  color: var(--ink);
-  text-shadow: 0 2px 24px #000;
-}
-/* the Orb of Zot's own tile before the name (public/orb.png, cut from the pinned gamedata's main.png), scaled so its bright core (28 of the tile's 32px) matches the O's cap height (0.62em in Grenze Gotisch Bold) and sits on the baseline with the O's overshoot */
-.frame.home-list .brand .head .place::before {
-  content: '';
-  display: inline-block;
-  width: 0.71em;
-  height: 0.71em;
-  margin-right: 0.16em;
-  vertical-align: -0.055em;
-  background: url('/orb.png') center / contain no-repeat;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 8px rgba(185, 120, 31, 0.75)) drop-shadow(0 0 18px rgba(139, 63, 176, 0.45)) drop-shadow(0 2px 8px #000);
-}
-/* a little spaced; the game's name is never split (menu.ts), so a wide screen breaks before it */
-.frame.home-list .brand .head .lede {
-  margin-top: 0.75rem;
-  max-width: 34rem;
-  font: 400 1.1rem/1.55 var(--mono);
-  letter-spacing: 0.02em;
-  color: var(--ink-dim);
-  /* the title has no shade of its own (the menu's stops short of it): its small words carry a dark cloud wide
-     enough to read on a lit wall and loose enough not to thicken the letters */
-  text-shadow: 0 1px 8px #000, 0 0 1.4rem #000, 0 0 2.8rem rgba(0, 0, 0, 0.7);
-}
-/* a phone balances the lines instead: two even ones, where filling the first would leave three */
-@media (max-width: 600px) {
-  .frame.home-list .brand .head .lede {
-    text-wrap: balance;
-  }
-}
-/* Xom's word under the lede: one line of godspeak per visit, in the god's own irreverent tone */
-.frame.home-list .brand .head .splash {
-  margin-top: 1rem;
-  max-width: 40ch;
-  font-family: var(--mono);
-  font-size: 1rem;
-  font-style: italic;
-  line-height: 1.5;
-  color: var(--ink-dim);
-  opacity: 0.85;
-  text-shadow: 0 1px 8px #000, 0 0 1.4rem #000, 0 0 2.8rem rgba(0, 0, 0, 0.7);
-}
-.frame.home-list .brand .head .splash::before {
-  content: '“';
-}
-.frame.home-list .brand .head .splash::after {
-  content: '” — Xom';
-  font-style: normal;
-  /* the attribution never stands on a line of its own: a long word of Xom's takes it along */
-  white-space: nowrap;
 }
 /* One button language for all front-end screens, separate from gameplay popups. */
 .frame.menu-frame .item {
@@ -940,9 +694,7 @@ a.item.beside {
 .frame.menu-frame .item.field-item .marker {
   transform: translateX(-10px);
 }
-.frame.menu-frame .menu-actions .line > .item:first-child:is(.focused, :focus-visible) .marker,
-.frame.menu-frame .settings .front-setting:is(.focused, :focus-visible) .marker,
-.frame.menu-frame .item.field-item:is(.focused, :focus-within) .marker {
+.frame.menu-frame .menu-actions .line > .item:first-child:is(.focused, :focus-visible) .marker, .frame.menu-frame .settings .front-setting:is(.focused, :focus-visible) .marker, .frame.menu-frame .item.field-item:is(.focused, :focus-within) .marker {
   transform: none;
 }
 .frame.menu-frame .item.beside {
@@ -1034,43 +786,6 @@ a.item.beside {
 .frame.menu-frame .chips.gap {
   margin-top: 0.7rem;
 }
-.frame.home-list .item.chip {
-  width: auto;
-  flex: 0 0 auto;
-  min-height: 2.9rem;
-  padding: 0.5rem 1rem 0.5rem 2rem;
-  font-size: 1rem;
-  border-radius: 2px;
-}
-.frame.home-list .item.chip .label {
-  font-size: 1rem;
-}
-.frame.home-list .item.chip .marker,
-.frame.home-list .item.chip[data-marker]::after {
-  left: 0.75rem;
-  font-size: 1rem;
-}
-
-.home-menu-help,
-.home-menu-help .menu-msg-reserve {
-  display: grid;
-}
-.home-menu-help > .menu-msg,
-.home-menu-help .menu-msg-reserve > span {
-  grid-area: 1 / 1;
-  min-width: 0;
-}
-.home-menu-help .menu-msg-reserve {
-  visibility: hidden;
-  pointer-events: none;
-}
-.frame.home-list .menu-msg {
-  min-height: 3em;
-  line-height: 1.5;
-  font-family: var(--mono);
-  font-size: var(--menu-note-size);
-  margin-top: 0.35rem;
-}
 .frame.menu-frame .legend {
   display: flex;
   flex-wrap: wrap;
@@ -1092,34 +807,6 @@ a.item.beside {
   border: 1px solid #655e50;
   border-radius: 3px;
   padding: 0.15rem 0.35rem;
-}
-.home-footer {
-  padding-top: 0.75rem;
-}
-.frame.home-list .home-utilities {
-  flex-direction: row;
-  gap: 0.5rem;
-}
-.frame.home-list .home-utilities .item {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 44px;
-  /* the label stands as far past its glyph as a main row's does: the glyph's 0.3rem in and its own width (0.6em of
-     the smaller text), then the main rows' 1.6rem inset less their wider glyph */
-  padding: 0.65rem 0.5rem 0.65rem calc(0.3rem + 0.6 * var(--menu-note-size) + var(--menu-label-inset) - var(--menu-cursor-inset) - 0.6 * var(--menu-action-size));
-  color: var(--ink-dim);
-}
-.frame.home-list .home-utilities .item:is(:hover, .focused, :focus-visible) {
-  color: var(--gold-bright);
-}
-.frame.home-list .home-utilities .item .label,
-.frame.home-list .home-utilities .item .sub {
-  font-size: var(--menu-note-size);
-}
-.frame.home-list .home-utilities .item .marker,
-.frame.home-list .home-utilities .item[data-marker]::after {
-  left: 0.3rem;
-  font-size: var(--menu-note-size);
 }
 .about-links {
   display: flex;
@@ -1487,173 +1174,21 @@ a.item.beside {
   color: var(--ink-dim);
   font-weight: 600;
 }
-/* What's new (menu.ts showNews, news.ts): the site's /about/new as a menu's rows, one a release, the cursor's
-   bar and @ on the one it stands on; its changes under its number and date, as a row's note is under its label */
-.frame.menu-frame.news-list .brand {
-  max-width: 48rem;
-}
-.frame.menu-frame.news-list .doc-scroll {
-  /* the releases' offsets are the scroller's (menu.ts stepNews) */
-  position: relative;
-  background: none;
-  margin-top: 0;
-  padding: 0;
-}
-.doc.news {
-  max-width: none;
-}
-.frame.menu-frame .doc.news .item.release {
-  display: block;
-  cursor: default;
-}
-/* the release's glyph and the cursor's @ stand on its number's line, not halfway down its changes: the middle of
-   that line is the row's top padding and half the line, whose height the number sets (h2 .ver below) */
-.frame.menu-frame .doc.news .item.release .marker,
-.frame.menu-frame .doc.news .item.release[data-marker]::after {
-  top: calc(0.7rem + var(--menu-action-size) * 0.6);
-}
-.doc.news .item.release h2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem 0.75rem;
-  margin: 0 0 0.3rem;
-  font: inherit;
-  color: inherit;
-}
-.doc.news h2 .sep {
-  display: none;
-}
-.doc.news h2 .ver {
-  font-size: var(--menu-action-size);
-  line-height: 1.2;
-  font-weight: 700;
-}
-.doc.news h2 .when {
-  font: 700 0.8rem var(--mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-}
-.doc.news h2 .tag {
-  padding: 0.15rem 0.5rem;
-  font: 700 0.72rem var(--mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #1a1204;
-  background: var(--gold);
-  border-radius: 4px;
-  text-shadow: none;
-}
-.doc.news h2 .tag.new {
-  color: var(--gold-bright);
-  background: none;
-  box-shadow: 0 0 0 1px var(--gold) inset;
-}
-.doc.news ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.doc.news li {
-  position: relative;
-  margin: 0.3rem 0;
-  padding-left: 1.2rem;
-  font-size: var(--menu-note-size);
-  line-height: 1.5;
-  color: var(--ink-dim);
-}
-.doc.news .item.release.focused li {
-  color: var(--ink);
-}
-.doc.news li::before {
-  content: '-';
-  position: absolute;
-  left: 0;
-  color: var(--color-8);
-}
 /* a phone, or a short window (a phone on its side, a small laptop): less air, the chips two to a line */
 @media (max-width: 600px), (max-height: 700px) {
   .frame.menu-frame {
     padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
   }
-  .frame.home-list .brand .head {
-    margin: auto 0;
-  }
-  .frame.home-list .brand .head .lede {
-    margin-top: 0.4rem;
-    font-size: 1rem;
-  }
-  .frame.home-list .menu-msg {
-    min-height: 2.4em;
-  }
-  .home-footer {
-    padding-top: 0.5rem;
-  }
 }
 /* a phone held upright: the title keeps its place near the top rather than floating between it and the menu, so
    a row, a hint or a build number landing under it never moves it */
-@media (pointer: coarse) and (max-width: 600px) and (orientation: portrait) {
-  .frame.home-list .brand .head {
-    margin: max(1rem, 18vh) 0 auto;
-  }
-}
 @media (max-width: 600px) {
-  .frame.home-list .item.chip {
-    flex: 1 1 calc(50% - 0.2rem);
-    min-width: 0;
-  }
   /* three to a line is too many for a phone: the account has a line of its own, What's new and About share the next */
-  .frame.home-list .home-utilities {
-    flex-wrap: wrap;
-    row-gap: 0;
-  }
-  .frame.home-list .home-utilities .item[data-focus='account'] {
-    flex-basis: 100%;
-  }
 }
-/* a phone on its side, or a handheld's 1280x800 at 150% (853x533): the head on one line, the menu right
-   under it. The wordmark keeps its size, so the air around it is what gives way. The full head needs
-   about 590px, so this takes over below 600 rather than letting the title screen scroll */
 @media (max-height: 600px) {
   .frame.menu-frame {
     padding-top: max(0.6rem, env(safe-area-inset-top));
     padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
-  }
-  .frame.home-list .brand {
-    gap: 0.35rem;
-  }
-  .frame.home-list .brand .head .place {
-    /* the one place the wordmark stops growing: a short window has no room for the wide-screen size,
-       so it holds the small-screen one (still far larger than the step-down this replaced) */
-    font-size: 4.5rem;
-    line-height: 1;
-  }
-  .frame.home-list .brand .head {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    column-gap: 1rem;
-    margin: auto 0;
-  }
-  .frame.home-list .brand .head .lede {
-    margin-top: 0;
-    max-width: none;
-    font-size: 0.9rem;
-  }
-  .frame.home-list .brand .head .splash {
-    display: none;
-  }
-  .frame.home-list .menu-msg {
-    min-height: 1.5em;
-  }
-}
-/* a phone on its side has no room for the line saying what the lit row does; and a finger takes a row without
-   lighting it first, so the line would only ever speak for the row the screen opened on. It is still there while
-   the words are fitted (menu.ts fitHome, `.fitting`), so they keep the size they would have beside it */
-@media (orientation: landscape) and (max-height: 500px) {
-  .frame.home-list:not(.fitting) .home-menu-help {
-    display: none;
   }
 }
 
@@ -1662,11 +1197,11 @@ a.item.beside {
    of help as large as the actions under them. Cap the head there (and drop the grid's letter fit with
    it) so it stays a head, and the list keeps the screen. */
 @media (max-width: 700px) {
-  .frame.menu-frame:not(.home-list) .brand .head .place {
+  .frame.menu-frame .brand .head .place {
     font-size: min(var(--fs, 1.2rem), 1.6rem);
     letter-spacing: 0;
   }
-  .frame.menu-frame:not(.home-list) .brand .head .lede {
+  .frame.menu-frame .brand .head .lede {
     font-size: min(var(--fs, 1rem), 1.05rem);
     letter-spacing: 0;
   }
@@ -1771,8 +1306,7 @@ a.item.beside {
   outline: none;
   color: var(--gold-bright);
 }
-.frame.menu-frame .settings.menu.game li.row:is(.focused, :focus-visible) .value,
-.frame.menu-frame .settings.menu.game li.row:is(.focused, :focus-visible) .arrow {
+.frame.menu-frame .settings.menu.game li.row:is(.focused, :focus-visible) .value, .frame.menu-frame .settings.menu.game li.row:is(.focused, :focus-visible) .arrow {
   color: var(--gold-bright);
 }
 /* too narrow for a column of values beside the labels: the row stays one line all the same — the
@@ -2128,61 +1662,6 @@ a.item.beside {
   font-family: var(--mono);
   color: var(--ink-dim);
 }
-/* ---- the button legend, bottom right */
-
-/* on the title screen the legend leaves the menu column and stands in the corner, over the room */
-.frame.home-list .legend {
-  position: absolute;
-  right: var(--safe-x);
-  bottom: var(--safe-y);
-  margin: 0;
-  justify-content: flex-end;
-  /* set as the lede under the title (.home-list .brand .head .lede): a tight shadow reads as bold */
-  font: 400 1.1rem/1.55 var(--mono);
-  letter-spacing: 0.02em;
-  text-shadow: 0 1px 8px #000;
-  /* a quiet aside over the room, never a rival to the rows */
-  opacity: 0.6;
-}
-.frame.home-list .legend:empty {
-  display: none;
-}
-/* Explicit fullscreen control in the title screen's upper-right corner. */
-.frame.home-list .home-fullscreen {
-  position: absolute;
-  top: max(0.75rem, env(safe-area-inset-top));
-  right: max(0.75rem, env(safe-area-inset-right));
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  color: var(--ink-dim);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.frame.home-list .home-fullscreen:is(:hover, :focus-visible, .focused) {
-  color: var(--gold-bright);
-  border-color: var(--gold);
-  outline: none;
-}
-/* the release, in the screen's very corner under the legend: the smallest, dimmest words on the screen */
-.frame.home-list .home-version {
-  position: absolute;
-  right: max(0.6rem, env(safe-area-inset-right));
-  bottom: max(0.5rem, env(safe-area-inset-bottom));
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  color: var(--ink-dim);
-  opacity: 0.35;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  pointer-events: none;
-}
-
-/* ------------------------------------------------------------------ lobby */
-
 @media (prefers-reduced-motion: reduce) {
   .frame {
     animation: none;
@@ -2267,6 +1746,8 @@ a.item.beside {
   touch-action: none;
   cursor: crosshair;
   display: block;
+  /* Returning keyboard control from a panel focuses the canvas; the playfield has no focus frame. */
+  outline: none;
   /* The view draws one pixel per CSS pixel whatever the display's density
      (game.ts `viewDpr`), so on a HiDPI screen the compositor is the thing that
      scales it up. Left to itself it does that smoothly, which softens every
@@ -2588,7 +2069,7 @@ canvas.minimap.hidden,
    stands the pane on the black page, here it lies bare over the view with its text
    shadowed instead. A pending --more-- changes nothing on the pane, as in WebTiles: no
    ring, no tag, no colour of its own (a ring read as a focused panel, a tag as a
-   control); the world under the pane says "stopped" instead, a lighter pause vignette (.more-scrim). */
+   control). The more row and action bar indicate the pause without dimming the world. */
 .messages {
   overflow: hidden;
   background: transparent;
@@ -2606,24 +2087,6 @@ canvas.minimap.hidden,
 .hud.touch > .messages {
   pointer-events: none;
 }
-/* the world stops while the more is pending: everything under the message pane
-   and the bar (the map, the stats, the sidebar) goes behind a lighter cousin of the
-   pause menu's vignette (the rule beside .popup.sysmenu, below): the same shape and
-   tint, still in colour, but no blur and half the depth, and it eases in and out
-   rather than snapping, because a --more-- comes every few turns of a fight where
-   a pause comes once. The pane stays as it was. Takes no pointer, so the panes
-   under it still do. */
-.hud > .more-scrim {
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(3, 2, 6, 0.25), rgba(3, 2, 6, 0.55));
-  opacity: 0;
-  transition: opacity 400ms ease-out;
-}
-.hud > .more-scrim.on {
-  opacity: 1;
-}
-
 .messages input.text {
   background: #111;
   border: 1px solid #666;
@@ -3274,6 +2737,16 @@ canvas.minimap.hidden,
   z-index: 20;
 }
 
+/* Retired windows keep their geometry for a brief fade, outside the live stack. */
+.ui-exit {
+  position: absolute;
+  inset: 0;
+}
+.ui-exit,
+.ui-exit * {
+  pointer-events: none !important;
+}
+
 /*
  * A popup hangs from the top of the screen, as WebTiles' do (style.css
  * .ui-popup: align-items start, .ui-popup-outer margin 50px, 20px when the
@@ -3491,6 +2964,33 @@ canvas.minimap.hidden,
   cursor: pointer;
 }
 
+/* Feedback changes paint only: dense inventory/spell rows never move under the pointer. */
+.popup li.selectable,
+.popup li.row:not(.off),
+.popup .more .more-hot,
+.popup .actions span[data-hotkey],
+.popup .footer.pane-switch,
+.crt .crt-hot,
+.newgame .button,
+.prompt-card .chip {
+  border-radius: 3px;
+  transition: background-color var(--ui-feedback) ease, outline-color var(--ui-feedback) ease, box-shadow var(--ui-feedback) ease;
+}
+
+@media (hover: hover) {
+  .popup li.selectable:not(.off):not(.hovered):not(.focused):hover,
+  .popup li.row:not(.off):not(.focused):not(.hovered):hover,
+  .popup .actions span[data-hotkey]:not(.focused):hover,
+  .popup .footer.pane-switch:not(.focused):hover,
+  .newgame .button:not(.selected):not(.focused):hover {
+    background-color: rgba(255, 212, 92, 0.09);
+    box-shadow: inset 2px 0 rgba(255, 212, 92, 0.55);
+  }
+  .popup li.selectable.preselected:not(.hovered):not(.focused):hover {
+    background-color: rgba(60, 120, 255, 0.28);
+  }
+}
+
 .popup li.hovered {
   background: rgba(255, 212, 92, 0.2);
   outline: 1px solid rgba(255, 212, 92, 0.6);
@@ -3585,7 +3085,7 @@ canvas.minimap.hidden,
 
 /* prompt card: yes/no and multi-choice prompts in the middle of the view, the lead-up
    lines above the question, one chip per answer wearing the button that fires it
-   (a --more-- has no card: the pane prints its bare more row and the world goes behind the pause vignette, .more-scrim) */
+   (a --more-- has no card: the pane prints its bare more row over the unchanged world) */
 .prompt-card {
   position: absolute;
   inset: 0;
@@ -3602,7 +3102,6 @@ canvas.minimap.hidden,
   max-width: min(94vw, 48rem);
   pointer-events: auto;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
-  animation: frame-in 160ms ease both;
 }
 .prompt-card .text {
   white-space: pre-wrap;
@@ -3798,8 +3297,7 @@ canvas.minimap.hidden,
   display: grid;
   grid-template-columns: var(--cols) minmax(0, 1fr);
 }
-:is(.popup, .morgue) .ccell,
-:is(.popup, .morgue) .hang {
+:is(.popup, .morgue) .ccell, :is(.popup, .morgue) .hang {
   display: block;
 }
 :is(.popup, .morgue) .hang {
@@ -3811,9 +3309,7 @@ canvas.minimap.hidden,
 }
 /* a rule as long as crawl drew it, cut short where the popup is narrower; a line crawl set against its right edge,
    there still, or at the popup's where that comes first; a talisman's table as crawl drew it, slid across if it must */
-:is(.popup, .morgue) .rule,
-:is(.popup, .morgue) .right,
-:is(.popup, .morgue) .grid {
+:is(.popup, .morgue) .rule, :is(.popup, .morgue) .right, :is(.popup, .morgue) .grid {
   display: block;
 }
 :is(.popup, .morgue) .rule {
@@ -4388,16 +3884,8 @@ canvas.minimap.hidden,
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 30px 90px rgba(0, 0, 0, 0.75);
   min-width: 26rem;
-  animation: popup-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
-/* a fade only, and nothing held once it is over (`backwards`): a scale here had Chrome keep the popup drawn at the
-   animation's scale long after it ended, then draw it again at its own whenever it pleased (a focus change, a quiet
-   page), so the icons in it changed under the player */
-@keyframes popup-in {
-  from {
-    opacity: 0;
-  }
-}
+/* WindowTransitions owns opening/closing, so server rebuilds never replay an entrance. */
 /* corner marks */
 .popup.ours::before,
 .popup.ours::after {
@@ -4447,25 +3935,22 @@ canvas.minimap.hidden,
   position: absolute;
   inset: 0 calc(-1 * var(--touch-right, 0px)) calc(-1 * var(--touch-bottom, 0px)) 0;
   z-index: -1;
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
-/* the pause menu takes the screen: the world dims and blurs behind it (a pending --more-- has a lighter cousin, .more-scrim) */
+/* Menus dim and blur the world uniformly, without darkening the corners. */
 .overlay-stack:has(> .popup.sysmenu)::before,
 .overlay-stack.dim::before {
-  background: radial-gradient(ellipse at center, rgba(3, 2, 6, 0.5), rgba(3, 2, 6, 0.86));
+  background: rgba(3, 2, 6, 0.5);
   backdrop-filter: blur(3px) saturate(0.7);
   -webkit-backdrop-filter: blur(3px) saturate(0.7);
-  animation: dim-in 220ms ease both;
-}
-@keyframes dim-in {
-  from {
-    opacity: 0;
-  }
 }
 /* the pack, X's actions and the character overview stand on the world dimmed, as WebTiles' popups stand on its .ui-popup-overlay:
    flat and unblurred, lighter than the pause menu, and eased rather than animated in, so a turn from one
    tab to the next (crawl's menu gone a moment before the next is up) never flashes the world bright */
 .overlay-stack::before {
-  transition: background-color 160ms ease;
+  transition: background-color var(--ui-panel) ease, backdrop-filter var(--ui-panel) ease;
 }
 .overlay-stack:has(> .popup.paged-pack)::before,
 .overlay-stack:has(> .popup.action-tabs)::before,
@@ -4475,7 +3960,7 @@ canvas.minimap.hidden,
 /* a popup with another stacked over it (an item described over the pack) darkens, so the eye goes to the one on top;
    WebTiles leaves the one under at full strength */
 .overlay-stack > .popup {
-  transition: filter 160ms ease;
+  transition: filter var(--ui-panel) ease;
 }
 .overlay-stack > .popup:not([data-client]):has(~ .popup:not(.hidden)) {
   filter: brightness(0.4) saturate(0.6);
@@ -4489,7 +3974,6 @@ canvas.minimap.hidden,
  */
 .popup.menu.game {
   min-width: 26rem;
-  animation: popup-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 .menu.game .title {
   color: #fff;
@@ -5128,3 +4612,119 @@ canvas.minimap.hidden,
   max-width: none;
   transform: translateY(var(--popup-y));
 }
+
+/* Quick View/Combat tuning stays beside the dungeon, below modal overlays. */
+.quick-settings {
+  position: absolute;
+  z-index: 19;
+  left: max(8px, env(safe-area-inset-left));
+  top: 50%;
+  height: calc(100% - 24px);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  color: #ddd5c0;
+  font: 13px/1.35 system-ui, sans-serif;
+}
+.quick-settings button, .quick-settings select {
+  color: inherit;
+  background: #24231f;
+  border: 1px solid #625b46;
+  border-radius: 5px;
+  font: inherit;
+  cursor: pointer;
+  min-height: 36px;
+}
+.quick-settings button:hover:not(:disabled) { background: #393426; }
+.quick-settings :is(button, input, select):focus-visible { outline: 2px solid #eac96d; outline-offset: 2px; }
+.quick-settings button:disabled, .quick-settings select:disabled { cursor: default; opacity: 0.45; }
+.quick-settings-toggle {
+  pointer-events: auto;
+  width: 44px;
+  min-height: 60px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px #0009;
+}
+.quick-settings-toggle span:first-child { font-size: 24px; line-height: 1; }
+.quick-settings-toggle span:last-child { font-size: 11px; }
+.quick-settings-panel {
+  width: min(300px, calc(100vw - 76px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: 100%;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 16, 0.97);
+  border: 1px solid #625b46;
+  border-radius: 8px;
+  box-shadow: 0 5px 24px #000a;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity var(--ui-panel) ease, display var(--ui-panel) allow-discrete;
+}
+.quick-settings [hidden] { display: none; }
+.quick-settings-panel[hidden] { opacity: 0; }
+@starting-style {
+  .quick-settings-panel { opacity: 0; }
+}
+.quick-settings-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; }
+.quick-settings-panel header strong { color: #eac96d; font-size: 15px; }
+.quick-settings-panel header button { width: 36px; font-size: 22px; }
+.quick-settings-tabs { display: flex; gap: 6px; padding: 0 10px 10px; }
+.quick-settings-tabs button { flex: 1; }
+.quick-settings-tabs button[aria-selected='true'] { color: #ffe49a; border-color: #eac96d; background: #393426; }
+.quick-settings-page { overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 10px; min-height: 0; }
+.quick-setting { padding: 9px 0; border-top: 1px solid #ffffff14; }
+.quick-setting-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+.quick-setting-label label { min-width: 0; }
+.quick-setting-label output { color: #ffe49a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.quick-setting.off .quick-setting-label { opacity: 0.5; }
+.quick-setting-range { display: flex; align-items: center; gap: 8px; }
+.quick-setting-range button { flex: 0 0 36px; font-size: 19px; }
+.quick-setting-range input { min-width: 0; width: 100%; margin: 0; accent-color: #eac96d; cursor: pointer; }
+.quick-setting-range input:disabled { cursor: default; opacity: 0.4; }
+.quick-setting select { width: 100%; padding: 4px 6px; }
+.quick-settings-reset { width: 100%; margin-top: 10px; }
+.quick-settings-hint { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Consistent, quiet feedback for supporting controls and front-end lists. */
+:is(.popup, .quick-settings, .chat) :is(button, select, input.text, input.chat_input), .menu .pack-tabs button, .frame.menu-frame table.roster tr.game, .frame.menu-frame table.roster tr.game td {
+  transition: color var(--ui-feedback) ease, background-color var(--ui-feedback) ease, border-color var(--ui-feedback) ease;
+}
+@media (hover: hover) {
+  .frame.menu-frame table.roster tr.game:not(.focused):not(:focus-visible):hover {
+    background-color: rgba(216, 180, 95, 0.06);
+  }
+}
+
+/* Still removes UI transitions too; OS reduced motion always takes precedence for UI. */
+[data-ui-motion='still'] {
+  --ui-feedback: 0s;
+  --ui-panel: 0s;
+  --frame-in: 0s;
+  --menu-hover-in: 0s;
+}
+[data-ui-motion='still'] .menu .pack-tabs .tab-lean.settle {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-feedback: 0s;
+    --ui-panel: 0s;
+  }
+  .prompt-card {
+    animation: none;
+  }
+}
+@media (pointer: coarse) {
+  .quick-settings button, .quick-settings select { min-height: 44px; }
+  .quick-setting-range button { flex-basis: 40px; }
+  .quick-setting-range input { height: 32px; }
+}
+
+.audio-status, .audio-details { padding: .5em 1em; overflow-wrap: anywhere; }
+.audio-details p { white-space: pre-wrap; font-size: .85em; }

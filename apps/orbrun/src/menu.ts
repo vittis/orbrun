@@ -1,12 +1,14 @@
-import { version } from '../package.json'
 import { cm, gameLinkRows, gameLinkVersion, gameVersionRows, type GameLink, type GameState, type LobbyEntry } from '@orbrun/webtiles'
 import { settingsPanel } from './settings-panel'
 import { settingGroups, type SettingGroup } from './settings-rows'
 import { controlsSheet } from './controls-sheet'
 import { h, replace } from './dom'
 import { FocusNav, type Focusable } from './focus'
-import { nextHomePlace } from './room/places'
-import { RoomView } from './room/view'
+import { MenuBackdrop } from './menu-backdrop'
+import { HomeView, homeGame } from './menu-home'
+import { MenuModal } from './menu-modal'
+import about from '../../../ABOUT.md?raw'
+import { renderMarkdown } from './markdown'
 import { addAccount, addServer, customServersAllowed, ensureDeviceAccount, removeServer, openPage, characterOf, describeCharacter, describePlace, findServer, getChosenAccount, getGames, getLast, getMorgueDir, listAccounts, listServers, loginState, OFFLINE_SERVER, offlineOffered, offlineRuns, onIOS, morgueUrlFor, removeAccount, sameAccount, setChosenAccount, setLast, setMorgueDir, type Account, type LastCharacter, type MenuRoute, type Route, type ServerInfo } from './servers'
 import { morgueDirGuesses, parseWhereis, saveWaiting, whereisUrl, type Whereis } from './whereis'
 import { deviceDump, deviceMorgues, morgueDate, morgueStamp, parseMorgue, serverMorgue, serverMorgueHead, serverMorgues, type MorgueSummary } from './morgues'
@@ -18,9 +20,8 @@ import { appSettled, connection, engines, updateApp } from './engines'
 import type { PadEvent, PadKind } from './gamepad'
 import { Osk, oskPrompts } from './osk'
 import { glyph, glyphName, type GlyphName } from './glyphs'
-import { pickSplash } from './splash'
 import { canQuit, quit } from './quit'
-import { changelog, latestLine, markNewsSeen, newsDoc, newsSeen, newsUnread } from './news'
+import { changelog, markNewsSeen, newsDoc, newsSeen, newsUnread } from './news'
 
 /** What to do once a fresh connection is up: rejoin a game or a spectate. */
 export type Intent = { kind: 'play'; gameId: string } | { kind: 'watch'; username: string }
@@ -30,19 +31,9 @@ export type Intent = { kind: 'play'; gameId: string } | { kind: 'watch'; usernam
  * shoulder buttons walk; the rest are the flows off them: the account and
  * server flows off the account row, the login and register forms.
  */
-export type View = 'home' | 'watch' | 'settings' | 'settings-group' | 'controls' | 'accounts' | 'account' | 'morgues' | 'rc' | 'servers' | 'add-server' | 'login' | 'register' | 'exit' | 'doc' | 'news'
+export type View = 'home' | 'watch' | 'settings' | 'settings-group' | 'controls' | 'accounts' | 'account' | 'morgues' | 'rc' | 'servers' | 'add-server' | 'login' | 'register' | 'exit' | 'doc'
 
 const SECTIONS: View[] = ['home', 'watch', 'settings']
-
-/** Static Dungeon scenery behind secondary menu pages. */
-type Backdrop = { tint: 'depths' | 'abyss' | 'lair' | 'dungeon' }
-const NEWS_BACKDROP: Backdrop = { tint: 'depths' }
-const ACCOUNT_BACKDROP: Backdrop = { tint: 'abyss' }
-const SETTINGS_BACKDROP: Backdrop = { tint: 'lair' }
-const WATCH_BACKDROP: Backdrop = { tint: 'dungeon' }
-
-/** about as long as a browser's smooth scroll takes: until then a scroll under way is taken to be where it is going */
-const GLIDE_MS = 500
 
 /** the way off a screen (`data-focus`) */
 const BACK = 'back'
@@ -66,8 +57,6 @@ const CONN_WORDS = { wait: 'connecting', down: 'not connected' } as const
 /** how long a server has to answer for an rc file before the editor says it did not */
 const RC_MS = 10_000
 
-/** the least the front end's words come down to (fitHome); past it, the title screen scrolls */
-const HOME_LEAST_SHRINK = 0.75
 
 /**
  * The rc file on show (showRc): whose, and which. A server keeps one file per
@@ -77,6 +66,8 @@ const HOME_LEAST_SHRINK = 0.75
 interface RcEdit {
   account: Account
   gameId: string | null
+  /** The Play link to return to, or null when opened from the account. */
+  homeFocus: string | null
   text: HTMLTextAreaElement
   /** the file as the server has it, once read; the text differs from it when there is something to save */
   saved: string | null
@@ -237,7 +228,8 @@ interface Row {
 }
 
 /**
- * The front end: readable menus over the room (room/view.ts), in the
+ * The front end: account/session actions and secondary screens, with a
+ * persistent HomeView, shared MenuModal and disposable MenuBackdrop. One
  * console face, one cursor driven by the pad, the keyboard, the mouse or
  * touch. The home screen is the chosen account and the four things to do:
  * Continue, Play, Watch, Settings; Play, Watch and Settings are the
@@ -268,10 +260,12 @@ export class FrontEnd {
   private error: string | null = null
   /** pad-driven keyboard for the login, register and add-server fields */
   private osk = new Osk(oskPrompts('Submit'), () => this.hooks.padKind?.() ?? 'generic')
-  /** the room behind the screens */
-  private roomView: RoomView
-  /** Xom's line under the title, drawn once per visit so redraws don't reshuffle it */
-  private splash = pickSplash()
+  /** the silent recording behind the screens */
+  private media: MenuBackdrop
+  private home: HomeView
+  private modal: MenuModal | null = null
+  private homeServer: ServerInfo | null = null
+  private inlineLogin: Session | null = null
   /** what the settings screen goes back to: the screen it was opened from */
   private settingsFrom: (() => void) | null = null
   /** the settings group whose page is up (settings-rows.ts) */
@@ -289,8 +283,6 @@ export class FrontEnd {
   /** the Morgues table on show, and its rows by file, each with what it read last time, so a row that reads the same is kept */
   private morgueTable: HTMLTableElement | null = null
   private morgueRows = new Map<string, { tr: HTMLTableRowElement; end: HTMLTableRowElement; sig: string }>()
-  /** the still the document on show stands in: a morgue from an account's list stands where the account does */
-  private docStill: Backdrop | null = null
   /** the rc file on show */
   private rc: RcEdit | null = null
   /** where the server list was opened from, so B retraces the way in: the accounts, or the front screen */
@@ -325,8 +317,6 @@ export class FrontEnd {
   private docScroller: HTMLElement | null = null
   /** what the document goes back to: the screen it was opened from */
   private docFrom: (() => void) | null = null
-  /** where What's new is gliding to, until it gets there: a press on the way is measured from where it is going */
-  private gliding: { to: number; until: number } | null = null
   /**
    * the address last given to `at`: a redraw of the same screen says nothing, so an address the game has
    * written since (a Play pressed here) stands. The home screen is where a front end starts; the caller has
@@ -340,21 +330,34 @@ export class FrontEnd {
     this.root = h('div', { class: 'screen home' })
     host.append(this.root)
     this.root.addEventListener('focusin', this.onNativeFocus)
-    // each visit the room stands in the next place round the cycle (places.ts)
-    this.roomView = new RoomView(this.root, nextHomePlace().id)
-    // the room fills the screen, so it is the one to say the screen changed size; a web font landing can rewrap a line
-    this.roomView.onfit = this.fitHome
-    document.fonts?.addEventListener('loadingdone', this.fitHome, { signal: this.aborter.signal })
-    document.addEventListener('fullscreenchange', () => {
-      const button = this.root.querySelector<HTMLButtonElement>('.home-fullscreen')
-      if (button) {
-        const label = document.fullscreenElement ? 'Exit fullscreen' : 'Go fullscreen'
-        button.title = label
-        button.setAttribute('aria-label', label)
-        const item = this.navItems.find(f => f.id === 'fullscreen')
-        if (item) item.label = label
-      }
-    }, { signal: this.aborter.signal })
+    this.media = new MenuBackdrop(this.root)
+    this.home = new HomeView({
+      server: id => {
+        const server = findServer(id)
+        if (!server) return
+        this.homeServer = server
+        this.inlineLogin = null
+        setChosenAccount(listAccounts().find(a => a.serverId === id) ?? null)
+        const chosen = getChosenAccount()
+        this.ensureSession(server, chosen?.username ?? null)
+        this.showHome()
+      },
+      accounts: () => this.showAccounts(),
+      login: (name, password) => {
+        const server = this.homeServer
+        if (!server || !name || !password) return
+        const chosen = this.chosen()
+        const s = this.ensureSession(server, chosen?.account.username ?? null)
+        if (!s.conn.open) { this.error = 'Not connected. Please wait for the server.'; this.showHome(); return }
+        this.loginName = name
+        this.inlineLogin = s
+        s.send(cm.login(name, password))
+        setLast({ serverId: server.id, username: name })
+      },
+      logout: () => { const account = getChosenAccount(); if (account) this.logout(account) },
+      register: () => { this.adding = this.homeServer; this.showRegister() },
+      about: () => this.showAbout(), news: () => this.showNews(),
+    })
     // an offline build checked for, downloading, or new is said on its game's row
     this.unwatchEngines = engines.onChange(() => {
       if (this._view === 'home') this.showHome()
@@ -381,9 +384,9 @@ export class FrontEnd {
     this.unsub?.()
     this.unwatchEngines()
     if (this.frame) cancelAnimationFrame(this.frame)
-    document.documentElement.style.removeProperty('--front-shrink')
     this.osk.detach()
-    this.roomView.destroy()
+    this.modal?.destroy(false)
+    this.media.destroy()
     this.root.remove()
   }
 
@@ -393,7 +396,7 @@ export class FrontEnd {
 
   /** Whether B goes anywhere: every screen but the bare home screen (back.ts lets Android's back leave the app there). */
   get goesBack(): boolean {
-    return this._view !== 'home' || this.osk.visible
+    return !!this.modal || this._view !== 'home' || this.osk.visible
   }
 
   // ------------------------------------------------------------------ input
@@ -412,6 +415,7 @@ export class FrontEnd {
    * Start confirms like Enter.
    */
   pad(ev: PadEvent) {
+    if (this.modal) return this.modal.pad(ev)
     if (ev.type === 'pan') {
       // a document takes the right stick as its scroll; other screens leave the scenery fixed
       if (this.docScroller) this.scrollDoc(ev.dy * 12)
@@ -454,49 +458,13 @@ export class FrontEnd {
 
   /** Up or down: a document scrolls, otherwise the cursor moves (What's new's releases are rows). */
   private up(dir: 'up' | 'down') {
-    if (this._view === 'news') this.stepNews(dir)
-    else if (this.docScroller) this.scrollDoc(dir === 'up' ? -this.docStep() : this.docStep())
+    if (this.docScroller) this.scrollDoc(dir === 'up' ? -this.docStep() : this.docStep())
     else this.nav.move(dir)
   }
 
   /** one press of up or down on a document: a fifth of what is in view, never less than a line or two */
   private docStep(): number {
     return Math.max(48, Math.round((this.docScroller?.clientHeight ?? 0) / 5))
-  }
-
-  /**
-   * Up or down on What's new: the cursor moves from release to release, as
-   * down any menu, except that a release taller than the view reads through
-   * first, a step at a time, as a document does. Measured from where the view
-   * is going, so a press during a glide adds to it rather than cutting it short.
-   */
-  private stepNews(dir: 'up' | 'down') {
-    const el = this.docScroller
-    const cur = this.nav.current()?.el
-    if (el && cur?.classList.contains('release')) {
-      const top = this.gliding && performance.now() < this.gliding.until ? this.gliding.to : el.scrollTop
-      const bottom = top + el.clientHeight
-      const a = cur.offsetTop
-      const b = a + cur.offsetHeight
-      // only a release in view reads through: one scrolled away (the stick, a wheel) is simply left
-      if (b > top && a < bottom) {
-        if (dir === 'down' && b > bottom + 1) return this.glide(top + this.docStep())
-        if (dir === 'up' && a < top - 1) return this.glide(Math.max(a, top - this.docStep()))
-      }
-    }
-    this.nav.move(dir)
-  }
-
-  /** Scroll What's new to `to`, gliding there unless motion is reduced; where it is headed is kept while it gets there. */
-  private glide(to: number) {
-    const el = this.docScroller
-    if (!el) return
-    const max = el.scrollHeight - el.clientHeight
-    if (max > 0) to = Math.min(to, max)
-    to = Math.max(0, to)
-    const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    this.gliding = smooth ? { to, until: performance.now() + GLIDE_MS } : null
-    el.scrollTo({ top: to, behavior: smooth ? 'smooth' : 'auto' })
   }
 
   private scrollDoc(by: number) {
@@ -530,6 +498,7 @@ export class FrontEnd {
 
   /** Keyboard. Returns true when the key was taken. */
   key(ev: KeyboardEvent): boolean {
+    if (this.modal) return this.modal.key(ev)
     if (this.osk.visible) {
       if (ev.key === 'Escape') {
         this.osk.detach()
@@ -553,6 +522,7 @@ export class FrontEnd {
     }
     // Browser shortcuts (including modified Enter on a link) belong to the browser.
     if (ev.ctrlKey || ev.altKey || ev.metaKey || ev.key === 'Tab') return false
+    if (this._view === 'home' && (target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return false
     const inInput = target instanceof HTMLInputElement
     const dir = navDir(ev, inInput)
     if (dir) {
@@ -686,6 +656,7 @@ export class FrontEnd {
   }
 
   private back() {
+    if (this.modal) return this.closeModal()
     this.osk.detach()
     const v = this._view
     if (v === 'home') return
@@ -696,7 +667,6 @@ export class FrontEnd {
       else this.showHome()
     } else if (v === 'controls') this.showSettingsGroup('Controls')
     else if (v === 'settings-group') this.showSettings(this.settingsFrom ?? undefined)
-    else if (v === 'news') this.showHome()
     else if (v === 'doc') {
       const from = this.docFrom
       this.docFrom = null
@@ -758,14 +728,15 @@ export class FrontEnd {
 
   /** Leave the screen on show: remember the row the cursor was on, put the keyboard away. */
   private setView(v: View, cls: string) {
+    if (this.modal && v !== 'home') this.closeModal(false)
     const cur = this.nav.current()
     if (cur) this.marks.set(this._view, cur.id ?? cur.label)
     this.osk.detach()
     this.docScroller = null
-    this.gliding = null
     if (v !== this._view) this.shape.delete(v)
     this._view = v
-    this.root.className = 'screen home ' + cls
+    this.root.className = 'screen home polished-shell ' + cls
+    this.media.cover(v !== 'home' || !!this.modal)
     if (v !== 'watch') {
       this.rosterRows.clear()
       this.rosterSeen.clear()
@@ -776,41 +747,6 @@ export class FrontEnd {
       this.morgueTable = null
     }
   }
-
-  /**
-   * The front end's words come down until the title screen holds them, as a phone's game menus come down with
-   * its grid (game.ts shrinkText): the page's font (styles.css html) at a share of its size, a step at a time
-   * from the whole. A phone on its side has no room for them at full size. Every other screen stands at the
-   * size the title screen comes to, so the words keep one size from screen to screen: with another screen on
-   * show (the phone turned on Settings, a font landing), the title screen as last drawn stands in again out of
-   * sight to be measured. It is measured with its hint line, even where a phone on its side hides that line
-   * (styles.css `.fitting`): the words keep the size they would have beside it, not the whole size the room
-   * the line leaves would allow.
-   */
-  private fitHome = () => {
-    const frame = this.homeFrame
-    if (!frame || this.destroyed) return
-    const away = !frame.isConnected
-    if (away) {
-      frame.style.visibility = 'hidden'
-      this.root.append(frame)
-    }
-    const st = document.documentElement.style
-    st.removeProperty('--front-shrink')
-    frame.classList.add('fitting')
-    let shrink = 1
-    while (shrink > HOME_LEAST_SHRINK && frame.scrollHeight > frame.clientHeight) {
-      shrink = Math.round(shrink * 100 - 1) / 100
-      st.setProperty('--front-shrink', String(shrink))
-    }
-    frame.classList.remove('fitting')
-    if (away) {
-      frame.remove()
-      frame.style.visibility = ''
-    }
-  }
-  /** the title screen as last drawn: the one every screen's words are sized by (fitHome) */
-  private homeFrame: HTMLElement | null = null
 
   /** Put the screen on show in the address bar, unless it is there already; `force` says it again whatever it said last. */
   private at(r: Route, force = false) {
@@ -825,6 +761,7 @@ export class FrontEnd {
    * Forward. A name it does not know is the nearest screen that it does.
    */
   open(r: MenuRoute) {
+    if (this.modal) this.closeModal(false)
     const [root, sub, leaf] = r.path.split('/')
     if (root === 'login' || root === 'register') {
       const server = r.serverId ? findServer(r.serverId) : null
@@ -867,7 +804,8 @@ export class FrontEnd {
       if (sub === 'add' && leaf === 'server') this.showAddServer('add')
       else if (sub === 'add') this.showServers('add')
       else this.showAccounts()
-    } else if (root === 'whats-new') this.showNews()
+    } else if (root === 'whats-new' || root === 'about' && sub === 'new') this.showNews()
+    else if (root === 'about') this.showAbout()
     else if (root === 'watch') {
       if (sub === 'add') this.showAddServer('watch')
       else this.showServers('watch')
@@ -876,10 +814,9 @@ export class FrontEnd {
 
   /** The screen's frame in the safe area, over the room; the room stays where it is. */
   private screen(cls: string, content: (HTMLElement | null)[]) {
-    const keep: HTMLElement[] = [this.roomView.el, this.roomView.veil, this.backdrop.el]
+    const keep: HTMLElement[] = [this.media.el]
     for (const child of Array.from(this.root.children)) if (!keep.includes(child as HTMLElement)) child.remove()
     for (const el of keep) if (el.parentNode !== this.root) this.root.append(el)
-    this.stand(this.backdropFor())
     // the first screen of a visit has no screen before it to move in from: it is simply there
     const first = !this.arrived
     this.arrived = true
@@ -889,39 +826,9 @@ export class FrontEnd {
   /** a screen has been drawn this visit (`screen`) */
   private arrived = false
 
-  /** the still a screen can stand in over the room, kept from screen to screen so the account's screens share one without fading it in again */
-  private backdrop = (() => {
-    const img = h('img', { alt: '', draggable: 'false', decoding: 'async' })
-    return { el: h('div', { class: 'menu-backdrop', 'aria-hidden': 'true' }, img), img }
-  })()
-
-  /** where the screen on show stands: What's new, the account's screens, Settings and Watch in a still of their own, the rest in the room */
-  private backdropFor(): Backdrop | null {
-    const v = this._view
-    if (v === 'news') return NEWS_BACKDROP
-    if (v === 'accounts' || v === 'account' || v === 'morgues' || v === 'rc' || v === 'login' || v === 'register') return ACCOUNT_BACKDROP
-    if (v === 'doc') return this.docStill
-    if (v === 'settings' || v === 'settings-group' || v === 'controls') return SETTINGS_BACKDROP
-    if (v === 'servers' || v === 'add-server') return this.serversMode === 'add' ? ACCOUNT_BACKDROP : WATCH_BACKDROP
-    if (v === 'watch') return WATCH_BACKDROP
-    return null
-  }
-
-  /** Stand the screen in `b`, or back in the room; the room draws nothing while a still covers it, and cannot be taken hold of. */
-  private stand(b: Backdrop | null) {
-    const { el, img } = this.backdrop
-    this.root.classList.toggle('covered', !!b)
-    this.roomView.cover(!!b)
-    if (!b) return el.classList.remove('up')
-    const src = '/room/poster.jpg'
-    if (img.getAttribute('src') !== src) img.src = src
-    el.dataset.tint = b.tint
-    el.classList.add('up')
-  }
-
-  /** The head of a screen: its name and the line under it; the title screen has Xom's word beneath both. */
-  private head(title: string, lede: string | null, splash?: string): HTMLElement {
-    return h('div', { class: 'head' }, h('h1', { class: 'place' }, title), lede ? h('div', { class: 'lede' }, lede) : null, splash ? h('div', { class: 'splash', title: 'Xom, in the game’s own words' }, splash) : null)
+  /** The heading and descriptive line for a secondary screen. */
+  private head(title: string, lede: string | null): HTMLElement {
+    return h('div', { class: 'head' }, h('h1', { class: 'place' }, title), lede ? h('div', { class: 'lede' }, lede) : null)
   }
 
   /** The message line: what the row under the cursor is, said the way the game says what is underfoot. */
@@ -976,11 +883,10 @@ export class FrontEnd {
    * cursor starts on the row the screen was left on, else where the caller
    * says, else the first row past Back.
    */
-  private list(opts: { cls: string; title: string; lede?: string | null; splash?: string; rows: Row[]; utilities?: Row[]; notices?: HTMLElement[]; below?: HTMLElement[]; extra?: Focusable[]; wrap?: (list: HTMLElement) => HTMLElement; focus?: string; over?: boolean }): HTMLElement {
-    this.rows = [...opts.rows, ...(opts.utilities ?? [])]
+  private list(opts: { cls: string; title: string; lede?: string | null; rows: Row[]; notices?: HTMLElement[]; below?: HTMLElement[]; extra?: Focusable[]; wrap?: (list: HTMLElement) => HTMLElement; focus?: string; over?: boolean }): HTMLElement {
+    this.rows = opts.rows
     const items: Focusable[] = []
-    const home = this._view === 'home'
-    const list = h('nav', { class: 'menu menu-actions' + (home ? ' home-actions' : ''), 'aria-label': home ? 'Main menu' : opts.title })
+    const list = h('nav', { class: 'menu menu-actions', 'aria-label': opts.title })
     /** the row of chips being filled, and the focus row they share */
     let chips: { el: HTMLElement; row: number; n: number } | null = null
     opts.rows.forEach((r, i) => {
@@ -1031,50 +937,8 @@ export class FrontEnd {
     this.msg = h('div', { class: 'menu-msg', 'aria-live': 'polite' })
     this.legend = h('div', { class: 'legend', 'aria-label': 'Menu controls' })
     this.updateInputHints()
-    // Size bottom-aligned home help for every hint, not just the focused row.
-    // Overlapping hidden copies wrap naturally at the current viewport width.
-    const help = this._view === 'home'
-      ? h('div', { class: 'home-menu-help' }, this.msg,
-        h('div', { class: 'menu-msg menu-msg-reserve', 'aria-hidden': 'true' },
-          ...this.rows.flatMap((r) => [[r.hint ?? '', r.fine], ...(r.also?.map((a) => [a.title ?? '']) ?? [])]).map(([hint, fine]) => h('span', {}, hint, fine ? h('span', { class: 'fine' }, fine) : null))))
-      : this.msg
-    const brand = h('div', { class: 'brand' }, this.head(opts.title, opts.lede ?? null, opts.splash), error, ...(opts.notices ?? []), body, ...(opts.below ?? []), help, this.legend)
+    const brand = h('div', { class: 'brand' }, this.head(opts.title, opts.lede ?? null), error, ...(opts.notices ?? []), body, ...(opts.below ?? []), this.msg, this.legend)
     const all = [...items, ...(opts.extra ?? [])]
-    if (opts.utilities?.length) {
-      const utilities = h('nav', { class: 'menu home-utilities', 'aria-label': 'Account and information' })
-      opts.utilities.forEach((r, i) => {
-        const el = this.item(r)
-        utilities.append(el)
-        all.push({ id: r.id, label: r.label, el, row: 200, col: i, activate: () => r.fn?.(), onFocus: () => this.onRow(r, el) })
-      })
-      brand.append(h('footer', { class: 'home-footer' }, utilities))
-    }
-    // which Orbrun this is, in the title screen's corner as a console game's is: the release What's new names
-    if (home) {
-      brand.append(h('div', { class: 'home-version' }, version))
-      if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
-        const label = document.fullscreenElement ? 'Exit fullscreen' : 'Go fullscreen'
-        const button = h('button', {
-          type: 'button', class: 'home-fullscreen', title: label,
-          'aria-label': label, dataset: { focus: 'fullscreen' },
-          html: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg>',
-        })
-        button.addEventListener('click', async () => {
-          if (button.disabled) return
-          button.disabled = true
-          try {
-            if (document.fullscreenElement) await document.exitFullscreen()
-            else await document.documentElement.requestFullscreen({ navigationUI: 'hide' })
-          } catch {
-            this.say('Fullscreen could not start. Tap Go fullscreen on the screen or use a keyboard to try again.')
-          } finally {
-            button.disabled = false
-          }
-        })
-        brand.append(button)
-        all.push({ id: 'fullscreen', label, el: button, row: -1, activate: () => button.click() })
-      }
-    }
     // a dialog (the exit report) is laid over the screen that is already up, which keeps its place behind it;
     // the next screen drawn clears both, as it clears everything but the room
     if (opts.over) {
@@ -1231,10 +1095,9 @@ export class FrontEnd {
 
   /**
    * The home screen: every offered DCSS version, then Watch and Settings.
-   * The preferred saved game comes first, without a duplicate Continue row.
-   * The compact account control and About & credits live in the footer;
-   * connection details are in Accounts unless something fails. Without an
-   * account, Play leads to adding one; Watch asks for a server.
+   * Stable release/trunk ordering is preserved, without a duplicate Continue row.
+   * The compact account controls live in the header; the footer opens documents.
+   * HomeView updates stable rows while keeping inputs and modal state intact.
    * A login still to come puts
    * Log in in Play's place, as the lobby page does (the server sends its
    * "Play now" lines only to someone logged in). The server's notices stand
@@ -1251,7 +1114,11 @@ export class FrontEnd {
     this.watchOn = null
     this.hooks.warm?.()
     const chosen = this.chosen()
-    const s = chosen ? this.sessionOn(chosen.server, chosen.account.username) : null
+    this.homeServer = chosen?.server ?? this.homeServer ?? findServer(getLast()?.serverId ?? '') ?? listServers()[0]
+    const server = this.homeServer
+    // A disconnected anonymous lobby stays owned by main.ts's reconnect backoff.
+    const s = chosen ? this.sessionOn(chosen.server, chosen.account.username) ?? (this.session?.server.id === server.id && this.session.username === chosen.account.username ? this.session : null)
+      : this.session?.server.id === server.id && !this.session.username ? this.session : this.ensureSession(server, null)
     const st: GameState | null = s?.state ?? null
     const lobby = st?.lobby ?? null
     const open = !!s?.conn.open
@@ -1264,9 +1131,6 @@ export class FrontEnd {
     if (chosen) {
       const { account, server } = chosen
       const login = loginState(account, loggedIn, !!s?.loggingIn)
-      const problem = s?.closed ? 'Disconnected' : open && login === 'out' ? 'Not logged in' : null
-      const conn = accountConn(s, account, true)
-      rows.push({ id: 'account', label: server.offline ? account.username : `${loggedIn ?? account.username} · ${server.name}`, sub: problem, conn, marker: server.offline ? DEVICE_MARKER : '\\', hint: 'Switch accounts, add one, or remove one.', fn: () => this.showAccounts() })
       const games = this.games(server, s)
       const links = games?.length ? gameLinkRows(games) : null
       // each row with the version it belongs to, as `gameLinkRows` grouped them: what a `.where` line answers for
@@ -1274,9 +1138,9 @@ export class FrontEnd {
         ...(links?.latest ?? []).map((game) => ({ game, version: links!.latestVersion })),
         ...(links?.trunk ?? []).map((game) => ({ game, version: 'trunk' })),
         ...(links?.other ?? []).map((game) => ({ game, version: null })),
-      ].filter(({ game }) => !game.disabled)
+      ].filter(({ game }) => !game.disabled && homeGame(game))
       if (login === 'out') {
-        rows.push({ id: 'login', label: 'Log in', sub: `as ${account.username}`, marker: '\\', main: true, gap: true, hint: `${server.host} asks who you are before it offers a game.`, fn: () => this.showLogin() })
+        rows.push({ id: 'login-needed', label: 'Play', sub: `Log in as ${account.username}`, marker: '>', fn: () => this.home.user.focus() })
       } else {
         const who = loggedIn ?? account.username
         const where = this.whereFor(server, who)
@@ -1300,13 +1164,18 @@ export class FrontEnd {
             // the line stands empty until the build is known, so the help under the menu never grows a line when it lands
             fine: server.offline ? (engineBuild(engines.build(g.id), engines.note(g.id)) ?? '\u00a0') : undefined,
             fn: () => this.connectTo(account, { kind: 'play', gameId: g.id }),
+            also: !server.offline && loggedIn && g.rc ? [{
+              id: 'rc:' + g.id, label: '(edit rc)',
+              title: `Edit your ${g.label} rc file on ${server.host}${sharedRc(games ?? [], g.rc, ' — ')}. Shared with WebTiles on this server.`,
+              fn: () => this.showRc(account, g.rc!, 'rc:' + g.id),
+            }] : undefined,
           })
         }
         if (!ordered.length) notices.push(h('div', { class: 'hint' }, !open ? 'Connecting…' : lobby?.complete ? 'No games offered by this server.' : 'Loading game versions…'))
       }
       const n = lobby?.entries.size ?? 0
       // nobody else plays on this device
-      if (!server.offline) rows.push({ id: 'watch', label: 'Watch', sub: deviceOffline() ? 'no connection' : open ? (lobby?.complete ? `${n} playing` : 'loading…') : 'connecting…', marker: '{', hint: `Look into the pool: who is playing on ${server.host} right now, and watch them.`, fn: () => this.showWatch() })
+      if (!server.offline) rows.push({ id: 'watch', label: 'Watch', sub: deviceOffline() ? 'no connection' : open ? (lobby?.complete ? `${n} playing` : 'loading…') : s?.closed ? (this.hooks.retrying?.() ? 'Reconnecting…' : 'Disconnected') : 'connecting…', marker: '{', hint: `Look into the pool: who is playing on ${server.host} right now, and watch them.`, fn: () => this.showWatch() })
       // the server's notices (client.html #account_restricted, #stale_processes_message, #force_terminate)
       if (lobby?.accountHold) notices.push(h('div', { class: 'notice' }, 'This account is being held for administrator approval. Until approved, community features and some game modes may be restricted, and games will not be visible to other players.'))
       // client.js lets any key cancel the purge and keep the old game; here the old game is nearly always this
@@ -1338,38 +1207,32 @@ export class FrontEnd {
         else s.state.exit = null
       }
     } else {
-      // with an account to pick, Play picks one; with none, it adds one
-      const any = listAccounts().length > 0
-      const none = offlineOffered() ? 'Add an offline account on this device, or an account on a server.' : 'Choose a public server, then log in or create an account.'
-      rows.push({ id: 'account', label: 'Play', marker: '>', main: true, hint: any ? 'Pick an account, or add one.' : none, fn: () => (any || offlineOffered() ? this.showAccounts() : this.showServers('add')) })
-      rows.push({ id: 'watch', label: 'Watch', sub: 'No account needed', marker: '{', hint: 'Pick a server and watch a live game. No login needed.', fn: () => this.showServers('watch') })
+      rows.push({ id: 'play', label: 'Play', marker: '>', sub: !open ? (s?.closed ? 'Disconnected' : 'Connecting…') : 'Log in to play', fn: () => this.home.user.focus() })
+      rows.push({ id: 'watch', label: 'Watch', sub: !open ? (s?.closed ? 'Disconnected' : 'Connecting…') : lobby?.complete ? `${lobby.entries.size} playing` : 'Loading…', marker: '{', fn: () => { this.watchOn = server; this.showWatch() } })
+      if (lobby?.loginFailed) notices.push(h('div', { class: 'error' }, lobby.loginFailed))
     }
-    // Only game actions in the main list; identity and information share a quiet footer.
-    const accountRow = chosen ? rows.shift() : undefined
-    const utilities: Row[] = accountRow ? [accountRow] : []
-    // What's new reads here, offline too, and says when there is something unread; the site has it as a page as well
-    utilities.push({ id: 'news', label: 'What’s new', marker: '!', dot: newsUnread(), hint: newsUnread() ? `What changed in Orbrun ${version}, and before.` : 'What changed in Orbrun, newest first.', fn: () => this.showNews() })
-    // the About pages are the site's, not a screen of the app: web pages of their own, for a reader who has never played
-    utilities.push({ id: 'about', label: 'About & credits', marker: '?', hint: 'About Orbrun, and the people behind the game.', fn: () => (this.hooks.page ?? openPage)('/about') })
-    const onPad = !!this.hooks.padConnected?.()
-    rows.push({ id: 'settings', label: 'Settings', marker: '?', hint: 'Dungeon, controls, the HUD: kept on this device.' + (onPad ? ' (X)' : ''), fn: () => this.showSettings(() => this.showHome()) })
-    // straight under Settings, and only where the browser left no way out of its own: a kiosk window on a
-    // Deck, or an installed app (quit.ts). `<` is the way out, as it is out of the dungeon.
-    if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', hint: 'Close Orbrun. A game in progress is kept on the server.', fn: () => this.quit() })
-    // the words under the cursor too: a saved game's row says its build's download only in its small print
-    const shape = JSON.stringify([[...rows, ...utilities].map((r) => [r.id, r.label, r.sub, r.hint, r.fine, r.conn, r.main, !!r.also, !!r.dot]), notices.map((n) => n.textContent)])
-    // a report to put up has its screen drawn first, however little of it changed: the dialog stands on it
-    if (this._view === 'home' && this.shape.get('home') === shape && !this.error && !report) return
-    // the screen under a dialog is drawn again as a redraw, not a fresh screen: it must not slide in behind it
-    const redraw = (this._view === 'home' || this._view === 'exit') && this.shape.has('home')
-    const keep = this._view === 'home' && redraw ? this.nav.current()?.id : undefined
-    this.setView('home', 'accounts')
-    this.at({ kind: 'home' })
-    this.shape.set('home', shape)
-    const first = rows.find((r) => r.main)?.id ?? rows[0]?.id
-    this.list({ cls: 'home-list' + (redraw ? ' still' : ''), title: 'Orbrun', lede: 'An unofficial 2.5D client for Dungeon\u00a0Crawl\u00a0Stone\u00a0Soup.', splash: this.splash, rows, utilities, notices, extra, focus: keep ?? this.marks.get('home') ?? first })
-    this.homeFrame = this.root.querySelector<HTMLElement>('.frame.home-list')
-    this.fitHome()
+    rows.push({ id: 'settings', label: 'Settings', marker: '?', fn: () => this.showSettings(() => this.showHome()) })
+    if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', fn: () => this.quit() })
+    if (this.error) { notices.push(h('div', { class: 'error' }, this.error)); this.error = null }
+    const entering = this._view !== 'home' || !this.home.el.isConnected
+    if (entering) {
+      this.setView('home', 'polished')
+      for (const child of Array.from(this.root.children)) if (child !== this.media.el) child.remove()
+      this.root.append(this.home.el)
+    }
+    if (!this.modal) this.at({ kind: 'home' })
+    this.msg = null
+    this.rows = rows
+    const all = this.home.update({ servers: server.offline ? [server, ...listServers()] : listServers(), server, username: loggedIn, remembered: chosen?.account.username ?? '', busy: !open || !!s?.loggingIn, rows, notices, unread: newsUnread() })
+    // Unchanged notices keep their nodes; controller targets must follow those same live buttons.
+    for (const item of extra) item.el = this.home.el.querySelector<HTMLElement>(`[data-focus="${item.id}"]`) ?? item.el
+    if (!this.modal) {
+      const focus = this.marks.get('home') ?? rows[0]?.id
+      this.prepareFocus([...all, ...extra])
+      this.nav.set(this.navItems, 'home', { wrap: true, keepColumn: true }, Math.max(0, all.findIndex(f => f.id === focus)))
+      if (entering) this.nav.current()?.onFocus?.()
+    }
+    this.media.cover(!!this.modal)
     if (report) this.showExit(report.s, report.exit, report.why, report.words)
   }
 
@@ -1436,16 +1299,15 @@ export class FrontEnd {
    * "Loading…" until it does; one that fails says so, with the document's
    * link out as the way to it, when it has one.
    */
-  private showDoc(opts: { title: string; lede?: string; body: () => HTMLElement | Promise<HTMLElement>; from: () => void; links?: { label: string; href: string }[]; failed?: string; view?: View; cls?: string; extra?: Focusable[]; focus?: string; still?: Backdrop; copy?: () => string | null }) {
-    const cls = 'doc-list' + (opts.cls ? ' ' + opts.cls : '')
-    this.docStill = opts.still ?? null
-    this.setView(opts.view ?? 'doc', cls)
+  private showDoc(opts: { title: string; lede?: string; body: () => HTMLElement | Promise<HTMLElement>; from: () => void; links?: { label: string; href: string }[]; failed?: string; copy?: () => string | null }) {
+    const cls = 'doc-list'
+    this.setView('doc', cls)
     this.docFrom = opts.from
     // nothing to copy from a document that would not read: its link out is the way to it
     const copy = opts.failed ? undefined : opts.copy
     // a document that can be taken away (a morgue, to paste anywhere) has its Copy beside Back, at the top right
     const rows: Row[] = [{ id: BACK, label: 'Back', marker: '<', hint: 'Back.', fn: () => this.back(), ...(copy ? { also: [{ id: 'doc:copy', label: '(copy)', title: `Copy the ${opts.title.toLowerCase()} as crawl wrote it, to paste anywhere.`, fn: () => void this.copyDoc(copy) }] } : {}) }]
-    const extra: Focusable[] = [...(opts.extra ?? [])]
+    const extra: Focusable[] = []
     const below: HTMLElement[] = []
     const scroller = h('div', { class: 'doc-scroll' })
     let content: HTMLElement | Promise<HTMLElement>
@@ -1480,7 +1342,7 @@ export class FrontEnd {
       })
       below.push(links)
     }
-    this.list({ cls, title: opts.title, lede: opts.lede ?? (this.hooks.padConnected?.() ? 'Up and down scroll it; so does the right stick.' : 'Up and down scroll it.'), rows, below, extra, focus: opts.focus ?? BACK })
+    this.list({ cls, title: opts.title, lede: opts.lede ?? (this.hooks.padConnected?.() ? 'Up and down scroll it; so does the right stick.' : 'Up and down scroll it.'), rows, below, extra, focus: BACK })
     // a document with no rows of its own leaves the cursor on Back: the document, not the cursor, is what up and down move
     this.docScroller = scroller
   }
@@ -1507,19 +1369,26 @@ export class FrontEnd {
   showNews() {
     if (this.newsSince === undefined) this.newsSince = newsSeen()
     markNewsSeen()
-    const doc = newsDoc(changelog, this.newsSince)
-    // each release a row under Back; the cursor opens on the newest, and a release it lands on glides to the top
-    const releases = Array.from(doc.querySelectorAll<HTMLElement>('.release[data-focus]'))
-    const extra: Focusable[] = releases.map((el, i) => ({
-      id: el.dataset.focus!, label: el.querySelector('.ver')?.textContent ?? '', el, row: i + 1, ownScroll: true,
-      activate: () => {},
-      onFocus: () => {
-        this.say('Up and down step through the releases.')
-        this.glide(i === 0 ? 0 : el.offsetTop)
-      },
-    }))
-    this.showDoc({ view: 'news', cls: 'news-list', title: 'What’s new', lede: latestLine(changelog), from: () => this.showHome(), body: () => doc, extra, focus: extra[0]?.id })
-    this.at({ kind: 'menu', path: 'whats-new' })
+    this.openModal('What’s new', newsDoc(changelog, this.newsSince), 'whats-new')
+  }
+
+  private showAbout() {
+    this.openModal('About & credits', renderMarkdown(about, { dropTitle: true }), 'about')
+  }
+
+  private openModal(title: string, content: HTMLElement, path: string) {
+    if (this.modal) this.closeModal(false)
+    if (this._view !== 'home') this.showHome()
+    this.modal = new MenuModal(this.root, title, content, () => this.closeModal())
+    this.media.cover(true)
+    this.at({ kind: 'menu', path })
+  }
+
+  private closeModal(route = true) {
+    this.modal?.destroy()
+    this.modal = null
+    this.media.cover(this._view !== 'home')
+    if (route) { this.at({ kind: 'home' }); this.showHome() }
   }
 
   // ------------------------------------------------------------------ watch
@@ -1695,13 +1564,18 @@ export class FrontEnd {
     this.settingsGroup = group
     this.setView('settings-group', 'settings')
     this.at({ kind: 'menu', path: 'settings/' + group.toLowerCase() })
-    // a change shows on the room behind the panel at once: Dungeon settings apply to the scenery too
-    const panel = settingsPanel(group, { onchange: () => this.roomView.applySettings(), controls: () => this.showControls() })
+    // Keep the menu media in sync with persisted motion preferences.
+    const panel = settingsPanel(group, { onchange: () => this.media.applySettings(), controls: () => this.showControls() })
     // Only the front-end instance gets the title-screen treatment; the pause
     // menu keeps its compact in-game rows and hotkeys.
     for (const el of panel.rows) {
       el.classList.add('item', 'front-setting')
       el.prepend(h('span', { class: 'marker', 'aria-hidden': 'true' }))
+      // Focus updates the hint and can resize this scroll region. Defer row
+      // focus until click so the pressed label cannot move before mouseup.
+      el.addEventListener('mousedown', ev => {
+        if (ev.button === 0 && !(ev.target as Element).closest('button, a, input, textarea, select')) ev.preventDefault()
+      })
       // Arrow clicks stop bubbling, so share their row's cursor in capture.
       el.addEventListener('click', () => el.focus({ preventScroll: true }), { capture: true })
     }
@@ -2103,7 +1977,6 @@ export class FrontEnd {
       title: 'Morgue file', lede,
       links: href ? [{ label: 'Open in a new tab', href }] : undefined,
       from: () => this.showMorgues(a, 'morgue:' + stamp),
-      still: ACCOUNT_BACKDROP,
       copy: () => came,
       body: () =>
         this.morgueText(a, server, stamp, game).then((t) => {
@@ -2141,9 +2014,9 @@ export class FrontEnd {
    * device, one file for every game the player plays (@orbrun/offline
    * RcBook). A save is read back before it is called saved: a server says
    * nothing after `set_rc`, whether it wrote the file or not. Reached from
-   * Other versions, or from a device player's screen under Accounts.
+   * Play on the home screen, or an account's version list.
    */
-  showRc(a: Account, gameId: string | null) {
+  showRc(a: Account, gameId: string | null, homeFocus: string | null = null) {
     const server = findServer(a.serverId)
     if (!server || (!server.offline && !gameId)) return this.showAccounts()
     const again = this._view === 'rc' && !!this.rc && sameAccount(this.rc.account, a) && this.rc.gameId === gameId
@@ -2151,7 +2024,7 @@ export class FrontEnd {
       const text = h('textarea', { class: 'rc-text', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', wrap: 'off', rows: 14, 'aria-label': 'rc file' })
       text.readOnly = true
       text.addEventListener('input', () => this.rcMarks())
-      this.rc = { account: a, gameId, text, saved: null, state: 'reading', asked: false, note: null, leaving: false }
+      this.rc = { account: a, gameId, homeFocus, text, saved: null, state: 'reading', asked: false, note: null, leaving: false }
       // the file is the logged-in account's, so this is a switch to it, as Other versions is
       setChosenAccount(a)
     }
@@ -2165,11 +2038,12 @@ export class FrontEnd {
     const notices: HTMLElement[] = []
     if (rc.note) notices.push(h('div', { class: rc.note.error ? 'error' : 'hint' }, rc.note.text))
     else if (rc.state === 'reading') notices.push(h('div', { class: 'hint' }, !s.conn.open ? 'Connecting…' : loggedIn || s.loggingIn ? `Reading your rc file from ${where}…` : `Log in to ${server.host} to read your rc file.`))
+    if (!server.offline) notices.push(h('div', { class: 'hint rc-scope' }, 'Shared with WebTiles for this account and version on this server. Other servers keep separate rc files.'))
     const pad = !!this.hooks.padConnected?.()
     const version = server.offline ? null : game ? gameLinkVersion(game) : null
     const guide = `https://github.com/crawl/crawl/blob/${version && version !== 'trunk' ? 'stone_soup-' + version : 'master'}/crawl-ref/docs/options_guide.txt`
     const rows: Row[] = [
-      { id: BACK, label: 'Back', marker: '<', hint: 'Back to the account.', fn: () => this.back() },
+      { id: BACK, label: 'Back', marker: '<', hint: rc.homeFocus ? 'Back to Play.' : 'Back to the account.', fn: () => this.back() },
       { id: 'rc:text', label: 'rc file', text: rc.text, hint: 'Crawl’s options, one to a line.' + (pad ? ' A to type, Y when done; the right stick scrolls.' : ' Enter to edit, Esc when done, Ctrl+S to save.') },
       {
         id: 'rc:save', label: 'Save', sub: rcWord(rc), hint: server.offline ? 'Keep it on this device. It counts from the next game you start or continue.' : `Save it on ${server.host}. It counts from the next game you start or continue.`,
@@ -2275,6 +2149,10 @@ export class FrontEnd {
       return
     }
     this.rc = null
+    if (rc.homeFocus) {
+      this.marks.set('home', rc.homeFocus)
+      return this.showHome()
+    }
     const server = findServer(rc.account.serverId)
     if (server?.offline) this.showAccount(rc.account, 'rc')
     else this.showAccount(rc.account, rc.gameId ? 'rc:' + rc.gameId : undefined)
@@ -2526,7 +2404,10 @@ export class FrontEnd {
     this.unsub = session.on((e) => {
       // every message redraws what changed, once a frame however many came
       if ((e.type === 'state' || e.type === 'open') && (this._view === 'home' || this._view === 'watch' || this._view === 'accounts' || this._view === 'account' || this._view === 'rc')) this.schedule()
-      if (e.type === 'state' && e.msg.msg === 'login_success' && (this._view === 'login' || this._view === 'register')) this.loggedIn(session)
+      if (e.type === 'state' && e.msg.msg === 'login_success' && (this._view === 'login' || this._view === 'register' || this.inlineLogin === session)) {
+        this.inlineLogin = null
+        this.loggedIn(session)
+      }
       if (e.type === 'state' && e.msg.msg === 'login_fail' && this._view === 'login') this.showLogin()
       if (e.type === 'state' && e.msg.msg === 'register_fail' && this._view === 'register') this.showRegister()
       if (e.type === 'state' && e.msg.msg === 'reload_url' && !this.reloaded) {
@@ -2551,8 +2432,15 @@ export class FrontEnd {
 
   /** The home screen, with the address bar saying so. */
   private goHome() {
+    if (this.modal) this.closeModal(false)
     this.at({ kind: 'home' }, true)
     this.shape.delete('home')
+    this.showHome()
+  }
+
+  /** Browser Back to the bare home closes its document without destroying form state. */
+  homeRoute() {
+    this.closeModal(false)
     this.showHome()
   }
 

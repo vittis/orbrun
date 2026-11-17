@@ -35,20 +35,51 @@ describe('what is written down', () => {
 describe('Dungeon presentation', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
+  it.each([
+    ['Dungeon tilt', 'depthTilt', 50, 55, 45, 42.5, 45, 40],
+    ['Dungeon zoom', 'depthZoom', 1, 1.05, 0.95, 1.12, 1.15, 1.1],
+  ] as const)('adjusts %s in fine steps and preserves custom saved values until adjusted', (label, key, initial, next, previous, custom, above, below) => {
+    const setting = row(label)
+    const onchange = vi.fn()
+    const panel = settingsPanel('View', { onchange })
+    const control = panel.rows.find(r => r.dataset.focus === `setting:${label}`)!
+    control.querySelector<HTMLElement>('.arrow:last-child')!.click()
+    expect(getSettings()[key]).toBe(next)
+    expect(control.querySelector('.val')!.textContent).toBe(settingValue(setting))
+    expect(onchange).toHaveBeenCalledTimes(1)
+    control.querySelector<HTMLElement>('.arrow:first-child')!.click()
+    expect(getSettings()[key]).toBe(initial)
+    control.dispatchEvent(new CustomEvent('adjust', { detail: -1 }))
+    expect(getSettings()[key]).toBe(previous)
+    for (const [direction, expected] of [[1, above], [-1, below]]) {
+      saveSettings({ ...getSettings(), [key]: custom })
+      expect(getSettings()[key]).toBe(custom)
+      adjustSetting(setting, direction)
+      expect(getSettings()[key]).toBe(expected)
+    }
+    resetGroup('View')
+    expect(getSettings()[key]).toBe(initial)
+  })
+
   it('persists movement options, gates them in still mode, and resets the View defaults', () => {
     saveSettings({ ...defaultSettings })
     expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')
     expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
     adjustSetting(row('Dungeon move duration'), 1)
     adjustSetting(row('Dungeon move easing'), 1)
-    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.14, depthMovementEasing: 'smooth' })
+    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.11, depthMovementEasing: 'smooth' })
+    const gestures = ['Move hop height', 'Move squash', 'Move sway']
+    for (const label of gestures) adjustSetting(row(label), -1)
+    expect(getSettings()).toMatchObject({ depthMovementHopHeight: 0.35, depthMovementSquash: 0.55, depthMovementSway: 0.95 })
     adjustSetting(row('Dungeon movement'), 1)
     expect(getSettings().depthMovement).toBe(false)
     expect(rowOff(row('Dungeon move duration'))).toBe(true)
+    for (const label of gestures) expect(rowOff(row(label))).toBe(true)
     saveSettings({ ...getSettings(), depthMovement: true, depthAnimate: false })
-    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing']) expect(rowOff(row(label))).toBe(true)
+    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing', ...gestures]) expect(rowOff(row(label))).toBe(true)
     resetGroup('View')
-    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out' })
+    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out',
+      depthMovementHopHeight: 0.4, depthMovementSquash: 0.6, depthMovementSway: 1 })
   })
 })
 
@@ -210,7 +241,7 @@ describe('what left and right do', () => {
    */
   it('lays every offered row out in one of the groups, each with its own line', () => {
     const groups = settingGroups()
-    expect(groups.map((g) => g.group)).toEqual(['View', 'Controls', 'Interface'])
+    expect(groups.map((g) => g.group)).toEqual(['View', 'Combat', 'Audio', 'Controls', 'Interface'])
     for (const g of groups) {
       expect(g.hint.length).toBeGreaterThan(0)
       expect(g.rows.length).toBeGreaterThan(0)
@@ -297,5 +328,50 @@ describe('Dungeon-only settings migration', () => {
     expect(getSettings()).toEqual(defaultSettings)
     for (const label of ['Projection', 'Hands', 'Field of view', 'Camera height', 'Camera angle', 'Nearby', 'Predictive movement', 'Keyboard left/right', 'Gamepad left/right', 'Swipe to turn', 'Look sensitivity', 'Invert look']) expect(SETTING_ROWS.some(r => r.label === label)).toBe(false)
     for (const label of ['Dungeon tilt', 'Dungeon zoom', 'Dungeon animation']) expect(rowOff(row(label))).toBe(false)
+  })
+})
+
+
+describe('Hit bump preferences', () => {
+  beforeEach(() => store.clear())
+  it('persists bump tuning, honors Still/Off, and resets only combat', () => {
+    saveSettings({ ...defaultSettings, meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, meleeBumpSpeed: 0.75, depthZoom: 1.2 })
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, meleeBumpSpeed: 0.75 })
+    expect(rowOff(row('Hit bump strength'), { ...defaultSettings, depthAnimate: false })).toBe(true)
+    expect(rowOff(row('Hit bump snap'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
+    expect(rowOff(row('Hit bump speed'), { ...defaultSettings, depthAnimate: false })).toBe(true)
+    expect(rowOff(row('Hit bump speed'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
+    resetGroup('Combat')
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSnap: 0.7, meleeBumpSpeed: 1.15, depthZoom: 1.2 })
+  })
+  it('drops retired VFX settings without losing bump tuning or unrelated preferences', () => {
+    store.set('orbrun.settings', JSON.stringify({ meleeEffects: false, meleeMotion: 0, meleeWeight: 1.5, meleeTrail: 0.4,
+      meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 }))
+    const s = getSettings()
+    expect(s).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(rowOff(row('Hit bump strength'), s)).toBe(false)
+    for (const key of ['meleeEffects', 'meleeMotion', 'meleeWeight', 'meleeTrail']) expect(s).not.toHaveProperty(key)
+    saveSettings(s)
+    expect(JSON.parse(store.get('orbrun.settings')!)).toEqual({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, depthZoom: 1.2 })
+    expect(settingGroups().find(g => g.group === 'Combat')!.rows.map(r => r.key)).toEqual(expect.arrayContaining(['meleeBumpStrength', 'meleeBumpSnap', 'hitGore', 'deathGore']))
+  })
+  it('adjusts every combat value by five points in both directions and preserves intermediate saves', () => {
+    for (const setting of ALL_SETTING_ROWS.filter(r => r.group === 'Combat')) {
+      saveSettings({ ...defaultSettings, [setting.key]: 0.65 })
+      adjustSetting(setting, 1)
+      expect(getSettings()[setting.key], setting.key).toBe(0.7)
+      adjustSetting(setting, -1)
+      expect(getSettings()[setting.key], setting.key).toBe(0.65)
+      saveSettings({ ...defaultSettings, [setting.key]: 0.67 })
+      adjustSetting(setting, -1)
+      expect(getSettings()[setting.key], setting.key).toBe(0.65)
+      saveSettings({ ...defaultSettings, [setting.key]: 0.67 })
+      adjustSetting(setting, 1)
+      expect(getSettings()[setting.key], setting.key).toBe(0.7)
+    }
+  })
+  it('clamps malformed or out-of-range bump tuning', () => {
+    store.set('orbrun.settings', JSON.stringify({ meleeBumpStrength: 99, meleeBumpSnap: -1 }))
+    expect(getSettings()).toMatchObject({ meleeBumpStrength: 2, meleeBumpSnap: 0 })
   })
 })

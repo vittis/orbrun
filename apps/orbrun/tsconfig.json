@@ -22,6 +22,7 @@
     "vite.config.ts",
     "gamedata-proxy.ts",
     "engine-files.ts",
+    "menu-replay-assets.ts",
     "site-pages.ts",
     "shell.ts",
     "package.json",

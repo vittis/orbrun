@@ -1,4 +1,4 @@
-import type { Scene } from './index.js'
+import type { Scene, DamageType, HitIntensity } from './index.js'
 import { cellKey } from './coordinates.js'
 import { lightReaches } from './living.js'
 
@@ -9,6 +9,9 @@ export interface DeathEffect {
   y: number
   height: number
   kind: DeathKind
+  /** Confirmed killing hit, independent of the creature’s body material. */
+  tone?: DamageType
+  intensity?: HitIntensity
   direction: { x: number; y: number }
 }
 export interface DeathParticle {

@@ -248,6 +248,10 @@ function beaconFor(feature: Feature | undefined): 'down' | 'up' | 'portal' | und
  * turn; what is built in turns with the ground it is part of.
  */
 const BUILT_IN = /DOOR|GATE|RUNELIGHT|STAIR|HATCH/
+// Vaults can dress blocking terrain in a freestanding prop's artwork. Its
+// minimap category still says wall, but extruding the transparent sprite's
+// square gives columns, ruins and statues an artificial solid pedestal.
+const TERRAIN_PROP = /(?:^|_)(?:STATUE|IDOL|COLUMN|PILLAR|GRAVESTONE|SARCOPHAGUS|SHRINE|TREE|MANGROVE)(?:_|$)/
 export function standsFree(name: string | undefined, feature: Feature | undefined): boolean {
   if (stanceFor(name, feature) !== 'upright') return false
   if (feature && (feature.type === 'door' || feature.type === 'stairs' || feature.type === 'hatch')) return false
@@ -479,14 +483,18 @@ function buildCell(mc: MapCell, gd: Gamedata): SceneCell | undefined {
   const name = gd.dngn.baseName(bgIdx) || gd.dngn.name(bgIdx)
   const floorUnder = t.flv?.f ?? bgIdx
   const hasCloud = cloud > 0
+  // g is the screen glyph: explosions use '#', and beams/creatures can hide
+  // a real wall's glyph. Only the server's terrain category may promote art
+  // outside the solid-wall range into an occluding wall.
+  const wallTerrain = mc.mf === MF.WALL || mc.mf === MF.MAP_WALL
 
   if (bgIdx < r.floorMax) {
     base.kind = 'floor'
     base.occluder = false
     base.floorTile = bgIdx
     base.label = flags.lava ? 'lava' : flags.water ? 'water' : 'floor'
-    if (glyph === '#' && !hasCloud) {
-      // glyph backstop: a vault wall using a floor-range tile
+    if (wallTerrain) {
+      // A vault wall may use floor-range artwork.
       base.kind = 'wall'
       base.occluder = true
       base.wallTile = bgIdx
@@ -502,7 +510,7 @@ function buildCell(mc: MapCell, gd: Gamedata): SceneCell | undefined {
     base.label = (name || 'wall').replace(/^DNGN_/, '').replace(/^WALL_/, '').toLowerCase().replace(/_/g, ' ')
   } else if (bgIdx < r.wallMax) {
     base.floorTile = floorUnder
-    if (glyph === '#' && !hasCloud) {
+    if (wallTerrain) {
       base.kind = 'wall'
       base.occluder = true
       base.wallTile = bgIdx
@@ -526,8 +534,8 @@ function buildCell(mc: MapCell, gd: Gamedata): SceneCell | undefined {
     base.floorTile = floorUnder
     const f = classifyFeature(name, glyph, mc.mf, MF)
     // a vault wall dressed in feature art (the Bailey keeps' `stone_smooth_wall_beogh`, wizlab_golubria's
-    // `dngn_dimension_edge`): the name alone says `other`, and the glyph says wall
-    if (glyph === '#' && !hasCloud && (!f || f.type === 'other')) {
+    // `dngn_dimension_edge`): the name alone says `other`, and the minimap says wall
+    if (wallTerrain && (!f || f.type === 'other') && !TERRAIN_PROP.test(name || '')) {
       base.kind = 'wall'
       base.occluder = true
       base.wallTile = bgIdx
@@ -1287,3 +1295,5 @@ export function monsterGroups(scene: Scene): Billboard[][] {
   }
   return groups
 }
+
+export { namedEffect, nativeEffectTone } from './effect-types.js'

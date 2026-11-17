@@ -1,13 +1,30 @@
 import type { HintMode } from './gamepad-hints'
 
 export interface Settings {
+  audioEnabled: boolean
+  masterVolume: number
+  effectsVolume: number
+  singleSoundChannel: boolean
   depthTilt: number
   depthZoom: number
   depthAnimate: boolean | 'auto'
+  depthFog: boolean
+  depthAtmosphere: boolean
   depthMovement: boolean
   /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
   depthMovementEasing: 'ease-out' | 'smooth' | 'linear'
+  depthMovementHopHeight: number
+  depthMovementSquash: number
+  depthMovementSway: number
+  meleeBumpStrength: number
+  meleeBumpSpeed: number
+  meleeBumpSnap: number
+  hitGore: number
+  deathGore: number
+  hitSprayOutward: number
+  deathSprayOutward: number
+  combatVfxVariation: number
   uiScale: number
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
@@ -35,12 +52,29 @@ function hintsFrom(saved: Record<string, unknown>): HintMode {
 
 const SETTINGS_KEY = 'orbrun.settings'
 export const defaultSettings: Settings = {
+  audioEnabled: false,
+  masterVolume: 0.7,
+  effectsVolume: 1,
+  singleSoundChannel: true,
   depthTilt: 50,
   depthZoom: 1,
   depthAnimate: 'auto',
+  depthFog: true,
+  depthAtmosphere: true,
   depthMovement: true,
   depthMovementDuration: 0.1,
   depthMovementEasing: 'ease-out',
+  depthMovementHopHeight: 0.4,
+  depthMovementSquash: 0.6,
+  depthMovementSway: 1,
+  meleeBumpStrength: 1.75,
+  meleeBumpSpeed: 1.15,
+  meleeBumpSnap: 0.7,
+  hitGore: 1,
+  deathGore: 0.5,
+  hitSprayOutward: 1,
+  deathSprayOutward: 0.75,
+  combatVfxVariation: 0.25,
   uiScale: 1,
   confirmStairs: false,
   minimapTiles: 0,
@@ -58,9 +92,22 @@ export const defaultSettings: Settings = {
  */
 type NumericSetting = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings]
 const numericDomains: Record<NumericSetting, { min: number; max: number; integer?: boolean; auto?: boolean }> = {
-  depthTilt: { min: 35, max: 65 },
-  depthZoom: { min: 0.8, max: 1.4 },
+  masterVolume: { min: 0, max: 1 },
+  effectsVolume: { min: 0, max: 1 },
+  depthTilt: { min: 25, max: 85 },
+  depthZoom: { min: 0.25, max: 3 },
   depthMovementDuration: { min: 0.04, max: 0.25 },
+  depthMovementHopHeight: { min: 0, max: 2 },
+  depthMovementSquash: { min: 0, max: 2 },
+  depthMovementSway: { min: 0, max: 2 },
+  meleeBumpStrength: { min: 0, max: 2 },
+  meleeBumpSpeed: { min: 0.5, max: 2 },
+  meleeBumpSnap: { min: 0, max: 1 },
+  hitGore: { min: 0, max: 2 },
+  deathGore: { min: 0, max: 2 },
+  hitSprayOutward: { min: 0, max: 1 },
+  deathSprayOutward: { min: 0, max: 1 },
+  combatVfxVariation: { min: 0, max: 1 },
   uiScale: { min: 0.85, max: 1.5 },
   minimapTiles: { min: 15, max: 61, integer: true, auto: true },
   minimapCell: { min: 8, max: 32, auto: true },
@@ -102,6 +149,7 @@ export function getSettings(): Settings {
 /** Persist normalized non-default preferences without touching accounts or saves. */
 export function saveSettings(settings: Settings) {
   const s = normalizeSettings(settings)
+  if (typeof document !== 'undefined') document.documentElement.dataset.uiMotion = s.depthAnimate === false ? 'still' : 'auto'
   const out: Partial<Settings> = {}
   for (const key of Object.keys(defaultSettings) as (keyof Settings)[]) {
     if (s[key] !== defaultSettings[key]) (out as Record<string, unknown>)[key] = s[key]
@@ -111,4 +159,5 @@ export function saveSettings(settings: Settings) {
   } catch {
     // Storage can be disabled or full; preferences remain best-effort.
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('orbrun-settings'))
 }

@@ -22,6 +22,7 @@ const BUILT = [
   'room/atlas.json',
   'room/atlas.png',
   'room/poster.jpg',
+  'menu/clips/example.json',
   'room/card.jpg',
   'room/places/lair.json',
   'room/places/lair.png',
@@ -38,7 +39,7 @@ const BUILT = [
 
 /** Orbrun opens with no connection: the service worker keeps what the app needs to start, and nothing else. */
 describe('the app kept on the device', () => {
-  it('keeps the page, the bundles, the fonts, the places the front screen stands in, the stills the menus stand in and the icons', () => {
+  it('keeps the page, the bundles, the fonts, the immediate poster and the icons', () => {
     expect(shellFiles(BUILT)).toEqual([
       '/',
       '/assets/index-AbC123.js',
@@ -49,19 +50,19 @@ describe('the app kept on the device', () => {
       '/icons/icon-192.png',
       '/manifest.webmanifest',
       '/orb.png',
-      '/room/places/lair.json',
-      '/room/places/lair.png',
       '/room/poster.jpg',
     ])
   })
 
   it('sends a page load of the site’s pages and the build’s other files to the network, not to the app', () => {
     const network = networkPaths(BUILT)
-    for (const p of PAGES.filter((p) => p.path !== '/')) expect(network).toContain(p.path)
+    for (const p of PAGES.filter((p) => p.path !== '/' && !p.modal)) expect(network).toContain(p.path)
     expect(network).toContain('/about/orbrun')
     expect(network).toContain('/robots.txt')
     expect(network).toContain('/room/card.jpg')
     expect(network).not.toContain('/')
+    expect(network).not.toContain('/about')
+    expect(network).toContain('/menu/clips/example.json')
     expect(network).not.toContain('/assets/index-AbC123.js.map')
     for (const f of shellFiles(BUILT)) expect(network).not.toContain(f)
   })

@@ -3,6 +3,7 @@ import { cellKey, emptyScene, type Billboard, type DeathKind, type SceneCell } f
 import { DungeonEffects } from '../src/effects.js'
 import { sampleHitSpray } from '../src/hit-spray.js'
 import { debrisPalettes } from '../src/death.js'
+import { elementalPalettes } from '../src/elemental-spray.js'
 
 function setup(name = 'orc') {
   const scene = { ...emptyScene(), playerOnLevel: true, levelKey: 'D:1', turn: 1, projectileTime: 0, player: { x: -2, y: 0 } }
@@ -20,6 +21,15 @@ const shot = (x: number, y: number, angle: number): Billboard => ({ x, y, kind: 
   life: { projectile: { kind: 'magic', family: 'dart', angle, colour: [180, 180, 240], beam: false } } })
 
 describe('material-specific ranged hit splatters', () => {
+  it('uses the incoming hit element even without a separate spell report', () => {
+    const { scene, fx } = setup()
+    fx.hit(scene, { ...hit, tone: 'fire', intensity: 'heavy' }, 1)
+    expect(fx.bursts).toHaveLength(1)
+    const particles = sampleHitSpray(scene, fx.bursts[0], 1.1)
+    expect(particles.some(p => elementalPalettes.fire.includes(p.colour))).toBe(true)
+    expect(particles.some(p => debrisPalettes.flesh.includes(p.colour))).toBe(true)
+  })
+
   it.each<[string, DeathKind]>([
     ['orc', 'flesh'], ['skeleton', 'bone'], ['jelly', 'slime'], ['stone golem', 'stone'],
     ['phantom', 'spirit'], ['fire elemental', 'fire'], ['ice beast', 'ice'],
@@ -33,12 +43,14 @@ describe('material-specific ranged hit splatters', () => {
     expect(burst.spray).toMatchObject({ kind, source: 'ranged' })
     const particles = sampleHitSpray(scene, burst, 1.1)
     expect(particles.length).toBeGreaterThanOrEqual(8)
-    expect(particles.length).toBeLessThanOrEqual(26)
-    expect(particles.every(p => debrisPalettes[kind].includes(p.colour) && p.size < 0.08 && [5, 8].includes(p.minPixels!) && p.sprite !== 'burst')).toBe(true)
+    expect(particles.length).toBeLessThanOrEqual(48)
+    expect(particles.some(p => debrisPalettes[kind].includes(p.colour))).toBe(true)
+    expect(particles.some(p => elementalPalettes.cold.includes(p.colour) && p.sprite === 'shard')).toBe(true)
+    expect(particles.every(p => p.size < 0.12 && p.minPixels! >= 5 && p.minPixels! <= 11 && p.sprite !== 'burst')).toBe(true)
     expect(sampleHitSpray(scene, burst, 1.7)).toEqual([])
   })
 
-  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1]])('uses projectile travel (%i, %i) and waits for contact', (dx, dy) => {
+  it.each([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]])('uses projectile travel (%i, %i) and waits for contact', (dx, dy) => {
     const { scene, fx, target } = setup()
     const angle = Math.atan2(dy, dx)
     scene.billboards = [target, shot(-dx, -dy, angle), shot(0, 0, angle)]
@@ -53,9 +65,13 @@ describe('material-specific ranged hit splatters', () => {
     expect(sampleHitSpray(scene, burst, 1.069)).toEqual([])
     const particles = sampleHitSpray(scene, burst, 1.25)
     expect(particles.length).toBeGreaterThan(0)
-    expect(particles.every(p => p.x * dx + p.y * dy > 0.1)).toBe(true)
     const travel = particles.map(p => (p.x * dx + p.y * dy) / Math.hypot(dx, dy))
-    expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.35)
+    expect(travel.filter(d => d > 0).length / travel.length).toBeGreaterThan(0.6)
+    expect(Math.min(...travel)).toBeLessThan(-0.05)
+    expect(travel.reduce((sum, d) => sum + d, 0) / travel.length).toBeGreaterThan(0.15)
+    const sideways = particles.map(p => (p.y * dx - p.x * dy) / Math.hypot(dx, dy))
+    expect(Math.min(...sideways)).toBeLessThan(-0.05)
+    expect(Math.max(...sideways)).toBeGreaterThan(0.05)
     expect(particles.some(p => p.minPixels === 5 && p.alpha < 1)).toBe(true)
   })
 
@@ -93,7 +109,9 @@ describe('material-specific ranged hit splatters', () => {
     scene.billboards = [player]; fx.observe(scene, 1.001, true)
     fx.hit(scene, { x: -2, y: 0, actorId: 'player' }, 1.002)
     expect(fx.bursts[0].spray?.direction).toEqual({ x: -1, y: 0 })
-    expect(sampleHitSpray(scene, fx.bursts[0], 1.25).every(p => p.x < -2)).toBe(true)
+    const particles = sampleHitSpray(scene, fx.bursts[0], 1.25)
+    expect(particles.filter(p => p.x < -2).length / particles.length).toBeGreaterThan(0.6)
+    expect(particles.some(p => p.x > -2)).toBe(true)
   })
 
   it('adopts a later native path without reseeding or firing before its arrival', () => {
@@ -109,7 +127,9 @@ describe('material-specific ranged hit splatters', () => {
     expect(burst.spray?.direction).toEqual({ x: -1, y: 0 })
     expect(burst.born).toBeCloseTo(1.08)
     expect(sampleHitSpray(scene, burst, 1.079)).toEqual([])
-    expect(sampleHitSpray(scene, burst, 1.25).every(p => p.x < 0)).toBe(true)
+    const particles = sampleHitSpray(scene, burst, 1.25)
+    expect(particles.filter(p => p.x < 0).length / particles.length).toBeGreaterThan(0.6)
+    expect(particles.some(p => p.x > 0)).toBe(true)
   })
 
   it('does not shed body material for unconfirmed projectile overlays, zero-damage casts, or utility spells', () => {

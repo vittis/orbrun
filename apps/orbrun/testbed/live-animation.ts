@@ -4,11 +4,11 @@ import '../src/styles.css'
 import { GameScreen } from '../src/game'
 import { dungeonAnimation } from '../src/effects-motion'
 import { Render25d } from '@orbrun/render-2.5d'
-import { initialState, reduce, MouseMode, UiState } from '@orbrun/webtiles'
+import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
 import { cellKey, type TileSource } from '@orbrun/scene'
 import { defaultSettings, type Settings } from '../src/settings'
 import type { Session, SessionEvent } from '../src/session'
-import type { GamepadInput } from '../src/gamepad'
+import type { GamepadInput, PadEvent } from '../src/gamepad'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
 
@@ -21,6 +21,7 @@ const state = initialState(); state.phase = 'playing'; state.inputMode = MouseMo
 Object.assign(state.player, { received: true, name: 'Animation check', title: 'the Magician', species: 'Formicid', pos: scene.player, hp: 30, hp_max: 30, mp: 6, mp_max: 6, xl: 3, place: 'Dungeon', depth: 1 })
 state.map.viewCenter = scene.player; state.map.playerOnLevel = true
 const listeners = new Set<(e: SessionEvent) => void>()
+const sent: unknown[] = []
 let scenePending = false
 const session = {
   state, scene, gamedata: null, loading: false, watching: false, server: { offline: false }, conn: {}, closed: false, diagnostics: [],
@@ -30,7 +31,7 @@ const session = {
     scenePending = false
     for (const fn of listeners) fn({ type: 'scene', scene })
     return true
-  }, send: () => {}, deviceRc: () => null,
+  }, send: (msg: unknown) => { sent.push(msg); if (sent.length > 32) sent.shift() }, deviceRc: () => null,
 } as unknown as Session
 const params = new URLSearchParams(location.search)
 const nativeMotion = params.has('native-motion')
@@ -46,7 +47,7 @@ const reducedInput = document.getElementById('reduced') as HTMLInputElement
 reducedInput.disabled = nativeMotion; reducedInput.checked = preference.matches
 const syncPreference = () => { reducedInput.checked = preference.matches }
 preference.addEventListener('change', syncPreference)
-const renderer = new Render25d({ animate: dungeonAnimation(settings, preference.matches) }); renderer.setTiles(tiles as TileSource)
+const renderer = new Render25d({ animate: dungeonAnimation(settings, preference.matches), unexploredFog: params.has('fog') }); renderer.setTiles(tiles as TileSource)
 let frames = 0, totalFrames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
 let pixelSamples = 0, lastSampleAt = -Infinity, destroyed = false
 let hits = 0
@@ -115,7 +116,12 @@ if (params.has('check')) {
   later(() => hit(thorns ? 'The ice thorns skewer the goblin.' : undefined), 1100)
 }
 const snapshot = () => {
-  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
+  const player = scene.billboards.find(b => b.kind === 'player')!
+  const feet = renderer.projectBillboard(player)
+  const scale = renderer.project(scene.player.x + 1, scene.player.y).x - renderer.project(scene.player.x, scene.player.y).x
+  const rect = document.querySelector('canvas.view')?.getBoundingClientRect()
+  const playerProjection = { x: (rect?.left ?? 0) + feet.x, y: (rect?.top ?? 0) + feet.y, scale }
+  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, sent: [...sent], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, xl: state.player.xl, playerProjection, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
 }
 const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
 function destroy() {
@@ -126,6 +132,11 @@ function destroy() {
   if (!nativeMotion) window.matchMedia = nativeMatch
   document.getElementById('result')!.textContent = JSON.stringify(snapshot())
 }
-declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy } } }
-window.__orbrunLiveAnimation = { snapshot, destroy }
+const receive = (msg: ServerMessage) => {
+  reduce(state, msg)
+  for (const fn of listeners) fn({ type: 'state', msg })
+}
+const pad = (event: PadEvent) => screen.pad(event)
+declare global { interface Window { __orbrunLiveAnimation: { snapshot: typeof snapshot; destroy: typeof destroy; receive: typeof receive; walk: typeof walk; pad: typeof pad } } }
+window.__orbrunLiveAnimation = { snapshot, destroy, receive, walk, pad }
 window.addEventListener('pagehide', destroy, { once: true })

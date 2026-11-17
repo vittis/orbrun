@@ -8,8 +8,9 @@ import { defaultSettings } from '../src/settings'
 describe('effective dungeon animation', () => {
   it('passes configured movement properties to the renderer', () => {
     const screen = Object.assign(Object.create(GameScreen.prototype), { reducedMotion: false })
-    expect(screen.render25dOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth' })).toMatchObject({
-      movement: false, movementDuration: 0.18, movementEasing: 'smooth',
+    expect(screen.render25dOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth',
+      depthMovementHopHeight: 0, depthMovementSquash: 0.5, depthMovementSway: 1.5 })).toMatchObject({
+      movement: false, movementDuration: 0.18, movementEasing: 'smooth', movementHopHeight: 0, movementSquash: 0.5, movementSway: 1.5,
     })
   })
   it.each([
@@ -60,7 +61,7 @@ describe('the Dungeon presentation lifecycle', () => {
   it('keeps a temporary map and its renderer when dungeon settings change', () => {
     const renderer = new Render2d()
     const screen = Object.assign(Object.create(GameScreen.prototype), {
-      renderer, presentation: 'flat-map', settingsCache: null, exploreDelay: null,
+      renderer, root: document.createElement('div'), presentation: 'flat-map', settingsCache: null, exploreDelay: null,
       settings: () => ({ ...defaultSettings }),
       grid: { setTextSize: vi.fn() }, textPx: () => 16, shrinkText: vi.fn(),
       hud: { setMinimapTiles: vi.fn() }, relayout: vi.fn(), setPresentation: vi.fn(), wake: vi.fn(),

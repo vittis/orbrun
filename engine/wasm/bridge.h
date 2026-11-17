@@ -51,7 +51,10 @@ EM_ASYNC_JS(void, wasm_bridge_await_message, (), {
     var b = Module['bridge'];
     if (b['queue'].length)
         return;
-    await new Promise(function(resolve) { b['wake'] = resolve; });
+    await new Promise(function(resolve) {
+        b['wake'] = resolve;
+        if (Module['onBridgeIdle']) Module['onBridgeIdle']();
+    });
 });
 
 // Suspends the engine for `ms` milliseconds: crawl's delay() (libunix.cc),
@@ -72,6 +75,7 @@ EM_ASYNC_JS(void, wasm_bridge_sleep, (int ms), {
 // eviction, a broken store), and package::commit() only announces a
 // checkpoint to the host when it did -- see wasm_bridge_checkpoint.
 EM_ASYNC_JS(bool, wasm_bridge_persist, (), {
+    if (Module['persistent'] === false) return true;
     return await new Promise(function(resolve) {
         FS.syncfs(false, function(err) {
             if (err)

@@ -2,9 +2,26 @@ import { cellKey, StepCadence, planStep, sampleStep, type StepCurve, type Billbo
 
 export type MovementEasing = 'ease-out' | 'smooth' | 'linear'
 export interface MovementOptions { enabled: boolean; duration: number; easing: MovementEasing }
+export interface MovementAppearance {
+  /** Body lift only, from 0 (off) to 2; never lifts the camera or ground markers. */
+  movementHopHeight?: number
+  /** Movement squash/stretch from 0 to 2, independent of idle breathing. */
+  movementSquash?: number
+  /** Movement sway and banking from 0 to 2, independent of idle hover. */
+  movementSway?: number
+}
 interface Point { x: number; y: number }
 interface Tween { from: Point; to: Point; start: number; duration: number; easing: MovementEasing; curve?: StepCurve }
-interface Actor { kind: Billboard['kind']; signature: string; tween: Tween }
+interface StridePose { x: number; y: number; sx: number; sy: number; angle: number }
+type Gait = 'hop' | 'ooze' | 'slither' | 'scuttle' | 'glide' | 'shuffle'
+interface Stride { from: StridePose; gait: Gait; direction: number; strength: number }
+interface Actor {
+  kind: Billboard['kind']; signature: string; tween: Tween
+  stride?: Stride
+  // Snapshot the phase origin and integrate rate changes; mutable scene objects
+  // and destination cells must never restart an actor's idle animation.
+  origin: Point; time: number; at: number; rate: number
+}
 
 const same = (a: Point, b: Point) => a.x === b.x && a.y === b.y
 const distance = (a: Point, b: Point) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
@@ -16,6 +33,51 @@ const identity = (b: Billboard): string | undefined => {
   return id === undefined ? undefined : `${b.kind}:${typeof id}:${id}`
 }
 const signature = (b: Billboard) => JSON.stringify([b.kind, b.tile, b.name, b.lying ?? false])
+const restPose = (): StridePose => ({ x: 0, y: 0, sx: 1, sy: 1, angle: 0 })
+const smooth = (t: number) => t * t * (3 - 2 * t)
+
+function gait(b: Billboard): Gait | undefined {
+  if (b.kind !== 'player' && b.kind !== 'monster' || b.scenery || b.lying || b.life?.held || b.life?.motion === 'still') return
+  if (b.life?.flying) return 'glide'
+  switch (b.life?.motion) {
+    case 'fly': case 'float': case 'swirl': return 'glide'
+    case 'ooze': return 'ooze'
+    case 'serpent': return 'slither'
+    case 'skitter': return 'scuttle'
+    case 'undead': return 'shuffle'
+    case 'plant': return
+    default: return 'hop'
+  }
+}
+
+/** A bounded body gesture, independent of ground travel and the following camera. */
+function stridePose(actor: Actor | undefined, now: number): StridePose {
+  const p = restPose(), stride = actor?.stride, tween = actor?.tween
+  if (!stride || !tween?.duration) return p
+  const t = Math.max(0, (now - tween.start) / tween.duration)
+  if (t >= 1) return p
+  const arc = Math.sin(Math.PI * t) ** 2 * stride.strength
+  const wave = Math.sin(Math.PI * 2 * t) * arc, direction = stride.direction
+  switch (stride.gait) {
+    case 'hop': {
+      p.y = arc * 0.13
+      const landing = t > 0.65 ? Math.sin(Math.PI * (t - 0.65) / 0.35) ** 2 * stride.strength : 0
+      p.sy += arc * 0.025 - landing * 0.045
+      p.sx = 1 / p.sy
+      break
+    }
+    case 'ooze': p.sx += arc * 0.12; p.sy = 1 / p.sx; p.angle = -direction * wave * 0.025; break
+    case 'slither': p.x = wave * 0.025; p.angle = wave * 0.045; break
+    case 'scuttle': p.y = Math.sin(Math.PI * 2 * t) ** 2 * arc * 0.025; p.angle = direction * wave * 0.025; break
+    case 'glide': p.angle = direction * arc * 0.045; break
+    case 'shuffle': p.angle = direction * arc * 0.035; p.sy -= arc * 0.025; break
+  }
+  // A rapid turn starts at the body pose actually on screen. Blend into the
+  // new gesture instead of resetting a hop mid-air or accumulating its height.
+  const blend = smooth(Math.min(1, t * 4))
+  for (const key of ['x', 'y', 'sx', 'sy', 'angle'] as const) p[key] = stride.from[key] + (p[key] - stride.from[key]) * blend
+  return p
+}
 
 export function sampleMovement(tween: Tween, now: number): Point {
   const t = tween.duration ? Math.max(0, Math.min(1, (now - tween.start) / tween.duration)) : 1
@@ -35,7 +97,7 @@ function velocity(tween: Tween, now: number): Point {
 /** Confirmed positions only. Retarget in place; never queue turns or mutate a Scene. */
 export class DungeonMovement {
   private actors = new Map<string, Actor>()
-  private billboards = new Map<Billboard, Tween>()
+  private billboards = new Map<Billboard, Actor>()
   private camera: Tween | null = null
   private player: Point | null = null
   private level: string | undefined
@@ -57,27 +119,56 @@ export class DungeonMovement {
     }
     // Anonymous art is matched conservatively: reserve stationary copies first,
     // then only pair a unique disappearance/arrival of the same artwork.
+    // Index once: a floor full of anonymous items must not scan and allocate
+    // the entire actor list again for each item on every confirmed step.
+    const signatures = new Map<Billboard, string>()
+    const stationary = new Map<string, string[]>()
+    for (const [id, a] of this.actors) {
+      if (!id.startsWith('anonymous:')) continue
+      const key = `${a.signature}:${a.tween.to.x}:${a.tween.to.y}`
+      const ids = stationary.get(key)
+      if (ids) ids.push(id)
+      else stationary.set(key, [id])
+    }
+    for (const ids of stationary.values()) ids.reverse()
+    const arrivals = new Map<string, number>()
     for (const b of boards) {
       if (assigned.has(b)) continue
       const sig = signature(b)
-      const old = [...this.actors].find(([id, a]) => id.startsWith('anonymous:') && !used.has(id) && a.signature === sig && same(a.tween.to, b))
-      if (old) { assigned.set(b, old[0]); used.add(old[0]) }
+      signatures.set(b, sig)
+      const ids = stationary.get(`${sig}:${b.x}:${b.y}`)
+      const id = ids?.pop()
+      if (id !== undefined) { assigned.set(b, id); used.add(id) }
+      else arrivals.set(sig, (arrivals.get(sig) ?? 0) + 1)
     }
-    const unmatched = boards.filter(b => !assigned.has(b))
-    const previousUnmatched = [...this.actors].filter(([id]) => id.startsWith('anonymous:') && !used.has(id))
-    for (const b of unmatched) {
-      const sig = signature(b)
-      const arrivals = unmatched.filter(other => signature(other) === sig)
-      const departures = previousUnmatched.filter(([, a]) => a.signature === sig)
-      const id = arrivals.length === 1 && departures.length === 1 ? departures[0][0] : `anonymous:${this.nextId++}`
+    const departures = new Map<string, string | null>()
+    for (const [id, a] of this.actors) {
+      if (!id.startsWith('anonymous:') || used.has(id)) continue
+      departures.set(a.signature, departures.has(a.signature) ? null : id)
+    }
+    for (const b of boards) {
+      if (assigned.has(b)) continue
+      const sig = signatures.get(b)!, previous = departures.get(sig)
+      const id = arrivals.get(sig) === 1 && previous != null ? previous : `anonymous:${this.nextId++}`
       assigned.set(b, id); used.add(id)
     }
     this.billboards.clear()
     for (const b of boards) {
-      const id = assigned.get(b)!, previous = this.actors.get(id)
-      const tween = this.retarget(previous?.kind === b.kind ? previous.tween : undefined, b, scene, now, options, true, b.kind === 'player')
-      next.set(id, { kind: b.kind, signature: signature(b), tween })
-      this.billboards.set(b, tween)
+      const id = assigned.get(b)!, candidate = this.actors.get(id)
+      const previous = candidate?.kind === b.kind ? candidate : undefined
+      const tween = this.retarget(previous?.tween, b, scene, now, options, true, b.kind === 'player')
+      const style = gait(b)
+      const stride = !style || !tween.duration ? undefined : tween === previous?.tween ? previous.stride : {
+        from: stridePose(previous, now), gait: style,
+        direction: (tween.to.x - tween.from.x) / Math.max(0.001, distance(tween.from, tween.to)),
+        strength: Math.min(1, distance(tween.from, tween.to)) * (b.life?.wading && !b.life.flying ? 0.55 : 1),
+      }
+      const rate = b.life?.rate ?? 1
+      const actor: Actor = { kind: b.kind, signature: signatures.get(b) ?? signature(b), tween, stride,
+        origin: previous?.origin ?? { x: b.x, y: b.y },
+        time: previous ? previous.time + (now - previous.at) * previous.rate : now * rate, at: now, rate }
+      next.set(id, actor)
+      this.billboards.set(b, actor)
     }
     const walked = this.player && !same(this.player, scene.player)
     // Follow confirmed player movement at any distance. Targeting pans still snap.
@@ -122,12 +213,26 @@ export class DungeonMovement {
     return { from, to: { x: to.x, y: to.y }, start: now, duration: options.duration, easing: options.easing }
   }
 
-  position(b: Billboard, now: number): Point { return sampleMovement(this.billboards.get(b) ?? still(b), now) }
+  position(b: Billboard, now: number): Point { return sampleMovement(this.billboards.get(b)?.tween ?? still(b), now) }
+  pose(b: Billboard, now: number, appearance: MovementAppearance = {}): StridePose {
+    const pose = stridePose(this.billboards.get(b), now)
+    pose.y *= appearance.movementHopHeight ?? 1
+    pose.x *= appearance.movementSway ?? 1
+    pose.angle *= appearance.movementSway ?? 1
+    pose.sx = 1 + (pose.sx - 1) * (appearance.movementSquash ?? 1)
+    pose.sy = 1 + (pose.sy - 1) * (appearance.movementSquash ?? 1)
+    return pose
+  }
+  animation(b: Billboard, now: number): Point & { time: number } {
+    const actor = this.billboards.get(b)
+    return actor ? { ...actor.origin, time: actor.time + (now - actor.at) * actor.rate }
+      : { x: b.x, y: b.y, time: now * (b.life?.rate ?? 1) }
+  }
   center(target: Point, now: number): Point {
     return this.camera && same(this.camera.to, target) ? sampleMovement(this.camera, now) : target
   }
   moving(b: Billboard, now: number) {
-    const tween = this.billboards.get(b)
+    const tween = this.billboards.get(b)?.tween
     return !!tween && now < tween.start + tween.duration - 1e-9
   }
   cameraMoving(now: number) { return !!this.camera && now < this.camera.start + this.camera.duration - 1e-9 }

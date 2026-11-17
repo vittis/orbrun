@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { creatureLife, tileLight, tileMotion, projectileAppearance } from '../src/living.js'
+import { creatureLife, tileLight, tileMotion, projectileAppearance, spawnAppearance } from '../src/living.js'
 import { livingPose, type Billboard } from '@orbrun/scene'
 import type { FlagWord } from '@orbrun/gamedata'
 
 const monster: Billboard = { x: 1, y: 0, kind: 'monster', tile: 1, height: 0.6, attitude: 'hostile' }
 describe('server tile semantics for atmosphere', () => {
+  it('recognises spawned terrain, prism charge variants, clouds and explicit area artwork', () => {
+    expect(spawnAppearance('DNGN_ICE_THORNS_2')).toEqual({ kind: 'cold', style: 'crystal', family: 'DNGN_ICE_THORNS' })
+    expect(spawnAppearance('MONS_FULMINANT_PRISM_3')).toEqual(spawnAppearance('MONS_FULMINANT_PRISM'))
+    expect(spawnAppearance('CLOUD_COLD_2')).toMatchObject({ kind: 'cold', style: 'cloud' })
+    expect(spawnAppearance('BOLT_ICEBLAST_1')).toMatchObject({ kind: 'cold', style: 'burst' })
+    for (const name of ['BOLT_FLAME', 'BOLT_DEFAULT_RED', 'BOLT_FROST', 'MONS_ORC', 'DNGN_FLOOR_NORMAL']) expect(spawnAppearance(name)).toBeUndefined()
+  })
   it.each([
     ['BOLT_SANDBLAST', 'sand'], ['BOLT_SANDBLAST_2', 'sand'], ['BOLT_STONE_ARROW', 'stone'],
-    ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],
+    ['BOLT_CRYSTAL_SPEAR', 'stone'], ['BOLT_SPLINTERSPRAY', 'sand'], ['BOLT_IRON_SHOT', 'metal'], ['BOLT_METAL_SPLINTERS', 'metal'], ['MI_STONE', 'stone'],
     ['BOLT_WEAK_AIR', 'air'], ['BOLT_MAGIC_DART', 'magic'], ['BOLT_ICICLE', 'cold'],
   ] as const)('gives %s projectile effects independent of lighting', (name, kind) => {
     expect(projectileAppearance(name)).toMatchObject({ kind })
@@ -16,6 +23,22 @@ describe('server tile semantics for atmosphere', () => {
       expect(projectileAppearance(name)).toMatchObject({ beam: false })
     }
   })
+  it.each([
+    ['BOLT_SEARING_RAY', 'fire', 'fire'], ['BOLT_GHOSTLY_FIREBALL', 'magic', 'slow'],
+    ['BOLT_SHADOWY_LIGHTNING', 'magic', 'slow'], ['BOLT_UMBRAL_TORCHLIGHT', 'magic', 'slow'],
+    ['BOLT_HOLY_FLAME', 'magic', 'slow'], ['BOLT_SIROCCO_2', 'fire', 'fire'],
+    ['BOLT_FIERY_PLASMA', 'fire', 'fire'], ['BOLT_PLASMA_BEAM', 'electric', 'electric'],
+    ['BOLT_FULSOME_FIRE', 'fire', 'fire'], ['BOLT_FULSOME_ICE', 'cold', 'slow'],
+    ['BOLT_FULSOME_POISON', 'poison', 'slow'], ['BOLT_FULSOME_ELECTRIC', 'electric', 'electric'],
+    ['BOLT_FULSOME_QUINTESSENCE', 'magic', 'slow'], ['BOLT_FIRE_STORM', 'fire', 'fire'],
+    ['CLOUD_ACID_2', 'acid', 'slow'], ['CLOUD_MIASMA_1', 'poison', 'slow'],
+  ] as const)('keeps %s projectile/spawn appearance and light in the same family', (name, kind, pulse) => {
+    expect(projectileAppearance(name)).toMatchObject({ kind })
+    expect(tileLight(name)).toMatchObject({ pulse })
+    const spawn = spawnAppearance(name)
+    if (spawn) expect(spawn.kind).toBe(kind)
+  })
+
   it('distinguishes directional artwork from distance/animation variants', () => {
     expect(projectileAppearance('BOLT_MAGIC_DART_5', 6)).toMatchObject({ family: 'BOLT_MAGIC_DART', distancePhase: 5, distanceCycle: 6 })
     expect(projectileAppearance('BOLT_MAGIC_DART', 6)).toMatchObject({ distancePhase: 0, distanceCycle: 6 })
@@ -51,6 +74,12 @@ describe('server tile semantics for atmosphere', () => {
     expect(creatureLife('wraith', flags, monster).motion).toBe('float')
     expect(tileMotion('GOLD')).toBe('gold')
     expect(tileMotion('DNGN_TREE_3')).toBe('plant')
+  })
+  it.each([
+    ['slime creature', 'ooze'], ['jelly', 'ooze'], ['naga', 'serpent'], ['adder', 'serpent'],
+    ['torpor snail', 'serpent'], ['dart slug', 'serpent'], ['ribbon worm', 'serpent'], ['spider', 'skitter'],
+  ] as const)('classifies the body of %s for grounded movement', (name, motion) => {
+    expect(creatureLife(name, {} as FlagWord, monster).motion).toBe(motion)
   })
   it('changes breathing by sleep/fleeing/wounds and freezes immobilised flying actors', () => {
     const asleep = creatureLife('orc', { STAB: true } as unknown as FlagWord, monster)

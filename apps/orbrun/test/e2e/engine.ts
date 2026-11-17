@@ -131,8 +131,14 @@ export function inProcessEngine(extraArgs: string[] = []): InProcessEngine {
         e.log.push(String(err))
         events.error(String(err))
       })
-      void build(ch.commit).then((b) =>
+      void build(ch.build ?? ch.commit).then((b) =>
         w.postMessage({ type: 'start', glue: b.glue, dir: b.dir, saveDir: ch.saveDir, args: [...args, ...QUIET, ...extraArgs], files: e.files, rootFiles, module: b.module }),
+        (error: unknown) => {
+          running = false
+          e.log.push(String(error))
+          events.error(String(error))
+          void w.terminate()
+        },
       )
       const control = (json: string) => {
         if (worker !== w) return

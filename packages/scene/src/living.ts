@@ -16,7 +16,13 @@ export interface ProjectileAppearance {
   distancePhase?: number
   distanceCycle?: number
 }
-export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[]; projectile?: ProjectileAppearance | false }
+/** Appearance of a confirmed object/terrain entrance, never a damage report. */
+export interface SpawnAppearance {
+  kind: 'cold' | 'fire' | 'magic' | 'poison' | 'acid' | 'air' | 'electric'
+  style: 'crystal' | 'cloud' | 'summon' | 'burst'
+  family: string
+}
+export interface TileLife { motion?: LifeMotion; rate?: number; amplitude?: number; flying?: boolean; held?: boolean; weary?: boolean; fleeing?: boolean; wading?: boolean; lights?: TileLight[]; projectile?: ProjectileAppearance | false; spawn?: SpawnAppearance }
 export interface LivingPose { x: number; y: number; sx: number; sy: number; angle: number; glow: number }
 
 /** World-anchored, subpixel motion. Memory and immobilised creatures stay still.

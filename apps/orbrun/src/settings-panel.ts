@@ -3,6 +3,7 @@ import { gamepadHints } from './gamepad-hints'
 import { touchHints } from './touch-hints'
 import { getSettings, saveSettings } from './settings'
 import { adjustSetting, groupAtDefaults, resetGroup, rowHint, rowOff, settingGroups, settingValue, type SettingGroup } from './settings-rows'
+import { audio } from './audio/controller'
 
 /**
  * Orbrun's settings, one panel for the front end and the game: drawn as
@@ -69,6 +70,43 @@ export function settingsPanel(group: SettingGroup, opts: { onchange?: () => void
     r.addEventListener('adjust', (ev) => adjust((ev as CustomEvent<number>).detail))
     rows.push(r)
     ol.append(r)
+  }
+  if (group === 'Audio') {
+    const controller = audio()
+    const status = h('div', { class: 'audio-status', role: 'status', 'aria-live': 'polite' })
+    const details = h('details', { class: 'audio-details' }, h('summary', null, 'Pack details'))
+    const description = h('p')
+    details.append(description)
+    body.append(status, details)
+    const action = (label: string, hint: string, run: () => void) => {
+      const k = hotkey()
+      const row = h('li', { class: 'row level2 selectable fg7 action', dataset: { hotkey: k, focus: 'audio:' + label, hint } },
+        h('span', { class: 'hotkey' }, k), h('span', { class: 'dash' }, '-'), h('span', { class: 'label' }, label))
+      row.addEventListener('click', run)
+      rows.push(row); ol.append(row)
+    }
+    action('Download / refresh OSP', 'Download roughly 45 MB from CNC. Reads only the base init.txt and saves the pack on this device.', () => { void controller.download() })
+    action('Import OSP ZIP', 'Choose a local sound pack with init.txt at the ZIP root. Replaces the selected pack.', () => {
+      const input = h('input', { type: 'file', accept: '.zip,application/zip' })
+      input.addEventListener('change', () => { if (input.files?.[0]) void controller.importZip(input.files[0]) })
+      input.click()
+    })
+    action('Test sound', 'Play the selected pack’s hit sound. Enable sound effects first. With a controller, a tap or keyboard press may be needed to unlock audio.', () => controller.testSound())
+    action('Remove cached pack', 'Stop playback and remove the selected pack from this device.', () => { void controller.remove() })
+    // Settings panels have no destroy hook. Observe attachment/removal to release the subscription.
+    let attached = false
+    const unsubscribe = controller.subscribe(value => {
+      status.textContent = value.message
+      status.setAttribute('aria-busy', String(value.busy))
+      details.hidden = !value.info
+      description.textContent = value.info ? `${value.info.name}\n${value.info.sounds} sounds · SHA-256 ${value.hash}\n${value.info.details.join('\n')}` : ''
+    })
+    const observer = new MutationObserver(() => {
+      if (panel.isConnected) attached = true
+      else if (attached) { unsubscribe(); observer.disconnect() }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    controller.prepare()
   }
   // A direct tap/key gesture is needed by the Fullscreen API. Keep this action
   // available to existing standalone installs as well as ordinary browser tabs.

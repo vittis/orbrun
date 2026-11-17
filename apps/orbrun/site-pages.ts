@@ -29,8 +29,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
 /** where the markdown reader points a link to another file of the repository (markdown.ts REPO_BLOB) */
-const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.66/'
-const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.66'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.123/'
+const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.123'
 const ISSUES = 'https://github.com/vittis/orbrun/issues'
 const SITE_SCRIPT_PATH = '/site-controls.js'
 
@@ -271,9 +271,9 @@ ${css}
 }
 
 function bar(page: Page): string {
-  const docs = PAGES.filter((p) => p.path !== '/')
+  const docs = PAGES.filter((p) => p.path !== '/' && !p.modal)
   return `<header class="bar solid">
-  <a class="brand" href="/"><img src="/orb.png" alt="" width="32" height="32" />Orbrun</a>
+  <a class="brand" href="/"><img src="/orb.png" alt="" width="32" height="32" />Polished Crawl</a>
   <nav aria-label="About Orbrun">
     ${docs.map((p) => `<a href="${p.path}"${p === page ? ' aria-current="page"' : ''}>${esc(p.name)}</a>`).join('\n    ')}
     <a href="${SOURCE}" target="_blank" rel="noopener">Source</a>
@@ -284,16 +284,8 @@ function bar(page: Page): string {
 
 /** Current documents share the 2.5D room poster; no obsolete gameplay screenshots ship. */
 const DOC_LOOK: Record<string, { tint: string; sub?: () => string }> = {
-  '/about': { tint: 'dungeon' },
-  '/about/new': { tint: 'depths', sub: () => latestRelease() },
   '/about/steam': { tint: 'abyss' },
   '/about/install': { tint: 'lair' },
-}
-
-/** the changelog's newest release, as its heading names it: "Version 0.2.1 · 2026-09-25" */
-function latestRelease(): string {
-  const head = /^## (.+?) — (\d{4}-\d{2}-\d{2})/m.exec(fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8'))
-  return head ? `Version ${head[1]} · ${head[2]}` : 'Newest first'
 }
 
 /** a document's page: its name over a still, as About's acts open, its sections as cards */
@@ -377,7 +369,7 @@ function lastmod(file: string): string | null {
 }
 
 export function sitemapXml(pages: Page[]): string {
-  const entries = pages.map((p) => {
+  const entries = pages.filter(p => !p.modal).map((p) => {
     const mod = p.doc ? lastmod(p.doc) : null
     return `  <url>\n    <loc>${url(p)}</loc>${mod ? `\n    <lastmod>${mod}</lastmod>` : ''}\n  </url>`
   })
@@ -416,7 +408,7 @@ export function sitePages(): Plugin {
           return
         }
         const page = pageAt(at)
-        if (!page || page.path === '/' || at !== page.path || (req.method !== 'GET' && req.method !== 'HEAD')) return next()
+        if (!page || page.modal || page.path === '/' || at !== page.path || (req.method !== 'GET' && req.method !== 'HEAD')) return next()
         drawPages([page], (_, html) => {
           res.setHeader('Content-Type', 'text/html; charset=utf-8')
           res.end(html)
@@ -426,7 +418,7 @@ export function sitePages(): Plugin {
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: SITE_SCRIPT_PATH.slice(1), source: fs.readFileSync(path.join(HERE, 'site/site.js'), 'utf8') })
       drawPages(
-        PAGES.filter((p) => p.path !== '/'),
+        PAGES.filter((p) => p.path !== '/' && !p.modal),
         (page, html) => this.emitFile({ type: 'asset', fileName: page.path.slice(1) + '.html', source: html }),
         beacon,
       )

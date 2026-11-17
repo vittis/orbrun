@@ -10,6 +10,10 @@ const known = (cell?: SceneCell): cell is SceneCell => !!cell && cell.visibility
 
 /** Keep each connected wall row level, including passage junctions and corners. */
 export function wallHeight(scene: Scene, cell: SceneCell) {
+  // A corridor cutaway only helps in front of the player. Applying it beside
+  // or behind them turns exposed wall ends into flat slabs for no clearance
+  // benefit. Keep the whole row raised there, including its joined corners.
+  if (scene.playerOnLevel && cell.y <= scene.player.y) return WALL_HEIGHT
   const connected = (x: number) => {
     const wall = scene.cells.get(cellKey(x, cell.y))
     return known(wall) && wall.occluder
@@ -30,6 +34,17 @@ export function wallHeight(scene: Scene, cell: SceneCell) {
     }
   }
   return WALL_HEIGHT
+}
+
+/** Continue the cap into a lower adjoining row instead of exposing an internal face. */
+export function wallRoof(scene: Scene, p: Projection, cell: SceneCell, dpr: number): SurfaceRect {
+  const roof = planeRect(p, cell.x, cell.y, wallHeight(scene, cell), dpr)
+  const south = scene.cells.get(cellKey(cell.x, cell.y + 1))
+  if (known(south) && south.occluder) {
+    const join = planeRect(p, south.x, south.y, wallHeight(scene, south), dpr).y
+    roof.height = Math.max(roof.height, join - roof.y)
+  }
+  return roof
 }
 
 /** Paint only receiving ground. Neighbouring wall tiles never get dark seams. */

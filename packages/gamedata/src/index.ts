@@ -506,10 +506,10 @@ export async function loadGamedata(opts: LoadGamedataOptions): Promise<Gamedata>
 }
 
 /** Default browser IO: fetch text and CORS images. */
-export function browserIo(): GamedataFetch {
+export function browserIo(fetchAsset: typeof fetch = fetch): GamedataFetch {
   return {
     async fetchText(url, signal) {
-      const r = await fetch(url, { signal })
+      const r = await fetchAsset(url, { signal })
       if (!r.ok) throw new Error(`gamedata ${url}: HTTP ${r.status}`)
       // Bound bytes while streaming, before retaining a hostile response.
       if (!r.body) throw new Error(`gamedata ${url}: empty response body`)
@@ -531,7 +531,7 @@ export function browserIo(): GamedataFetch {
       }
     },
     async loadImage(url, signal) {
-      const r = await fetch(url, { signal })
+      const r = await fetchAsset(url, { signal })
       if (!r.ok) throw new Error(`gamedata ${url}: HTTP ${r.status}`)
       const blob = await r.blob()
       // same trap as the modules: a missing proxy answers with an app shell,

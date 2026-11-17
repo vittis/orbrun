@@ -23,21 +23,22 @@
     <label>Elevation <select id="tilt"><option>35</option><option selected>50</option><option>65</option></select></label>
     <label>Zoom <select id="zoom"><option value="0.8">80%</option><option value="1" selected>100%</option><option value="1.2">120%</option><option value="1.4">140%</option></select></label>
     <label><input type="checkbox" id="animate" checked> Animation</label>
+    <label><input type="checkbox" id="fog" checked> Unexplored fog</label>
+    <label><input type="checkbox" id="atmosphere" checked> Stars and subtle swirls</label>
     <label>Move <select id="duration"><option value="0">Instant</option><option value="0.06">60 ms</option><option value="0.1" selected>100 ms</option><option value="0.18">180 ms</option><option value="0.25">250 ms</option></select></label>
     <label>Easing <select id="easing"><option value="ease-out">Snappy</option><option value="smooth">Smooth</option><option value="linear">Linear</option></select></label>
     <button id="move" type="button">Move entities ↔</button>
     <button id="los" type="button">Toggle LOS</button>
     <label>Travel direction <select id="travel-direction"><option value="1,0">East →</option><option value="1,1">Southeast ↘</option><option value="0,1">South ↓</option><option value="-1,1">Southwest ↙</option><option value="-1,0">West ←</option><option value="-1,-1">Northwest ↖</option><option value="0,-1">North ↑</option><option value="1,-1">Northeast ↗</option></select></label>
     <button id="travel" type="button">Travel</button>
-    <label>Weapon <select id="weapon"><option value="slash">Sword</option><option value="thrust">Spear</option><option value="cleave">Axe</option><option value="crush">Mace</option><option value="unarmed">Unarmed</option></select></label>
-    <button id="melee" type="button">Melee</button>
+    <button id="bump" type="button">Bump</button>
     <label>Wounds <select id="wound"><option value="uninjured">Healthy</option><option value="moderately_damaged">Damaged</option><option value="almost_dead">Almost dead</option></select></label>
     <label>Spell <select id="spell"><option value="burst:cold">Freeze</option><option value="burst:air">Airstrike</option><option value="burst:fire">Scorch</option><option value="burst:drain">Vampiric Draining</option><option value="burst:holy">Smite</option><option value="burst:electric">Discharge</option><option value="burst:earth">Shatter</option><option value="burst:poison">Toxic Radiance</option><option value="burst:acid">Acid</option><option value="burst:magic">Irradiate</option><option value="burst:debuff">Hex</option><option value="burst:buff">Buff</option><option value="burst:heal">Heal</option><option value="burst:teleport">Blink</option><option value="fire">Fire bolt</option><option value="cold">Frost</option><option value="electric">Lightning</option><option value="magic">Magic</option></select></label>
     <button id="cast" type="button">Cast</button>
     <label><input type="checkbox" id="original"> Original 2D</label>
   </header>
   <canvas id="view" aria-label="Interactive 2.5D dungeon renderer preview"></canvas>
-  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Melee/Wounds place a practice enemy nearby · Cast previews contact, area and projectile effects · <span id="cell">—</span></footer>
+  <footer>Hover to inspect · Click to place the lantern · Arrow keys to walk · Bump/Wounds place a practice enemy nearby · Cast previews contact, area and projectile effects · <span id="cell">—</span></footer>
   <script type="module" src="./dungeon.ts"></script>
 </body>
 </html>

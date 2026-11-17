@@ -154,7 +154,7 @@ export class LocalWasmConnection implements Connection {
 /** Runs each game's engine in its own module Web Worker. */
 export function workerLauncher(engineBase: (channel: OfflineChannel) => string): EngineLauncher {
   return (channel, args, events, files) => {
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
+    const worker = createEngineWorker()
     const post = (m: ToWorker) => worker.postMessage(m)
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const m = e.data
@@ -162,7 +162,7 @@ export function workerLauncher(engineBase: (channel: OfflineChannel) => string):
       else if (m.type === 'exit') {
         worker.terminate()
         events.exit(m.code)
-      } else {
+      } else if (m.type === 'error') {
         worker.terminate()
         events.error(m.message)
       }
@@ -178,4 +178,9 @@ export function workerLauncher(engineBase: (channel: OfflineChannel) => string):
       terminate: () => worker.terminate(),
     }
   }
+}
+
+/** Low-level engine transport, also used by disposable menu sessions without a lobby. */
+export function createEngineWorker(): Worker {
+  return new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 }

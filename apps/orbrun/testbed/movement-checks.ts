@@ -8,7 +8,8 @@ export async function movementChecks(source: TileSource) {
   let checks = 0
   for (const [width, height] of matrix([[512, 384], [390, 600]], [[390, 600]])) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (const degrees of matrix([35, 50, 65], [50])) for (const easing of ['ease-out', 'smooth', 'linear'] as MovementEasing[]) {
     const canvas = document.createElement('canvas')
-    const r = new Render25d({ tilt: degrees, movementDuration: 0.1, movementEasing: easing, center: { x: 0, y: 0 } })
+    // Exercise the normalized 100% gesture independently of shipped preferences.
+    const r = new Render25d({ tilt: degrees, movementDuration: 0.1, movementEasing: easing, movementHopHeight: 1, movementSquash: 1, movementSway: 1, center: { x: 0, y: 0 } })
     r.mount(canvas); r.resize(width, height, dpr); r.setTiles(source)
     const scene = emptyScene()
     scene.playerOnLevel = true
@@ -70,6 +71,78 @@ export async function movementChecks(source: TileSource) {
       checks++
       if (Math.abs((left + right + 1) / 2 - width * dpr / 2) > 1.5 || Math.abs(r.project(0, 0).x - (width / 2 - f * scale)) > 1e-6 ||
         picked !== cellKey(1, 0) || r.animating !== (elapsed < 0.1)) failures.push({ kind: 'following camera / steady player / picking / sleep', width, height, dpr, degrees, easing, elapsed, left, right, picked })
+    }
+    // Compare real sprite pixels on both sides of a confirmed update at the
+    // same instant. A following camera cancels the glide, leaving only the
+    // actor's ongoing pose; changing grid cells must not change that pose.
+    const silhouette = () => {
+      const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+      let mass = 0, x = 0, y = 0, left = Infinity, right = -1
+      for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
+        const i = (py * canvas.width + px) * 4
+        // Match the synthetic blue sprite, excluding the blue-black fog.
+        const weight = pixels[i + 2] > 100 && pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3
+          ? pixels[i + 2] - Math.max(pixels[i], pixels[i + 1]) : 0
+        mass += weight; x += px * weight; y += py * weight
+        if (weight) { left = Math.min(left, px); right = Math.max(right, px) }
+      }
+      return { mass, x: x / mass, y: y / mass, width: right - left + 1 }
+    }
+    for (const motion of ['breath', 'fly'] as const) {
+      const walking = { ...scene, levelKey: motion, revision: 10, player: { x: 0, y: 0 },
+        billboards: [{ ...start.billboards[0], statusIcons: [], life: { motion, rate: 0.8 } }] }
+      r.setOptions({ center: walking.player }); r.setScene(walking, 10)
+      for (const [x, y, time] of [[1, 0, 11], [1, 1, 11.04], [0, 1, 11.07], [0, 0, 11.3]]) {
+        r.render(time)
+        const before = silhouette()
+        walking.billboards[0].x = x; walking.billboards[0].y = y
+        // Health/haste updates may also change the rate during a step.
+        walking.billboards[0].life.rate += 0.2
+        walking.player = { x, y }; walking.revision++
+        r.setOptions({ center: walking.player }); r.setScene(walking, time); r.render(time)
+        const after = silhouette()
+        checks++
+        if (!before.mass || !after.mass || Math.abs(after.mass / before.mass - 1) > 0.002 ||
+          Math.hypot(after.x - before.x, after.y - before.y) > 0.02) {
+          failures.push({ kind: 'continuous walking pose / rate change', width, height, dpr, degrees, easing, motion, time, before, after })
+        }
+      }
+    }
+    // Independent raster oracles: compare each moving body to its own idle
+    // artwork at the same instant. Camera travel must not become body lift.
+    for (const [kind, motion] of [
+      ['player', 'breath'], ['monster', 'breath'], ['monster', 'ooze'], ['monster', 'serpent'],
+      ['monster', 'fly'], ['monster', 'skitter'], ['monster', 'undead'],
+    ] as const) {
+      const idle = { ...scene, levelKey: `${kind}-${motion}`, revision: 30, player: { x: 0, y: 0 },
+        billboards: [{ ...start.billboards[0], kind, statusIcons: [], life: { motion } }] }
+      r.setOptions({ center: idle.player }); r.setScene(idle, 20)
+      r.render(21.05); const baseline = silhouette()
+      r.render(21.1); const landedBaseline = silhouette()
+      const step = { ...idle, revision: 31, player: { x: 1, y: 0 }, billboards: [{ ...idle.billboards[0], x: 1 }] }
+      r.setOptions({ center: step.player }); r.setScene(step, 21)
+      r.render(21.05); const middle = silhouette()
+      const foot = r.projectBillboard(step.billboards[0], 0.3)
+      const picked = r.pick(middle.x / dpr, middle.y / dpr)
+      r.setOptions({ movementHopHeight: 0, movementSquash: 0, movementSway: 0 })
+      r.render(21.05); const off = silhouette()
+      r.setOptions({ movementHopHeight: 2 })
+      r.render(21.05); const high = silhouette()
+      r.setOptions({ movementHopHeight: 1, movementSquash: 1, movementSway: 1 })
+      r.render(21.1); const landed = silhouette()
+      const lift = (baseline.y - middle.y) / (scale * dpr)
+      const highLift = (baseline.y - high.y) / (scale * dpr)
+      checks++
+      // At small tile sizes a 12% stretch can retain the same integer pixel
+      // width; the lowered centre still proves the floor-anchored compression.
+      if (!middle.mass || !landed.mass ||
+        (motion === 'breath' ? lift < 0.09 || lift > 0.18 : motion === 'ooze' ? middle.width < baseline.width || lift > -0.02 || lift < -0.1 : Math.abs(lift) > 0.06) ||
+        Math.hypot(off.x - baseline.x, off.y - baseline.y) > 0.05 ||
+        (motion === 'breath' ? highLift < 0.22 || highLift > 0.3 : Math.abs(highLift) > 0.01) ||
+        Math.hypot(landed.x - landedBaseline.x, landed.y - landedBaseline.y) > 0.05 ||
+        Math.abs(foot.x - width / 2) > 0.01 || picked !== cellKey(1, 0)) {
+        failures.push({ kind: 'creature gait / tuning / grounded camera / exact landing / picking', actor: kind, motion, width, height, dpr, degrees, easing, baseline, middle, off, highLift, landed, landedBaseline, lift, foot, picked })
+      }
     }
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('movement-checks')

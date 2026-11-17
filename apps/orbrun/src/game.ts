@@ -9,6 +9,7 @@ import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
 import { dungeonAnimation } from './effects-motion'
+import { dungeonOptions } from './dungeon-options'
 import { Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
 import { GridHost, isPhone } from './grid/host'
@@ -31,8 +32,11 @@ import { PointerDrag } from './pointer-drag'
 import { requestRenderFrame, cancelFrame } from './frames'
 import { SpellBar, SpellBook, spellShort, type Spell } from './spell-bar'
 import { CombatFeedback } from './combat-feedback'
+import { audio } from './audio/controller'
 import { presentCombat } from './combat-presentation'
 import { NearDeath } from './near-death'
+import { LevelUp } from './level-up'
+import { QuickSettings } from './quick-settings'
 
 /** Cap dungeon pixels per CSS pixel to keep the pixel art crisp. */
 const VIEW_MAX_DPR = 1
@@ -102,6 +106,7 @@ export interface GameHooks {
 export class GameScreen {
   private feedback: CombatFeedback
   private nearDeath: NearDeath
+  private levelUp: LevelUp
   root: HTMLElement
   private canvas = h('canvas', { class: 'view' })
   private renderer: MapRenderer
@@ -121,6 +126,7 @@ export class GameScreen {
   private hud: Hud
   private chat: Chat
   private overlays: Overlays
+  private quickSettings?: QuickSettings
   private hooks: GameHooks
   private ctx: Context
   /** frame timing readout (perf.ts), on with `?perf` */
@@ -178,6 +184,7 @@ export class GameScreen {
   }
   /** Scene callbacks start both animations at the confirmed update's arrival time. */
   private sceneTime: number | undefined
+  private inputContextDirty = false
   private lastFrame = performance.now()
   private raf = 0
   /** the safety tick while the loop sleeps (IDLE_TICK_MS) */
@@ -294,13 +301,16 @@ export class GameScreen {
     this.loop = this.loop.bind(this)
     this.session = session
     this.feedback = new CombatFeedback(session.state)
+    this.unsub.push(audio().attach(session))
     this.nearDeath = new NearDeath(session.state)
+    this.levelUp = new LevelUp(session.state)
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     this.root.append(this.canvas, this.loading, this.fps.root)
-    this.root.append(this.nearDeath.root)
+    this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
     const st = hooks.settings()
+    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
     setExploreGame(rc === null ? { online: true } : { online: false, rc })
@@ -320,6 +330,7 @@ export class GameScreen {
     this.renderer = this.makeRenderer()
     const motionChanged = () => {
       this.reducedMotion = motionPreference?.matches ?? false
+      if (this.reducedMotion) this.overlays?.settleMotion()
       if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
       else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.reducedMotion })
       this.needsRender = true
@@ -332,6 +343,7 @@ export class GameScreen {
       onMinimapClick: () => this.minimapTap(),
       // on the map with nothing of ours up, as the pad's Start opens it there
       onStatsClick: () => {
+        this.prepareInput()
         if (this.ctx.mode !== 'command' || this.session.watching || this.overlays.hasClientOverlay) return
         this.touchAttempt('menu')
         this.runner.execute({ kind: 'ui', op: 'system' })
@@ -363,6 +375,7 @@ export class GameScreen {
       },
       onTouchExtra: (id) => {
         this.inputFrom('touch')
+        this.prepareInput()
         this.runner.execute(touchExtraAction(id, this.ctx))
       },
     })
@@ -374,6 +387,7 @@ export class GameScreen {
       gamedata: () => this.session.gamedata,
       watching: () => this.session.watching,
       onClientOverlayChange: () => {
+        this.quickSettings?.close()
         this.tapArmed.clear()
         this.holding = null
         this.needsRender = true
@@ -434,11 +448,14 @@ export class GameScreen {
     this.unsub.push(
       session.on((e) => {
         if (e.type === 'scene') {
+          this.inputContextDirty = true
           this.wake()
           this.onScene()
         } else if (e.type === 'state') {
+          this.inputContextDirty = true
           this.feedback.observe(session.state, e.msg)
           this.nearDeath.observe(session.state, e.msg, performance.now())
+          this.levelUp.observe(session.state, e.msg, performance.now())
           this.lastHeard = performance.now()
           this.wake()
           this.trackHop()
@@ -453,6 +470,7 @@ export class GameScreen {
           this.lastSent = performance.now()
         } else if (e.type === 'closed') {
           this.nearDeath.clear()
+          this.levelUp.clear()
           this.wake()
         } else if (e.type === 'gamedata') {
           if (e.status === 'ready') {
@@ -500,6 +518,12 @@ export class GameScreen {
     this.onDocContextMenu = this.onDocContextMenu.bind(this)
     document.addEventListener('contextmenu', this.onDocContextMenu, true)
     this.attachPointer(this.canvas)
+    this.quickSettings = new QuickSettings(() => this.applySettings(), () => this.canvas.focus({ preventScroll: true }))
+    this.quickSettings.root.addEventListener('focusin', () => {
+      this.inputActed()
+      this.mapPan = { x: 0, y: 0 }
+    })
+    this.root.append(this.quickSettings.root)
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
     this.relayout(true)
     this.wake()
@@ -535,6 +559,7 @@ export class GameScreen {
     document.documentElement.style.removeProperty('--phone-shrink')
     this.renderer.destroy()
     this.nearDeath.clear()
+    this.levelUp.clear()
     this.root.remove()
   }
 
@@ -671,10 +696,7 @@ export class GameScreen {
   }
 
   private render25dOptions(st: Settings) {
-    return {
-      tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, this.reducedMotion),
-      movement: st.depthMovement, movementDuration: st.depthMovementDuration, movementEasing: st.depthMovementEasing,
-    }
+    return dungeonOptions(st, this.reducedMotion)
   }
 
   private makeRenderer(): MapRenderer {
@@ -691,6 +713,8 @@ export class GameScreen {
   applySettings() {
     this.settingsCache = null
     const st = this.settings()
+    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
+    if (st.depthAnimate === false || this.reducedMotion) this.overlays.settleMotion()
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()
@@ -704,6 +728,7 @@ export class GameScreen {
     }
     this.relayout(true)
     this.needsRender = true
+    this.quickSettings?.refresh()
   }
 
   /** The settings, read from storage once and kept until `applySettings` says they changed. */
@@ -792,25 +817,13 @@ export class GameScreen {
     const st = this.session.state
     // overlays first: the popup's parsed actions and the focus cursor feed the context and the action bar
     // the device first: the overlays decide what to bring up with a server prompt by who spoke last
-    this.overlays.setDevice(this.lastInput)
-    this.overlays.update(st)
+    this.updateContext()
     // The gamedata fetch runs while the game is already talking: the launcher's
     // save-transfer question (a `show_dialog`) comes up with the veil still
     // over the screen. A veil that swallowed the click would strand the player,
     // so while anything of the server's is up it stands behind the overlays.
     this.loading.classList.toggle('behind', !!(st.dialog || st.menus.length || st.ui.length || st.textInput))
-    this.ctx = this.deriveContext(st)
     this.fireHolds(now)
-    // the server reports targeting alone; the runner knows whether its `x` opened it
-    if (this.runner.examining(this.ctx.mode)) this.ctx.examining = true
-    if (this.ctx.mode === 'popup') this.ctx.popupActions = this.overlays.popupActions()
-    if (this.ctx.mode === 'menu') this.ctx.switches = this.overlays.menuSwitches()
-    if (this.ctx.mode === 'popup') this.ctx.switches = this.overlays.popupSwitches()
-    this.overlays.updatePrompt(this.ctx.mode, this.ctx.prompt, this.lastInput)
-    this.overlays.syncFocus(this.ctx)
-    const fi = this.overlays.focusInfo(this.ctx)
-    if (fi) this.ctx.focus = fi
-    this.ctx.pageable = this.overlays.pageable(this.ctx)
     this.trackPack()
     this.trackActions(now, true)
     this.spellFrame()
@@ -830,9 +843,8 @@ export class GameScreen {
     this.applyServerOptions()
     const settings = this.settings()
     const combat = this.feedback.flush(this.session.scene)
-    const incomingMelee = this.feedback.takeMelee()
     const spells = this.feedback.takeSpells()
-    if (spells.length || incomingMelee.length || combat.length) this.needsRender = true
+    if (spells.length || combat.length) this.needsRender = true
     // one of our own panels has its prompts from the panel (Overlays.padPrompts), set under it as crawl's menus' are
     const ours = this.overlays.padPrompts
     let padLabels = this.chat.capturing ? [] : ours ?? this.padHints.prompts(this.ctx, settings.hints)
@@ -877,7 +889,7 @@ export class GameScreen {
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
         const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
-        presentCombat(this.renderer, this.session.scene, combat, incomingMelee, spells, weapon, now, animate)
+        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, animate, settings.meleeBumpSpeed)
       }
       this.renderer.render(now / 1000)
       rendered = true
@@ -887,6 +899,21 @@ export class GameScreen {
     }
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
       && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
+    if (this.levelUp.active && this.viewPx) {
+      const scene = this.session.scene
+      const player = scene.billboards.find(b => b.kind === 'player')
+      const centre = this.renderer.project?.(scene.player.x, scene.player.y)
+      const right = this.renderer.project?.(scene.player.x + 1, scene.player.y)
+      // Upright sprites stand at y + 0.3 and are one projected tile tall.
+      const foot = this.renderer.project?.(scene.player.x, scene.player.y + 0.3)
+      const actor = player ? this.renderer.projectBillboard?.(player) ?? centre : centre
+      if (actor && centre && right && foot) this.levelUp.place(this.viewPx, {
+        x: actor.x, y: actor.y + foot.y - centre.y - Math.abs(right.x - centre.x) - 6,
+      })
+    }
+    this.levelUp.render(now, !this.mapShown && !this.overlays.hasClientOverlay
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'),
+      this.reducedMotion || !dungeonAnimation(settings, this.reducedMotion))
     this.fps.update(now, rendered)
     perf?.end()
   }
@@ -941,6 +968,31 @@ export class GameScreen {
     return { ...this.ctxBase }
   }
 
+  /** A reply may arrive after the last paint but before the next input poll.
+   * Resolve that input against confirmed state now, without waiting for RAF. */
+  private prepareInput() {
+    if (!this.inputContextDirty) return
+    this.session.flushScene()
+    this.updateContext()
+  }
+
+  private updateContext() {
+    this.inputContextDirty = false
+    this.overlays.setDevice(this.lastInput)
+    this.overlays.update(this.session.state)
+    this.ctx = this.deriveContext(this.session.state)
+    // The runner distinguishes examine from other server targeting modes.
+    if (this.runner.examining(this.ctx.mode)) this.ctx.examining = true
+    if (this.ctx.mode === 'popup') this.ctx.popupActions = this.overlays.popupActions()
+    if (this.ctx.mode === 'menu') this.ctx.switches = this.overlays.menuSwitches()
+    if (this.ctx.mode === 'popup') this.ctx.switches = this.overlays.popupSwitches()
+    this.overlays.updatePrompt(this.ctx.mode, this.ctx.prompt, this.lastInput)
+    this.overlays.syncFocus(this.ctx)
+    const fi = this.overlays.focusInfo(this.ctx)
+    if (fi) this.ctx.focus = fi
+    this.ctx.pageable = this.overlays.pageable(this.ctx)
+  }
+
   /** The safety tick: a frame after IDLE_TICK_MS asleep, so anything that changed without waking the loop is seen. */
   private idleTick = () => {
     this.idleTimer = 0
@@ -979,7 +1031,7 @@ export class GameScreen {
   /** Something wants this frame: a message, an input, an easing, an animation, a hold. */
   private busy(): boolean {
     if (this.dirty || this._needsRender || this.pickDirty || this.hoverMoved) return true
-    if (this.renderer.animating || this.nearDeath.active) return true
+    if (this.renderer.animating || this.nearDeath.active || this.levelUp.active) return true
     return this.pressTimes.size > 0 || this.padHints.waiting || this.touchHints.waiting
   }
 
@@ -1207,7 +1259,7 @@ export class GameScreen {
   /** Fire the hold half of any tap-or-hold button that has been down for HOLD_MS, without waiting for release. */
   private fireHolds(now: number) {
     this.holding = null
-    if (this.chat.capturing || this.overlays.hasClientOverlay) {
+    if (this.chat.capturing || this.overlays.hasClientOverlay || this.quickSettings?.owns(document.activeElement)) {
       this.tapArmed.clear()
       return
     }
@@ -1233,8 +1285,10 @@ export class GameScreen {
   pad(ev: PadEvent) {
     if (this.destroyed) return
     this.wake()
+    if (this.quickSettings?.pad(ev)) return
     // a press, a stick or the d-pad is the pad speaking; a stick settling back to centre is not
     if (isPadActivity(ev)) this.inputFrom('pad')
+    this.prepareInput()
     if (this.chat.capturing) {
       this.chat.pad(ev)
       return
@@ -1398,6 +1452,7 @@ export class GameScreen {
   /** A spell on the bar tapped: armed, or spent (spell-bar.ts SpellBar). */
   private spellTap(spell: Spell) {
     this.inputFrom('touch')
+    this.prepareInput()
     // the spell bar's own tap keeps what it lit: its second tap is what spends it
     this.inputActed(false)
     this.spellBar.tap(spell)
@@ -1407,6 +1462,7 @@ export class GameScreen {
   /** The bar's More: every spell, in crawl's cast list (X's Spells). */
   private spellMore() {
     this.inputFrom('touch')
+    this.prepareInput()
     this.inputActed()
     if (this.ctx.mode === 'command') this.openActionTab('spells')
   }
@@ -1455,8 +1511,10 @@ export class GameScreen {
   private onKeyDown(ev: KeyboardEvent) {
     this.wake()
     const target = ev.target as HTMLElement | null
+    if (this.quickSettings?.owns(target)) return
     // a key typed into a field is still the keyboard speaking (a server prompt's on-screen keyboard goes away for it)
     this.inputFrom('keyboard')
+    this.prepareInput()
     if (target && isTextEntry(target)) return
     // F2–F5 are Orbrun's own: the pad's four menus, so a player can rebind a button (or anything) to them. A bare
     // F1 goes on to Crawl (keys.ts CODES), which binds it to CMD_GAME_MENU alongside `~`; crawl binds none of these.
@@ -1551,6 +1609,7 @@ export class GameScreen {
   }
 
   private attachPointer(c: HTMLCanvasElement) {
+    c.tabIndex = -1
     c.addEventListener('contextmenu', (ev) => ev.preventDefault())
     c.addEventListener('pointerdown', (ev) => {
       this.inputFrom(ev.pointerType === 'touch' ? 'touch' : 'pointer')
@@ -1658,6 +1717,7 @@ export class GameScreen {
    * view, nor the pad.
    */
   back() {
+    if (this.quickSettings?.open) { this.quickSettings.close(); return }
     if (this.ctx.mode === 'command' && !this.session.watching && !this.overlays.hasClientOverlay && !this.chat.capturing) {
       this.runner.send(cm.input('S'))
       return
@@ -1758,6 +1818,9 @@ export class GameScreen {
     const touch = ev.pointerType === 'touch'
     if (touch) this.inputFrom('touch')
     const t = ev.target instanceof Element ? ev.target : null
+    if (this.quickSettings?.owns(t)) return
+    // Returning to the dungeon leaves the panel open, but gives gameplay its input back.
+    if (this.quickSettings?.owns(document.activeElement)) this.canvas.focus({ preventScroll: true })
     if (t?.closest('.touchbar')) return
     if (touch && this.overlays.hasClientOverlay && !this.session.watching) {
       // inside a panel, on the on-screen keyboard or in the chat, the press is theirs

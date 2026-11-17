@@ -58,8 +58,15 @@ describe('settings storage boundary', () => {
     expect(getSettings().hints).toBe(hints)
   })
 
+  it('persists independent hit and death gore levels without losing existing motion preferences', () => {
+    saveSettings({ ...defaultSettings, hitGore: 0, deathGore: 1.25, meleeBumpStrength: 1.75, meleeBumpSnap: 0.5, hitSprayOutward: 0.25, deathSprayOutward: 0.75 })
+    expect(getSettings()).toMatchObject({ hitGore: 0, deathGore: 1.25, meleeBumpStrength: 1.75, meleeBumpSnap: 0.5, hitSprayOutward: 0.25, deathSprayOutward: 0.75 })
+    saveSettings({ ...getSettings(), hitGore: 2 })
+    expect(getSettings()).toMatchObject({ hitGore: 2, deathGore: 1.25, meleeBumpSnap: 0.5, hitSprayOutward: 0.25, deathSprayOutward: 0.75 })
+  })
+
   it('validates booleans and unions on both read and write', () => {
-    const invalid = { depthAnimate: 'yes', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
+    const invalid = { depthAnimate: 'yes', depthFog: 'false', depthAtmosphere: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
     expect(getSettings()).toEqual(defaultSettings)
     saveSettings({ ...defaultSettings, ...invalid } as unknown as Settings)
@@ -71,7 +78,15 @@ describe('settings storage boundary', () => {
   })
 })
 
-const numericKeys = ['depthTilt', 'depthZoom', 'depthMovementDuration', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
+it('persists an atmosphere opt-out independently of the exploration transition', () => {
+  saveSettings({ ...defaultSettings, depthFog: true, depthAtmosphere: false })
+  expect(getSettings()).toMatchObject({ depthFog: true, depthAtmosphere: false })
+  expect(JSON.parse(store.get(key)!)).toEqual({ depthAtmosphere: false })
+  saveSettings({ ...getSettings(), depthFog: false })
+  expect(getSettings()).toMatchObject({ depthFog: false, depthAtmosphere: false })
+})
+
+const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'depthMovementHopHeight', 'depthMovementSquash', 'depthMovementSway', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
 describe('numeric preference validation', () => {
   it.each(numericKeys)('rejects invalid %s values on read and write', name => {
     for (const value of [null, true, '12', {}, [], NaN, Infinity, -Infinity]) {
@@ -86,9 +101,16 @@ describe('numeric preference validation', () => {
   })
 
   it.each([
-    ['depthTilt', -10, 35], ['depthTilt', 100, 65],
-    ['depthZoom', 0, 0.8], ['depthZoom', 2, 1.4],
+    ['combatVfxVariation', -1, 0], ['combatVfxVariation', 2, 1],
+    ['hitSprayOutward', -1, 0], ['hitSprayOutward', 2, 1], ['deathSprayOutward', -1, 0], ['deathSprayOutward', 2, 1],
+    ['meleeBumpSpeed', 0, 0.5], ['meleeBumpSpeed', 99, 2],
+    ['hitGore', -1, 0], ['hitGore', 99, 2], ['deathGore', -1, 0], ['deathGore', 99, 2],
+    ['depthTilt', -10, 25], ['depthTilt', 100, 85],
+    ['depthZoom', 0, 0.25], ['depthZoom', 4, 3],
     ['depthMovementDuration', 0, 0.04], ['depthMovementDuration', 1, 0.25],
+    ['depthMovementHopHeight', -1, 0], ['depthMovementHopHeight', 3, 2],
+    ['depthMovementSquash', -1, 0], ['depthMovementSquash', 3, 2],
+    ['depthMovementSway', -1, 0], ['depthMovementSway', 3, 2],
     ['uiScale', 0, 0.85], ['uiScale', 9, 1.5],
     ['minimapTiles', -10, 0], ['minimapTiles', 2, 15], ['minimapTiles', 130, 61], ['minimapTiles', 18.6, 19],
     ['minimapCell', -1, 0], ['minimapCell', 1, 8], ['minimapCell', 64, 32],

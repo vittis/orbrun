@@ -30,7 +30,7 @@ interface Env {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname.startsWith('/engine/')) return new Response('Offline play is unavailable on this deployment.', { status: 404 })
+    if (url.pathname.startsWith('/engine/') || url.pathname.startsWith('/menu-engine/')) return new Response('Offline play is unavailable on this deployment.', { status: 404 })
     if (url.pathname === COUNT_PATH) return countEvent(request, url, env)
     const morgue = url.pathname.startsWith(MORGUE_PROXY_PREFIX)
     if (!morgue && !url.pathname.startsWith(GAMEDATA_PROXY_PREFIX)) return answerPage(request, url, env)

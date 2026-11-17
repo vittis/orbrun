@@ -23,8 +23,7 @@ const KEPT = [
   /^index\.html$/,
   /^assets\/.+(?<!\.map)$/,
   /^fonts\/.+\.woff2$/,
-  // the places the front screen stands in (room/places.ts): each one's level and tiles
-  /^room\/places\/[\w-]+\.(json|png)$/,
+  // The home entrance is CSS; the menu recordings/artwork load independently of the shell cache.
   // The 2.5D fallback/poster also backs menu documents.
   /^room\/poster\.jpg$/,
   /^icons\/.+\.png$/,
@@ -54,7 +53,7 @@ export function shellFiles(built: string[]): string[] {
 
 /** The addresses a page load goes to the network for: the site's own pages (and the ones that were), and the build's files the app does not keep. */
 export function networkPaths(built: string[]): string[] {
-  const pages = [...PAGES.filter((p) => p.path !== '/').map((p) => p.path), ...Object.keys(MOVED)]
+  const pages = [...PAGES.filter((p) => p.path !== '/' && !p.modal).map((p) => p.path), ...Object.keys(MOVED)]
   const files = built.filter((f) => !f.endsWith('.map') && !KEPT.some((re) => re.test(f))).map((f) => '/' + f)
   return [...new Set([...pages, ...files])].sort()
 }
