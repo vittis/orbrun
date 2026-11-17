@@ -206,6 +206,12 @@ export function classifyFeature(name: string | undefined, glyph: string | undefi
 const UPRIGHT = /HATCH|DOOR|ARCH|GATE|ALTAR|FOUNTAIN|STATUE|IDOL|ENSIGN|GRAVE|SARCOPHAG|COLUMN|PILLAR|SHRINE|PORTAL|ENTER_|EXIT_|RETURN_|ENTRANCE|SHOP|TREE|MANGROVE|PLANT|BUSH|FUNGUS|LANTERN|TORCH|ORCISH_IDOL|STONE_ARCH|WAX_WALL|TRANSPORTER$|RUNELIGHT|SEAL|CRYSTAL|STAIRS|ABYSSAL_STAIR|WELL/
 const DECAL = /TRAP|TELEPORT|LANDING|SHAFT|MAGIC_CIRCLE|WATER|LAVA|BLOOD|MOLD|SLIME/
 
+/** Named decorations keep their original cap but use matching plain masonry below. */
+export function plainWallTile(name: string | undefined, names: { id(name: string): number | undefined }): number | undefined {
+  const material = name?.match(/^(WALL_.+)_(?:TORCH|LAMP|LANTERN|BANNER|SIGN)(?:_\d+)?$/)?.[1]
+  return material ? names.id(material) : undefined
+}
+
 /**
  * Whether a feature stands as a billboard in its cell, lies on the floor as a
  * block, or is painted on it.
@@ -568,6 +574,7 @@ function buildCell(mc: MapCell, gd: Gamedata): SceneCell | undefined {
       // trees and statues block movement but not knowledge; treat as passable for rendering.
     }
   }
+  if (base.kind === 'wall') base.wallMaterialTile = plainWallTile(gd.dngn.name(bgIdx), gd.dngn)
   decorate(base, t, bgw, gd)
   if (hasCloud) base.cloud = cloud
   return base

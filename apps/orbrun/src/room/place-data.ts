@@ -98,6 +98,7 @@ export function sceneTileIds(scene: Scene): Set<TileId> {
   for (const c of scene.cells.values()) {
     add(c.floorTile)
     add(c.wallTile)
+    add(c.wallMaterialTile)
     add(c.featureTile)
     add(c.cloud)
     Object.values(c.faceTiles ?? {}).forEach(add)

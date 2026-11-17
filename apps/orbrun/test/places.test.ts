@@ -45,6 +45,14 @@ describe('the places', () => {
 })
 
 describe('a place file', () => {
+  it('retains and packs the plain material used below a decorated wall', () => {
+    const scene = emptyScene()
+    scene.cells.set(cellKey(0, 0), { x: 0, y: 0, kind: 'wall', visibility: 'visible', occluder: true,
+      floorTile: 1, wallTile: 2, wallMaterialTile: 3, flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false } })
+    const back = readScene(JSON.parse(JSON.stringify(writeScene(scene))))
+    expect(back.cells.get(cellKey(0, 0))?.wallMaterialTile).toBe(3)
+    expect([...sceneTileIds(back)].sort()).toEqual([1, 2, 3])
+  })
   it('reads back the scene it was written from', () => {
     const scene: Scene = emptyScene()
     const flags = { water: true, lava: false, excluded: false, travelTrail: false, newStair: false, cursor: false, outOfRange: false, magicMapped: false }

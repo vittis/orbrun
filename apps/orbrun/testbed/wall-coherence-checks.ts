@@ -5,14 +5,19 @@ import { planeRect } from '../../../packages/render-2.5d/src/projection'
 
 /** Catch stretched roofs/faces, restarted face artwork and topology/LOS-dependent sizes. */
 export async function wallCoherenceChecks() {
-  const atlas = document.createElement('canvas'); atlas.width = atlas.height = 32
+  const atlas = document.createElement('canvas'); atlas.width = 128; atlas.height = 32
   const ink = atlas.getContext('2d')!
   ink.fillStyle = '#20c020'; ink.fillRect(0, 0, 32, 32)
   // The roof's bottom stripe must join the face before giving way to its
   // green stonework, rather than stretching the stripe all the way down.
   ink.fillStyle = '#f02020'; ink.fillRect(0, 28, 32, 4)
+  // Plain material, a baked-in lamp, and a separate wall decoration have
+  // independent colours so a mirrored decoration cannot pass as stonework.
+  ink.fillStyle = '#20c020'; ink.fillRect(32, 0, 32, 32)
+  ink.fillStyle = '#f0d020'; ink.fillRect(64, 0, 32, 32)
+  ink.fillStyle = '#2030f0'; ink.fillRect(96, 0, 32, 32)
   const source: TileSource = {
-    tile: () => ({ atlas: 'stripe', sx: 0, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
+    tile: id => ({ atlas: 'stripe', sx: (id - 1) * 32, sy: 0, w: 32, h: 32, ox: 0, oy: 0, cell: 32 }),
     atlas: () => atlas, atlasNames: () => ['stripe'],
   }
   let checks = 0
@@ -111,6 +116,21 @@ export async function wallCoherenceChecks() {
       raisedWalls.every(({ x, body, picked }) => body[1] > body[0] * 3 && picked === cellKey(x, 0)), raisedWalls)
     assert('walls beside the player retain shaded vertical stonework',
       raisedWalls.every(({ face }) => face[0] + face[1] > 20 && Math.max(face[0], face[1]) < Math.max(...body.slice(0, 3)) - 40), raisedWalls)
+    const decorated = scene.cells.get(cellKey(0, 0))!
+    const decoratedX = r.project(0, 0).x
+    Object.assign(decorated, { wallTile: 3, wallMaterialTile: 2 })
+    const faceY = raised.y + raised.height + (ground.y + ground.height - raised.y - raised.height) * 0.5
+    scene.revision++; r.setScene(scene); r.render(0)
+    const lamp = sample(decoratedX, raised.y + raised.height * 0.5), material = sample(decoratedX, faceY)
+    assert('baked wall decorations remain on the cap above plain shaded material',
+      lamp[0] > lamp[2] * 3 && lamp[1] > lamp[2] * 3 && material[1] > material[0] * 3,
+      { lamp, material })
+    // Also exercise overlay exclusion without a special material override.
+    Object.assign(decorated, { wallTile: 2, wallMaterialTile: undefined, wallOverlays: [4] })
+    scene.revision++; r.setScene(scene); r.render(0)
+    const overlay = sample(decoratedX, raised.y + raised.height * 0.5), belowOverlay = sample(decoratedX, faceY)
+    assert('separate wall overlays remain on the cap without reflection below',
+      overlay[2] > overlay[1] * 3 && belowOverlay[1] > belowOverlay[2] * 3, { overlay, belowOverlay })
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('wall-coherence-checks')
   }

@@ -6,7 +6,7 @@ import {
   type SceneCell,
   type TileId,
 } from '@orbrun/scene'
-import { classifyFeature, isVegetation, stanceFor, standsFree } from '@orbrun/scene-webtiles'
+import { classifyFeature, isVegetation, plainWallTile, stanceFor, standsFree } from '@orbrun/scene-webtiles'
 
 /**
  * @orbrun/vault
@@ -263,6 +263,7 @@ export function vaultScene(v: Vault, names: TileNames): Scene {
         cell.kind = 'wall'
         cell.occluder = true
         cell.wallTile = variantAt(id, count(id), x, y)
+        cell.wallMaterialTile = plainWallTile(e.tile, names)
         cell.wallStyle = /TRANSPARENT|CRYSTAL|GLASS/.test(e.tile) ? 'transparent' : 'solid'
         cell.label = e.tile.replace(/^WALL_/, '').toLowerCase().replace(/_/g, ' ')
         cell.glyph = '#'

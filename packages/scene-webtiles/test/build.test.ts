@@ -161,6 +161,24 @@ describe('buildScene on a recorded level', () => {
   beforeAll(async () => {
     gd = await fixtureGamedata()
   })
+  it('uses stable plain masonry beneath torch frames and clears it when the wall changes', () => {
+    const state = initialState(), key = cellKey(1, 0)
+    let previous = emptyScene()
+    for (const family of [2, 4, 6]) for (let frame = 0; frame < 4; frame++) {
+      const name = `WALL_BRICK_DARK_${family}`
+      const decorated = gd.dngn.id(`${name}_TORCH${frame ? `_${frame}` : ''}`)!
+      expect(decorated).toBeDefined()
+      reduce(state, { msg: 'map', cells: [{ x: 1, y: 0, mf: gd.enums.MF_WALL, g: '#', t: { bg: decorated } }] })
+      previous = buildScene(state, gd, { previous, dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
+      expect(previous.cells.get(key)).toMatchObject({ kind: 'wall', wallTile: decorated, wallMaterialTile: gd.dngn.id(name) })
+      state.dirtyCells.clear(); state.mapCleared = false
+    }
+    const plain = gd.dngn.id('WALL_BRICK_DARK_2')!
+    reduce(state, { msg: 'map', cells: [{ x: 1, y: 0, t: { bg: plain } }] })
+    previous = buildScene(state, gd, { previous, dirty: { cells: state.dirtyCells, mapCleared: state.mapCleared } })
+    expect(previous.cells.get(key)?.wallTile).toBe(plain)
+    expect(previous.cells.get(key)?.wallMaterialTile).toBeUndefined()
+  })
   it('stands a tree upright rather than laying it on the floor', () => {
     const st = fixtureState()
     const floor = [...st.map.cells.values()].find((c) => c.t?.bg && gd.bg(c.t.bg).value < gd.ranges.floorMax)!

@@ -757,7 +757,9 @@ export class Render25d implements MapRenderer {
     const layers = [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))]
     this.tiles.drawPlane(ctx, layers, roof,
       this.light(), this.visibility.surface(cell, this.frameTime), cell.flash, this.terrainLighting(cell), roof)
-    this.tiles.drawWallFace(ctx, layers, face, this.light(), this.visibility.surface(cell, this.frameTime, true), cell.flash, this.terrainLighting(cell, true))
+    // Decorations belong to the cap, never the reflected material underneath.
+    this.tiles.drawWallFace(ctx, [{ tile: cell.wallMaterialTile ?? tile }], face,
+      this.light(), this.visibility.surface(cell, this.frameTime, true), cell.flash, this.terrainLighting(cell, true))
     shadeWallFace(ctx, face)
     this.frontierFog(ctx, p, [cell], this.opts.animate ? this.frameTime : 0)
     ctx.restore()

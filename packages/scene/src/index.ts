@@ -74,6 +74,8 @@ export interface SceneCell {
   occluder: boolean
   floorTile: TileId
   wallTile?: TileId
+  /** Undecorated material for a raised wall's lower face; the cap keeps wallTile and its overlays. */
+  wallMaterialTile?: TileId
   wallStyle?: 'solid' | 'transparent'
   /**
    * The tile a face shows instead of `wallTile`, by the side it faces. A

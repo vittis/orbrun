@@ -218,6 +218,8 @@ edge continuation with distinct face shading at three tilts, zooms and device
 pixel ratios, with filtering on/off. They also verify the edge stripe gives way
 to stonework instead of stretching down the face, corner/foreground picking and
 stable wall silhouettes when the ground behind them leaves LOS.
+Decorated caps keep their original artwork and overlays; lower faces use the
+scene's matching plain material without reflecting those decorations.
 
 ## Extending the mode
 

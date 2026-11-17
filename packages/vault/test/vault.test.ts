@@ -112,6 +112,15 @@ describe('parseDes: the supported subset', () => {
 })
 
 describe('vaultScene: the vault as a Scene', () => {
+  it('uses plain brick below torch walls when that material is available', async () => {
+    const gd = await fixtureGamedata(), names = namesOf(gd)
+    const vault = parseDes(SMALL.replace('wall_brick_dark', 'wall_brick_dark_2_torch'))
+    const wall = getCell(vaultScene(vault, names), 0, 0)!
+    expect(gd.dngn.baseName(wall.wallTile!)).toBe('WALL_BRICK_DARK_2_TORCH')
+    expect(wall.wallMaterialTile).toBe(gd.dngn.id('WALL_BRICK_DARK_2'))
+    const missingPlain = { ...names, id: (name: string) => name === 'WALL_BRICK_DARK_2' ? undefined : names.id(name) }
+    expect(getCell(vaultScene(vault, missingPlain), 0, 0)?.wallMaterialTile).toBeUndefined()
+  })
   it('builds walls, features, doors, items and monsters from the tile set, seen and lit once', async () => {
     const gd = await fixtureGamedata()
     const v = parseDes(SMALL)
