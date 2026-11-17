@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.128 — 2026-11-17
+
+- Added Tengu Air Elementalist to the main menu shuffle and recording chooser.
+
 ## 0.3.127 — 2026-11-17
 
 - The main menu shuffles sixteen recordings. Choose a recording to loop a favorite or select Shuffle all to resume the rotation.

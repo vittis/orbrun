@@ -198,6 +198,16 @@
         59000,
         99000
       ]
+    },
+    {
+      "file": "clips/tengu-air-elementalist-3c65c31f6d66238b.json",
+      "title": "Tengu Air Elementalist",
+      "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
+      "durationMs": 30101,
+      "sourceRangeMs": [
+        61000,
+        92000
+      ]
     }
   ],
   "assets": {
@@ -584,6 +594,10 @@
     "gamedata/f98aa2753f7c97d60cb6bf568b498824bacb38b7/wall.png": {
       "size": 1466040,
       "sha256": "1848b5c0cec0344c4b1cd17ffcabe85665deaf040a8d44be8ad875c66de06151"
+    },
+    "clips/tengu-air-elementalist-3c65c31f6d66238b.json": {
+      "size": 871975,
+      "sha256": "3c65c31f6d66238b95661ef3890a7aa31ebc653817371dbbba57f3fc35d27fd9"
     }
   }
 }

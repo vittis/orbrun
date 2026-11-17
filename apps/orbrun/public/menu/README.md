@@ -1,6 +1,6 @@
 # Recorded menu gameplay
 
-The menu shuffles sixteen clips from recorded gameplay through
+The menu shuffles seventeen clips from recorded gameplay through
 Orbrun's normal 2.5D renderer and confirmed combat presentation. No game engine,
 video, external replay player, gameplay commands or public spectator connection
 is used by the backdrop. The home screen's ordinary server lobby is independent.
@@ -49,6 +49,8 @@ asset sources; playback switches tile tables with the recording, never reuses
 tile IDs from a different DCSS version.
 
 Seven additional clips come from the November 17 captures. The Brazilian server supplied the three Djinni clips “Foxfire at the entrance”, “Blastmotes on Dungeon:5” and “Stand against Jeremiah”. CDI supplied two Formicid clips from the Vaults and Swamp, a Mummy recording from the Elven Halls and a Demonspawn recording from the Abyss. The shorter Demonspawn capture contains only the opening snapshot. Each playable excerpt has its original time range in the manifest. The three additional artwork versions use downloads from the versioned CDI gamedata directories.
+
+The Tengu Air Elementalist clip uses seconds 61–92 of a November 17 Brazilian server capture. It shows Shock and lightning arcs against an adder and shares the Lair recording’s artwork version.
 
 `../../data/menu-replays.json` pins every recording and artwork file by size and
 SHA-256. The Vite build verifies these files; it never downloads or compiles an
