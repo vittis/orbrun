@@ -222,6 +222,14 @@ export class Render25d implements MapRenderer {
     } }
   }
 
+  private terrainLighting(cell: SceneCell, face = false): SurfaceLighting | undefined {
+    const shade = this.visibility.surface(cell, this.frameTime, face)
+    if (typeof shade === 'number') return this.surfaceLighting(cell)
+    const exposure = this.tiles.visibility.mask(shade, true)
+    if (!exposure) return this.surfaceLighting(cell)
+    return { draw: (ctx, rect) => this.lighting.draw(ctx, rect, exposure) }
+  }
+
   private tile(ctx: Context2d, layers: Layer[], cell: SceneCell, x: number, y: number, size: number, world: { x: number; y: number }, rasterScale = 1) {
     return this.tiles.draw(ctx, layers, x, y, size, this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell),
       { x: world.x - size, y: world.y - size, width: size * 3, height: size * 3 }, rasterScale)
@@ -230,7 +238,7 @@ export class Render25d implements MapRenderer {
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
     // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
-    return this.tiles.drawPlane(ctx, layers, rect, this.light(), this.darkness(cell), cell.flash, illuminate ? this.surfaceLighting(cell) : undefined,
+    return this.tiles.drawPlane(ctx, layers, rect, this.light(), this.visibility.surface(cell, this.frameTime), cell.flash, illuminate ? this.terrainLighting(cell) : undefined,
       rect)
   }
 
@@ -340,8 +348,10 @@ export class Render25d implements MapRenderer {
     if (this.opts.animate) for (const shot of [...this.effects.projectiles(now), ...this.effects.spawns.overlays(this.scene, now)]) {
       for (const light of shot.life?.lights ?? []) emitters.push({ ...light, x: Math.round(shot.x), y: Math.round(shot.y) })
     }
+    // Build known receiving surfaces; the continuous exposure mask below
+    // attenuates boundary light without clipping it to individual LOS tiles.
     this.lighting.build(this.scene, p, emitters, time, this.opts.animate, this.tiles.source, b => this.actorPosition(b, now),
-      cell => cell.visibility === 'visible' || this.visibility.moving(cell, now))
+      () => true)
     this.hits = []
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.imageSmoothingEnabled = this.opts.filterScaling
@@ -400,13 +410,15 @@ export class Render25d implements MapRenderer {
     }
 
     ctx.save(); ctx.beginPath()
-    for (const cell of cells) if (!cell.occluder && this.lightExposure(cell) === 1) {
+    for (const cell of cells) if (!cell.occluder && this.visibility.surface(cell, now) === 0) {
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(rect.x, rect.y, rect.width, rect.height)
     }
     ctx.clip(); this.lighting.draw(ctx, { x: 0, y: 0, width: this.width, height: this.height }); ctx.restore()
-    for (const cell of cells) if (!cell.occluder && this.lightExposure(cell) > 0 && this.lightExposure(cell) < 1) {
+    for (const cell of cells) if (!cell.occluder) {
+      const shade = this.visibility.surface(cell, now)
+      if (shade === 0 || typeof shade === 'number' && shade >= MEMORY_DARKNESS) continue
       const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      this.surfaceLighting(cell)?.draw(ctx, rect)
+      this.terrainLighting(cell)?.draw(ctx, rect)
     }
     if (this.lighting.active) this.active = true
     this.waterSurface(ctx, p, cells, time)
@@ -744,8 +756,8 @@ export class Render25d implements MapRenderer {
     // Keep the original cap and continue its edge into shaded stonework.
     const layers = [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))]
     this.tiles.drawPlane(ctx, layers, roof,
-      this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell), roof)
-    this.tiles.drawWallFace(ctx, layers, face, this.light(), this.darkness(cell), cell.flash, this.surfaceLighting(cell))
+      this.light(), this.visibility.surface(cell, this.frameTime), cell.flash, this.terrainLighting(cell), roof)
+    this.tiles.drawWallFace(ctx, layers, face, this.light(), this.visibility.surface(cell, this.frameTime, true), cell.flash, this.terrainLighting(cell, true))
     shadeWallFace(ctx, face)
     this.frontierFog(ctx, p, [cell], this.opts.animate ? this.frameTime : 0)
     ctx.restore()

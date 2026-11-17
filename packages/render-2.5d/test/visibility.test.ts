@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cellKey, emptyScene, type SceneCell } from '@orbrun/scene'
-import { DungeonVisibility, MEMORY_DARKNESS } from '../src/visibility.js'
+import { DungeonVisibility, MEMORY_DARKNESS, sampleVisibility } from '../src/visibility.js'
 
 function world(visibility: SceneCell['visibility'] = 'visible') {
   const cell: SceneCell = { x: 0, y: 0, kind: 'floor', occluder: false, visibility, floorTile: 1, flags: { water: false, lava: false } as SceneCell['flags'] }
@@ -11,6 +11,60 @@ function world(visibility: SceneCell['visibility'] = 'visible') {
 }
 
 describe('LOS brightness transitions', () => {
+  it('joins straight and diagonal boundaries continuously while retaining cell-centre brightness', () => {
+    const { fade, scene, cell } = world()
+    for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {
+      scene.cells.set(cellKey(x, y), { ...cell, x, y, visibility: x + y > 0 ? 'remembered' : 'visible' })
+    }
+    fade.observe(scene, 0, false)
+    const a = scene.cells.get(cellKey(0, 0))!, b = scene.cells.get(cellKey(1, 0))!
+    const left = fade.surface(a, 0), right = fade.surface(b, 0)
+    expect(sampleVisibility(left, 0.5, 0.5)).toBe(0)
+    expect(sampleVisibility(right, 0.5, 0.5)).toBe(MEMORY_DARKNESS)
+    for (const y of [0, 0.25, 0.5, 0.75, 1]) {
+      expect(sampleVisibility(left, 1, y)).toBe(sampleVisibility(right, 0, y))
+    }
+    expect(sampleVisibility(left, 1, 0.5)).toBeCloseTo(MEMORY_DARKNESS / 2)
+    const south = fade.surface(scene.cells.get(cellKey(0, 1))!, 0)
+    expect(sampleVisibility(left, 1, 1)).toBe(sampleVisibility(south, 1, 0))
+    const face = fade.surface(a, 0, true)
+    expect(sampleVisibility(face, 0.75, 0)).toBe(sampleVisibility(left, 0.75, 1))
+    expect(sampleVisibility(face, 0.75, 1)).toBe(sampleVisibility(left, 0.75, 1))
+  })
+
+  it('blends neighbouring fades without consulting hidden cells or changing visibility', () => {
+    const { fade, scene, cell } = world()
+    const neighbour: SceneCell = { ...cell, x: 1, visibility: 'remembered' }
+    scene.cells.set(cellKey(1, 0), neighbour)
+    fade.observe(scene, 0, false)
+    expect(sampleVisibility(fade.surface(cell, 0), 1, 0.5)).toBeCloseTo(MEMORY_DARKNESS / 2)
+    neighbour.visibility = 'unseen'
+    fade.observe(scene, 1, true)
+    expect(fade.surface(cell, 1)).toBe(0)
+    scene.cells.delete(cellKey(1, 0))
+    fade.observe(scene, 1, true)
+    expect(fade.surface(cell, 1)).toBe(0)
+    neighbour.visibility = 'visible'
+    scene.cells.set(cellKey(1, 0), neighbour)
+    fade.observe(scene, 2, true)
+    expect(sampleVisibility(fade.surface(cell, 2), 1, 0.5)).toBeCloseTo(0.5)
+    expect(sampleVisibility(fade.surface(cell, 2.11), 1, 0.5)).toBeCloseTo(0.25)
+    expect(fade.surface(cell, 2.23)).toBe(0)
+    expect(cell.visibility).toBe('visible')
+  })
+
+  it('keeps LOS on ground behind a wall from affecting its connected cap shading', () => {
+    const { fade, scene, cell } = world()
+    cell.occluder = true; cell.kind = 'wall'
+    const ground: SceneCell = { ...cell, x: 1, kind: 'floor', occluder: false, visibility: 'remembered' }
+    scene.cells.set(cellKey(1, 0), ground)
+    fade.observe(scene, 0, false)
+    expect(fade.surface(cell, 0)).toBe(0)
+    Object.assign(ground, { kind: 'wall', occluder: true })
+    fade.observe(scene, 1, false)
+    expect(sampleVisibility(fade.surface(cell, 1), 1, 0.5)).toBeCloseTo(MEMORY_DARKNESS / 2)
+  })
+
   it('snaps the initial view and fades a mutable cell into memory', () => {
     const { fade, scene, cell } = world()
     expect(fade.darkness(cell, 0)).toBe(0)

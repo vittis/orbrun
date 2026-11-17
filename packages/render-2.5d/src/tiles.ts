@@ -1,6 +1,7 @@
 import type { TileSource } from '@orbrun/scene'
 import type { SurfaceRect } from './projection.js'
-import { MEMORY_DARKNESS } from './visibility.js'
+import { MEMORY_DARKNESS, type VisibilityShade } from './visibility.js'
+import { VisibilityShading } from './visibility-shading.js'
 
 export type Context2d = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
 export interface Layer { tile: number; ox?: number; oy?: number; ymax?: number; at?: 'top' }
@@ -27,8 +28,9 @@ export class TileCache {
   private pixels = 0
   private fading = new Map<number, HTMLCanvasElement | OffscreenCanvas>()
   source: TileSource | null = null
+  readonly visibility = new VisibilityShading()
 
-  clear() { this.entries.clear(); this.pixels = 0; this.fading.clear() }
+  clear() { this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear() }
 
   draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean | number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, rasterScale = 1): boolean {
     const surface = this.composite(layers, light, memory, false, flash, false, rasterScale)
@@ -39,7 +41,7 @@ export class TileCache {
   }
 
   /** Terrain has no transparent padding to bleed into its edges when filtered. */
-  drawPlane(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: boolean | number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, thin = false): boolean {
+  drawPlane(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: boolean | VisibilityShade, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, thin = false): boolean {
     const surface = this.composite(layers, light, memory, true, flash, thin)
     if (!surface) return false
     ctx.drawImage(surface, rect.x, rect.y, rect.width, rect.height)
@@ -48,7 +50,7 @@ export class TileCache {
   }
 
   /** Turn the roof edge down into shallow stonework, keeping texels roughly square. */
-  drawWallFace(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting) {
+  drawWallFace(ctx: Context2d, layers: Layer[], rect: SurfaceRect, light: number, memory: VisibilityShade, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting) {
     if (rect.height <= 0) return
     const surface = this.composite(layers, light, memory, true, flash)
     if (!surface) return
@@ -66,12 +68,13 @@ export class TileCache {
   }
 
   /** Numeric memory is continuous black opacity; booleans retain static shading. */
-  private composite(layers: Layer[], light: number, memory: boolean | number, flat: boolean, flash?: { r: number; g: number; b: number; a: number }, thin = false, rasterScale = 1) {
+  private composite(layers: Layer[], light: number, memory: boolean | VisibilityShade, flat: boolean, flash?: { r: number; g: number; b: number; a: number }, thin = false, rasterScale = 1) {
     if (!layers.some(l => this.source?.tile(l.tile))) return null
     if (layers.some(l => { const r = this.source?.tile(l.tile); return r && !this.source?.atlas(r.atlas) })) return null
     const shade = Math.round(Math.max(0.2, Math.min(1, light)) * 16) / 16
-    const darkness = typeof memory === 'boolean' ? memory ? MEMORY_DARKNESS : 0 : Math.max(0, Math.min(1, memory))
-    const fading = darkness !== 0 && darkness !== MEMORY_DARKNESS
+    const field = typeof memory === 'object' ? memory : undefined
+    const darkness = typeof memory === 'boolean' ? memory ? MEMORY_DARKNESS : 0 : typeof memory === 'number' ? Math.max(0, Math.min(1, memory)) : 0
+    const fading = !!field || darkness !== 0 && darkness !== MEMORY_DARKNESS
     const cachedMemory = !fading && darkness === MEMORY_DARKNESS
     const cachedFlash = fading ? undefined : flash
     const key = JSON.stringify([layers, shade, cachedMemory, flat, cachedFlash, thin, rasterScale])
@@ -139,7 +142,13 @@ export class TileCache {
       c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, surface.width, surface.height)
       c.drawImage(surface, 0, 0)
       c.globalCompositeOperation = 'source-atop'
-      c.fillStyle = `rgba(0,0,0,${darkness})`; c.fillRect(0, 0, surface.width, surface.height)
+      const mask = field && this.visibility.mask(field)
+      if (mask) {
+        c.imageSmoothingEnabled = true
+        c.drawImage(mask, 0, 0, surface.width, surface.height)
+      } else {
+        c.fillStyle = `rgba(0,0,0,${darkness})`; c.fillRect(0, 0, surface.width, surface.height)
+      }
       if (flash) {
         c.fillStyle = `rgba(${flash.r},${flash.g},${flash.b},${flash.a / 255})`
         c.fillRect(0, 0, surface.width, surface.height)

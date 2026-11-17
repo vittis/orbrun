@@ -96,7 +96,8 @@ export async function visibilityChecks(source: TileSource) {
   let alphaPreserved = true, transparent = true
   for (let i = 1; i < 100; i++) {
     ctx.clearRect(0, 0, 32, 32)
-    cache.drawPlane(ctx, [{ tile: 1 }], { x: 0, y: 0, width: 32, height: 32 }, 1, i / 100, { r: 255, g: 0, b: 0, a: 128 })
+    const shade = i % 2 ? i / 100 : [0, 0, 0, i / 100, i / 100, i / 100, 0, 0, 0]
+    cache.drawPlane(ctx, [{ tile: 1 }], { x: 0, y: 0, width: 32, height: 32 }, 1, shade, { r: 255, g: 0, b: 0, a: 128 })
     const pixel = ctx.getImageData(16, 16, 1, 1).data
     alphaPreserved &&= pixel[3] === 128 && pixel[0] >= 127
     transparent &&= ctx.getImageData(0, 0, 1, 1).data[3] === 0

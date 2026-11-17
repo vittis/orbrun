@@ -1,6 +1,17 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
+test('LOS shading joins straight and diagonal terrain boundaries in Still mode', async ({ page }) => {
+  await page.goto('/testbed/los-boundary-checks.html')
+  await expect.poll(async () => {
+    try { return (await result(page)).status } catch { return 'loading' }
+  }).toMatch(/complete|error/)
+  const report = await result(page)
+  expect(report.status, JSON.stringify(report)).toBe('complete')
+  expect(report.checks).toBe(32)
+  expect(report.failures, JSON.stringify(report)).toEqual([])
+})
+
 test('ruined columns and similar wall-category props keep floor-supported silhouettes', async ({ page }) => {
   await page.goto('/testbed/scenery-terrain-checks.html')
   await expect.poll(async () => {

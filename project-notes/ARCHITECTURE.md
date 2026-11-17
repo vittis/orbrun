@@ -31,6 +31,8 @@ Unexplored fog uses one black starfield throughout the dungeon, with soft circul
 
 Confirmed travel adds bounded body gestures in the 2.5D renderer: walkers hop, oozes compress, serpents slither, small creatures scuttle, undead shuffle, and airborne or spectral creatures bank along their glide. Existing life traits select the gesture; player species and confirmed transformation artwork distinguish non-walking bodies, with actual flight status taking precedence. Ground travel, camera following, markers and authoritative cells remain independent of the body gesture. Rapid retargets preserve the current pose and settle by the end of the latest move. Visibility loss, level resets, disabled movement and Still/reduced motion discard these gestures; flat maps retain their existing presentation.
 
+LOS memory shading forms a continuous field between confirmed cell centres, sampled over floors and raised wall caps with bounded cached alpha masks. Wall faces continue the cap edge downwards; ground and wall samples stay separate so visibility behind a wall cannot tint its artwork. The field follows the existing temporal fades, remains soft in Still/reduced motion and never changes authoritative visibility, actor shading or interaction.
+
 ## Audio
 
 Audio is opt-in and local to the listener, including spectators. Settings → Audio
