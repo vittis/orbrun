@@ -19,7 +19,7 @@ it('preserves ordered batches, remaining pause time and fresh state across clip 
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
   const clips = [clip(0), clip(10)], source = structuredClone(clips), seen: unknown[] = []
   const reset = (messages: ServerMessage[]) => { seen.push(['reset', structuredClone(messages)]); (messages[0].cells as object[]).length = 0 }
-  const clock = new ReplayClock(clips, reset, messages => seen.push(['frame', messages]), vi.fn())
+  const clock = new ReplayClock(clips, reset, messages => seen.push(['frame', messages]), vi.fn(), () => 0.999)
   clock.setActive(true)
   await vi.advanceTimersByTimeAsync(40)
   clock.setActive(false)
@@ -33,6 +33,33 @@ it('preserves ordered batches, remaining pause time and fresh state across clip 
   await vi.advanceTimersByTimeAsync(1900); expect(seen[6]).toEqual(['reset', source[0].initial])
   expect(clips).toEqual(source)
   clock.destroy(); await vi.advanceTimersByTimeAsync(10000); expect(seen).toHaveLength(7)
+})
+
+it('shuffles every clip once per round without repeating across round boundaries', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
+  const seen: number[] = []
+  const clock = new ReplayClock([clip(0), clip(10), clip(20)], messages => {
+    seen.push((messages[1].pos as { x: number }).x)
+  }, () => {}, vi.fn(), () => 0)
+  clock.setActive(true)
+  await vi.advanceTimersByTimeAsync(1900 * 8)
+  expect(seen.slice(0, 3)).toEqual([10, 20, 0])
+  for (let i = 0; i < seen.length; i += 3) expect([...seen.slice(i, i + 3)].sort((a, b) => a - b)).toEqual([0, 10, 20])
+  expect(seen.every((id, i) => !i || id !== seen[i - 1])).toBe(true)
+  clock.destroy()
+
+  // Choose an order whose first clip matches the preceding round's last clip.
+  const random = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValue(0.999)
+  const boundary: number[] = []
+  const next = new ReplayClock([clip(0), clip(10), clip(20)], messages => {
+    boundary.push((messages[1].pos as { x: number }).x)
+  }, () => {}, vi.fn(), random)
+  next.setActive(true)
+  await vi.advanceTimersByTimeAsync(1900 * 5)
+  expect(boundary.slice(0, 3)).toEqual([10, 20, 0])
+  expect(boundary[3]).not.toBe(0)
+  expect([...boundary.slice(3)].sort((a, b) => a - b)).toEqual([0, 10, 20])
+  next.destroy()
 })
 
 it('stops on a failed frame and rejects executable or mismatched recording content', async () => {

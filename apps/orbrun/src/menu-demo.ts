@@ -12,6 +12,7 @@ import manifest from '../data/menu-replays.json'
 
 export interface MenuDemo {
   setActive(active: boolean): void
+  refresh(): void
   destroy(): void
 }
 
@@ -142,6 +143,12 @@ class RecordedMenuDemo implements MenuDemo {
       cancelAnimationFrame(this.raf); this.raf = 0
       this.renderer?.setOptions({ animate: false })
     }
+  }
+
+  /** A settings edit must repaint even when the current recorded scene is resting. */
+  refresh() {
+    this.dirty = true
+    this.wake()
   }
 
   private fail() { this.destroy(); this.failed() }

@@ -782,3 +782,48 @@ test('menu entrance remains usable when recordings are unavailable and motion fo
 })
 
 menuReplayCheck(false)
+
+for (const narrow of [false, true]) {
+  test(`menu replay tilt previews and persists with native controls at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
+    await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1280, height: 720 })
+    await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+    await page.addInitScript(() => {
+      Math.random = () => 0.999 // Stable first clip for the visual evidence.
+      if (!localStorage.getItem('orbrun.settings')) localStorage.setItem('orbrun.settings', JSON.stringify({ depthTilt: 50, depthZoom: 1.2 }))
+    })
+    await page.goto('/')
+    const slider = page.getByRole('slider', { name: 'Dungeon tilt', exact: true })
+    const canvas = page.locator('.menu-backdrop canvas')
+    await expect(canvas).toBeVisible()
+    await expect(slider).toBeVisible()
+    await expect(slider).toHaveValue('50')
+    const controls = await page.locator('.menu-replay-controls').boundingBox()
+    expect(controls).not.toBeNull()
+    expect(controls!.x).toBeGreaterThanOrEqual(0)
+    expect(controls!.x + controls!.width).toBeLessThanOrEqual(narrow ? 390 : 1280)
+    expect(controls!.x + controls!.width / 2).toBeCloseTo(narrow ? 195 : 1280 * .68, 0)
+    const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
+    // A real pointer click catches controls accidentally buried under the full-screen home layer.
+    await slider.click()
+    await slider.fill('70')
+    await slider.press('ArrowRight')
+    await expect(slider).toHaveValue('71')
+    await expect(slider).toHaveAttribute('aria-valuetext', '71 degrees')
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toMatchObject({ depthTilt: 71, depthZoom: 1.2 })
+    await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(before)
+    await page.screenshot({ path: `test-results/menu-tilt-${narrow ? 'narrow' : 'desktop'}.png` })
+    await page.locator('[data-focus="about"]').click()
+    await expect(slider).toBeHidden()
+    await page.keyboard.press('Escape')
+    await expect(slider).toBeVisible()
+    await expect(slider).toHaveValue('71')
+    await page.reload()
+    await expect(slider).toBeVisible()
+    await expect(slider).toHaveValue('71')
+    await slider.press('Home'); await expect(slider).toHaveValue('25')
+    await slider.press('End'); await expect(slider).toHaveValue('85')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(slider).toBeHidden()
+    await expect(canvas).toBeHidden()
+  })
+}

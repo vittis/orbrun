@@ -25,6 +25,13 @@ exports.status_icon_size = function (icon)
     case icons.NOBODY_MEMORY_3:
     case icons.PYRRHIC:
     case icons.FRENZIED:
+    case icons.UNSEEN_INVIS_KNOWN:
+    case icons.UNSEEN_INVIS_REMEMBERED:
+    case icons.DRAGON_VEIN_AIR:
+    case icons.DRAGON_VEIN_EARTH:
+    case icons.DRAGON_VEIN_FIRE:
+    case icons.DRAGON_VEIN_ICE:
+    case icons.GUARDIAN:
         return 0;
     case icons.DRAIN:
     case icons.MIGHT:
@@ -45,6 +52,7 @@ exports.status_icon_size = function (icon)
     case icons.CONFUSED:
     case icons.SENTINEL_MARK:
     case icons.DIMMED:
+    case icons.GLOWING:
         return 6;
     case icons.LACED_WITH_CHAOS:
     case icons.CONC_VENOM:
@@ -60,10 +68,14 @@ exports.status_icon_size = function (icon)
     case icons.GHOSTLY:
     case icons.MALMUTATED:
     case icons.MAGNETISED:
+    case icons.SEEN_INVIS:
+    case icons.PHASE_SHIFT:
+    case icons.DIVINE_SHIELD:
         return 8;
     case icons.RECALL:
     case icons.TELEPORTING:
     case icons.FIGMENT:
+    case icons.MAYBE_FAKE:
         return 9;
     case icons.BLIND:
     case icons.BRILLIANCE:
@@ -93,10 +105,13 @@ exports.status_icon_size = function (icon)
     case icons.PARADOX:
     case icons.WARDING:
     case icons.SUNDERING:
+    case icons.EXPOSED:
         return 10;
     case icons.CONSTRICTED:
     case icons.VILE_CLUTCH:
     case icons.PAIN_BOND:
+    case icons.MUTE:
+    case icons.STAMPEDE:
         return 11;
     default:
         return -1;
