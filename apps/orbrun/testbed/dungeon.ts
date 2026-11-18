@@ -112,8 +112,9 @@ corridorScene.billboards = [
   { x: -2, y: 0, tile: 4274, kind: 'item', height: 0.6 },
   { x: 2, y: 0, tile: 7189, kind: 'monster', height: 0.4, attitude: 'hostile' },
 ]
-document.getElementById('scene')!.addEventListener('change', async () => {
-  const id = (document.getElementById('scene') as HTMLSelectElement).value
+const sceneSelect = document.querySelector<HTMLSelectElement>('#scene')!
+async function changeScene() {
+  const id = sceneSelect.value
   let source: TileSource = roomSource
   if (id === 'room') scene = roomScene
   else if (id === 'corridor') scene = corridorScene
@@ -127,6 +128,7 @@ document.getElementById('scene')!.addEventListener('change', async () => {
         image.src = `/room/places/${id}.png`
       }),
     ])
+    if (sceneSelect.value !== id) return
     const place = RoomTiles.fromPlace(file, image)
     source = {
       tile: tile => spellTile(tile) ?? (tile === -1 ? { ...tiles.tile(4519)!, atlas: 'preview-player' } : place.tile(tile)),
@@ -145,7 +147,13 @@ document.getElementById('scene')!.addEventListener('change', async () => {
   original.setScene(scene)
   original.setOptions({ center })
   fit()
-})
+}
+sceneSelect.addEventListener('change', changeScene)
+const initialScene = new URLSearchParams(location.search).get('scene')
+if (initialScene && Array.from(sceneSelect.options).some(option => option.value === initialScene)) {
+  sceneSelect.value = initialScene
+  await changeScene()
+}
 canvas.addEventListener('pointermove', event => {
   const rect = canvas.getBoundingClientRect()
   const key = (flat.checked ? original : renderer).pick(event.clientX - rect.left, event.clientY - rect.top)

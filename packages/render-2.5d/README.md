@@ -139,7 +139,7 @@ share the upright item frame, while other cell badges keep their ground anchor.
 The unexplored mist is static, so it does not keep idle scenes awake.
 
 Time is presentation-only: fluid breathing and swaying, drifting clouds and remembered-terrain fog,
-continuous water ripples, fountain ripples,
+refracted water with drifting highlights, slow molten folds, bog sheen, fountain ripples,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
 effects need it. No renderer starts a separate timer or RAF loop.
@@ -186,7 +186,7 @@ freezes its midpoint.
 Open `/testbed/arrival-checks.html` for 96 focused Canvas checks of sweep
 direction, subtle brightness and exact expiry across desktop/portrait layouts.
 
-The Scene chooser also loads a recorded fountain dungeon. Original 2D
+The Scene chooser also loads a recorded fountain dungeon, the Shoals tidal flats, and a Zot lava channel. Original 2D
 switches to the standard renderer at the same atlas scale for comparison.
 Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and

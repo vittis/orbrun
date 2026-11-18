@@ -161,6 +161,15 @@ describe('buildScene on a recorded level', () => {
   beforeAll(async () => {
     gd = await fixtureGamedata()
   })
+  it('preserves the liquid material when the minimap reports generic water', () => {
+    const state = initialState()
+    const cells = ['DNGN_SHALLOW_WATER', 'DNGN_LAVA', 'DNGN_TOXIC_BOG', 'FLOOR_GREY_DIRT'].map((name, x) =>
+      ({ x, y: 1, mf: gd.enums.MF_WATER, t: { bg: gd.dngn.id(name), liquefied: x === 3 } }))
+    reduce(state, { msg: 'map', cells })
+    const scene = buildScene(state, gd)
+    expect(cells.map(({ x, y }) => scene.cells.get(cellKey(x, y))?.life?.motion)).toEqual(['water', 'lava', 'bog', 'bog'])
+  })
+
   it('uses stable plain masonry beneath torch frames and clears it when the wall changes', () => {
     const state = initialState(), key = cellKey(1, 0)
     let previous = emptyScene()

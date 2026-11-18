@@ -127,7 +127,12 @@ export function decorateLiving(cell: SceneCell, billboards: Billboard[], mc: Map
   const lights = light ? [light] : []
   if (t?.halo || t?.sanctuary) lights.push({ colour: [255, 236, 190], radius: 2.2, power: 0.18, pulse: 'slow' })
   if (t?.orb_glow || t?.disjunct || t?.quad_glow) lights.push({ colour: [220, 100, 255], radius: 2.4, power: 0.25, pulse: 'slow' })
-  cell.life = { motion: cell.flags.lava ? 'lava' : cell.flags.water ? 'water' : tileMotion(name), lights, spawn: spawnAppearance(name) }
+  let motion = tileMotion(name)
+  // Occupied liquid can carry a generic WATER flag even on lava or toxic bog.
+  if (cell.flags.lava) motion = 'lava'
+  else if (cell.kind === 'floor' && t?.liquefied) motion = 'bog'
+  else if (cell.flags.water && motion !== 'lava' && motion !== 'bog') motion = 'water'
+  cell.life = { motion, lights, spawn: spawnAppearance(name) }
   for (const b of billboards) {
     const tileName = gd.main.baseName(b.tile) ?? gd.player.baseName(b.tile) ?? ''
     if (b.kind === 'monster') {

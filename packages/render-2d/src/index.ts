@@ -1,7 +1,7 @@
 import {
   cellKey,
   combatActorId, HitEffects, type HitEffect,
-  DungeonLife, livingPose, lanternAt, lightingFor, lightPulse,
+  DungeonLife, liquidMaterial, LiquidSurfaces, livingPose, lanternAt, lightingFor, lightPulse,
   flashOf,
   minibarRects,
   MINIBAR_CELL,
@@ -168,6 +168,7 @@ export class Render2d implements MapRenderer {
   private origin = { x: 0, y: 0 }
   /** the whole css px the cells are drawn right and down of the origin's own place, under an `anchor` */
   private shift = { x: 0, y: 0 }
+  private liquids = new LiquidSurfaces()
   private life = new DungeonLife()
   private hits = new HitEffects()
   private active = false
@@ -250,6 +251,7 @@ export class Render2d implements MapRenderer {
   destroy(): void {
     this.hits.clear()
     this.life.clear()
+    this.liquids.clear()
     this.active = false
     this.canvas = null
     this.ctx = null
@@ -486,7 +488,7 @@ export class Render2d implements MapRenderer {
       if (!inView(sx, sy)) continue
       if (minimap) this.drawMinimapCell(ctx, cell, sx, sy, cs)
       else if (glyphs) this.drawGlyphCell(ctx, cell, sx, sy, cs, 'fill')
-      else this.drawTileCell(ctx, cell, sx, sy, cs)
+      else this.drawTileCell(ctx, cell, sx, sy, cs, living ? this.time ?? 0 : undefined)
     }
     // on the floor, under what stands on it
     if (!minimap && !glyphs) {
@@ -683,18 +685,9 @@ export class Render2d implements MapRenderer {
     if (light && cell.occluder) { ctx.fillStyle = `rgba(${light.colour},${light.strength})`; ctx.fillRect(sx, sy, cs, cs); this.active = true }
     ctx.globalCompositeOperation = 'source-over'
     const motion = cell.life?.motion
-    if (cell.flags.water || cell.flags.lava) {
-      this.active = true
-      ctx.strokeStyle = cell.flags.lava ? 'rgba(255,173,52,0.23)' : 'rgba(173,231,245,0.15)'
-      ctx.lineWidth = Math.max(0.7, cs / 48)
-      for (let i = 0; i < 3; i++) {
-        const phase = time * (cell.flags.lava ? 0.5 : 1.2) + cell.x * 1.7 + cell.y + i * 2
-        ctx.beginPath(); ctx.ellipse(sx + cs * (0.5 + Math.sin(phase) * 0.2), sy + cs * (i + 0.5) / 3, cs * 0.24, cs * 0.055, 0, 0, Math.PI * 2); ctx.stroke()
-      }
-    }
     if (motion && motion !== 'still') this.active = true
     const pose = livingPose(cell.life, cell.x, cell.y, time, this.opts.animate)
-    if (pose.glow) { ctx.fillStyle = `rgba(180,215,255,${pose.glow * 0.035})`; ctx.fillRect(sx, sy, cs, cs) }
+    if (pose.glow && !liquidMaterial(cell)) { ctx.fillStyle = `rgba(180,215,255,${pose.glow * 0.035})`; ctx.fillRect(sx, sy, cs, cs) }
     for (const ripple of this.opts.animate ? this.life.ripples : []) {
       const age = now - ripple.born
       if (age < 0 || age >= 1.5) continue
@@ -712,7 +705,7 @@ export class Render2d implements MapRenderer {
     ctx.restore()
   }
 
-  private drawTileCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number) {
+  private drawTileCell(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, cell: SceneCell, sx: number, sy: number, cs: number, liquidTime?: number) {
     if (cell.kind === 'unknown') return
     if (cell.kind === 'wall') {
       this.drawTile(ctx, cell.wallTile ?? cell.floorTile, sx, sy, cs)
@@ -720,6 +713,13 @@ export class Render2d implements MapRenderer {
       return
     }
     this.drawTile(ctx, cell.floorTile, sx, sy, cs)
+    if (liquidTime !== undefined) {
+      const material = liquidMaterial(cell)
+      if (material) {
+        this.liquids.draw(ctx, material, cell, liquidTime, sx, sy, cs, cs)
+        this.active = true
+      }
+    }
     if (cell.underlays) for (const o of cell.underlays) this.drawTile(ctx, o, sx, sy, cs)
     if (cell.featureTile !== undefined) {
       const feature = cell.featureTile

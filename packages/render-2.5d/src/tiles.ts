@@ -1,4 +1,4 @@
-import type { TileSource } from '@orbrun/scene'
+import { LiquidSurfaces, type LiquidMaterial, type SceneCell, type TileSource } from '@orbrun/scene'
 import type { SurfaceRect } from './projection.js'
 import { MEMORY_DARKNESS, settledVisibility, type VisibilityShade } from './visibility.js'
 import { VisibilityShading } from './visibility-shading.js'
@@ -32,11 +32,12 @@ export class TileCache {
   private fieldCursor = 0
   source: TileSource | null = null
   readonly visibility = new VisibilityShading()
+  private liquids = new LiquidSurfaces()
 
   beginFrame() { this.frameFields.clear(); this.fieldCursor = 0 }
 
   clear() {
-    this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear()
+    this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear(); this.liquids.clear()
     this.fieldRasters = []; this.beginFrame()
   }
 
@@ -55,6 +56,52 @@ export class TileCache {
     ctx.drawImage(surface, rect.x, rect.y, rect.width, rect.height)
     lighting?.draw(ctx, rect, surface, sample)
     return true
+  }
+
+  /** Refract just the native floor. Decals, shoreline foam and actors keep their anchors. */
+  drawLiquidFloor(ctx: Context2d, material: LiquidMaterial, cell: SceneCell, rect: SurfaceRect, memory: VisibilityShade, time: number, dpr: number) {
+    const floor = this.composite([{ tile: cell.floorTile }], 1, false, true)
+    if (floor) {
+      const water = material === 'water'
+      const speed = water ? 1.05 : 0.55
+      const inset = water ? 1.05 : 1.25
+      const phase = cell.y * 5.3 + cell.x * 1.2 - time * speed
+      const drift = 0.85 * Math.sin(cell.x * 0.8 + cell.y * 1.1 + time * speed * 0.4)
+      // Vary the sampled strip, keeping destination boundaries on device pixels.
+      // The inset leaves room to bend the artwork without sampling adjacent atlas tiles.
+      const strips = 8
+      let top = rect.y
+      if (water) {
+        ctx.drawImage(floor, rect.x, rect.y, rect.width, rect.height)
+        ctx.save()
+        ctx.globalAlpha *= 0.68
+      }
+      for (let band = 0; band < strips; band++) {
+        const v = (band + 0.5) / strips
+        const bend = Math.sin(phase + v * 5.3 + drift)
+        const sourceX = inset + bend * inset
+        const bottom = Math.round((rect.y + (band + 1) / strips * rect.height) * dpr) / dpr
+        ctx.drawImage(floor, sourceX, band / strips * floor.height, floor.width - inset * 2, floor.height / strips,
+          rect.x, top, rect.width, bottom - top)
+        top = bottom
+      }
+      if (water) ctx.restore()
+    }
+    this.liquids.draw(ctx, material, cell, time, rect.x, rect.y, rect.width, rect.height)
+    if (this.source && memory !== 0) {
+      const mask = typeof memory === 'number' ? undefined : this.visibility.mask(memory)
+      if (mask) {
+        ctx.save(); ctx.imageSmoothingEnabled = true
+        ctx.drawImage(mask.canvas, mask.x, mask.y, mask.width, mask.height, rect.x, rect.y, rect.width, rect.height)
+        ctx.restore()
+      } else if (typeof memory === 'number') {
+        ctx.fillStyle = `rgba(0,0,0,${memory})`; ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+      }
+    }
+    if (this.source && cell.flash) {
+      const { r, g, b, a } = cell.flash
+      ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`; ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+    }
   }
 
   /** Turn the roof edge down into shallow stonework, keeping texels roughly square. */

@@ -1,5 +1,5 @@
 import {
-  cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, livingPose, type DeathEffect, type HitEffect,
+  cellKey, combatActorId, emptyScene, minibarRects, DungeonLife, liquidMaterial, livingPose, type DeathEffect, type HitEffect,
   type Billboard, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type CombatBump, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
@@ -390,7 +390,13 @@ export class Render25d implements MapRenderer {
       const q = { x: rect.x, y: rect.y }
       ctx.fillStyle = cell.flags.lava ? '#75351b' : cell.flags.water ? '#193c50' : '#353538'
       ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
-      const layers: Layer[] = [{ tile: cell.floorTile }, ...(cell.underlays ?? []).map(tile => ({ tile }))]
+      const layers: Layer[] = []
+      const material = liquidMaterial(cell)
+      if (material) {
+        this.tiles.drawLiquidFloor(ctx, material, cell, rect, this.visibility.surface(cell, now), time, this.dpr)
+        this.active = true
+      } else layers.push({ tile: cell.floorTile })
+      layers.push(...(cell.underlays ?? []).map(tile => ({ tile })))
       const fadingFeature = this.opts.animate && cell.visibility === 'visible' && !cell.occluder && !this.upright(cell)
         && cell.featureTile !== undefined && this.effects.spawns.terrainOpacity(cell, now) < 1
       if (fadingFeature) {
@@ -400,7 +406,7 @@ export class Render25d implements MapRenderer {
         this.plane(ctx, p, cell, [{ tile: cell.featureTile! }], 0, false); ctx.restore()
       } else if (!cell.occluder && !this.upright(cell) && cell.featureTile !== undefined) layers.push({ tile: cell.featureTile })
       layers.push(...(cell.overlays ?? []).filter(tile => !cell.wallShadows?.includes(tile)).map(tile => ({ tile })))
-      this.plane(ctx, p, cell, layers, 0, false)
+      if (layers.length) this.plane(ctx, p, cell, layers, 0, false)
       if (!this.tiles.source) {
         ctx.fillStyle = '#d7d5c8'
         ctx.font = `${s * 0.65}px monospace`
@@ -441,8 +447,6 @@ export class Render25d implements MapRenderer {
       }
     }
     if (this.lighting.active) this.active = true
-    this.waterSurface(ctx, p, cells, time)
-    this.lavaSurface(ctx, p, cells, time)
     // Traces stay on the floor, underneath silhouettes, badges and targeting.
     if (this.opts.animate) for (const trace of this.effects.traces) {
       if (!this.inFrame(p, trace.source)) continue
@@ -618,52 +622,6 @@ export class Render25d implements MapRenderer {
       ctx.fillRect(q.x - radius, cy - radius, radius * 2, radius * 2)
     }
     ctx.restore()
-  }
-
-  private waterSurface(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
-    const water = cells.filter(cell => cell.visibility === 'visible' && cell.flags.water && !cell.occluder)
-    if (!water.length) return
-    this.active = true
-    ctx.save()
-    ctx.beginPath()
-    for (const cell of water) {
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      ctx.rect(rect.x, rect.y, rect.width, rect.height)
-    }
-    ctx.clip()
-    const left = Math.min(...water.map(cell => cell.x)) - 1, right = Math.max(...water.map(cell => cell.x)) + 1
-    const top = Math.min(...water.map(cell => cell.y)) - 1, bottom = Math.max(...water.map(cell => cell.y)) + 1
-    ctx.strokeStyle = 'rgba(152,224,238,0.16)'
-    ctx.lineWidth = Math.max(0.7, p.scale / 65)
-    // One world-space wave field across the whole surface; no per-tile clipping edges.
-    for (let y = top; y <= bottom; y += 0.65) {
-      ctx.beginPath()
-      for (let x = left; x <= right; x += 0.25) {
-        const wave = Math.sin(x * 1.7 + time * 0.9 + y) * 0.07 + Math.sin(x * 0.8 - time * 0.4) * 0.04
-        const q = project(p, x, y + wave)
-        if (x === left) ctx.moveTo(q.x, q.y)
-        else ctx.lineTo(q.x, q.y)
-      }
-      ctx.stroke()
-    }
-    ctx.restore()
-  }
-
-  private lavaSurface(ctx: Context2d, p: Projection, cells: SceneCell[], time: number) {
-    for (const cell of cells) {
-      if (cell.visibility !== 'visible' || !cell.flags.lava) continue
-      this.active = true
-      const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.width, rect.height); ctx.clip()
-      ctx.strokeStyle = 'rgba(255,177,47,0.22)'; ctx.lineWidth = Math.max(1, p.scale * 0.025)
-      for (let i = 0; i < 3; i++) {
-        const t = time * 0.5 + cell.x * 1.7 + cell.y * 2.1 + i * 2
-        ctx.beginPath()
-        ctx.ellipse(rect.x + rect.width * (0.5 + Math.sin(t) * 0.24), rect.y + rect.height * (0.5 + Math.cos(t * 0.7) * 0.24), rect.width * (0.12 + i * 0.055), rect.height * 0.12, Math.sin(t) * 0.3, 0, Math.PI * 2)
-        ctx.stroke()
-      }
-      ctx.restore()
-    }
   }
 
   private impactRipples(ctx: Context2d, p: Projection, time: number) {

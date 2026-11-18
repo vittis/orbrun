@@ -8,6 +8,10 @@
     * { box-sizing: border-box; }
     body { margin: 0; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #080c13; color: #c9c7bd; font: 14px system-ui, sans-serif; }
     header { padding: 20px 28px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; border-bottom: 1px solid #28303a; }
+    @media (max-width: 650px) {
+      header { flex-wrap: nowrap; overflow-x: auto; gap: 16px; padding: 10px 14px; }
+      header > * { flex: none; }
+    }
     h1 { font-size: 17px; font-weight: 500; margin: 0; color: #e7c98f; }
     label { display: flex; align-items: center; gap: 8px; }
     select, button { background: #151c27; color: #e5e2d9; border: 1px solid #384354; padding: 5px 8px; }
@@ -19,7 +23,7 @@
 <body>
   <header>
     <h1>Orbrun / Dungeon 2.5D</h1>
-    <label>Scene <select id="scene"><option value="room">Antechamber</option><option value="corridor">Narrow corridors</option><option value="d1-fountains">Dungeon fountains</option></select></label>
+    <label>Scene <select id="scene"><option value="room">Antechamber</option><option value="shoals">Shoals · tidal flats</option><option value="zot-4">Zot · lava</option><option value="corridor">Narrow corridors</option><option value="d1-fountains">Dungeon fountains</option></select></label>
     <label>Elevation <select id="tilt"><option>35</option><option selected>50</option><option>65</option></select></label>
     <label>Zoom <select id="zoom"><option value="0.8">80%</option><option value="1" selected>100%</option><option value="1.2">120%</option><option value="1.4">140%</option></select></label>
     <label><input type="checkbox" id="fog" checked> Unexplored fog</label>
