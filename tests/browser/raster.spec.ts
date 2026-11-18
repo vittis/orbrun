@@ -1,5 +1,39 @@
 import { expect } from '@playwright/test'
+import type { Render25d } from '@orbrun/render-2.5d'
+import type { Scene } from '@orbrun/scene'
 import { test, result } from './fixtures'
+
+test('Shoals water moves without outlining the native depth transition', async ({ page }) => {
+  await page.goto('/testbed/dungeon.html?scene=shoals')
+  await page.waitForFunction(() => '__ready' in window)
+  const samples = await page.evaluate(() => {
+    const { renderer, scene, canvas } = window as unknown as { renderer: Render25d; scene: Scene; canvas: HTMLCanvasElement }
+    renderer.setOptions({ center: { x: 0, y: 25.5 }, zoom: 3, movement: false })
+    const ctx = canvas.getContext('2d')!
+    function sample(time: number) {
+      renderer.render(time)
+      // The shallow tile's southern overlay meets the deep tile's own artwork here.
+      const { x, y } = renderer.project(0, 25.5)
+      const center = renderer.project(0, 26)
+      return {
+        edge: ctx.getImageData(Math.round(x) - 12, Math.round(y) - 1, 24, 2).data,
+        interior: ctx.getImageData(Math.round(x) - 8, Math.round(center.y) - 8, 16, 16).data,
+      }
+    }
+    const first = sample(5), second = sample(16)
+    // Render the same atlas layers directly to obtain an independent reference.
+    for (const cell of scene.cells.values()) cell.flags.water = false
+    renderer.setScene({ ...scene, revision: scene.revision + 1 })
+    const reference = sample(5).edge
+    return {
+      edgeError: Math.max(...reference.map((value, i) =>
+        Math.max(Math.abs(value - first.edge[i]), Math.abs(value - second.edge[i])))),
+      moving: first.interior.some((value, i) => Math.abs(value - second.interior[i]) > 2),
+    }
+  })
+  expect(samples.edgeError).toBeLessThanOrEqual(1)
+  expect(samples.moving).toBe(true)
+})
 
 test('LOS shading joins straight and diagonal terrain boundaries in a static frame', async ({ page }) => {
   await page.goto('/testbed/los-boundary-checks.html')

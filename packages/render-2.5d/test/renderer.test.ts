@@ -793,16 +793,21 @@ describe('environmental lighting', () => {
   })
 
   it.each([
-    ['visible', 'blue', 2],
-    ['visible', 'dry_fountain', 0],
-    ['remembered', 'blue', 0],
-    ['unseen', 'blue', 0],
-  ] as const)('animates %s %s fountains only when water is in sight', (visibility, kind, strokes) => {
+    ['visible', 'blue', true],
+    ['visible', 'dry_fountain', false],
+    ['remembered', 'blue', false],
+    ['unseen', 'blue', false],
+  ] as const)('animates %s %s fountains only when water is in sight', (visibility, kind, wet) => {
     const { r, ctx } = renderer()
     r.setScene(sceneOf(cell(0, 0, { visibility, featureTile: 2, stance: 'upright', feature: { type: 'fountain', kind } })))
     r.render(2)
-    expect(ctx.stroke).toHaveBeenCalledTimes(strokes)
+    const hasSpray = () => vi.mocked(ctx.fillRect as CanvasRenderingContext2D['fillRect']).mock.calls
+      .some(([, , width, height]) => width === height && width > 0 && width <= 1)
+    expect(hasSpray()).toBe(wet)
+    vi.mocked(ctx.fillRect as CanvasRenderingContext2D['fillRect']).mockClear()
     r.setOptions({ animate: false })
+    r.render(3)
+    expect(hasSpray()).toBe(false)
     expect(r.animating).toBe(false)
   })
 

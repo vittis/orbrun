@@ -139,7 +139,7 @@ share the upright item frame, while other cell badges keep their ground anchor.
 The unexplored mist is static, so it does not keep idle scenes awake.
 
 Time is presentation-only: fluid breathing and swaying, drifting clouds and remembered-terrain fog,
-refracted water with drifting highlights, slow molten folds, bog sheen, fountain ripples,
+water, lava and bog textures refracted within their native edges, fountain spray,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
 effects need it. No renderer starts a separate timer or RAF loop.

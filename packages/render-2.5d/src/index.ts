@@ -835,7 +835,7 @@ export class Render25d implements MapRenderer {
       ctx.moveTo(q.x, q.y - s * 0.28); ctx.lineTo(q.x, q.y - s * 0.16)
       ctx.stroke(); ctx.restore()
     }
-    if (visible && b.kind === 'doll' && cell.feature?.type === 'fountain' && !/dry/.test(cell.feature.kind)) this.fountain(ctx, p, cell, time)
+    if (this.opts.animate && visible && b.kind === 'doll' && cell.feature?.type === 'fountain' && !/dry/.test(cell.feature.kind)) this.fountain(ctx, p, cell, time)
     if (!cloud && !b.lying) this.hits.push({ key: cellKey(cell.x, cell.y), left: x + size * 0.12, right: x + size * 0.88, top: y, bottom: q.y })
     // Badges and bars stay upright and do not breathe, so tiny text never shimmers.
     for (const icon of b.statusIcons ?? []) drawTile(ctx, this.tiles.source, icon, q.x - s / 2, q.y - s, s)
@@ -854,22 +854,12 @@ export class Render25d implements MapRenderer {
     const q = project(p, cell.x, cell.y + 0.3), s = p.scale
     const phase = cell.x * 1.31 + cell.y * 2.17
     ctx.save()
-    ctx.lineWidth = Math.max(0.7, s / 60)
-    for (let i = 0; i < 2; i++) {
-      const life = (time * 0.45 + i * 0.5 + phase % 1 + 1) % 1
-      ctx.strokeStyle = `rgba(170,239,245,${0.32 * Math.sin(life * Math.PI)})`
-      ctx.beginPath()
-      ctx.ellipse(q.x, q.y - s * 0.12, s * (0.08 + life * 0.21), s * (0.025 + life * 0.04), 0, 0, Math.PI * 2)
-      ctx.stroke()
-    }
-    if (this.opts.animate) {
-      ctx.fillStyle = '#b8edf4'
-      for (let i = 0; i < 5; i++) {
-        const life = ((time * 0.75 + i / 5 + phase) % 1 + 1) % 1
-        ctx.globalAlpha = Math.sin(life * Math.PI) * 0.45
-        const side = i % 2 ? -1 : 1, size = Math.max(0.7, s / 75)
-        ctx.fillRect(q.x + side * life * s * 0.2, q.y - s * (0.18 + Math.sin(life * Math.PI) * 0.19), size, size)
-      }
+    ctx.fillStyle = '#b8edf4'
+    for (let i = 0; i < 5; i++) {
+      const life = ((time * 0.75 + i / 5 + phase) % 1 + 1) % 1
+      ctx.globalAlpha = Math.sin(life * Math.PI) * 0.45
+      const side = i % 2 ? -1 : 1, size = Math.max(0.7, s / 75)
+      ctx.fillRect(q.x + side * life * s * 0.2, q.y - s * (0.18 + Math.sin(life * Math.PI) * 0.19), size, size)
     }
     ctx.restore()
   }

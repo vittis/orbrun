@@ -25,7 +25,7 @@ export { cellKey, keyToXY, type CellKey } from './coordinates.js'
 export * from './bars.js'
 export * from './motion.js'
 export * from './living.js'
-export { liquidMaterial, LiquidSurfaces, type LiquidMaterial } from './liquid-surface.js'
+export { liquidMaterial, refractLiquid, type LiquidMaterial } from './liquid-surface.js'
 
 /** 8 compass headings, clockwise from north. North is -y. */
 export type Dir8 = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7

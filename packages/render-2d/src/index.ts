@@ -1,7 +1,7 @@
 import {
   cellKey,
   combatActorId, HitEffects, type HitEffect,
-  DungeonLife, liquidMaterial, LiquidSurfaces, livingPose, lanternAt, lightingFor, lightPulse,
+  DungeonLife, liquidMaterial, refractLiquid, livingPose, lanternAt, lightingFor, lightPulse,
   flashOf,
   minibarRects,
   MINIBAR_CELL,
@@ -168,7 +168,6 @@ export class Render2d implements MapRenderer {
   private origin = { x: 0, y: 0 }
   /** the whole css px the cells are drawn right and down of the origin's own place, under an `anchor` */
   private shift = { x: 0, y: 0 }
-  private liquids = new LiquidSurfaces()
   private life = new DungeonLife()
   private hits = new HitEffects()
   private active = false
@@ -251,7 +250,6 @@ export class Render2d implements MapRenderer {
   destroy(): void {
     this.hits.clear()
     this.life.clear()
-    this.liquids.clear()
     this.active = false
     this.canvas = null
     this.ctx = null
@@ -716,8 +714,14 @@ export class Render2d implements MapRenderer {
     if (liquidTime !== undefined) {
       const material = liquidMaterial(cell)
       if (material) {
-        this.liquids.draw(ctx, material, cell, liquidTime, sx, sy, cs, cs)
-        this.active = true
+        const tile = this.tiles?.tile(cell.floorTile)
+        const image = tile && this.tiles?.atlas(tile.atlas)
+        if (tile && image) {
+          const scale = cs / tile.cell
+          const rect = { x: sx + tile.ox * scale, y: sy + tile.oy * scale, width: tile.w * scale, height: tile.h * scale }
+          refractLiquid(ctx, image as CanvasImageSource, tile, rect, material, cell, liquidTime, this.dpr)
+          this.active = true
+        }
       }
     }
     if (cell.underlays) for (const o of cell.underlays) this.drawTile(ctx, o, sx, sy, cs)
