@@ -69,13 +69,20 @@ Every clip plays once per shuffled round, starting with a random clip on each
 menu load. The first clip of a new round cannot repeat the last clip of the
 previous round. The playlist is silent, renders at most 30 fps/1280×720, pauses its clock and
 renderer while covered or hidden, and releases artwork/renderer state for Still
-or OS reduced motion. Loading/failure retains the CSS entrance. The retired
+or OS reduced motion. Startup loads one clip and its matching artwork. The
+Orb of Zot shrine remains visible while loading, in Still/reduced motion
+and on failure. Its status identifies paused playback or offers a retry on
+failure. The retired
 menu-engine CacheStorage caches are deleted without touching offline saves.
 
-A temporary **Choose recording** selector above the tilt slider starts any
-clip immediately and loops it until **Shuffle all** is chosen. Selection lasts
+A temporary **Choose recording** selector above the tilt slider loads a chosen
+clip and loops it until **Shuffle all** is chosen. Selection lasts
 only for the current menu instance, survives covered/reduced-motion pauses,
 and is never written to settings, accounts or saves.
+
+The fallback uses the [original Orb of Zot tile](../orb.png) over a text-mode
+altar. The Orb floats while a visible menu is loading with motion enabled.
+See [tile provenance](../../../../ATTRIBUTION.md#tile-art-in-the-front-room).
 
 ## Preparing replacement clips
 

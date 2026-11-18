@@ -8,41 +8,35 @@ import { presentCombat } from './combat-presentation'
 import { dungeonOptions } from './dungeon-options'
 import { getSettings } from './settings'
 import { readReplay, ReplayClock, type ReplayClip } from './menu-replay'
-import manifest from '../data/menu-replays.json'
+import type manifest from '../data/menu-replays.json'
 
 export interface MenuDemo {
   setActive(active: boolean): void
-  chooseRecording(file: string | null): void
   refresh(): void
   destroy(): void
 }
 
+interface ReplayCallbacks {
+  progress(): void
+  finished(): void
+  failed(error: unknown): void
+}
+
 /** Same-origin, version-pinned state and artwork. No server connection or engine. */
-export async function loadMenuDemo(canvas: HTMLCanvasElement, signal: AbortSignal, failed: () => void): Promise<MenuDemo> {
+export async function loadMenuDemo(canvas: HTMLCanvasElement, signal: AbortSignal, entry: typeof manifest.clips[number],
+  callbacks: ReplayCallbacks): Promise<MenuDemo> {
   signal.throwIfAborted()
-  const loading = new AbortController()
-  const abort = () => loading.abort()
-  signal.addEventListener('abort', abort, { once: true })
-  const data = new Map<string, Gamedata>()
+  const response = await fetch('/menu/' + entry.file, { signal })
+  if (!response.ok) throw new Error(`Menu recording ${entry.file}: HTTP ${response.status}`)
+  const text = await response.text()
+  if (text.length > 2 * 1024 * 1024) throw new Error('Menu recording too large')
+  const clip = readReplay(JSON.parse(text), entry.version)
+  callbacks.progress()
+  const data = await loadGamedata({ base: '/menu', version: entry.version, io: browserIo(), signal, onProgress: callbacks.progress })
   try {
-    const [, clips] = await Promise.all([
-      Promise.all([...new Set(manifest.clips.map(clip => clip.version))].map(version =>
-        loadGamedata({ base: '/menu', version, io: browserIo(), signal: loading.signal }).then(loaded => {
-        if (loading.signal.aborted) { loaded.dispose(); loading.signal.throwIfAborted() }
-        data.set(version, loaded)
-      }))),
-      Promise.all(manifest.clips.map(async clip => {
-        const response = await fetch('/menu/' + clip.file, { signal: loading.signal })
-        if (!response.ok) throw new Error('Menu recording unavailable')
-        const text = await response.text()
-        if (text.length > 2 * 1024 * 1024) throw new Error('Menu recording too large')
-        return readReplay(JSON.parse(text), clip.version)
-      })),
-    ])
     signal.throwIfAborted()
-    return new RecordedMenuDemo(canvas, data, clips, failed)
-  } catch (error) { loading.abort(); for (const loaded of data.values()) loaded.dispose(); throw error }
-  finally { signal.removeEventListener('abort', abort) }
+    return new RecordedMenuDemo(canvas, data, clip, callbacks.finished, callbacks.failed)
+  } catch (error) { data.dispose(); throw error }
 }
 
 /** The normal dungeon renderer and confirmed combat pipeline, driven by recorded server output. */
@@ -58,22 +52,18 @@ class RecordedMenuDemo implements MenuDemo {
   private dirty = true
   private raf = 0
   private lastFrame = -Infinity
-  private data!: Gamedata
 
-  constructor(private canvas: HTMLCanvasElement, private versions: Map<string, Gamedata>, clips: ReplayClip[], private failed: () => void) {
+  constructor(private canvas: HTMLCanvasElement, private data: Gamedata, clip: ReplayClip, finished: () => void, private failed: (error: unknown) => void) {
     try {
-      this.clock = new ReplayClock(clips, (messages, version) => this.reset(messages, version), messages => this.apply(messages), () => this.fail())
+      this.clock = new ReplayClock(clip, messages => this.reset(messages), messages => this.apply(messages), finished, error => this.fail(error))
       this.resize = new ResizeObserver(() => { this.fit(); this.wake() })
       this.resize.observe(canvas)
-    } catch { this.clock?.destroy(); this.renderer?.destroy(); this.resize?.disconnect(); throw new Error('Menu playback failed to initialize') }
+    } catch (error) { this.clock?.destroy(); this.renderer?.destroy(); this.resize?.disconnect(); throw error }
   }
 
-  private reset(messages: ServerMessage[], version: string) {
+  private reset(messages: ServerMessage[]) {
     this.renderer?.destroy()
     this.renderer = null
-    const data = this.versions.get(version)
-    if (!data) throw new Error('Menu recording artwork unavailable')
-    this.data = data
     this.state = initialState()
     reduce(this.state, { msg: 'game_started' })
     for (const message of messages) reduce(this.state, message)
@@ -136,7 +126,7 @@ class RecordedMenuDemo implements MenuDemo {
         }
       }
       if (this.dirty || this.renderer.animating) this.wake()
-    } catch { this.fail() }
+    } catch (error) { this.fail(error) }
   }
 
   setActive(active: boolean) {
@@ -157,14 +147,7 @@ class RecordedMenuDemo implements MenuDemo {
     this.wake()
   }
 
-  chooseRecording(file: string | null) {
-    if (this.destroyed) return
-    const index = file === null ? null : manifest.clips.findIndex(clip => clip.file === file)
-    if (index === -1) return
-    this.clock.select(index)
-  }
-
-  private fail() { this.destroy(); this.failed() }
+  private fail(error: unknown) { this.destroy(); this.failed(error) }
 
   destroy() {
     if (this.destroyed) return
@@ -173,7 +156,7 @@ class RecordedMenuDemo implements MenuDemo {
     cancelAnimationFrame(this.raf)
     this.resize?.disconnect()
     this.renderer?.destroy()
-    for (const data of this.versions.values()) data.dispose()
+    this.data.dispose()
     this.canvas.hidden = true
   }
 }

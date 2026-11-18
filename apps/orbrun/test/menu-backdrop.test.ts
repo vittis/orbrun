@@ -6,7 +6,7 @@ import { defaultSettings, saveSettings } from '../src/settings'
 let settings = { ...defaultSettings }
 vi.mock('../src/settings', async original => ({ ...await original<object>(), getSettings: () => settings,
   saveSettings: vi.fn(next => { settings = next; window.dispatchEvent(new Event('orbrun-settings')) }) }))
-const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), chooseRecording: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
+const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
 vi.mock('../src/menu-demo', () => ({ loadMenuDemo: load }))
 let view: MenuBackdrop
 let reduced: EventTarget & { matches: boolean }
@@ -60,13 +60,18 @@ it('chooses a recording immediately, retains the choice across reduced motion, a
   const picker = v.el.querySelector('select')!
   const file = picker.options[1].value
   picker.value = file; picker.dispatchEvent(new Event('change'))
-  expect(demo.chooseRecording).toHaveBeenLastCalledWith(file)
-  expect(load).toHaveBeenCalledOnce()
+  await start()
+  expect(load.mock.lastCall?.[2].file).toBe(file)
+  const count = load.mock.calls.length
+  load.mock.lastCall?.[3].finished()
+  expect(load).toHaveBeenCalledTimes(count) // A manual choice loops the loaded clip.
   reduced.matches = true; reduced.dispatchEvent(new Event('change'))
   reduced.matches = false; reduced.dispatchEvent(new Event('change')); await start()
-  expect(demo.chooseRecording).toHaveBeenLastCalledWith(file)
-  picker.value = ''; picker.dispatchEvent(new Event('change'))
-  expect(demo.chooseRecording).toHaveBeenLastCalledWith(null)
+  expect(load.mock.lastCall?.[2].file).toBe(file)
+  picker.value = ''; picker.dispatchEvent(new Event('change')); await start()
+  const shuffled = load.mock.lastCall?.[2].file
+  load.mock.lastCall?.[3].finished(); await start()
+  expect(load.mock.lastCall?.[2].file).not.toBe(shuffled)
   expect(saveSettings).not.toHaveBeenCalled()
 })
 
@@ -110,21 +115,31 @@ it('aborts a covered load and disposes a late result without starting it', async
   expect(demo.setActive).not.toHaveBeenCalled()
 })
 
-it('keeps the entrance without loading text on failure and avoids retry storms', async () => {
+it('explains a failed load and retries only when requested', async () => {
   load.mockRejectedValue(new Error('unavailable'))
   const v = create(); await start()
   expect(v.canvas.hidden).toBe(true)
   expect(v.el.dataset.loading).toBe('false')
   v.cover(true); v.cover(false); await start()
   expect(load).toHaveBeenCalledOnce()
+  load.mockResolvedValue(demo)
+  v.el.querySelector('button')!.click(); await start()
+  expect(load).toHaveBeenCalledTimes(2)
+  expect(demo.setActive).toHaveBeenLastCalledWith(true)
 })
 
-it('times out an unresponsive asset load and aborts it', async () => {
-  load.mockImplementation((_canvas, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason))))
-  create(); await start(); await vi.advanceTimersByTimeAsync(60_000)
-  expect(load.mock.calls[0][1].aborted).toBe(true)
-  view.cover(true); view.cover(false); await start()
-  expect(load).toHaveBeenCalledOnce()
+it('allows a progressing slow load and can retry even if the stalled request never settles', async () => {
+  load.mockReturnValueOnce(new Promise(() => {}))
+  const v = create(); await start()
+  const [, signal, , callbacks] = load.mock.calls[0]
+  await vi.advanceTimersByTimeAsync(45_000)
+  callbacks.progress()
+  await vi.advanceTimersByTimeAsync(45_000)
+  expect(signal.aborted).toBe(false)
+  await vi.advanceTimersByTimeAsync(15_000)
+  expect(signal.aborted).toBe(true)
+  v.el.querySelector('button')!.click(); await start()
+  expect(demo.setActive).toHaveBeenLastCalledWith(true)
 })
 
 it('releases a loaded demo if starting playback fails', async () => {

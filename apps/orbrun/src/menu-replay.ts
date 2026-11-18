@@ -23,11 +23,39 @@ export function readReplay(value: unknown, version: string): ReplayClip {
   return clip
 }
 
+/** Each shuffle visits the entire manifest, even when recordings are loaded on demand. */
+export class ReplayPlaylist {
+  private order: number[] = []
+  private last = -1
+
+  constructor(private count: number, private random = Math.random) {
+    if (!count) throw new Error('Empty menu playlist')
+  }
+
+  next(afterManualChoice?: number) {
+    if (afterManualChoice !== undefined) {
+      this.last = afterManualChoice
+      this.order = []
+    }
+    if (!this.order.length) {
+      this.order = Array.from({ length: this.count }, (_, i) => i)
+      for (let i = this.order.length - 1; i > 0; i--) {
+        const j = Math.floor(this.random() * (i + 1))
+        ;[this.order[i], this.order[j]] = [this.order[j], this.order[i]]
+      }
+      // Every clip gets a turn; a new shuffle cannot repeat the last one immediately.
+      if (this.order.length > 1 && this.order[0] === this.last) {
+        const j = 1 + Math.floor(this.random() * (this.order.length - 1))
+        ;[this.order[0], this.order[j]] = [this.order[j], this.order[0]]
+      }
+    }
+    this.last = this.order.shift()!
+    return this.last
+  }
+}
+
 /** One recorded batch at a time. Pauses retain their remaining delay; no catch-up bursts. */
 export class ReplayClock {
-  private clip = -1
-  private order: number[] = []
-  private selected: number | null = null
   private frame = 0
   private active = false
   private destroyed = false
@@ -35,30 +63,16 @@ export class ReplayClock {
   private due = 0
   private timer: ReturnType<typeof setTimeout> | undefined
 
-  constructor(private clips: ReplayClip[], private reset: (messages: ServerMessage[], version: string) => void,
-    private apply: (messages: ServerMessage[]) => void, private failed: () => void, private random = Math.random) {
-    if (!clips.length) throw new Error('Empty menu playlist')
+  constructor(private clip: ReplayClip, private reset: (messages: ServerMessage[]) => void,
+    private apply: (messages: ServerMessage[]) => void, private finished: () => void, private failed: (error: unknown) => void) {
     this.begin()
   }
 
   private begin() {
-    if (this.selected === null && !this.order.length) {
-      this.order = this.clips.map((_, i) => i)
-      for (let i = this.order.length - 1; i > 0; i--) {
-        const j = Math.floor(this.random() * (i + 1))
-        ;[this.order[i], this.order[j]] = [this.order[j], this.order[i]]
-      }
-      // Every clip gets a turn; a new shuffle cannot repeat the last one immediately.
-      if (this.order.length > 1 && this.order[0] === this.clip) {
-        const j = 1 + Math.floor(this.random() * (this.order.length - 1))
-        ;[this.order[0], this.order[j]] = [this.order[j], this.order[0]]
-      }
-    }
-    this.clip = this.selected ?? this.order.shift()!
     this.frame = 0
     // The reducer may mutate nested message data. Every loop starts with fresh messages.
-    this.reset(structuredClone(this.clips[this.clip].initial), this.clips[this.clip].version)
-    this.remaining = this.clips[this.clip].frames[0].after
+    this.reset(structuredClone(this.clip.initial))
+    this.remaining = this.clip.frames[0].after
   }
 
   private schedule() {
@@ -67,15 +81,17 @@ export class ReplayClock {
       this.timer = undefined
       if (!this.active || this.destroyed) return
       try {
-        const frames = this.clips[this.clip].frames
+        const frames = this.clip.frames
         if (this.frame === frames.length) {
+          this.finished()
+          if (this.destroyed) return
           this.begin()
         } else {
           this.apply(structuredClone(frames[this.frame++].messages))
           this.remaining = frames[this.frame]?.after ?? 1600
         }
         this.schedule()
-      } catch { this.destroy(); this.failed() }
+      } catch (error) { this.destroy(); this.failed(error) }
     }, this.remaining)
   }
 
@@ -88,20 +104,6 @@ export class ReplayClock {
       clearTimeout(this.timer)
       this.timer = undefined
     }
-  }
-
-  /** A temporary manual choice loops until the viewer returns to shuffle. */
-  select(index: number | null) {
-    if (this.destroyed) return
-    if (index !== null && (!Number.isInteger(index) || index < 0 || index >= this.clips.length)) throw new RangeError('Unknown menu recording')
-    clearTimeout(this.timer)
-    this.timer = undefined
-    this.selected = index
-    this.order = []
-    try {
-      this.begin()
-      if (this.active) this.schedule()
-    } catch { this.destroy(); this.failed() }
   }
 
   destroy() { this.destroyed = true; this.active = false; clearTimeout(this.timer) }

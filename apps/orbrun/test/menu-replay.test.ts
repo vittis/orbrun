@@ -5,7 +5,7 @@ import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { emptyScene } from '@orbrun/scene'
 import { buildScene } from '@orbrun/scene-webtiles'
 import { CombatFeedback } from '../src/combat-feedback'
-import { readReplay, ReplayClock, type ReplayClip } from '../src/menu-replay'
+import { readReplay, ReplayClock, ReplayPlaylist, type ReplayClip } from '../src/menu-replay'
 import { verifyMenuReplays } from '../menu-replay-assets'
 import manifest from '../data/menu-replays.json'
 import { curate } from '../../../tools/record/curate-menu.mjs'
@@ -15,11 +15,11 @@ const clip = (id: number): ReplayClip => ({ format: 1, version, initial: [{ msg:
   frames: [{ after: 100, messages: [{ msg: 'player', pos: { x: id + 1, y: 0 } }] }, { after: 200, messages: [{ msg: 'msgs', messages: [] }] }] })
 afterEach(() => vi.useRealTimers())
 
-it('preserves ordered batches, remaining pause time and fresh state across clip changes and loops', async () => {
+it('preserves ordered batches, remaining pause time and fresh state across loops', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
-  const clips = [clip(0), clip(10)], source = structuredClone(clips), seen: unknown[] = []
+  const recording = clip(0), source = structuredClone(recording), seen: unknown[] = []
   const reset = (messages: ServerMessage[]) => { seen.push(['reset', structuredClone(messages)]); (messages[0].cells as object[]).length = 0 }
-  const clock = new ReplayClock(clips, reset, messages => seen.push(['frame', messages]), vi.fn(), () => 0.999)
+  const clock = new ReplayClock(recording, reset, messages => seen.push(['frame', messages]), vi.fn(), vi.fn())
   clock.setActive(true)
   await vi.advanceTimersByTimeAsync(40)
   clock.setActive(false)
@@ -27,79 +27,32 @@ it('preserves ordered batches, remaining pause time and fresh state across clip 
   expect(seen).toHaveLength(1)
   clock.setActive(true)
   await vi.advanceTimersByTimeAsync(59); expect(seen).toHaveLength(1)
-  await vi.advanceTimersByTimeAsync(1); expect(seen[1]).toEqual(['frame', source[0].frames[0].messages])
-  await vi.advanceTimersByTimeAsync(200); expect(seen[2]).toEqual(['frame', source[0].frames[1].messages])
-  await vi.advanceTimersByTimeAsync(1600); expect(seen[3]).toEqual(['reset', source[1].initial])
-  await vi.advanceTimersByTimeAsync(1900); expect(seen[6]).toEqual(['reset', source[0].initial])
-  expect(clips).toEqual(source)
+  await vi.advanceTimersByTimeAsync(1); expect(seen[1]).toEqual(['frame', source.frames[0].messages])
+  await vi.advanceTimersByTimeAsync(200); expect(seen[2]).toEqual(['frame', source.frames[1].messages])
+  await vi.advanceTimersByTimeAsync(1600); expect(seen[3]).toEqual(['reset', source.initial])
+  await vi.advanceTimersByTimeAsync(1900); expect(seen[6]).toEqual(['reset', source.initial])
+  expect(recording).toEqual(source)
   clock.destroy(); await vi.advanceTimersByTimeAsync(10000); expect(seen).toHaveLength(7)
 })
 
-it('shuffles every clip once per round without repeating across round boundaries', async () => {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
-  const seen: number[] = []
-  const clock = new ReplayClock([clip(0), clip(10), clip(20)], messages => {
-    seen.push((messages[1].pos as { x: number }).x)
-  }, () => {}, vi.fn(), () => 0)
-  clock.setActive(true)
-  await vi.advanceTimersByTimeAsync(1900 * 8)
-  expect(seen.slice(0, 3)).toEqual([10, 20, 0])
-  for (let i = 0; i < seen.length; i += 3) expect([...seen.slice(i, i + 3)].sort((a, b) => a - b)).toEqual([0, 10, 20])
+it('shuffles every clip once per round without repeating across round boundaries', () => {
+  const random = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValue(.999)
+  const playlist = new ReplayPlaylist(3, random)
+  const seen = Array.from({ length: 9 }, () => playlist.next())
+  expect(seen.slice(0, 3)).toEqual([1, 2, 0])
+  for (let i = 0; i < seen.length; i += 3) expect([...seen.slice(i, i + 3)].sort()).toEqual([0, 1, 2])
   expect(seen.every((id, i) => !i || id !== seen[i - 1])).toBe(true)
-  clock.destroy()
-
-  // Choose an order whose first clip matches the preceding round's last clip.
-  const random = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValue(0.999)
-  const boundary: number[] = []
-  const next = new ReplayClock([clip(0), clip(10), clip(20)], messages => {
-    boundary.push((messages[1].pos as { x: number }).x)
-  }, () => {}, vi.fn(), random)
-  next.setActive(true)
-  await vi.advanceTimersByTimeAsync(1900 * 5)
-  expect(boundary.slice(0, 3)).toEqual([10, 20, 0])
-  expect(boundary[3]).not.toBe(0)
-  expect([...boundary.slice(3)].sort((a, b) => a - b)).toEqual([0, 10, 20])
-  next.destroy()
 })
 
 it('stops on a failed frame and rejects executable or mismatched recording content', async () => {
   vi.useFakeTimers()
   const failed = vi.fn(), apply = vi.fn(() => { throw Error('broken') })
-  const clock = new ReplayClock([clip(0)], () => {}, apply, failed)
+  const clock = new ReplayClock(clip(0), () => {}, apply, vi.fn(), failed)
   clock.setActive(true); await vi.advanceTimersByTimeAsync(5000)
   expect(apply).toHaveBeenCalledOnce(); expect(failed).toHaveBeenCalledOnce()
   for (const bad of [null, { ...clip(0), version: 'wrong' }, { ...clip(0), frames: [] },
     { ...clip(0), initial: [{ msg: 'game_client', content: '<script>' }] },
     { ...clip(0), frames: [{ after: -1, messages: [] }] }]) expect(() => readReplay(bad, version)).toThrow()
-})
-
-it('switches recordings and artwork versions immediately, loops the selection, and preserves pauses', async () => {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] })
-  const second = { ...clip(10), version: 'b'.repeat(40) }
-  const reset = vi.fn(), apply = vi.fn(), failed = vi.fn()
-  const clock = new ReplayClock([clip(0), second], reset, apply, failed, () => .999)
-  clock.setActive(true)
-  await vi.advanceTimersByTimeAsync(50)
-  clock.select(1)
-  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
-  await vi.advanceTimersByTimeAsync(99); expect(apply).not.toHaveBeenCalled()
-  await vi.advanceTimersByTimeAsync(1); expect(apply).toHaveBeenLastCalledWith(second.frames[0].messages)
-  await vi.advanceTimersByTimeAsync(1800)
-  expect(reset).toHaveBeenCalledTimes(3)
-  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
-  clock.setActive(false)
-  clock.select(0)
-  expect(reset).toHaveBeenLastCalledWith(clip(0).initial, version)
-  const count = apply.mock.calls.length
-  await vi.advanceTimersByTimeAsync(5000); expect(apply).toHaveBeenCalledTimes(count)
-  clock.select(null); clock.setActive(true)
-  expect(reset).toHaveBeenLastCalledWith(second.initial, second.version)
-  await vi.advanceTimersByTimeAsync(1900)
-  expect(reset).toHaveBeenLastCalledWith(clip(0).initial, version)
-  expect(() => clock.select(-1)).toThrow(RangeError)
-  clock.destroy(); clock.select(1)
-  expect(vi.getTimerCount()).toBe(0)
-  expect(failed).not.toHaveBeenCalled()
 })
 
 it('curates state-only clips with complete preceding deltas and bounded idle gaps', () => {

@@ -1,6 +1,7 @@
 import { h } from './dom'
 import { getSettings, saveSettings } from './settings'
 import type { MenuDemo } from './menu-demo'
+import { ReplayPlaylist } from './menu-replay'
 import manifest from '../data/menu-replays.json'
 
 /** Silent recorded gameplay with an immediate, lightweight dungeon entrance while loading. */
@@ -15,23 +16,45 @@ export class MenuBackdrop {
   private controls = h('div', { class: 'menu-replay-controls', hidden: true },
     h('label', { class: 'menu-replay-picker' }, h('span', {}, 'Choose recording'), this.recording),
     h('label', { class: 'menu-replay-tilt' }, h('span', {}, 'Dungeon tilt'), this.tiltValue, this.tilt))
+  private status = h('span', { role: 'status' })
+  private retry = h('button', { type: 'button', hidden: true }, 'Retry replay')
+  private entrance = h('div', { class: 'menu-entrance' },
+    h('div', { class: 'menu-orb-shrine', 'aria-hidden': 'true' },
+      h('div', { class: 'menu-orb-relic' }, h('img', { src: '/orb.png', width: 32, height: 32, alt: '' })),
+      h('pre', { class: 'menu-orb-altar' }, [
+        '        ╱─────◇─────╲        ',
+        '       ╱_____________╲       ',
+        '       ╲══════╤══════╱       ',
+        '          ░│  │  │░          ',
+        '          ▒│  ◊  │▒          ',
+        '       ┌───┴─────┴───┐       ',
+        '    ───┴─────────────┴───    ',
+      ].join('\n'))),
+    h('div', { class: 'menu-replay-status' }, this.status, this.retry))
+  private playlist = new ReplayPlaylist(manifest.clips.length)
+  private entry = manifest.clips[this.playlist.next()]
   private media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
   private observer: MutationObserver
   private covered = false
   private destroyed = false
-  private failed = false
+  private failure = ''
+  private hasPlayed = false
   private demo: MenuDemo | null = null
   private loading: AbortController | null = null
   private deadline: ReturnType<typeof setTimeout> | undefined
 
   constructor(private host: HTMLElement) {
-    this.el.append(this.canvas, h('div', { class: 'menu-entrance', 'aria-hidden': 'true' },
-      h('div', { class: 'menu-entrance-door' }, h('span', {}, '@')),
-      h('p', { class: 'menu-loading' }, 'Loading dungeon scenes…')), this.controls)
+    this.el.append(this.canvas, this.entrance, this.controls)
+    this.retry.addEventListener('click', () => {
+      this.switchTo(this.recording.value ? this.entry : manifest.clips[this.playlist.next()])
+    })
     this.tilt.addEventListener('input', () => {
       saveSettings({ ...getSettings(), depthTilt: this.tilt.valueAsNumber })
     })
-    this.recording.addEventListener('change', () => this.demo?.chooseRecording(this.recording.value || null))
+    this.recording.addEventListener('change', () => {
+      const chosen = manifest.clips.find(clip => clip.file === this.recording.value)
+      this.switchTo(chosen ?? manifest.clips[this.playlist.next(manifest.clips.indexOf(this.entry))])
+    })
     host.prepend(this.el)
     this.media?.addEventListener?.('change', this.applySettings)
     document.addEventListener('visibilitychange', this.applySettings)
@@ -47,6 +70,15 @@ export class MenuBackdrop {
 
   cover(on: boolean) { this.covered = on; this.applySettings() }
 
+  private switchTo(entry: typeof this.entry) {
+    this.entry = entry
+    this.failure = ''
+    this.demo?.destroy(); this.demo = null
+    this.loading?.abort(); this.loading = null
+    clearTimeout(this.deadline)
+    this.applySettings()
+  }
+
   applySettings = () => {
     const settings = getSettings()
     this.tilt.value = String(settings.depthTilt)
@@ -54,48 +86,67 @@ export class MenuBackdrop {
     this.tilt.setAttribute('aria-valuetext', `${settings.depthTilt} degrees`)
     const still = settings.depthAnimate === false || !!this.media?.matches
     const active = !this.destroyed && !this.covered && !document.hidden && !still
-    this.controls.hidden = !active || !this.demo || this.failed
-    this.el.dataset.loading = active && !this.failed ? 'true' : 'false'
+    this.controls.hidden = !active || !this.hasPlayed
+    this.el.dataset.loading = String(active && !this.demo && !this.failure)
+    this.entrance.hidden = this.destroyed || this.covered || document.hidden
+    this.retry.hidden = !active || !this.failure
+    const message = settings.depthAnimate === false ? 'Replays paused in Still mode'
+      : this.media?.matches ? 'Replay paused · Device requests reduced motion'
+      : this.failure || 'Loading dungeon replay…'
+    if (this.status.textContent !== message) this.status.textContent = message
     this.host.dataset.menuMotion = active ? 'on' : 'off'
     this.demo?.setActive(active)
     if (active) this.demo?.refresh()
     if (!active) {
       clearTimeout(this.deadline)
       this.loading?.abort(); this.loading = null
-      if (still) { this.demo?.destroy(); this.demo = null; this.canvas.hidden = true }
+      if (still) { this.hasPlayed = false; this.demo?.destroy(); this.demo = null; this.canvas.hidden = true }
       return
     }
-    if (this.demo || this.loading || this.failed) return
+    if (this.demo || this.loading || this.failure) return
     void this.start()
   }
 
   private async start() {
     const controller = this.loading = new AbortController()
-    this.deadline = setTimeout(() => { this.failed = true; this.el.dataset.loading = 'false'; controller.abort() }, 60_000)
+    const progress = () => {
+      if (controller.signal.aborted) return
+      clearTimeout(this.deadline)
+      this.deadline = setTimeout(() => {
+        this.reportFailure(new Error('No replay asset progress for 60 seconds'), 'Replay download timed out')
+      }, 60_000)
+    }
+    progress()
     try {
       const { loadMenuDemo } = await import('./menu-demo')
       if (controller.signal.aborted) return
-      const demo = await loadMenuDemo(this.canvas, controller.signal, () => {
-        this.failed = true; this.demo = null; this.el.dataset.loading = 'false'
-        this.controls.hidden = true
+      const demo = await loadMenuDemo(this.canvas, controller.signal, this.entry, {
+        progress, failed: this.reportFailure,
+        finished: () => {
+          if (!this.recording.value) this.switchTo(manifest.clips[this.playlist.next()])
+        },
       })
       if (controller.signal.aborted || this.destroyed) { demo.destroy(); return }
       this.demo = demo
-      if (this.recording.value) demo.chooseRecording(this.recording.value)
-      if (this.demo !== demo) return
       demo.setActive(true)
+      this.hasPlayed = true
       this.controls.hidden = false
-    } catch {
-      if (!controller.signal.aborted) {
-        this.failed = true
-        this.el.dataset.loading = 'false'
-        this.demo?.destroy(); this.demo = null
-        this.canvas.hidden = true
-        this.controls.hidden = true
-      }
+      this.el.dataset.loading = 'false'
+    } catch (error) {
+      if (!controller.signal.aborted) this.reportFailure(error)
     } finally {
       if (this.loading === controller) { clearTimeout(this.deadline); this.loading = null }
     }
+  }
+
+  private reportFailure = (error: unknown, message = 'Replay could not load') => {
+    console.warn('Menu replay unavailable', this.entry.file, error)
+    clearTimeout(this.deadline)
+    this.loading?.abort(); this.loading = null
+    this.failure = message
+    this.demo?.destroy(); this.demo = null
+    this.canvas.hidden = true
+    this.applySettings()
   }
 
   destroy() {
