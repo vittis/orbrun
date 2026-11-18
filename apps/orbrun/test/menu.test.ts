@@ -773,6 +773,26 @@ describe('the front end: accounts and servers', () => {
     expect(screen.root.querySelector('.error')).toBeNull()
   })
 
+  it('keeps a login draft while connecting and accepts it once the socket opens', () => {
+    const s = fakeSession(crg, null, {}, false)
+    const { screen } = make(server => server.id === crg.id ? s : null)
+    screen.open({ kind: 'menu', path: 'login', serverId: crg.id })
+    const form = screen.root.querySelector<HTMLFormElement>('form')!
+    const password = form.querySelector<HTMLInputElement>('[name=password]')!
+    const submit = form.querySelector<HTMLButtonElement>('[data-focus=login]')!
+    form.querySelector<HTMLInputElement>('[name=username]')!.value = 'Alice'
+    password.value = 'typed-password'
+    expect(submit.disabled).toBe(true)
+    form.requestSubmit()
+    expect(s.send).not.toHaveBeenCalled()
+    Object.assign(s.conn, { open: true })
+    ;(s as unknown as { emit(e: unknown): void }).emit({ type: 'open' })
+    expect(submit.disabled).toBe(false)
+    expect(password.value).toBe('typed-password')
+    form.requestSubmit()
+    expect(s.send).toHaveBeenCalledWith({ msg: 'login', username: 'Alice', password: 'typed-password' })
+  })
+
   it('Start chooses a row, then submits a focused login field like Enter', () => {
     const { screen } = make()
     screen.open({ kind: 'menu', path: 'accounts/add' })

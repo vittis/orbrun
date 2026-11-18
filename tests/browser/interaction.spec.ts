@@ -701,7 +701,7 @@ for (const touch of [false, true]) {
         send(socket, [{ msg: 'lobby_complete' }])
         socket.onMessage(raw => {
           const m = JSON.parse(String(raw)); sent.push(m)
-          if (m.msg === 'login') send(socket, [
+          if (m.msg === 'login' && m.password === 'fixture-password') send(socket, [
             { msg: 'login_success', username: m.username },
             { msg: 'set_game_links', content: '<span><a href="#play-dcss-0.34">DCSS 0.34</a><a class="edit_rc_link" data-game_id="stable-rc">(edit rc)</a></span><span><a href="#play-dcss-web-trunk">DCSS trunk</a><a class="edit_rc_link" data-game_id="trunk-rc">(edit rc)</a></span><span><a href="#play-descent-web-trunk">Descent</a></span>' },
             { msg: 'lobby_complete' },
@@ -715,6 +715,8 @@ for (const touch of [false, true]) {
       })
       await page.goto('/')
       const user = page.getByRole('textbox', { name: 'User', exact: true }), pass = page.getByLabel('Pass', { exact: true })
+      // Cover both a remembered account and a server where this device has never logged in.
+      if (touch) await page.getByRole('combobox', { name: 'Server', exact: true }).selectOption('cao')
       await user.fill('menu-test'); await pass.fill('fixture-password')
       const handle = await pass.elementHandle()
       send(sockets.at(-1)!, [{ msg: 'lobby_entry', id: 1, username: 'viewer', game_id: 'dcss-0.34' }, { msg: 'lobby_complete' }])
@@ -734,10 +736,27 @@ for (const touch of [false, true]) {
         await expect(pass).toHaveValue('fixture-password')
       }
       expect(await page.evaluate(() => localStorage.getItem('orbrun.newsSeen'))).toBeTruthy()
+      const login = page.getByRole('button', { name: 'Log in', exact: true })
+      await pass.fill('rejected-password')
+      await login.click()
+      await expect(login).toBeDisabled()
+      await expect(page.locator('.account-bar [role="status"]')).toHaveText('Logging in…')
+      await page.screenshot({ path: `test-results/polished-login-${touch ? 'mobile' : 'desktop'}.png` })
+      await pass.fill('fixture-password')
+      await pass.press('Enter')
+      send(sockets.at(-1)!, [{ msg: touch ? 'auth_error' : 'login_fail', reason: 'Incorrect password.' }])
+      await expect(page.locator('.account-bar [role="status"]')).toHaveText('Incorrect password.')
+      await expect(pass).toHaveValue('fixture-password')
+      await expect(login).toBeEnabled()
       await pass.press('Enter')
       await expect(page.locator('[data-focus="play:dcss-0.34"]')).toBeVisible()
+      await expect(page.locator('.signed-in')).toContainText('menu-test')
+      expect(await page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.account')!))).toEqual({ serverId: touch ? 'cao' : 'cdi', username: 'menu-test' })
       await expect(page.locator('.polished-commands')).not.toContainText('Descent')
-      expect(sent.filter(m => m.msg === 'login')).toEqual([{ msg: 'login', username: 'menu-test', password: 'fixture-password' }])
+      expect(sent.filter(m => m.msg === 'login')).toEqual([
+        { msg: 'login', username: 'menu-test', password: 'rejected-password' },
+        { msg: 'login', username: 'menu-test', password: 'fixture-password' },
+      ])
       const play = page.locator('[data-focus="play:dcss-web-trunk"]'); await play.focus()
       const node = await play.elementHandle()
       send(sockets.at(-1)!, [{ msg: 'lobby_entry', id: 2, username: 'menu-test', game_id: 'dcss-web-trunk', char: 'TrFi', xl: '11', place: 'Lair:2' }])

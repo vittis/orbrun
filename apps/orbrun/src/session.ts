@@ -59,8 +59,7 @@ export class Session {
    */
   username: string | null
   /**
-   * A token login is out and not yet answered. The token is forgotten as it is sent, so without this the
-   * moment between would read as nobody logged in and nothing to log in with.
+   * A password or token login is awaiting its server reply.
    */
   loggingIn = false
   readonly conn: Connection
@@ -148,7 +147,6 @@ export class Session {
       const token = who ? (server.offline ? 'offline:' + who : getToken(server.id, who)) : null
       if (token) {
         this.send(cm.tokenLogin(token))
-        this.loggingIn = true
         // the server forgets a token as it is used (ws_handler.py `token_login`), so it is forgotten here too, as
         // client.js `start_login` does; `login_cookie` brings the next one
         setToken(server.id, who!, null)
@@ -203,6 +201,7 @@ export class Session {
 
   send(msg: ClientMessage, own = false) {
     if (!own && this.hold?.(msg)) return
+    if (msg.msg === 'login' || msg.msg === 'token_login') this.loggingIn = true
     this.conn.send(msg)
     this.emit({ type: 'sent', msg })
   }
@@ -330,7 +329,7 @@ export class Session {
       return
     }
     if (this.intercept?.(m)) return
-    if (m.msg === 'login_success' || m.msg === 'login_fail') this.loggingIn = false
+    if (m.msg === 'login_success' || m.msg === 'login_fail' || m.msg === 'auth_error' || m.msg === 'logout') this.loggingIn = false
     if (m.msg === 'login_success') {
       // the name the server answered with: an account just added had none on this connection until now
       this.username = (m.username as string) || this.username

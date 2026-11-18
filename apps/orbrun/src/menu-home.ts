@@ -16,7 +16,7 @@ export function homeGame(game: GameLink): boolean {
 interface HomeActions {
   server(id: string): void
   accounts(): void
-  login(user: string, password: string): void
+  login(user: string, password: string): boolean
   logout(): void
   register(): void
   about(): void
@@ -27,7 +27,7 @@ interface HomeActions {
 export class HomeView {
   readonly el = h('div', { class: 'polished-home' })
   private select = h('select', { 'aria-label': 'Server', dataset: { focus: 'server' } })
-  readonly user = h('input', { name: 'username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', required: true, dataset: { focus: 'username' } })
+  readonly user = h('input', { name: 'username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', required: true, pattern: '.*\\S.*', dataset: { focus: 'username' } })
   private pass = h('input', { type: 'password', name: 'password', autocomplete: 'current-password', required: true, dataset: { focus: 'password' } })
   private login = h('button', { type: 'submit', dataset: { focus: 'login' } }, 'Log in')
   private form: HTMLFormElement
@@ -35,6 +35,7 @@ export class HomeView {
   private signedIn: HTMLElement
   private recovery = h('a', { target: '_blank', rel: 'noopener noreferrer', title: 'Open the server’s own account recovery page', dataset: { focus: 'recovery' } }, 'Forgot password')
   private authLinks: HTMLElement
+  private authStatus = h('div', { class: 'auth-status', role: 'status' })
   private status = h('div', { class: 'home-status', role: 'status' })
   private commands = h('nav', { class: 'menu polished-commands', 'aria-label': 'Main menu' })
   private footer: HTMLElement
@@ -46,19 +47,22 @@ export class HomeView {
   constructor(private actions: HomeActions) {
     this.select.onchange = () => actions.server(this.select.value)
     this.identity.onclick = actions.accounts
-    this.form = h('form', { class: 'inline-login', onsubmit: (e: Event) => { e.preventDefault(); actions.login(this.user.value.trim(), this.pass.value); this.pass.value = '' } },
+    this.form = h('form', { class: 'inline-login', onsubmit: (e: Event) => {
+      e.preventDefault()
+      if (!this.login.disabled && actions.login(this.user.value.trim(), this.pass.value)) this.pass.value = ''
+    } },
       h('label', null, 'User', this.user), h('label', null, 'Pass', this.pass), this.login)
     this.signedIn = h('div', { class: 'signed-in' }, this.identity, h('button', { type: 'button', dataset: { focus: 'logout' }, onclick: actions.logout }, 'Log out'))
     this.authLinks = h('div', { class: 'auth-links' }, h('button', { type: 'button', dataset: { focus: 'register' }, onclick: actions.register }, 'Register'), this.recovery,
       h('button', { type: 'button', dataset: { focus: 'accounts' }, onclick: actions.accounts }, 'Accounts'))
     this.news = h('button', { type: 'button', dataset: { focus: 'news' }, onclick: actions.news }, 'What’s new')
     this.footer = h('footer', { class: 'polished-footer' }, h('button', { type: 'button', dataset: { focus: 'about' }, onclick: actions.about }, 'About & credits'), this.news)
-    this.el.append(h('header', { class: 'account-bar' }, h('label', { class: 'server-picker' }, 'Server:', this.select), h('div', { class: 'account-controls' }, this.form, this.signedIn, this.authLinks)),
+    this.el.append(h('header', { class: 'account-bar' }, h('label', { class: 'server-picker' }, 'Server', this.select), h('div', { class: 'account-controls' }, this.form, this.signedIn, this.authStatus, this.authLinks)),
       h('main', { class: 'polished-main' }, h('h1', { class: 'polished-title', 'aria-label': 'Polished Crawl' }, h('span', { class: 'polished-eyebrow', 'aria-hidden': 'true' }, 'POLISHED'), h('span', { class: 'crawl-title', 'aria-hidden': 'true', 'data-text': 'CRAWL' }, 'CRAWL')),
         h('p', { class: 'polished-subtitle' }, 'Classic Crawl, with a 2.5D perspective and enhanced visual effects.'), this.status, this.commands), this.footer)
   }
 
-  update(opts: { servers: ServerInfo[]; server: ServerInfo; username: string | null; remembered: string; busy: boolean; rows: HomeRow[]; notices: HTMLElement[]; unread: boolean }): Focusable[] {
+  update(opts: { servers: ServerInfo[]; server: ServerInfo; username: string | null; remembered: string; busy: boolean; authStatus: string; rows: HomeRow[]; notices: HTMLElement[]; unread: boolean }): Focusable[] {
     const shape = JSON.stringify(opts.servers.map(s => [s.id, s.name, s.location]))
     if (shape !== this.serverShape) {
       this.select.replaceChildren(...opts.servers.map(s => h('option', { value: s.id }, [s.name, s.location].filter(Boolean).join(' · '))))
@@ -71,6 +75,7 @@ export class HomeView {
     this.authLinks.hidden = !!opts.username || !!opts.server.offline
     this.identity.textContent = opts.username ?? ''
     this.login.disabled = opts.busy
+    if (this.authStatus.textContent !== opts.authStatus) this.authStatus.textContent = opts.authStatus
     // Recovery belongs to WebTiles, whose supported flows differ by server. Link to its existing lobby.
     this.recovery.href = opts.server.http + '/'
     this.news.classList.toggle('unread', opts.unread)

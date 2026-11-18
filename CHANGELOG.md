@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.129 — 2026-11-18
+
+- The server picker sits beside the login fields on desktop and directly above them on narrow screens.
+- Fixed a first-login issue that could leave the menu signed out after the server accepted your credentials. The form shows progress and server errors, and waits for a reply before accepting another attempt.
+
 ## 0.3.128 — 2026-11-17
 
 - Added Tengu Air Elementalist to the main menu shuffle and recording chooser.

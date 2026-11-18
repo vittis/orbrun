@@ -270,11 +270,13 @@ function openSession(server: ServerInfo, username: string | null, i?: Intent): S
         if (r.kind === 'watch' || r.kind === 'lobby') showWatchFor(s)
         else showLobbyFor(s)
       }
-      if (m === 'login_fail' && intent?.kind === 'play') {
+      if ((m === 'login_fail' || m === 'auth_error') && intent?.kind === 'play' && lobby?.view !== 'login') {
         // a Continue/Play (or a reload) whose token was refused: the login
         // form comes up, as the official page's does (client.js login_failed), and the intent waits for it
         frontEnd().showLogin()
-      } else if (m === 'login_success' || m === 'login_fail') lobby?.refresh()
+      }
+      // The menu follows auth replies itself. Refreshing here on success would
+      // reopen the anonymous lobby before the menu has chosen the new account.
       if (m === 'set_game_links') {
         // the lobby screen's Play entries come from this list; keep it for next time, before the connection is up
         setGames(server.id, s.state.lobby.games)

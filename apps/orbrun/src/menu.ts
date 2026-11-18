@@ -266,6 +266,7 @@ export class FrontEnd {
   private modal: MenuModal | null = null
   private homeServer: ServerInfo | null = null
   private inlineLogin: Session | null = null
+  private syncLoginForm: (() => void) | null = null
   /** what the settings screen goes back to: the screen it was opened from */
   private settingsFrom: (() => void) | null = null
   /** the settings group whose page is up (settings-rows.ts) */
@@ -345,14 +346,15 @@ export class FrontEnd {
       accounts: () => this.showAccounts(),
       login: (name, password) => {
         const server = this.homeServer
-        if (!server || !name || !password) return
+        if (!server || !name || !password) return false
         const chosen = this.chosen()
         const s = this.ensureSession(server, chosen?.account.username ?? null)
-        if (!s.conn.open) { this.error = 'Not connected. Please wait for the server.'; this.showHome(); return }
+        if (!s.conn.open || s.loggingIn || s.state.lobby.username) { this.showHome(); return false }
         this.loginName = name
         this.inlineLogin = s
         s.send(cm.login(name, password))
-        setLast({ serverId: server.id, username: name })
+        this.showHome()
+        return true
       },
       logout: () => { const account = getChosenAccount(); if (account) this.logout(account) },
       register: () => { this.adding = this.homeServer; this.showRegister() },
@@ -728,6 +730,7 @@ export class FrontEnd {
 
   /** Leave the screen on show: remember the row the cursor was on, put the keyboard away. */
   private setView(v: View, cls: string) {
+    this.syncLoginForm = null
     if (this.modal && v !== 'home') this.closeModal(false)
     const cur = this.nav.current()
     if (cur) this.marks.set(this._view, cur.id ?? cur.label)
@@ -1139,8 +1142,8 @@ export class FrontEnd {
         ...(links?.trunk ?? []).map((game) => ({ game, version: 'trunk' })),
         ...(links?.other ?? []).map((game) => ({ game, version: null })),
       ].filter(({ game }) => !game.disabled && homeGame(game))
-      if (login === 'out') {
-        rows.push({ id: 'login-needed', label: 'Play', sub: `Log in as ${account.username}`, marker: '>', fn: () => this.home.user.focus() })
+      if (login === 'out' || this.inlineLogin === s && s?.loggingIn) {
+        rows.push({ id: 'login-needed', label: 'Play', sub: s?.loggingIn ? null : `Log in as ${account.username}`, off: !!s?.loggingIn, marker: '>', fn: () => this.home.user.focus() })
       } else {
         const who = loggedIn ?? account.username
         const where = this.whereFor(server, who)
@@ -1196,7 +1199,6 @@ export class FrontEnd {
         notices.push(h('div', { class: 'notice dialog' }, `Couldn't stop one of your stale ${lobby.staleProcesses?.game || 'game'} processes gracefully. Force its termination? [yn]`, h('div', { class: 'actions' }, yes, no)))
         extra.push({ id: 'terminate:yes', label: 'Yes', el: yes, row: 100, col: 0, activate: () => answer(true) }, { id: 'terminate:no', label: 'No', el: no, row: 100, col: 1, activate: () => answer(false) })
       }
-      if (open && lobby && !lobby.username && lobby.loginFailed) notices.push(h('div', { class: 'error' }, lobby.loginFailed))
       // how the last game ended (client.html #exit_game): a dialog over this screen, put up once it is drawn,
       // until closed; a saved game says nothing unless the server had words
       if (s && st?.exit && st.exit.reason) {
@@ -1207,9 +1209,8 @@ export class FrontEnd {
         else s.state.exit = null
       }
     } else {
-      rows.push({ id: 'play', label: 'Play', marker: '>', sub: !open ? (s?.closed ? 'Disconnected' : 'Connecting…') : 'Log in to play', fn: () => this.home.user.focus() })
+      rows.push({ id: 'play', label: 'Play', marker: '>', sub: s?.loggingIn ? null : !open ? (s?.closed ? 'Disconnected' : 'Connecting…') : 'Log in to play', off: !!s?.loggingIn, fn: () => this.home.user.focus() })
       rows.push({ id: 'watch', label: 'Watch', sub: !open ? (s?.closed ? 'Disconnected' : 'Connecting…') : lobby?.complete ? `${lobby.entries.size} playing` : 'Loading…', marker: '{', fn: () => { this.watchOn = server; this.showWatch() } })
-      if (lobby?.loginFailed) notices.push(h('div', { class: 'error' }, lobby.loginFailed))
     }
     rows.push({ id: 'settings', label: 'Settings', marker: '?', fn: () => this.showSettings(() => this.showHome()) })
     if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', fn: () => this.quit() })
@@ -1223,7 +1224,8 @@ export class FrontEnd {
     if (!this.modal) this.at({ kind: 'home' })
     this.msg = null
     this.rows = rows
-    const all = this.home.update({ servers: server.offline ? [server, ...listServers()] : listServers(), server, username: loggedIn, remembered: chosen?.account.username ?? '', busy: !open || !!s?.loggingIn, rows, notices, unread: newsUnread() })
+    const all = this.home.update({ servers: server.offline ? [server, ...listServers()] : listServers(), server, username: loggedIn, remembered: chosen?.account.username ?? '', busy: !open || !!s?.loggingIn,
+      authStatus: server.offline || loggedIn ? '' : loginFeedback(s), rows, notices, unread: newsUnread() })
     // Unchanged notices keep their nodes; controller targets must follow those same live buttons.
     for (const item of extra) item.el = this.home.el.querySelector<HTMLElement>(`[data-focus="${item.id}"]`) ?? item.el
     if (!this.modal) {
@@ -2400,6 +2402,7 @@ export class FrontEnd {
   /** Follow a session's events without changing the screen. */
   private follow(session: Session) {
     this.unsub?.()
+    if (session !== this.inlineLogin) this.inlineLogin = null
     this.session = session
     this.unsub = session.on((e) => {
       // every message redraws what changed, once a frame however many came
@@ -2408,13 +2411,15 @@ export class FrontEnd {
         this.inlineLogin = null
         this.loggedIn(session)
       }
-      if (e.type === 'state' && e.msg.msg === 'login_fail' && this._view === 'login') this.showLogin()
+      if (e.type === 'state' && (e.msg.msg === 'login_fail' || e.msg.msg === 'auth_error')) this.inlineLogin = null
+      if (e.type === 'open' || (e.type === 'state' && (e.msg.msg === 'login_fail' || e.msg.msg === 'auth_error'))) this.syncLoginForm?.()
       if (e.type === 'state' && e.msg.msg === 'register_fail' && this._view === 'register') this.showRegister()
       if (e.type === 'state' && e.msg.msg === 'reload_url' && !this.reloaded) {
         this.reloaded = true
         window.location.reload()
       }
       if (e.type === 'closed') {
+        this.inlineLogin = null
         // a drop the app is already retrying says so; one it is not (the server closed it) says why. Only a screen
         // that stands on the connection says it: one that does not (the server list, the settings) is not redrawn,
         // so the words would wait there and turn up on the next screen, long after the connection was back
@@ -2482,8 +2487,9 @@ export class FrontEnd {
     this.setView('login', 'login')
     this.at({ kind: 'menu', path: 'login', serverId: server.id, ...(chosen ? { username: chosen.account.username } : {}) })
     // a phone keyboard capitalises, corrects and leaves a space after a suggestion; the server takes the name as sent
-    const user = h('input', { type: 'text', name: 'username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', placeholder: 'name', size: 20, value: this.loginName })
-    const pass = h('input', { type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'password', size: 20 })
+    const user = h('input', { type: 'text', name: 'username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', required: true, pattern: '.*\\S.*', placeholder: 'name', size: 20, value: this.loginName })
+    const pass = h('input', { type: 'password', name: 'password', autocomplete: 'current-password', required: true, placeholder: 'password', size: 20 })
+    const status = h('div', { role: 'status' })
     let form: HTMLFormElement
     const typing = this.hooks.padConnected?.() ? ' Press X to type.' : ''
     const rows: Row[] = [
@@ -2493,12 +2499,12 @@ export class FrontEnd {
       { id: 'login', label: 'Log in', sub: s.server.name, marker: '\\', main: true, hint: `Log in to ${s.server.host}.`, fn: () => form.requestSubmit() },
     ]
     if (this.adding) rows.push({ id: 'register', label: 'Register', sub: 'a new account', marker: '+', gap: true, hint: 'A new account on this server.', fn: () => this.showRegister() })
-    if (s.state.lobby.loginFailed) this.error = s.state.lobby.loginFailed
     this.list({
       cls: 'login-form',
       title: 'Log in',
       lede: s.server.name,
       rows,
+      notices: [status],
       focus: this.loginName ? 'password' : 'username',
       wrap: (list) => {
         form = h(
@@ -2507,10 +2513,12 @@ export class FrontEnd {
             class: 'form',
             onsubmit: (ev: Event) => {
               ev.preventDefault()
+              if (!s.conn.open || s.loggingIn) return
               const name = user.value.trim()
               this.loginName = name
               s.send(cm.login(name, pass.value))
-              setLast({ serverId: s.server.id, username: name })
+              pass.value = ''
+              this.syncLoginForm?.()
             },
           },
           list,
@@ -2518,6 +2526,12 @@ export class FrontEnd {
         return form
       },
     })
+    const submit = form!.querySelector<HTMLButtonElement>('button[data-focus="login"]')!
+    this.syncLoginForm = () => {
+      submit.disabled = !s.conn.open || s.loggingIn
+      status.textContent = loginFeedback(s)
+    }
+    this.syncLoginForm()
   }
 
   /**
@@ -2830,6 +2844,13 @@ function engineBuild(info: EngineInfo | null, note: EngineNote | null): string |
           ? `${note.kind}… ${note.percent}%`
           : null
   return [version, doing].filter(Boolean).join(' · ') || undefined
+}
+
+function loginFeedback(s: Session | null): string {
+  if (s?.closed) return 'Disconnected'
+  if (!s?.conn.open) return 'Connecting…'
+  if (s.loggingIn) return 'Logging in…'
+  return s.state.lobby.loginFailed ?? ''
 }
 
 /**
