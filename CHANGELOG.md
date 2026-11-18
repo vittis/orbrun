@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.134 — 2026-11-18
+
+- The main-menu replay keeps playing in Settings. Adjust dungeon zoom or tilt to see the change as you make it.
+
 ## 0.3.133 — 2026-11-18
 
 - The main menu title and gameplay options sit lower on the screen.

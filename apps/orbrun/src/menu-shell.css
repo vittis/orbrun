@@ -41,7 +41,7 @@
 }
 .menu-replay-status button { pointer-events: auto; cursor: pointer; font: inherit; color: #e0c783; border: 1px solid #5c533e; padding: 4px 10px; background: #0d0d0b; }
 .menu-replay-controls { position: absolute; z-index: 3; left: 68%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translateX(-50%); box-sizing: border-box; width: min(280px, 80vw); display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; padding: 10px 16px 4px; border: 1px solid #4b533b; border-radius: 4px; background: #0c130ded; color: #c5cbb4; font: 12px 'IBM Plex Mono', monospace; pointer-events: auto; }
-.menu-replay-controls[hidden] { display: none; }
+.polished-shell:not(.polished) .menu-replay-controls, .menu-replay-controls[hidden] { display: none; }
 .menu-replay-picker, .menu-replay-tilt { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; min-width: 0; }
 .menu-replay-picker { margin-bottom: 8px; }
 .menu-replay-picker select { grid-column: 1 / -1; width: 100%; min-width: 0; min-height: 32px; padding: 4px 6px; border: 1px solid #4b533b; border-radius: 2px; background: #0c130d; color: #d6d7c9; font: inherit; cursor: pointer; }
@@ -165,6 +165,14 @@
     height: 48%;
     mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 72%, transparent);
   }
+}
+@media (max-width: 700px) {
+  .polished-shell:is(.settings, .controls) { --preview-height: min(25dvh, 200px); }
+  .polished-shell:is(.settings, .controls) .menu-frame { bottom: var(--preview-height); }
+  .polished-shell:is(.settings, .controls) .menu-backdrop canvas {
+    inset: auto 0 0; height: var(--preview-height); mask-image: none;
+  }
+  .polished-shell:is(.settings, .controls)::before { bottom: var(--preview-height); }
 }
 @media (pointer: coarse) {
   .account-bar :is(button, select, input, a), .command-also button, .polished-footer button { min-height: 44px; }

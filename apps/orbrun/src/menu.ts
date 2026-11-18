@@ -739,7 +739,7 @@ export class FrontEnd {
     if (v !== this._view) this.shape.delete(v)
     this._view = v
     this.root.className = 'screen home polished-shell ' + cls
-    this.media.cover(v !== 'home' || !!this.modal)
+    this.media.cover(!!this.modal || !['home', 'settings', 'settings-group', 'controls'].includes(v))
     if (v !== 'watch') {
       this.rosterRows.clear()
       this.rosterSeen.clear()

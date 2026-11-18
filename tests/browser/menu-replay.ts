@@ -70,6 +70,20 @@ export function menuReplayCheck(production: boolean) {
     expect((await evidence()).workers).toBe(0)
     expect((await evidence()).opens).toEqual([])
     expect(forbidden).toEqual([])
-    await page.locator('[data-focus="settings"]').click(); await park()
+    await page.locator('[data-focus="settings"]').click()
+    const settingsDraws = (await evidence()).draws
+    await expect.poll(async () => (await evidence()).draws).toBeGreaterThan(settingsDraws)
+    await expect(page.getByRole('combobox', { name: 'Choose scene' })).toBeHidden()
+    await page.locator('[data-focus="settings:View"]').click()
+    for (const label of ['Dungeon zoom', 'Dungeon tilt']) {
+      await page.getByRole('button', { name: label + ' next' }).click()
+      const afterEdit = (await evidence()).draws
+      await expect.poll(async () => (await evidence()).draws).toBeGreaterThan(afterEdit)
+    }
+    await page.screenshot({ path: 'test-results/settings-replay-narrow.png' })
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const desktopDraws = (await evidence()).draws
+    await expect.poll(async () => (await evidence()).draws).toBeGreaterThan(desktopDraws)
+    await page.screenshot({ path: 'test-results/settings-replay-desktop.png' })
   })
 }
