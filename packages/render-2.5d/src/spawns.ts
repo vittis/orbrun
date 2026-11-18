@@ -10,6 +10,7 @@ const objectKey = (b: Billboard) => b.kind === 'doll' && b.scenery ? terrainKey(
 /** Cell-bound entrances are independent of actor hits and projectile contacts. */
 export class DungeonSpawns {
   effects: SpawnEffect[] = []
+  private entering = new Map<string, SpawnEffect>()
   private previous = new Map<string, SpawnEffect>()
   private visibleCells = new Set<ReturnType<typeof cellKey>>()
   private areaFamilies = new Set<string>()
@@ -37,6 +38,9 @@ export class DungeonSpawns {
     }
     this.anchored.clear()
     const next = new Map<string, SpawnEffect>()
+    // Replacements go to the end so the existing 192-effect budget still
+    // retains the newest entrances and departures in their original order.
+    const effects = new Map(this.effects.map(e => [e.key, e]))
     const add = (key: string, p: { x: number; y: number }, appearance: SpawnAppearance, billboard?: Billboard, terrain?: SceneCell) => {
       const previous = this.previous.get(key)
       const born = previous?.born ?? (continuing && this.visibleCells.has(cellKey(p.x, p.y)) ? now : now - ENTER)
@@ -46,8 +50,7 @@ export class DungeonSpawns {
         terrain: terrain ? { ...terrain } : undefined }
       next.set(key, snapshot)
       if (!continuing || now - born >= ENTER) return
-      this.effects = this.effects.filter(e => e.key !== key)
-      this.effects.push(snapshot)
+      effects.delete(key); effects.set(key, snapshot)
     }
     for (const cell of scene.cells.values()) if (cell.life?.spawn && cell.visibility === 'visible') add(terrainKey(cell), cell, cell.life.spawn, undefined, cell)
     for (const b of scene.billboards) {
@@ -66,18 +69,19 @@ export class DungeonSpawns {
     }
     if (continuing) for (const [key, old] of this.previous) {
       if (next.has(key) || !visible(scene, old) || scene.cells.get(cellKey(old.x, old.y))?.occluder) continue
-      this.effects = this.effects.filter(e => e.key !== key)
+      effects.delete(key)
       // Very short server overlays still receive one readable exposure when
       // created and cleared between draws. Persistent objects get no extra hold.
       const ended = old.billboard?.kind === 'projectile' ? Math.max(now, old.born + OVERLAY_HOLD) : now
-      this.effects.push({ ...old, ended })
+      effects.set(key, { ...old, ended })
     }
     // Reappearance replaces a departure; do not paint the same tile twice.
-    this.effects = this.effects.filter(e => e.ended === undefined || !next.has(e.key))
+    this.effects = [...effects.values()].filter(e => e.ended === undefined || !next.has(e.key))
     this.previous = next
     this.visibleCells = new Set([...scene.cells.values()].filter(c => c.visibility === 'visible').map(c => cellKey(c.x, c.y)))
     this.tick(scene, now)
     this.effects = this.effects.slice(-192)
+    this.entering = new Map(this.effects.filter(e => e.ended === undefined).map(e => [e.key, e]))
   }
 
   stationary(b: Billboard) { return this.anchored.has(overlayKey(b)) }
@@ -93,7 +97,7 @@ export class DungeonSpawns {
 
   overlays(scene: Scene, now: number) {
     const current = new Map(scene.billboards.filter(b => b.kind === 'projectile' && this.stationary(b) && visible(scene, b)).map(b => {
-      const effect = this.effects.find(e => e.key === `overlay:${overlayKey(b)}` && e.ended === undefined)
+      const effect = this.entering.get(`overlay:${overlayKey(b)}`)
       return [overlayKey(b), { ...b, alpha: (b.alpha ?? 0.95) * (effect ? this.opacity(effect, now) : 1) }]
     }))
     for (const e of this.effects) if (e.ended !== undefined && e.billboard?.kind === 'projectile' && !current.has(overlayKey(e.billboard))) {
@@ -104,12 +108,12 @@ export class DungeonSpawns {
   }
 
   entrance(b: Billboard, now: number) {
-    const effect = this.effects.find(e => e.key === objectKey(b) && e.ended === undefined)
+    const effect = this.entering.get(objectKey(b))
     return effect ? this.opacity(effect, now) : 1
   }
 
   terrainOpacity(cell: SceneCell, now: number) {
-    const effect = this.effects.find(e => e.key === terrainKey(cell) && e.ended === undefined)
+    const effect = this.entering.get(terrainKey(cell))
     return effect ? this.opacity(effect, now) : 1
   }
 
@@ -119,8 +123,12 @@ export class DungeonSpawns {
   }
 
   tick(scene: Scene, now: number) {
-    this.effects = this.effects.filter(e => now < (e.ended === undefined ? e.born + ENTER : e.ended + EXIT) && visible(scene, e))
+    this.effects = this.effects.filter(e => {
+      const active = now < (e.ended === undefined ? e.born + ENTER : e.ended + EXIT) && visible(scene, e)
+      if (!active) this.entering.delete(e.key)
+      return active
+    })
   }
 
-  clear() { this.effects = []; this.previous.clear(); this.visibleCells.clear(); this.areaFamilies.clear(); this.anchored.clear() }
+  clear() { this.effects = []; this.entering.clear(); this.previous.clear(); this.visibleCells.clear(); this.areaFamilies.clear(); this.anchored.clear() }
 }

@@ -133,3 +133,42 @@ LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome PERF_DPR=2 RESPONSIVENESS_SCENARIOS=m
 ```
 
 Moving standalone cases warm their movement/fade paths for 1.5 seconds and measure three seconds with a fixed 90 ms update cadence independent of FPS. The GameScreen tool retains its six-second observation and trailing frame window. Both tools report the GPU backend; keep performance evidence outside the default suite and do not substitute software-headless FPS for hardware acceptance.
+
+## Dungeon effects and replay pacing — 2026-11-18
+
+Compared the working renderer with release 0.3.140 (`4b6808b`) using the bundled **Polar Vortex in Gehenna** recording, its version-pinned art, default settings and the menu playback clock. Both versions ran sequentially in hardware Chrome 157 on an Apple M3 Pro with Metal and accelerated Canvas 2D. The replay occupied a 1280×720 canvas at DPR 1. The benchmark stops after a paint containing the same recorded update in both versions. It includes the first draw and cache warm-up. Render time measures the renderer call on the main thread. Paint-start intervals also include the replay's 30 FPS cap, scheduling and stalls.
+
+| Workload | Metric | Before | After |
+| --- | --- | ---: | ---: |
+| All 207 updates, 4× CPU throttle | Median render time | 42.9 ms | 14.1 ms |
+| | 95th / 99th percentile render time | 88.7 / 116.6 ms | 44.8 / 60.6 ms |
+| | Median paint interval | 44.7 ms | 33.4 ms |
+| | 95th / 99th percentile paint interval | 91.0 / 119.4 ms | 47.3 / 61.5 ms |
+| Opening fight, first 73 updates, native CPU speed | Median / 95th percentile render time | 11.5 / 19.8 ms | 3.9 / 8.8 ms |
+| | Median / 95th percentile paint interval | 41.5 / 42.5 ms | 33.3 / 41.6 ms |
+
+The complete throttled run drew 1,283 frames before and 1,581 after. The opening comparison drew 389 and 450. Heavy frames still exceed the 33.3 ms replay budget under throttling. Physical entry-level GPUs, sustained mobile thermals and authenticated online play were outside these local measurements.
+
+The dungeon renderer reuses masked light gradients and applies their pulse and afterglow intensity each frame. Only the soft light field uses half resolution on each axis. Receivers still sample their current visibility and moving silhouettes. In-cell sprites use a tight filtered raster, with full padding retained for overhanging art. Fog reuses distance and blur fields while the sampled exploration silhouette stays the same. Deep inside explored terrain it omits a noise contribution of at most one 8-bit opacity level. The replay carries the 30 FPS paint deadline across fractional display refreshes. The recording clock still delivers each authored update independently.
+
+Three fixed-time draws at 3, 5 and 7 seconds were compared at both 1280×720 and 390×844. Across these six pairs the largest frame-wide mean absolute RGB difference was 0.265 on a 0–255 scale. In every pair, at least 99% of pixels differed by at most four levels in any RGB channel.
+
+Two additional local comparisons exercised different workloads.
+
+- **Ignition in the Slime Pits**, first 42 updates, 1280×720, bundled headless Chromium 158 using software Canvas and SwiftShader. Median / 95th percentile render time fell from 6.2 / 26.5 ms to 5.0 / 8.5 ms. Median / 95th percentile paint interval fell from 49.3 / 51.0 ms to 33.3 / 36.6 ms.
+- **GameScreen movement with changing LOS and fog**, 1280×720 at DPR 2, hardware Chrome with six seconds of movement after warm-up. The trailing 240 frames held a median 8.3 ms interval on both versions. The 95th percentile interval measured 9.7 ms before and 8.6 ms after. Median / 95th percentile gameplay render time went from 3.5 / 3.9 ms to 3.2 / 3.5 ms.
+
+To repeat against this checkout or another local Vite origin, run the benchmark with other workloads idle.
+
+```sh
+npm run dev -w apps/orbrun -- --host 127.0.0.1 --port 5396 --strictPort
+# In a second terminal
+REPLAY_CPU=4 REPLAY_MS=55000 node tools/perf/replay-effects.mjs http://127.0.0.1:5396
+node tools/perf/replay-effects.mjs http://127.0.0.1:5396
+# Fixed-time screenshots at 3, 5 and 7 seconds. Set REPLAY_NARROW=1 for 390×844.
+REPLAY_CAPTURE=/tmp/orbrun-gehenna node tools/perf/replay-effects.mjs
+REPLAY_HEADLESS=1 REPLAY_SCENE='Ignition in the Slime Pits' node tools/perf/replay-effects.mjs
+LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome PERF_DPR=2 RESPONSIVENESS_SCENARIOS=moving-los-fog node tools/perf/responsiveness.mjs http://127.0.0.1:5396
+```
+
+Verification on the final code passed TypeScript, all 516 cases selected by `npm run test:changed`, and 22 Playwright cases including the full 5,160-assertion dungeon raster matrix. The default browser port was occupied, so the checks used an isolated strict loopback port, 5398. A pre-existing Snake Pit timing test referenced a five-cell shot from a retired clip. Its replacement checks the current recording's six confirmed cells and their exact inter-frame delays. A fake 120 Hz display also exercises the menu paint cadence and recovery from a stall.

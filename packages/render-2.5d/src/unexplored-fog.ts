@@ -95,6 +95,11 @@ export class UnexploredFog {
   private stars: HTMLCanvasElement | OffscreenCanvas | null = null
   private swirl: HTMLCanvasElement | OffscreenCanvas | null = null
   private occupied = new Uint8Array(0)
+  private previousOccupied = new Uint8Array(0)
+  private boundary: number[] = []
+  private veilArea = new Uint32Array(0)
+  private blurRadius = -1
+  private fullyCovered = false
   private coverage = new Float32Array(0)
   private outside = new Float32Array(0)
   private spacing = 1
@@ -107,16 +112,12 @@ export class UnexploredFog {
   get hasBoundary() { return this.prepared }
 
   draw(ctx: Context2d, p: Projection, known: readonly SceneCell[], time: number, dpr: number,
-    geometry: readonly SurfaceRect[] = known.map(c => planeRect(p, c.x, c.y, 0, dpr)), decorations = true): boolean {
+    inView: readonly SceneCell[], silhouette: (cell: SceneCell, ground: SurfaceRect) => SurfaceRect, decorations = true): boolean {
     this.prepared = false
     if (!known.length) return false
-    let covered = 0
-    for (const cell of known) {
-      const r = planeRect(p, cell.x, cell.y, 0, dpr)
-      covered += Math.max(0, Math.min(p.width, r.x + r.width) - Math.max(0, r.x))
-        * Math.max(0, Math.min(p.height, r.y + r.height) - Math.max(0, r.y))
-    }
-    if (covered >= p.width * p.height - 1 / (dpr * dpr)) return false
+    const key = [p.x, p.y, p.width, p.height, p.scale, p.tilt, dpr].join(':')
+    const changed = key !== this.maskKey || known !== this.maskCells
+    if (!changed && this.fullyCovered) return false
 
     // Bounded, reused buffers; no readbacks or per-cell blur filters.
     const spacing = this.spacing = Math.max(4, p.scale * 0.12, p.width / 240, p.height / 180)
@@ -135,12 +136,19 @@ export class UnexploredFog {
       this.occupied = new Uint8Array(width * height)
       this.coverage = new Float32Array(width * height); this.outside = new Float32Array(width * height)
       this.scratch = new Float32Array(width * height)
+      this.previousOccupied = new Uint8Array(width * height)
+      this.veilArea = new Uint32Array((width + 1) * (height + 1))
+      this.blurRadius = -1
       this.maskKey = ''
     }
-    const key = [p.x, p.y, p.width, p.height, p.scale, p.tilt, dpr].join(':')
-    if (key !== this.maskKey || known !== this.maskCells) {
+    if (changed) {
       this.occupied.fill(0)
-      for (const r of geometry) {
+      let covered = 0
+      for (const cell of inView) {
+        const ground = planeRect(p, cell.x, cell.y, 0, dpr)
+        covered += Math.max(0, Math.min(p.width, ground.x + ground.width) - Math.max(0, ground.x))
+          * Math.max(0, Math.min(p.height, ground.y + ground.height) - Math.max(0, ground.y))
+        const r = silhouette(cell, ground)
         const left = Math.max(0, Math.ceil((r.x - this.origin) / spacing - 0.5))
         const right = Math.min(width, Math.ceil((r.x + r.width - this.origin) / spacing - 0.5))
         const top = Math.max(0, Math.ceil((r.y - this.origin) / spacing - 0.5))
@@ -148,27 +156,46 @@ export class UnexploredFog {
         if (right <= left) continue
         for (let y = top; y < bottom; y++) this.occupied.fill(1, y * width + left, y * width + right)
       }
-      for (let i = 0; i < this.occupied.length; i++) {
-        this.coverage[i] = this.occupied[i]
-        this.outside[i] = this.occupied[i] ? 0 : 1e6
-      }
-      blur(this.coverage, this.scratch, width, height, Math.max(1, Math.ceil(p.scale * 0.12 / spacing)))
-      distances(this.outside, width, height)
       this.maskKey = key; this.maskCells = known
+      this.fullyCovered = covered >= p.width * p.height - 1 / (dpr * dpr)
+      if (this.fullyCovered) return false
+      const radius = Math.max(1, Math.ceil(p.scale * 0.12 / spacing))
+      // Map packets and fractional camera movement can leave the sampled
+      // silhouette identical. Only its shape and blur radius affect these fields.
+      if (this.blurRadius !== radius || this.occupied.some((v, i) => v !== this.previousOccupied[i])) {
+        this.blurRadius = radius
+        this.previousOccupied.set(this.occupied)
+        for (let i = 0; i < this.occupied.length; i++) {
+          this.coverage[i] = this.occupied[i]
+          this.outside[i] = this.occupied[i] ? 0 : 1e6
+        }
+        blur(this.coverage, this.scratch, width, height, radius)
+        distances(this.outside, width, height)
+        this.boundary.length = 0
+        const edge = this.edgePixels.data, stride = width + 1
+        for (let y = 0, k = 0; y < height; y++) {
+          let row = 0
+          for (let x = 0; x < width; x++, k++) {
+            const coverage = this.coverage[k]
+            if (coverage < 1) row++
+            this.veilArea[(y + 1) * stride + x + 1] = this.veilArea[y * stride + x + 1] + row
+            // Deep inside the union even the strongest noise darkens a
+            // channel by at most one level. Animate only the feather itself.
+            if (coverage > 0.5 && coverage < 1) this.boundary.push(k)
+            else edge[k * 4 + 3] = coverage <= 0.5 ? 255 : 0
+          }
+        }
+      }
     }
 
-    const field = noiseField(), edge = this.edgePixels!.data, sy = groundDepth(p.tilt)
-    for (let py = 0, i = 0; py < height; py++) for (let px = 0; px < width; px++, i += 4) {
-      const k = py * width + px
-      // The smoothstep is identically zero on this side of the boundary,
-      // regardless of noise or time. Most of a zoomed-out viewport can be
-      // unexplored: do not evaluate animated noise for those opaque pixels.
-      if (this.coverage[k] <= 0.5) { edge[i + 3] = 255; continue }
+    const field = noiseField(), edge = this.edgePixels.data, sy = groundDepth(p.tilt)
+    for (const k of this.boundary) {
+      const px = k % width, py = Math.floor(k / width)
       const wx = p.x + (this.origin + (px + 0.5) * spacing - p.width / 2) / p.scale
       const wy = p.y + (this.origin + (py + 0.5) * spacing - p.height / 2) / (p.scale * sy)
       const feather = 0.3 + 0.22 * noise(field, wx * 0.8 + time * 0.22, wy * 0.8 - time * 0.18)
       // RGB stays black in the reused, zero-initialized ImageData.
-      edge[i + 3] = 255 * (1 - smooth((this.coverage[k] - 0.5) / feather))
+      edge[k * 4 + 3] = 255 * (1 - smooth((this.coverage[k] - 0.5) / feather))
     }
     this.edgeInk.putImageData(this.edgePixels!, 0, 0)
     this.prepared = true
@@ -265,6 +292,15 @@ export class UnexploredFog {
   shade(ctx: Context2d, rect: SurfaceRect) {
     if (!this.prepared || !this.edgeCanvas) return
     const s = this.spacing
+    // Include a texel of filtering support on each side. Four reads from
+    // the summed-area table discard fully transparent receiver draws.
+    const { width, height } = this.edgeCanvas, stride = width + 1
+    const x0 = Math.max(0, Math.min(width, Math.floor((rect.x - this.origin) / s) - 1))
+    const y0 = Math.max(0, Math.min(height, Math.floor((rect.y - this.origin) / s) - 1))
+    const x1 = Math.max(0, Math.min(width, Math.ceil((rect.x + rect.width - this.origin) / s) + 1))
+    const y1 = Math.max(0, Math.min(height, Math.ceil((rect.y + rect.height - this.origin) / s) + 1))
+    if (this.veilArea[y1 * stride + x1] - this.veilArea[y0 * stride + x1]
+      - this.veilArea[y1 * stride + x0] + this.veilArea[y0 * stride + x0] === 0) return
     ctx.save(); ctx.imageSmoothingEnabled = true
     ctx.drawImage(this.edgeCanvas, (rect.x - this.origin) / s, (rect.y - this.origin) / s, rect.width / s, rect.height / s,
       rect.x, rect.y, rect.width, rect.height)
@@ -277,6 +313,7 @@ export class UnexploredFog {
     this.stars = this.swirl = null
     this.edgeCanvas = null; this.edgeInk = null; this.edgePixels = null; this.prepared = false
     this.occupied = new Uint8Array(0); this.coverage = this.outside = this.scratch = new Float32Array(0)
+    this.previousOccupied = new Uint8Array(0); this.veilArea = new Uint32Array(0); this.boundary = []; this.blurRadius = -1
     this.maskKey = ''; this.maskCells = null
   }
 }

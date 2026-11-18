@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.141 — 2026-11-18
+
+- Dense spell effects, dungeon lighting and exploration fog render faster, especially when many clouds overlap in Polar Vortex. The menu replay also holds its 30 FPS target more consistently.
+
 ## 0.3.140 — 2026-11-18
 
 - The dungeon defaults are 35° tilt, 100% zoom, 140 ms movement and 60% combat VFX variation.

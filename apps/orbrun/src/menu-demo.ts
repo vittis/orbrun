@@ -51,7 +51,7 @@ class RecordedMenuDemo implements MenuDemo {
   private destroyed = false
   private dirty = true
   private raf = 0
-  private lastFrame = -Infinity
+  private nextFrame = 0
 
   constructor(private canvas: HTMLCanvasElement, private data: Gamedata, clip: ReplayClip, finished: () => void, private failed: (error: unknown) => void) {
     try {
@@ -123,8 +123,12 @@ class RecordedMenuDemo implements MenuDemo {
     this.raf = 0
     if (!this.active || this.destroyed || !this.renderer) return
     try {
-      if (now - this.lastFrame >= 1000 / 30) {
-        this.lastFrame = now
+      // RAF timestamps can fall just short of 1/30 s. Keep the phase across
+      // refreshes and discard missed slots after a pause or slow draw.
+      if (now + 0.5 >= this.nextFrame) {
+        const period = 1000 / 30
+        this.nextFrame = this.nextFrame > 0 && now - this.nextFrame < period
+          ? this.nextFrame + period : now + period
         if (this.dirty || this.renderer.animating) {
           this.renderer.render(now / 1000)
           this.canvas.hidden = false

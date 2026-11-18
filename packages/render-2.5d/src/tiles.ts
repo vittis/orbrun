@@ -43,8 +43,13 @@ export class TileCache {
   draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean | number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, rasterScale = 1): boolean {
     const surface = this.composite(layers, light, memory, false, flash, false, rasterScale)
     if (!surface) return false
-    ctx.drawImage(surface, x - size, y - size, size * 3, size * 3)
-    lighting?.draw(ctx, { x: x - size, y: y - size, width: size * 3, height: size * 3 }, surface, sample)
+    const extent = size * surface.width / (32 * rasterScale)
+    const margin = (extent - size) / 2
+    const rect = { x: x - margin, y: y - margin, width: extent, height: extent }
+    ctx.drawImage(surface, rect.x, rect.y, extent, extent)
+    lighting?.draw(ctx, rect, surface, sample && extent !== size * 3 ? {
+      x: sample.x + size - margin, y: sample.y + size - margin, width: extent, height: extent,
+    } : sample)
     return true
   }
 
@@ -112,7 +117,16 @@ export class TileCache {
     const key = JSON.stringify([layers, shade, cachedMemory, flat, cachedFlash, thin, rasterScale, cachedField])
     let surface = this.entries.get(key)
     if (!surface) {
-      const size = flat ? 32 : 96, origin = flat ? 0 : 32
+      // Most sprites (especially dense spell clouds) fit their own cell.
+      // Keep a filtering gutter for them and retain the full three-cell
+      // footprint for overhanging art and offset equipment.
+      const fits = !flat && layers.every(layer => {
+        const tile = this.source?.tile(layer.tile)
+        if (!tile) return true
+        const left = tile.ox + (layer.ox ?? 0), top = layer.at === 'top' ? 0 : tile.oy + (layer.oy ?? 0)
+        return left >= 0 && top >= 0 && left + tile.w <= tile.cell && top + tile.h <= tile.cell
+      })
+      const origin = flat ? 0 : fits ? 2 : 32, size = 32 + origin * 2
       surface = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(size * rasterScale, size * rasterScale) : Object.assign(document.createElement('canvas'), { width: size * rasterScale, height: size * rasterScale })
       const c = surface.getContext('2d') as Context2d | null
       if (!c) return null

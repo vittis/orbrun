@@ -213,6 +213,7 @@ export class Render25d implements MapRenderer {
   private lightExposure(cell: SceneCell) { return Math.max(0, 1 - this.darkness(cell) / MEMORY_DARKNESS) }
 
   private surfaceLighting(cell: SceneCell): SurfaceLighting | undefined {
+    if (!this.lighting.active) return undefined
     const exposure = this.lightExposure(cell)
     if (exposure <= 0) return undefined
     if (exposure === 1) return this.lighting
@@ -285,14 +286,16 @@ export class Render25d implements MapRenderer {
     if (this.effects.hits.active) this.active = true
     const deathParticles = this.opts.animate ? this.deaths.sample(this.scene, now, this.opts.deathGore, this.opts.deathSprayOutward, this.opts.combatVfxVariation) : []
     // Sort and cull at the drawn position, retaining confirmed cells for semantics and picking.
-    const standing = this.standing.filter(entry => !this.opts.animate || entry.billboard?.kind !== 'projectile').map(entry => {
-      if (!entry.billboard) return entry
+    const standing: Standing[] = this.standing.filter(entry => !this.opts.animate || entry.billboard?.kind !== 'projectile').map(entry => {
+      if (!entry.billboard || entry.billboard.kind === 'cloud') return entry
       const pos = this.actorPosition(entry.billboard, now)
       return { ...entry, ...pos, depth: entry.depth + pos.y - entry.billboard.y, moving: this.movement.moving(entry.billboard, now) }
-    }).sort((a, b) => a.depth - b.depth || a.x - b.x)
+    })
+    const overlays = this.opts.animate ? this.effects.spawns.overlays(this.scene, now) : []
+    const projectiles = this.opts.animate ? this.effects.projectiles(now) : []
     const departures = this.opts.animate ? this.effects.spawns.departures(now) : []
     if (this.opts.animate) {
-      for (const billboard of this.effects.spawns.overlays(this.scene, now)) {
+      for (const billboard of overlays) {
         const cell = this.scene.cells.get(cellKey(billboard.x, billboard.y))!
         standing.push({ cell, billboard, x: billboard.x, y: billboard.y, depth: billboard.y + 0.3 })
       }
@@ -311,7 +314,7 @@ export class Render25d implements MapRenderer {
         standing.push({ cell, death, x: death.x, y: death.y, depth: death.y + 0.35 })
       }
       if (this.deaths.active) this.active = true
-      for (const billboard of this.effects.projectiles(now)) {
+      for (const billboard of projectiles) {
         const actor = billboard.targetId && this.scene.billboards.find(b => combatActorId(b) === billboard.targetId)
         const target = actor ? this.actorPosition(actor, now) : billboard.destination
         const blend = billboard.targetId ? billboard.contactBlend : 0
@@ -343,11 +346,11 @@ export class Render25d implements MapRenderer {
         } else standing.push({ cell, burst, x: position.x, y: position.y, depth: position.y + 0.65 })
         this.active = true
       }
-      standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
     }
+    standing.sort((a, b) => a.depth - b.depth || a.x - b.x)
     this.life.tick(now)
     const emitters = this.life.emitters(now)
-    if (this.opts.animate) for (const shot of [...this.effects.projectiles(now), ...this.effects.spawns.overlays(this.scene, now)]) {
+    for (const shot of [...projectiles, ...overlays]) {
       for (const light of shot.life?.lights ?? []) emitters.push({ ...light, x: Math.round(shot.x), y: Math.round(shot.y) })
     }
     // Build known receiving surfaces; the continuous exposure mask below
@@ -375,14 +378,12 @@ export class Render25d implements MapRenderer {
       }
       this.tiles.visibility.prepare(fields, this.lighting.active)
     }
-    const fogGeometry = this.opts.unexploredFog ? cells.map(cell => {
-      const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      if (!cell.occluder) return ground
-      const roof = wallRoof(this.scene, p, cell, this.dpr)
-      return { ...roof, height: ground.y + ground.height - roof.y }
-    }) : []
     if (this.opts.unexploredFog && this.scene.playerOnLevel
-      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, fogGeometry, this.opts.unexploredAtmosphere) && this.opts.animate) this.active = true
+      && this.unexploredAtmosphere.draw(ctx, p, this.cells, time, this.dpr, cells, (cell, ground) => {
+        if (!cell.occluder) return ground
+        const roof = wallRoof(this.scene, p, cell, this.dpr)
+        return { ...roof, height: ground.y + ground.height - roof.y }
+      }, this.opts.unexploredAtmosphere) && this.opts.animate) this.active = true
     if (this.opts.animate && cells.some(c => this.visibility.moving(c, now))) this.active = true
 
     for (const cell of cells) {
