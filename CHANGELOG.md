@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.130 — 2026-11-18
+
+- Menu replays now load one recording and its artwork at a time. Slow downloads can continue while assets arrive, and failed loads offer a retry.
+- The black main menu shows the Orb of Zot hovering above a text-mode altar while a replay loads. Still mode and device reduced motion keep the Orb stationary and explain why playback is paused.
+
 ## 0.3.129 — 2026-11-18
 
 - The server picker sits beside the login fields on desktop and directly above them on narrow screens.
