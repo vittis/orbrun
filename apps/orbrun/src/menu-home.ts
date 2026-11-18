@@ -57,11 +57,13 @@ export class HomeView {
       h('button', { type: 'button', dataset: { focus: 'accounts' }, onclick: actions.accounts }, 'Accounts'))
     this.news = h('button', { type: 'button', dataset: { focus: 'news' }, onclick: actions.news }, 'What’s new')
     this.footer = h('footer', { class: 'polished-footer' }, h('button', { type: 'button', dataset: { focus: 'about' }, onclick: actions.about }, 'About & credits'), this.news)
-    this.el.append(h('header', { class: 'account-bar' },
-      this.select, this.form, this.signedIn,
-      h('div', { class: 'account-details' }, this.authLinks, this.authStatus)),
+    this.el.append(h('div', { class: 'polished-content' },
+      h('header', { class: 'account-bar' },
+        this.select, this.form, this.signedIn,
+        h('div', { class: 'account-details' }, this.authLinks, this.authStatus)),
       h('main', { class: 'polished-main' }, h('h1', { class: 'polished-title', 'aria-label': 'Polished Crawl' }, h('span', { class: 'polished-eyebrow', 'aria-hidden': 'true' }, 'POLISHED'), h('span', { class: 'crawl-title', 'aria-hidden': 'true', 'data-text': 'CRAWL' }, 'CRAWL')),
-        h('p', { class: 'polished-subtitle' }, 'Classic Crawl, with a 2.5D perspective and enhanced visual effects.'), this.status, this.commands), this.footer)
+        h('p', { class: 'polished-subtitle' }, 'Classic Crawl, with a 2.5D perspective and enhanced visual effects.'), this.status, this.commands)),
+      this.footer)
   }
 
   update(opts: { servers: ServerInfo[]; server: ServerInfo; username: string | null; remembered: string; busy: boolean; authStatus: string; rows: HomeRow[]; notices: HTMLElement[]; unread: boolean }): Focusable[] {

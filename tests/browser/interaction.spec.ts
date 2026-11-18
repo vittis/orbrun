@@ -712,13 +712,25 @@ for (const touch of [false, true]) {
 }
 
 test('menu entrance remains usable when recordings are unavailable despite an old saved animation setting', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   let requests = 0
-  await page.route('**/menu/clips/**', route => ++requests === 1 ? route.fulfill({ status: 404, body: '' }) : route.continue())
+  let failFirstRequest!: () => void
+  const loading = new Promise<void>(resolve => { failFirstRequest = resolve })
+  await page.route('**/menu/clips/**', async route => {
+    if (++requests !== 1) return route.continue()
+    await loading
+    return route.fulfill({ status: 404, body: '' })
+  })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.addInitScript(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false })) })
   await page.goto('/')
   const canvas = page.locator('.menu-backdrop canvas')
   const shine = page.locator('.crawl-title')
+  await expect(page.getByText('Loading dungeon replay…')).toBeVisible()
+  await expect(page.locator('.polished-footer')).toBeInViewport({ ratio: 1 })
+  await page.evaluate(() => document.fonts.ready)
+  await page.screenshot({ path: 'test-results/menu-loading-narrow.png' })
+  failFirstRequest()
   await expect(page.getByRole('button', { name: 'Retry replay' })).toBeVisible()
   expect(requests).toBe(1)
   await expect(canvas).toBeHidden()
@@ -798,8 +810,15 @@ for (const narrow of [false, true]) {
     expect(controls!.x + controls!.width).toBeLessThanOrEqual(narrow ? 390 : 1280)
     expect(controls!.x + controls!.width / 2).toBeCloseTo(narrow ? 195 : 1280 * .68, 0)
     if (narrow) {
-      const menu = await page.locator('.polished-home').boundingBox()
-      expect(menu!.y + menu!.height).toBeLessThanOrEqual(controls!.y)
+      const main = (await page.locator('.polished-main').boundingBox())!
+      const footer = (await page.locator('.polished-footer').boundingBox())!
+      expect(main.y).toBeLessThan(844 / 4)
+      expect(main.y + main.height).toBeLessThanOrEqual(controls!.y)
+      const footerGap = footer.y - (controls!.y + controls!.height)
+      expect(footerGap).toBeGreaterThanOrEqual(0)
+      expect(footerGap).toBeLessThan(16)
+      expect(footer.y + footer.height).toBeGreaterThan(814)
+      await expect(page.locator('.polished-footer')).toBeInViewport({ ratio: 1 })
     }
     const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
     // A real pointer click catches controls accidentally buried under the full-screen home layer.

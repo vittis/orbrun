@@ -72,6 +72,7 @@
 .menu-replay-arrow:hover, .menu-replay-picker:hover, .menu-replay-slider:hover input { color: #efd28c; }
 .menu-replay-controls :is(input, button):focus-visible, .menu-replay-picker:has(select:focus-visible) { outline: 1px solid #cab36a; outline-offset: -2px; }
 .polished-home { --gutter: 40px; position: relative; z-index: 2; width: 100%; height: 100%; overflow: auto; display: flex; flex-direction: column; font-family: 'IBM Plex Mono', monospace; font-weight: 400; }
+.polished-content { display: contents; }
 .polished-home [hidden] { display: none; }
 .account-bar {
   display: grid;
@@ -157,17 +158,26 @@
   .menu-orb-relic img { width: 32px; height: 32px; margin-top: 4px; }
   .menu-orb-altar { font-size: 8px; }
   .menu-replay-status { font-size: 11px; }
-  .polished-shell:has(.menu-backdrop canvas[hidden]) .polished-home { height: calc(100% - 154px - env(safe-area-inset-bottom)); }
-  .polished-shell:has(.menu-backdrop canvas[hidden]) .polished-main { margin-block: clamp(55px, 10vh, 85px) 16px; }
-  .polished-shell.polished { display: grid; grid-template: minmax(0, 1fr) auto / minmax(0, 1fr); }
-  .polished .menu-backdrop { position: relative; grid-area: 1 / 1 / 3 / 2; display: grid; grid-template-rows: subgrid; }
-  .polished-home { grid-area: 1 / 1; min-height: 0; --gutter: 22px; }
-  .menu-replay-controls { position: static; grid-row: 2; justify-self: center; transform: none; margin-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .polished-shell.polished { display: grid; grid-template: minmax(0, 1fr) auto auto auto / minmax(0, 1fr); }
+  .polished .menu-backdrop, .polished-home { grid-area: 1 / 1 / -1 / 2; display: grid; grid-template-rows: subgrid; }
+  .polished .menu-backdrop { position: relative; }
+  .polished .menu-entrance {
+    position: relative; grid-area: 2 / 1; inset: auto; transform: none; justify-self: center;
+    grid-template-columns: auto minmax(0, 1fr); align-items: center; min-height: 88px;
+  }
+  .polished .menu-orb-altar { font-size: 6px; }
+  .polished-home { --gutter: 22px; overflow: visible; pointer-events: none; }
+  .polished-content { grid-row: 1; display: flex; flex-direction: column; overflow: auto; pointer-events: auto; }
+  .menu-replay-controls { position: static; grid-row: 3; justify-self: center; transform: none; }
   .menu-replay-slider input { height: 44px; }
   .account-bar { grid-template-columns: minmax(0, 1fr); align-self: stretch; align-items: stretch; max-width: 400px; row-gap: 4px; }
   .account-details { align-items: center; }
   .inline-login { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; }
   .inline-login input { width: 100%; box-sizing: border-box; }
+  .polished-home .polished-main { margin-block: clamp(24px, 5dvh, 48px) 16px; }
+  .polished-footer {
+    grid-row: 4; margin-block: 0 max(20px, env(safe-area-inset-bottom)); padding-top: 4px; pointer-events: auto;
+  }
   .polished-eyebrow { font-size: 30px; }
   .crawl-title { font-size: 78px; }
   .polished-commands .label { font-size: 16px; }
@@ -175,7 +185,7 @@
   .command-line .item { flex-basis: 100%; }
   .command-also { padding-left: 26px; }
 }
-/* Keep the encounter visible between the home commands and the scene picker on tall phones. */
+/* Keep the encounter visible beneath the home commands on tall phones. */
 @media (max-width: 700px) and (max-aspect-ratio: 3/4) {
   .menu-backdrop canvas {
     top: 44%;
