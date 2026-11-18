@@ -327,6 +327,16 @@
         61000,
         92000
       ]
+    },
+    {
+      "file": "clips/xoms-gunslinger-eacd132836bb0fa1.json",
+      "title": "Xom’s Gunslinger: Lair to Necropolis",
+      "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
+      "durationMs": 50201,
+      "sourceRangeMs": [
+        910,
+        65815
+      ]
     }
   ],
   "assets": {
@@ -785,6 +795,10 @@
     "clips/pan-af1b46fd08988147.json": {
       "size": 318273,
       "sha256": "af1b46fd08988147e4d2f83c41263c1a2d925e4acd712618ac15dcb426d81aca"
+    },
+    "clips/xoms-gunslinger-eacd132836bb0fa1.json": {
+      "size": 1027727,
+      "sha256": "eacd132836bb0fa1981e03ce54dc572731070877ef603314739e89bcf27b0b7f"
     }
   }
 }

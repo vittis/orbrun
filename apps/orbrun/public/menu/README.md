@@ -1,6 +1,6 @@
 # Recorded menu gameplay
 
-The menu shuffles seventeen spectator recordings and seventeen staged engine recordings through
+The menu shuffles eighteen spectator recordings and seventeen staged engine recordings through
 Orbrun's normal 2.5D renderer and confirmed combat presentation. No game engine,
 video, external replay player, gameplay commands or public spectator connection
 is used by the backdrop. The home screen's ordinary server lobby is independent.
@@ -113,6 +113,13 @@ tile IDs from a different DCSS version.
 Seven additional clips come from the November 17 captures. The Brazilian server supplied the three Djinni clips “Foxfire at the entrance”, “Blastmotes on Dungeon:5” and “Stand against Jeremiah”. CDI supplied two Formicid clips from the Vaults and Swamp, a Mummy recording from the Elven Halls and a Demonspawn recording from the Abyss. The shorter Demonspawn capture contains only the opening snapshot. Each playable excerpt has its original time range in the manifest. The three additional artwork versions use downloads from the versioned CDI gamedata directories.
 
 The Tengu Air Elementalist clip uses seconds 61–92 of a November 17 Brazilian server capture. It shows Shock and lightning arcs against an adder and shares the Lair recording’s artwork version.
+
+**Xom’s Gunslinger: Lair to Necropolis** follows a level-15 Coglin wielding two hand cannons
+on CDI on November 18. The Coglin fights through elephants and yaks on Lair:3, then enters
+a phantasmal passage. Xom paralyses a basilisk and a player ghost as the runed gate opens.
+The clip covers turns 17522–17813 and retains all 504 gameplay packets and 120 WebTiles
+animation delays. It plays in 50.201 seconds using the existing CDI 0.34.1 artwork.
+The ghost appears under the alias Wayfarer.
 
 `../../data/menu-replays.json` pins every recording and artwork file by size and
 SHA-256. The Vite build verifies these files; it never downloads or compiles an
