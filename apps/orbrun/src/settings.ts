@@ -1,3 +1,4 @@
+import { DUNGEON_ZOOM, DUNGEON_TILT } from '@orbrun/render-2.5d/projection'
 import type { HintMode } from './gamepad-hints'
 
 export interface Settings {
@@ -92,8 +93,8 @@ type NumericSetting = { [K in keyof Settings]: Settings[K] extends number ? K : 
 const numericDomains: Record<NumericSetting, { min: number; max: number; integer?: boolean; auto?: boolean }> = {
   masterVolume: { min: 0, max: 1 },
   effectsVolume: { min: 0, max: 1 },
-  depthTilt: { min: 25, max: 85 },
-  depthZoom: { min: 0.25, max: 3 },
+  depthTilt: DUNGEON_TILT,
+  depthZoom: DUNGEON_ZOOM,
   depthMovementDuration: { min: 0.04, max: 0.25 },
   depthMovementHopHeight: { min: 0, max: 2 },
   depthMovementSquash: { min: 0, max: 2 },

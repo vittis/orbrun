@@ -42,14 +42,14 @@ describe('quick View and Combat settings', () => {
     expect(panel.root.querySelectorAll('.quick-setting')).toHaveLength(SETTING_ROWS.filter(r => r.group === 'View' || r.group === 'Combat').length)
     expect(control('depthTilt').getAttribute('aria-valuetext')).toBe('42.5°')
     expect(getSettings().depthTilt).toBe(42.5)
-    control('depthTilt').value = '12'
+    control('depthTilt').value = control('depthTilt').max
     control('depthTilt').dispatchEvent(new Event('input', { bubbles: true }))
-    expect(getSettings().depthTilt).toBe(85)
+    expect(getSettings().depthTilt).toBe(90)
     expect(changed).toHaveBeenCalledTimes(1)
     const increase = panel.root.querySelector<HTMLButtonElement>('[aria-label="Dungeon tilt increase"]')!
     expect(increase.disabled).toBe(true)
     increase.click()
-    expect(getSettings().depthTilt).toBe(85)
+    expect(getSettings().depthTilt).toBe(90)
     expect(changed).toHaveBeenCalledTimes(1)
     expect(control('exploreDelay').disabled).toBe(true)
     const reset = panel.root.querySelector<HTMLButtonElement>('#quick-settings-view .quick-settings-reset')!

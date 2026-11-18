@@ -1,3 +1,6 @@
+export const DUNGEON_TILT = { min: 20, max: 90 } as const
+export const DUNGEON_ZOOM = { min: 0.5, max: 2 } as const
+
 /** Orthographic, north-up projection. World coordinates name cell centres. */
 export interface Projection {
   x: number

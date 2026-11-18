@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.135 — 2026-11-18
+
+- Browse main-menu replays with the scene arrows or open the scene title to choose a recording. Adjust tilt from 20° to 90° and zoom from 50% to 200% directly beneath the replay.
+
 ## 0.3.134 — 2026-11-18
 
 - The main-menu replay keeps playing in Settings. Adjust dungeon zoom or tilt to see the change as you make it.

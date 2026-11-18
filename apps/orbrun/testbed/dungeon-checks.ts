@@ -47,7 +47,7 @@ const failures: unknown[] = []
 let checks = 0
 // Camera limits must reach the raster and picking paths, not just the settings label.
 if (run('tiles')) for (const [width, height, dpr] of [[390, 600, 1], [1280, 720, 2]]) {
-  for (const degrees of [25, 85]) for (const zoom of [0.25, 3]) {
+  for (const degrees of [20, 90]) for (const zoom of [0.5, 2]) {
     const canvas = document.createElement('canvas')
     const r = new Render25d({ tilt: degrees, zoom, animate: false })
     r.mount(canvas)

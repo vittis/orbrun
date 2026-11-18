@@ -3,7 +3,7 @@ import {
   type Billboard, type CellKey, type MapRenderer, type Minibars,
   type Scene, type SceneCell, type SceneCursor, type TileSource, type CombatBump, type Emitter, type SpellEffect,
 } from '@orbrun/scene'
-import { fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
+import { DUNGEON_ZOOM, DUNGEON_TILT, fittedScale, groundDepth, planeRect, project, unproject, type Projection } from './projection.js'
 import { drawTile, TileCache, type Context2d, type Layer, type SurfaceLighting } from './tiles.js'
 import { DungeonLighting, glowCenter } from './lighting.js'
 import { DungeonMovement, type MovementAppearance, type MovementEasing } from './movement.js'
@@ -22,9 +22,9 @@ export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
 
 export interface Render25dOptions extends MovementAppearance {
-  /** Camera elevation above the ground, clamped to 25–85 degrees. */
+  /** Camera elevation above the ground, clamped to 20–90 degrees. */
   tilt?: number
-  /** 0.25–3; 1 fits the full field of view, higher values trade coverage for detail. */
+  /** 0.5–2; 1 fits the full field of view, higher values trade coverage for detail. */
   zoom?: number
   /** Enable renderer animation. The menu pauses it while playback is suspended. */
   animate?: boolean
@@ -97,8 +97,8 @@ export class Render25d implements MapRenderer {
 
   setOptions(options: Render25dOptions) {
     Object.assign(this.opts, options)
-    this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(25, Math.min(85, this.opts.tilt)) : 50
-    this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(0.25, Math.min(3, this.opts.zoom)) : 1
+    this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(DUNGEON_TILT.min, Math.min(DUNGEON_TILT.max, this.opts.tilt)) : 50
+    this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(DUNGEON_ZOOM.min, Math.min(DUNGEON_ZOOM.max, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
     for (const [key, fallback] of [['movementHopHeight', 0.4], ['movementSquash', 0.6], ['movementSway', 1]] as const) {
@@ -583,7 +583,7 @@ export class Render25d implements MapRenderer {
     ctx.save(); ctx.beginPath()
     for (const cell of cells) {
       const ground = planeRect(p, cell.x, cell.y, 0, this.dpr)
-      const roof = cell.occluder ? planeRect(p, cell.x, cell.y, wallHeight(this.scene, cell), this.dpr) : ground
+      const roof = cell.occluder ? planeRect(p, cell.x, cell.y, wallHeight(this.scene, cell, p.tilt), this.dpr) : ground
       ctx.rect(ground.x, roof.y, ground.width, ground.y + ground.height - roof.y)
     }
     ctx.clip(); ctx.translate(q.x, q.y); ctx.scale(1, sy)

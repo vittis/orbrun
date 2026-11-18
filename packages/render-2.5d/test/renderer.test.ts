@@ -185,12 +185,13 @@ describe('picking and visibility', () => {
     r.destroy()
   })
 
-  it.each([25, 30, 35, 50, 65, 75, 85])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
+  it.each([20, 25, 30, 35, 50, 65, 75, 85, 90])('keeps a narrow horizontal corridor open with raised, pickable walls at %s degrees', tilt => {
     const { r } = renderer()
     r.setOptions({ tilt, animate: false })
     const cells = [-2, -1, 0, 1, 2].flatMap(y => [-1, 0, 1].map(x =>
       cell(x, y, y !== 0 ? { kind: 'wall', occluder: true } : {})))
-    r.setScene(sceneOf(...cells))
+    const scene = sceneOf(...cells)
+    r.setScene(scene)
     r.render(0)
     // Most of the floor, including the feet of standing art, must remain clickable.
     for (const y of [-0.45, 0, 0.35]) {
@@ -198,7 +199,8 @@ describe('picking and visibility', () => {
       expect(r.pick(q.x, q.y)).toBe(cellKey(0, 0))
     }
     // Both the tall back wall and low foreground lip still own their raised surfaces.
-    for (const [y, z] of [[-1.4, 0.58], [0.6, 0.08]]) {
+    for (const y of [-1.4, 0.6]) {
+      const z = wallHeight(scene, scene.cells.get(cellKey(0, Math.round(y)))!, tilt * Math.PI / 180)
       const q = r.project(0, y, z)
       expect(r.pick(q.x, q.y)).toBe(cellKey(0, Math.round(y)))
     }

@@ -1,3 +1,4 @@
+import { DUNGEON_ZOOM, DUNGEON_TILT } from '@orbrun/render-2.5d/projection'
 import { h } from './dom'
 import { getSettings, saveSettings } from './settings'
 import type { MenuDemo } from './menu-demo'
@@ -8,14 +9,22 @@ import manifest from '../data/menu-replays.json'
 export class MenuBackdrop {
   readonly el = h('div', { class: 'menu-backdrop' })
   readonly canvas = h('canvas', { hidden: true, 'aria-hidden': 'true' })
-  private tilt = h('input', { type: 'range', min: 25, max: 85, step: 1, 'aria-label': 'Dungeon tilt' })
-  private tiltValue = h('span', { class: 'menu-replay-angle', 'aria-hidden': 'true' })
+  private tilt = h('input', { type: 'range', ...DUNGEON_TILT, step: 1, 'aria-label': 'Dungeon tilt' })
+  private tiltValue = h('span', { class: 'menu-replay-value', 'aria-hidden': 'true' })
+  private zoom = h('input', { type: 'range', min: DUNGEON_ZOOM.min * 100, max: DUNGEON_ZOOM.max * 100, step: 5, 'aria-label': 'Dungeon zoom' })
+  private zoomValue = h('span', { class: 'menu-replay-value', 'aria-hidden': 'true' })
   private recording = h('select', { 'aria-label': 'Choose scene' },
     h('option', { value: '' }, 'Shuffle all'),
     ...manifest.clips.map(clip => h('option', { value: clip.file }, clip.title)))
-  private controls = h('div', { class: 'menu-replay-controls', hidden: true },
-    h('label', { class: 'menu-replay-picker' }, h('span', {}, 'Choose scene'), this.recording),
-    h('label', { class: 'menu-replay-tilt' }, h('span', {}, 'Dungeon tilt'), this.tiltValue, this.tilt))
+  private sceneTitle = h('span', { class: 'menu-replay-title', 'aria-hidden': 'true' })
+  private controls = h('div', { class: 'menu-replay-controls', role: 'group', 'aria-label': 'Dungeon replay', hidden: true },
+    h('div', { class: 'menu-replay-scenes' },
+      this.sceneArrow(-1),
+      h('label', { class: 'menu-replay-picker', title: 'Choose scene or shuffle all' }, this.sceneTitle, this.recording),
+      this.sceneArrow(1)),
+    h('div', { class: 'menu-replay-camera' },
+      h('label', { class: 'menu-replay-slider' }, 'Tilt', this.tilt, this.tiltValue),
+      h('label', { class: 'menu-replay-slider' }, 'Zoom', this.zoom, this.zoomValue)))
   private status = h('span', { role: 'status' })
   private retry = h('button', { type: 'button', hidden: true }, 'Retry replay')
   private entrance = h('div', { class: 'menu-entrance' },
@@ -49,6 +58,9 @@ export class MenuBackdrop {
     this.tilt.addEventListener('input', () => {
       saveSettings({ ...getSettings(), depthTilt: this.tilt.valueAsNumber })
     })
+    this.zoom.addEventListener('input', () => {
+      saveSettings({ ...getSettings(), depthZoom: this.zoom.valueAsNumber / 100 })
+    })
     this.recording.addEventListener('change', () => {
       const chosen = manifest.clips.find(clip => clip.file === this.recording.value)
       this.switchTo(chosen ?? manifest.clips[this.playlist.next(manifest.clips.indexOf(this.entry))])
@@ -61,6 +73,16 @@ export class MenuBackdrop {
       names.filter(name => name.startsWith('orbrun-menu-assets-v1-')).map(name => caches.delete(name)),
     )).catch(() => {})
     this.applySettings()
+  }
+
+  private sceneArrow(direction: -1 | 1) {
+    const label = direction < 0 ? 'Previous scene' : 'Next scene'
+    return h('button', { type: 'button', class: 'menu-replay-arrow', 'aria-label': label, title: label, onclick: () => {
+      const clips = manifest.clips
+      const next = clips[(clips.indexOf(this.entry) + direction + clips.length) % clips.length]
+      this.recording.value = next.file
+      this.switchTo(next)
+    } }, h('span', { 'aria-hidden': 'true' }, direction < 0 ? '‹' : '›'))
   }
 
   cover(on: boolean) { this.covered = on; this.applySettings() }
@@ -76,9 +98,15 @@ export class MenuBackdrop {
 
   private applySettings = () => {
     const settings = getSettings()
+    this.sceneTitle.textContent = this.entry.title
+    this.recording.setAttribute('aria-description', 'Current scene: ' + this.entry.title)
     this.tilt.value = String(settings.depthTilt)
     this.tiltValue.textContent = `${settings.depthTilt}°`
     this.tilt.setAttribute('aria-valuetext', `${settings.depthTilt} degrees`)
+    const zoomPercent = Math.round(settings.depthZoom * 100)
+    this.zoom.value = String(zoomPercent)
+    this.zoomValue.textContent = zoomPercent + '%'
+    this.zoom.setAttribute('aria-valuetext', zoomPercent + '%')
     const active = !this.destroyed && !this.covered && !document.hidden
     this.controls.hidden = !active || !this.hasPlayed
     this.el.dataset.loading = String(active && !this.demo && !this.failure)

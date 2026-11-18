@@ -346,7 +346,7 @@ for (const touch of [false, true]) {
       await expect(zoom).toHaveAttribute('aria-valuetext', '105%')
       await expect.poll(async () => (await result(page)).appliedDungeonOptions?.zoom).toBe(1.05)
       await zoom.press('End')
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions.zoom).toBe(3)
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions.zoom).toBe(2)
       await quick.getByRole('button', { name: 'Dungeon tilt increase', exact: true }).click()
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.tilt).toBe(55)
       for (const [label, key, value] of [['Move hop height', 'movementHopHeight', 0.35], ['Move squash', 'movementSquash', 0.55], ['Move sway', 'movementSway', 0.95]] as const) {
@@ -770,10 +770,16 @@ for (const narrow of [false, true]) {
     await page.keyboard.press('Escape'); await expect(chooser).toHaveValue(chosen)
     await chooser.selectOption({ label: 'Shuffle all' }); await expect(chooser).toHaveValue('')
     await chooser.selectOption({ label: 'Djinni descent' })
+    const djinni = await chooser.inputValue()
+    await page.getByRole('button', { name: 'Next scene' }).click()
+    await expect(chooser).not.toHaveValue(djinni)
+    await page.getByRole('button', { name: 'Previous scene' }).click()
+    await expect(chooser).toHaveValue(djinni)
+    await expect(page.locator('.menu-replay-title')).toHaveText('Djinni descent')
     await page.reload(); await expect(chooser).toBeVisible(); await expect(chooser).toHaveValue('')
   })
 
-  test(`menu replay tilt previews and persists with native controls at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
+  test(`menu replay tilt and zoom preview and persist with native controls at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
     await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1280, height: 720 })
     await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
     await page.addInitScript(() => {
@@ -804,6 +810,15 @@ for (const narrow of [false, true]) {
     await expect(slider).toHaveAttribute('aria-valuetext', '71 degrees')
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toMatchObject({ depthTilt: 71, depthZoom: 1.2 })
     await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(before)
+    const zoom = page.getByRole('slider', { name: 'Dungeon zoom', exact: true })
+    await expect(zoom).toHaveValue('120')
+    await zoom.click()
+    await zoom.press('Home'); await expect(zoom).toHaveValue('50')
+    await zoom.press('End'); await expect(zoom).toHaveValue('200')
+    await zoom.fill('145')
+    await zoom.press('ArrowRight')
+    await expect(zoom).toHaveAttribute('aria-valuetext', '150%')
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toMatchObject({ depthTilt: 71, depthZoom: 1.5 })
     await page.screenshot({ path: `test-results/menu-tilt-${narrow ? 'narrow' : 'desktop'}.png` })
     await page.locator('[data-focus="about"]').click()
     await expect(slider).toBeHidden()
@@ -813,7 +828,15 @@ for (const narrow of [false, true]) {
     await page.reload()
     await expect(slider).toBeVisible()
     await expect(slider).toHaveValue('71')
-    await slider.press('Home'); await expect(slider).toHaveValue('25')
-    await slider.press('End'); await expect(slider).toHaveValue('85')
+    await expect(zoom).toHaveValue('150')
+    for (const [key, value] of [['Home', '20'], ['End', '90']]) {
+      const pixels = () => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
+      await expect(canvas).toBeVisible()
+      const previous = await pixels()
+      await slider.press(key)
+      await expect(slider).toHaveValue(value)
+      await expect.poll(pixels).not.toBe(previous)
+      await page.screenshot({ path: `test-results/menu-tilt-${value}-${narrow ? 'narrow' : 'desktop'}.png` })
+    }
   })
 }
