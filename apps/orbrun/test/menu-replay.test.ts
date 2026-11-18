@@ -4,7 +4,7 @@ import { loadGamedata } from '@orbrun/gamedata'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { buildScene } from '@orbrun/scene-webtiles'
 import { CombatFeedback } from '../src/combat-feedback'
-import { readReplay, ReplayClock, ReplayPlaylist, type ReplayClip } from '../src/menu-replay'
+import { readReplay, REPLAY_END_HOLD_MS, ReplayClock, ReplayPlaylist, type ReplayClip } from '../src/menu-replay'
 import { verifyMenuReplays } from '../menu-replay-assets'
 import manifest from '../data/menu-replays.json'
 import { curate, curateStaged } from '../../../tools/record/curate-menu.mjs'
@@ -113,6 +113,9 @@ it('bundles matching artwork and moving/combat sequences that replay identically
     for (const entry of manifest.clips) {
       const data = versions.find(data => data.version === entry.version)!
       const recording = readReplay(JSON.parse(readFileSync(new URL(entry.file, root), 'utf8')), entry.version)
+      const frameTime = recording.frames.reduce((ms, frame) => ms + frame.after, 0)
+      expect(frameTime, entry.title).toBeGreaterThanOrEqual(30_000)
+      expect(entry.durationMs, entry.title).toBe(frameTime + REPLAY_END_HOLD_MS)
       const original = structuredClone(recording)
       const run = () => {
         const state = initialState(); reduce(state, { msg: 'game_started' })
@@ -131,9 +134,7 @@ it('bundles matching artwork and moving/combat sequences that replay identically
           expect(scene.playerOnLevel, entry.title).toBe(true)
         }
         expect(events, entry.title).toBeGreaterThan(0)
-        // The Djinni holds position throughout the fight against Jeremiah.
-        if (entry.title === 'Stand against Jeremiah') expect(positions.size).toBe(1)
-        else expect(positions.size, entry.title).toBeGreaterThan(2)
+        expect(positions.size, entry.title).toBeGreaterThan(2)
         return state
       }
       expect(run()).toEqual(run())

@@ -7,6 +7,8 @@ export interface ReplayClip {
   frames: { after: number; projectileTimeMs?: number; messages: ServerMessage[] }[]
 }
 
+export const REPLAY_END_HOLD_MS = 1600
+
 /** Bundled recordings contain state, never client commands or executable WebTiles HTML. */
 export const REPLAY_MESSAGES = new Set(['map', 'player', 'msgs'])
 
@@ -99,7 +101,7 @@ export class ReplayClock {
             const frame = frames[this.frame++]
             this.apply(structuredClone(frame.messages), frame.projectileTimeMs)
           } while (frames[this.frame]?.after === 0)
-          this.remaining = frames[this.frame]?.after ?? 1600
+          this.remaining = frames[this.frame]?.after ?? REPLAY_END_HOLD_MS
           this.schedule(start)
         }
       } catch (error) { this.destroy(); this.failed(error) }

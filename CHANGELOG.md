@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.138 — 2026-11-18
+
+- All 36 main-menu scenes now show at least 30 seconds of gameplay. The longer cuts include the approach to Jeremiah, a second volley of tremorstones in the Spider Nest and a fight with a frost giant in Cocytus.
+
 ## 0.3.137 — 2026-11-18
 
 - The ten newest main-menu showcases now run for 36–55 seconds. Follow the Gauntlet gladiator to the treasure, descend to a second floor of Gehenna, or watch the summoner call dragons against Geryon.

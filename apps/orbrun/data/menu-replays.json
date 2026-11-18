@@ -28,107 +28,107 @@
   },
   "clips": [
     {
-      "file": "clips/volcano-temple-9e1a15238dd41b44.json",
+      "file": "clips/volcano-temple-082794f02957d6b2.json",
       "title": "Volcano Temple",
-      "durationMs": 19695,
+      "durationMs": 39126,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/volcano-lake-d6b2af6d693c06d6.json",
+      "file": "clips/volcano-lake-315095bbba81fcda.json",
       "title": "Volcano Lake",
-      "durationMs": 10992,
+      "durationMs": 33207,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/shoals-33dd385a93c2612a.json",
+      "file": "clips/shoals-af8dc1821d12f8eb.json",
       "title": "Storm on the Shoals",
-      "durationMs": 13135,
+      "durationMs": 32276,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/spider-161f222d66c49244.json",
+      "file": "clips/spider-9f40b7564c49848a.json",
       "title": "Silk and Cinders",
-      "durationMs": 9576,
+      "durationMs": 37941,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/swamp-7b9f87fa0bea4dd0.json",
+      "file": "clips/swamp-b9f4925307720e69.json",
       "title": "The Walking Grove",
-      "durationMs": 13031,
+      "durationMs": 34274,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/cave-bff82ff4bdf16a5b.json",
+      "file": "clips/cave-568c25e536c304e3.json",
       "title": "Fire Under the Ice",
-      "durationMs": 9133,
+      "durationMs": 43071,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/orc-e18a19ed564c2d93.json",
+      "file": "clips/orc-13d5230e148ab7a3.json",
       "title": "The Dead March in Orc",
-      "durationMs": 12697,
+      "durationMs": 32827,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/snake-db9ccdf8a7732c68.json",
+      "file": "clips/snake-29bcb490cc5f3803.json",
       "title": "Crossfire in the Snake Pit",
-      "durationMs": 7658,
+      "durationMs": 44905,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/tomb-b1b2e94f2a17ee3e.json",
+      "file": "clips/tomb-8c86cccfc712e7e7.json",
       "title": "Mirrors of the Tomb",
-      "durationMs": 12513,
+      "durationMs": 33286,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/slime-1e83ef96f19b94bf.json",
+      "file": "clips/slime-019823221353fcff.json",
       "title": "Ignition in the Slime Pits",
-      "durationMs": 8690,
+      "durationMs": 38318,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/zot-b89089267e5eeb28.json",
+      "file": "clips/zot-e94956747e4ac4ee.json",
       "title": "Dragons at the Zot Gate",
-      "durationMs": 11589,
+      "durationMs": 34392,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/bailey-47612f50b2bde660.json",
+      "file": "clips/bailey-6a3d0074f5e320a8.json",
       "title": "Unseen in the Bailey",
-      "durationMs": 11134,
+      "durationMs": 33331,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/salt-1507f0455b5436c1.json",
+      "file": "clips/salt-90bae54f9626a285.json",
       "title": "Clockwork in the Salt",
-      "durationMs": 13038,
+      "durationMs": 34000,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/cocytus-6032128f616a757a.json",
+      "file": "clips/cocytus-c869f3246dfbd533.json",
       "title": "Firestorm on Cocytus",
-      "durationMs": 6979,
+      "durationMs": 33046,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/pan-af1b46fd08988147.json",
+      "file": "clips/pan-6d36d484bb00b67a.json",
       "title": "Butterflies in Pandemonium",
-      "durationMs": 14478,
+      "durationMs": 42618,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
@@ -203,12 +203,12 @@
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/lair-yaks-f7f31a2020ff7549.json",
+      "file": "clips/lair-yaks-39dbe6020f8531d7.json",
       "title": "Yaks in the Lair",
-      "durationMs": 24406,
+      "durationMs": 32390,
       "sourceRangeMs": [
         1000,
-        30000
+        39000
       ],
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
@@ -223,87 +223,91 @@
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
     {
-      "file": "clips/djinni-descent-c19162e1151085b2.json",
+      "file": "clips/djinni-descent-9280bcb05c5b8607.json",
       "title": "Djinni descent",
-      "durationMs": 28864,
+      "durationMs": 34893,
       "sourceRangeMs": [
         1000,
-        30000
+        37000
       ],
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
     {
-      "file": "clips/djinni-depths-946a25f255ca39bb.json",
+      "file": "clips/djinni-depths-4a2cf20b56349dd9.json",
       "title": "Djinni on Dungeon:3",
-      "durationMs": 22959,
+      "durationMs": 35051,
       "sourceRangeMs": [
-        90500,
+        78000,
         111859
       ],
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41"
     },
     {
-      "file": "clips/octopode-vaults-2eba79ad00fa9b98.json",
+      "file": "clips/octopode-vaults-06b3fab4bfe4659e.json",
       "title": "Octopode in the Vaults",
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
-      "durationMs": 16564,
+      "durationMs": 36290,
       "sourceRangeMs": [
         8000,
-        29000
+        89000
       ],
       "captureServer": "CUE (Amsterdam, Netherlands)",
       "captureDate": "2026-11-17"
     },
     {
-      "file": "clips/octopode-skirmish-5d13ba42abf96042.json",
+      "file": "clips/octopode-skirmish-682b84ff15a30ddb.json",
       "title": "Vaults skirmish",
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
-      "durationMs": 24782,
+      "durationMs": 32067,
       "sourceRangeMs": [
-        93000,
+        80000,
         119603
       ],
       "captureServer": "CUE (Amsterdam, Netherlands)",
       "captureDate": "2026-11-17"
     },
     {
-      "file": "clips/jeremiah-04c4f85b3c7ba0f7.json",
+      "file": "clips/jeremiah-4e0b32f9f614853c.json",
       "title": "Stand against Jeremiah",
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
-      "durationMs": 21306,
+      "durationMs": 35459,
       "sourceRangeMs": [
         1000,
         24142
+      ],
+      "precedingSourceRangeMs": [
+        180000,
+        194562
       ]
     },
     {
-      "file": "clips/swamp-ghoul-5e749504cf4c495b.json",
+      "file": "clips/swamp-ghoul-338d5b58959dbdc1.json",
       "title": "Ghoul in the Swamp",
       "version": "8aead0d076b6cf299d5308168248c8053933a821",
-      "durationMs": 29420,
+      "durationMs": 34188,
       "sourceRangeMs": [
-        41000,
-        69000
+        38600,
+        73300
       ]
     },
     {
-      "file": "clips/elf-blademaster-fffe92aa53ce36a4.json",
+      "file": "clips/elf-blademaster-e04598d0d8ba1150.json",
       "title": "Blademaster in the Elven Halls",
       "version": "c81caa56c749218c78414d879e0a05f397694ed3",
-      "durationMs": 27509,
+      "durationMs": 33157,
       "sourceRangeMs": [
-        19000,
-        48000
+        14800,
+        54200
       ]
     },
     {
-      "file": "clips/tengu-air-elementalist-2108301bd2e4aba2.json",
+      "file": "clips/tengu-air-elementalist-fd675d55bc462985.json",
       "title": "Tengu Air Elementalist",
       "version": "5d79d81db7552a085647a74860d9842e4beb3d41",
-      "durationMs": 29729,
+      "durationMs": 36738,
       "sourceRangeMs": [
-        61000,
-        92000
+        57000,
+        94917
       ]
     },
     {
@@ -574,105 +578,9 @@
       "size": 1466040,
       "sha256": "1848b5c0cec0344c4b1cd17ffcabe85665deaf040a8d44be8ad875c66de06151"
     },
-    "clips/volcano-temple-9e1a15238dd41b44.json": {
-      "size": 251540,
-      "sha256": "9e1a15238dd41b44f45f6f3b4b64b82cf9a318ad9d48902f8eb119394b3329bb"
-    },
-    "clips/volcano-lake-d6b2af6d693c06d6.json": {
-      "size": 224424,
-      "sha256": "d6b2af6d693c06d6ba509ed72256ce9cb944aadbbb6ef7bbf699ec2aff7d983a"
-    },
-    "clips/shoals-33dd385a93c2612a.json": {
-      "size": 253336,
-      "sha256": "33dd385a93c2612a41eef62e56f33a75cb27e1c7d72d206302d8f0adfd913d56"
-    },
-    "clips/spider-161f222d66c49244.json": {
-      "size": 91590,
-      "sha256": "161f222d66c49244cede214f9a3fe3f97dda21c72c28e07c144d545ae8cdb719"
-    },
-    "clips/swamp-7b9f87fa0bea4dd0.json": {
-      "size": 157680,
-      "sha256": "7b9f87fa0bea4dd0483605b4d183f336aa6b56f56dbff95b18586b6941387340"
-    },
-    "clips/cave-bff82ff4bdf16a5b.json": {
-      "size": 64997,
-      "sha256": "bff82ff4bdf16a5bc6e06fe1ac2d4bb52066deb60172796fb64bc15f4c96290d"
-    },
-    "clips/orc-e18a19ed564c2d93.json": {
-      "size": 139941,
-      "sha256": "e18a19ed564c2d93b0f9f1fe45656b58ae193207e01a3afe36c19b36f4f2536b"
-    },
-    "clips/snake-db9ccdf8a7732c68.json": {
-      "size": 79333,
-      "sha256": "db9ccdf8a7732c687c5c78f6ed30e9975ba55e3a50a40ece743c4f4853906847"
-    },
-    "clips/tomb-b1b2e94f2a17ee3e.json": {
-      "size": 93445,
-      "sha256": "b1b2e94f2a17ee3e9376dd131acd85a70519a936d95313d683d5f2de3883b20b"
-    },
-    "clips/slime-1e83ef96f19b94bf.json": {
-      "size": 155694,
-      "sha256": "1e83ef96f19b94bf8ef47e2b22bcec18d211ce6af56f2fe0ecc0a5ec205932c8"
-    },
-    "clips/zot-b89089267e5eeb28.json": {
-      "size": 179590,
-      "sha256": "b89089267e5eeb2814945974946d57b8b71cea358a8fcfadae09f7066e23d788"
-    },
-    "clips/lair-yaks-f7f31a2020ff7549.json": {
-      "size": 249274,
-      "sha256": "f7f31a2020ff75493849f1fe02d06452fb558bb25409879ac8da06e6db16229a"
-    },
     "clips/lair-gastronok-53a46408c78c9e41.json": {
       "size": 471781,
       "sha256": "53a46408c78c9e41f43899cec673ce1e30d55a3d4c4cadca5249ea69c07908b2"
-    },
-    "clips/djinni-descent-c19162e1151085b2.json": {
-      "size": 359289,
-      "sha256": "c19162e1151085b2e2416f0ebb2c48a60b88f7caf96c68b456bf2364019df6ea"
-    },
-    "clips/djinni-depths-946a25f255ca39bb.json": {
-      "size": 924711,
-      "sha256": "946a25f255ca39bb7336bab5cdc58c68a0667e05b2ff30dad08a4bdf9cbd9957"
-    },
-    "clips/octopode-vaults-2eba79ad00fa9b98.json": {
-      "size": 285836,
-      "sha256": "2eba79ad00fa9b9830563ac1966a8188eeebc10a2c786806f1fe36420b5ad1d8"
-    },
-    "clips/octopode-skirmish-5d13ba42abf96042.json": {
-      "size": 553816,
-      "sha256": "5d13ba42abf96042cf747e8dc97dea25a925bea7872ce329beb1a3d73b611f80"
-    },
-    "clips/jeremiah-04c4f85b3c7ba0f7.json": {
-      "size": 477870,
-      "sha256": "04c4f85b3c7ba0f781bf6747fd29b8e9bd14988c292460973159cc8debc27ee0"
-    },
-    "clips/swamp-ghoul-5e749504cf4c495b.json": {
-      "size": 1285613,
-      "sha256": "5e749504cf4c495b5e34947461d8d6f22fcc17f9ab2af99149106a3301758b76"
-    },
-    "clips/elf-blademaster-fffe92aa53ce36a4.json": {
-      "size": 381582,
-      "sha256": "fffe92aa53ce36a4429451aac015cd50f93fd2272bb6534d786fbf24ace9299f"
-    },
-    "clips/tengu-air-elementalist-2108301bd2e4aba2.json": {
-      "size": 874950,
-      "sha256": "2108301bd2e4aba2c60fcbb097d9ddf9713b24a0ee080b7fa6a7f8426e350a73"
-    },
-    "clips/bailey-47612f50b2bde660.json": {
-      "size": 88589,
-      "sha256": "47612f50b2bde66055498789b7c9926a07fa017e6328b760ced20adc59795062"
-    },
-    "clips/salt-1507f0455b5436c1.json": {
-      "size": 190100,
-      "sha256": "1507f0455b5436c103ed453e6b17e924739afc21ac059b79fe2338dd1d81e6c4"
-    },
-    "clips/cocytus-6032128f616a757a.json": {
-      "size": 197209,
-      "sha256": "6032128f616a757a2f7d028db4699352d07c3de6e629fb8172ed5a991c85180b"
-    },
-    "clips/pan-af1b46fd08988147.json": {
-      "size": 318273,
-      "sha256": "af1b46fd08988147e4d2f83c41263c1a2d925e4acd712618ac15dcb426d81aca"
     },
     "clips/xoms-gunslinger-eacd132836bb0fa1.json": {
       "size": 1027727,
@@ -717,6 +625,102 @@
     "clips/hell-f63167188721c850.json": {
       "size": 713422,
       "sha256": "f63167188721c8506c233ad104550309b9aedf7f7d2c511867506fc20afce2f0"
+    },
+    "clips/volcano-temple-082794f02957d6b2.json": {
+      "size": 251541,
+      "sha256": "082794f02957d6b249bb4b815aeaa8dccde76c1daa474b679d311a8f173f49bc"
+    },
+    "clips/volcano-lake-315095bbba81fcda.json": {
+      "size": 224448,
+      "sha256": "315095bbba81fcdaaf204cd553c423b3ad79eb1d481e4b82c125b4600d3e6180"
+    },
+    "clips/shoals-af8dc1821d12f8eb.json": {
+      "size": 253351,
+      "sha256": "af8dc1821d12f8eb1b26c318b84e1a98e3d32f1887a67b2bf496679763f7be84"
+    },
+    "clips/spider-9f40b7564c49848a.json": {
+      "size": 117821,
+      "sha256": "9f40b7564c49848ac0a65a7be14dcd199d9d43447607184e7fc4cd38d9a0e2d3"
+    },
+    "clips/swamp-b9f4925307720e69.json": {
+      "size": 157697,
+      "sha256": "b9f4925307720e69e7e936d7d0f984b4ee90b56800e0ede1ba06b0f70df51df7"
+    },
+    "clips/cave-568c25e536c304e3.json": {
+      "size": 201738,
+      "sha256": "568c25e536c304e31946ca3606a10bc4fb34c8480de2df21176fd0e1b251bf16"
+    },
+    "clips/orc-13d5230e148ab7a3.json": {
+      "size": 139963,
+      "sha256": "13d5230e148ab7a37b345a89a2f919578ade740c5534aa43251b4fa322136ac3"
+    },
+    "clips/snake-29bcb490cc5f3803.json": {
+      "size": 280695,
+      "sha256": "29bcb490cc5f38032b69db94ed7d91be08c82433b8a74357235d24ed9fc7c097"
+    },
+    "clips/tomb-8c86cccfc712e7e7.json": {
+      "size": 93463,
+      "sha256": "8c86cccfc712e7e70183f38440a35bf0bf5fe4ec7034eb7990ef158c3b9e4c2e"
+    },
+    "clips/slime-019823221353fcff.json": {
+      "size": 253166,
+      "sha256": "019823221353fcffea909a66715aec1dfbc696c32543d4a187e49fdc88d53094"
+    },
+    "clips/zot-e94956747e4ac4ee.json": {
+      "size": 179621,
+      "sha256": "e94956747e4ac4eed4deeadac670630c0ba29c07da27a763e34e4b14e1a6ac96"
+    },
+    "clips/bailey-6a3d0074f5e320a8.json": {
+      "size": 88617,
+      "sha256": "6a3d0074f5e320a849b2352ffaf434a1a55ddb99af266c4b9655ebac939a653f"
+    },
+    "clips/salt-90bae54f9626a285.json": {
+      "size": 190120,
+      "sha256": "90bae54f9626a285c6fceb9a810ddcc177367fd619a29eb8f2fb7f52b380cc97"
+    },
+    "clips/cocytus-c869f3246dfbd533.json": {
+      "size": 327363,
+      "sha256": "c869f3246dfbd533ad19e2a9f34700ffd3191b72bb0348abb031887f17eb7cf7"
+    },
+    "clips/pan-6d36d484bb00b67a.json": {
+      "size": 318335,
+      "sha256": "6d36d484bb00b67a3430539467435e433a0623ca7a02ed658abbd8069aff7e44"
+    },
+    "clips/lair-yaks-39dbe6020f8531d7.json": {
+      "size": 313250,
+      "sha256": "39dbe6020f8531d78feae5601ef82ea826c941caa2d94fdfc778c35c91a3b807"
+    },
+    "clips/djinni-descent-9280bcb05c5b8607.json": {
+      "size": 398116,
+      "sha256": "9280bcb05c5b8607b5cea2189ddae7ed96ec7b4633d6cbe1f40d53caf86b12f7"
+    },
+    "clips/djinni-depths-4a2cf20b56349dd9.json": {
+      "size": 927046,
+      "sha256": "4a2cf20b56349dd92c302511637d1cef0c10ea568c185580061302f01ce8a55a"
+    },
+    "clips/octopode-vaults-06b3fab4bfe4659e.json": {
+      "size": 399684,
+      "sha256": "06b3fab4bfe4659e4e2f69c9714b723f80a670d530ac511ab3fc5f15d5ff063c"
+    },
+    "clips/octopode-skirmish-682b84ff15a30ddb.json": {
+      "size": 554917,
+      "sha256": "682b84ff15a30ddb2a9518a251be0adc10eeeb8d10ffffb9c867b49725015a6e"
+    },
+    "clips/jeremiah-4e0b32f9f614853c.json": {
+      "size": 1940329,
+      "sha256": "4e0b32f9f614853c929978261e62f39b3d95e7872dcf6fc69cdd6c9dc71fe0cd"
+    },
+    "clips/swamp-ghoul-338d5b58959dbdc1.json": {
+      "size": 1297211,
+      "sha256": "338d5b58959dbdc19b8e3c05b6fe180d19798f0cf2d96528e956d9c434b5feb1"
+    },
+    "clips/elf-blademaster-e04598d0d8ba1150.json": {
+      "size": 388827,
+      "sha256": "e04598d0d8ba1150f5f62564879624776428f968b100658f73a394c6c0100a5b"
+    },
+    "clips/tengu-air-elementalist-fd675d55bc462985.json": {
+      "size": 888717,
+      "sha256": "fd675d55bc4629858314b75733c51286d143496048529baea162233433dc8d43"
     }
   }
 }

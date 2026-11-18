@@ -22,7 +22,7 @@ portal before recording. A WebTiles spectator snapshot opens the clip on turn
 11. Ordinary movement, casting and evocation commands drive the rest of the
 run. The final gold pickup coincides with a volcanic eruption on turn 67.
 The clip preserves all 254 player, map and message packets in order. Its 100
-timed updates and final hold play in 19.695 seconds.
+timed updates and final hold play in 39.126 seconds.
 
 **Volcano Lake** follows a level-20 Tengu Air Elementalist flying
 along a lava island in a different generated Volcano (seed 147). A phial of
@@ -33,7 +33,7 @@ final cast kills a sun demon, a fire bat and two lava snakes.
 
 The lake recording uses the same wizard setup process and starts from a
 spectator snapshot on turn 28. Its 206 ordered packets follow the encounter
-through turn 54. The 96 timed updates and final hold play in 10.992 seconds.
+through turn 54. The 96 timed updates and final hold play in 33.207 seconds.
 
 ## Other staged encounters
 
@@ -45,17 +45,17 @@ the ordered player, map and message packets through its final turn.
 | Scene | Seed | Turns | Encounter |
 | --- | ---: | ---: | --- |
 | Storm on the Shoals | 31 | 41–67 | A Merfolk Air Elementalist swims through kelp with harpies in pursuit. Freezing Cloud spreads across the water and ball lightning catches a manticore. |
-| Silk and Cinders | 92 | 24–44 | A Minotaur Fighter cracks open a tin of tremorstones, then cleaves through spiders and their simulacra with a flaming broad axe. A blink lands on gold as Aizul comes into view. |
+| Silk and Cinders | 92 | 33–76 | A Minotaur Fighter fires two volleys of tremorstones into the Spider Nest. A flaming broad axe cuts through simulacra in the blast zone, then finishes a steelbarb worm and a redback. |
 | The Walking Grove | 58 | 2–176 | A Barachi Summoner calls a forest, a hydra and a cactus giant. A swamp worm harpoons the hydra. Later, tree roots strike an alligator that drags the caster through the shallows. |
-| Fire Under the Ice | 83 | 4–25 | A Deep Elf Fire Elementalist follows a tunnel through the Ice Cave. Foxfire and Starburst melt dragon simulacra, and a rime drake encases the caster in ice before it falls. |
+| Fire Under the Ice | 83 | 12–92 | A Deep Elf Fire Elementalist follows the tunnel past dragon simulacra and a rime drake. Fireball, Scorch and Starburst help clear an ice statue and the ice beasts around it. |
 | The Dead March in Orc | 45 | 16–47 | A Demonspawn Necromancer pins a two-headed ogre with zombie hands. Animate Dead and Death Channel turn the orc patrol into a crowd of zombies and spectral allies. |
-| Crossfire in the Snake Pit | 89 | 30–44 | A Coglin Hunter fires paired flaming and freezing hand cannons at a black mamba, a guardian serpent and naga magi. One mage constricts the hunter before the last volley. |
+| Crossfire in the Snake Pit | 89 | 33–131 | A Coglin Hunter fires paired flaming and freezing hand cannons at a black mamba and naga magi. Beyond the guardian serpent, the hunter explores a second passage and shoots down a salamander and a mana viper. |
 | Mirrors of the Tomb | 174 | 62–122 | A Mountain Dwarf uses a phantom mirror on a mummy priest. The reflection smites the original. Farther down the gallery, the dwarf meets a swarm of death scarabs with a holy axe. |
-| Ignition in the Slime Pits | 228 | 9–23 | A Deep Elf Alchemist pushes past corrosive walls and mutating eyes. Ignition sets off a series of blasts across the converging slimes. The caster blinks clear and reaches the stairs. |
+| Ignition in the Slime Pits | 228 | 18–51 | A Deep Elf Alchemist uses toxic radiance and repeated casts of Ignition against eyes and slime creatures. An azure jelly, an acid blob and a star jelly fall before a rockslime drives the caster back. |
 | Dragons at the Zot Gate | 318 | 67–129 | A Deep Elf Conjurer calls up dragons and tentacled monstrosities. A moth of wrath sends allies berserk against a quicksilver dragon. Beyond the gate, Orbs of Destruction intercept a white draconian breathing frost. |
 | Unseen in the Bailey | 522 | 16–62 | A Spriggan Enchanter slips through the gate, confuses an orc and puts a gnoll to sleep. A potion of invisibility lets the Spriggan carry the ambush into the next room. |
 | Clockwork in the Salt | 735 | 26–85 | A Mountain Dwarf Forgewright winds a clockwork bee in the salt fog. A lightning spire fires on the saltlings while a blazeheart golem fights beside the dwarf. Its exposed core explodes and kills a guardian serpent. |
-| Firestorm on Cocytus | 917 | 23–35 | A Deep Elf Fire Elementalist follows the narrow footing between pools with Plasma Beam and Starburst. Scalding steam and fire vortices catch a harpy simulacrum before Fire Storm melts a quicksilver dragon and an alligator simulacrum. |
+| Firestorm on Cocytus | 917 | 32–60 | A Deep Elf Fire Elementalist sends Plasma Beam and Fire Storm over the pools. With magic running low, the caster fights a frost giant and a dire elephant simulacrum at close range with a staff of fire. |
 | Butterflies in Pandemonium | 628 | 37–117 | A Gargoyle Hunter shoots down a reaper and a ynoxinul with a holy triple crossbow. After scouting two gates, the hunter reads a scroll of butterflies to make room against the Pandemonium lord Tatacsir and a Brimstone Fiend. |
 | The Ossuary Door | 1101 | 4–108 | The Gargoyle opens three burial chambers, fights zombies and mummies with a holy eveningstar and collects the potions and scrolls inside. |
 | Ice on the Sewer Walls | 1102 | 4–162 | The Merfolk crosses the sewer channel to freeze kobolds against the walls, then explores the side rooms and spears a jelly, a brain worm and a clockroach. |
@@ -78,14 +78,14 @@ Captured read-only from https://crawl-br.roguelikes.gg on 2026-11-17.
 The Lair recording contains 1,268 complete, ordered messages over 92.094
 seconds, with an initial full map and 280 map updates, all in Lair:1.
 
-- Yaks in the Lair: 24.406 seconds, source capture 1–30 seconds.
+- Yaks in the Lair: 32.390 seconds, source capture 1–39 seconds.
 - Wolves and Gastronok: 32.621 seconds, source capture 30–66 seconds.
 
 The Djinni recording contains 2,346 complete, ordered messages over 111.706
 seconds, with 454 map updates across Dungeon:1–3. The playlist includes two excerpts:
 
-- Djinni descent: 28.864 seconds, source capture 1–30 seconds.
-- Djinni on Dungeon:3: 22.959 seconds, source capture 90.5–111.859 seconds.
+- Djinni descent: 34.893 seconds, source capture 1–37 seconds.
+- Djinni on Dungeon:3: 35.051 seconds, source capture 78–111.859 seconds.
 
 Source ranges for these clips refer to the Djinni capture's own timestamps.
 Both raw recordings are kept out of tracked source. These four clips share the
@@ -99,10 +99,10 @@ Artwork and generated tile tables are exact downloads from
 
 The Octopode capture is from **CUE (Amsterdam, Netherlands)** on 2026-11-17:
 960 complete, ordered messages over 118.811 seconds, starting in Elven Halls:2
-and continuing into Vaults:1. The long idle/menu interval is omitted:
+and continuing into Vaults:1. Idle gaps between gameplay updates are compressed.
 
-- Octopode in the Vaults: 16.564 seconds, source capture 8–29 seconds.
-- Vaults skirmish: 24.782 seconds, source capture 93–119.603 seconds.
+- Octopode in the Vaults: 36.290 seconds, source capture 8–89 seconds.
+- Vaults skirmish: 32.067 seconds, source capture 80–119.603 seconds.
 
 These use DCSS `0.34.1-5-gfd259fce64` and gamedata version
 `0703b2fa62e821390161d95cf52f9da1183761d4`. Its matching artwork and tile tables
@@ -111,9 +111,9 @@ downloads in commit `db6c39d`. The manifest lists each clip's version and both
 asset sources; playback switches tile tables with the recording, never reuses
 tile IDs from a different DCSS version.
 
-Three more clips come from the November 17 captures. The Brazilian server supplied “Stand against Jeremiah”. CDI supplied a Formicid recording from the Swamp and a Mummy recording from the Elven Halls. The manifest records their original time ranges and pins the corresponding server artwork.
+Three more clips come from the November 17 captures. The Brazilian server supplied “Stand against Jeremiah”. It joins the approach (seconds 180–194.562 of the preceding capture) to the fight (seconds 1–24.142 of the next capture). The two captures meet on turn 6152 at the same position, with the same health and magic. CDI supplied a Formicid recording from the Swamp and a Mummy recording from the Elven Halls. The manifest records their original time ranges and pins the corresponding server artwork.
 
-The Tengu Air Elementalist clip uses seconds 61–92 of a November 17 Brazilian server capture. It shows Shock and lightning arcs against an adder and shares the Lair recording’s artwork version.
+The Tengu Air Elementalist clip uses seconds 57–94.917 of a November 17 Brazilian server capture. It shows Shock and lightning arcs against an adder and shares the Lair recording’s artwork version.
 
 **Xom’s Gunslinger: Lair to Necropolis** follows a level-15 Coglin wielding two hand cannons
 on CDI on November 18. The Coglin fights through elephants and yaks on Lair:3, then enters
@@ -132,14 +132,12 @@ player as Adventurer, and discard lobby, spectator lists, chat, server HTML,
 menus and outgoing commands. All preceding gameplay deltas form a silent
 bootstrap; no terrain, visibility or combat result is fabricated. The curator uses the original packet timestamps and WebTiles animation
 delays, including delays between maps delivered in a single socket batch.
-Spectator idle gaps are capped at 900 ms. Staged clips use short pauses
-between inputs and the captured map timings within each action. The menu
+Spectator idle gaps are capped at 900 ms. Staged clips pace movement and combat decisions separately from the captured projectile animations. The menu
 delivers each authored frame to the 2.5D renderer before its next canvas
-paint. In the Snake Pit recording, one hand-cannon slug advances across
-five confirmed cells in 71 ms. In Butterflies in Pandemonium, the opening crossbow bolt
+paint. In Butterflies in Pandemonium, the opening crossbow bolt
 appears on six successive cells at 0, 19, 37, 57, 77 and 97 ms from its first appearance.
 Clip boundaries rebuild state and clear presentation, followed by
-a fresh copy of the next bootstrap. The final frame holds for 1.6 seconds.
+a fresh copy of the next bootstrap. Each clip plays at least 30 seconds before its 1.6-second final hold.
 
 Every clip plays once per shuffled round, starting with a random clip on each
 menu load. The first clip of a new round cannot repeat the last clip of the
