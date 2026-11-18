@@ -6,6 +6,7 @@ export interface Settings {
   masterVolume: number
   effectsVolume: number
   singleSoundChannel: boolean
+  depthShowFps: boolean
   depthTilt: number
   depthZoom: number
   depthFog: boolean
@@ -56,6 +57,7 @@ export const defaultSettings: Settings = {
   masterVolume: 0.7,
   effectsVolume: 1,
   singleSoundChannel: true,
+  depthShowFps: false,
   depthTilt: 35,
   depthZoom: 1,
   depthFog: true,

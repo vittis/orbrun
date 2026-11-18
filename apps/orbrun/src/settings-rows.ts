@@ -190,6 +190,7 @@ export const ALL_SETTING_ROWS: readonly SettingRow[] = [
   // View
   row('View', 'Dungeon tilt', 'depthTilt', Array.from({ length: (DUNGEON_TILT.max - DUNGEON_TILT.min) / 5 + 1 }, (_, i) => DUNGEON_TILT.min + i * 5), 'The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.', v => v + '°'),
   row('View', 'Dungeon zoom', 'depthZoom', Array.from({ length: (DUNGEON_ZOOM.max - DUNGEON_ZOOM.min) * 20 + 1 }, (_, i) => (DUNGEON_ZOOM.min * 100 + i * 5) / 100), 'At 100% the full field of view fits. Zooming in shows larger tiles and less surrounding terrain.', v => Math.round(v * 100) + '%'),
+  row('View', 'FPS counter', 'depthShowFps', [false, true], 'Show rendered frames per second in the dungeon view.', v => v ? 'On' : 'Off'),
   row('View', 'Unexplored fog', 'depthFog', [true, false], 'Soft transitions between explored terrain and unexplored darkness. Off restores the plain boundary.', v => v ? 'On' : 'Off'),
   row('View', 'Unexplored atmosphere', 'depthAtmosphere', [true, false], 'Soft stars, gentle drift and faint swirling traces in unexplored darkness. Off keeps only the smooth exploration transition.', v => v ? 'On' : 'Off', s => !s.depthFog),
   row('View', 'Dungeon movement', 'depthMovement', [true, false], 'Animate travel with creature-specific hops, slithers and glides.', v => v ? 'Animated' : 'Instant'),

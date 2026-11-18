@@ -6,7 +6,7 @@ export class FpsCounter {
   private start: number | null = null
   private frames = 0
 
-  place(view: { left: number; top: number } | null) {
+  place(view: { left: number; top: number; height: number } | null, portrait = false) {
     const hidden = view === null
     if (this.root.hidden !== hidden) {
       this.start = null
@@ -16,7 +16,8 @@ export class FpsCounter {
     }
     if (view) {
       this.root.style.left = view.left + 8 + 'px'
-      this.root.style.top = view.top + 8 + 'px'
+      // On portrait phones the character sheet overlays the top of the view.
+      this.root.style.top = view.top + (portrait ? Math.max(0, view.height - 32) : 32) + 'px'
     }
   }
 

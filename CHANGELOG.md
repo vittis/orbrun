@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.142 — 2026-11-18
+
+- The dungeon FPS counter is off by default. Enable it in Settings → View or in-game Quick settings → View. It now sits slightly lower in the dungeon view.
+
 ## 0.3.141 — 2026-11-18
 
 - Dense spell effects, dungeon lighting and exploration fog render faster, especially when many clouds overlap in Polar Vortex. The menu replay also holds its 30 FPS target more consistently.

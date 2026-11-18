@@ -646,7 +646,7 @@ export class GameScreen {
       }
     }
     this.viewPx = px
-    this.fps.place(this.presentation === 'dungeon' && !mapView ? this.grid.px(cells.view) : null)
+    this.fps.place(this.settings().depthShowFps && this.presentation === 'dungeon' && !mapView ? this.grid.px(cells.clear) : null, isPortrait(g))
     // the map is centred, and its cells fitted, on its part above the touch bar (render-2d `foot`)
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
