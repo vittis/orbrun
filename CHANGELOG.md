@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.133 — 2026-11-18
+
+- The main menu title and gameplay options sit lower on the screen.
+- Dungeon liquids have animated reflections and improved shorelines, and the menu includes more recorded encounters.
+
 ## 0.3.132 — 2026-11-18
 
 - The main menu groups server selection and login on the left. Shorter server labels show the city or region, and the login fields use placeholders.
