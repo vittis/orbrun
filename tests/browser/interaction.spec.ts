@@ -746,7 +746,7 @@ for (const narrow of [false, true]) {
     const assetRequests: string[] = []
     page.on('request', request => { if (request.url().includes('/menu/')) assetRequests.push(request.url()) })
     await page.goto('/')
-    const chooser = page.getByRole('combobox', { name: 'Choose recording', exact: true })
+    const chooser = page.getByRole('combobox', { name: 'Choose scene', exact: true })
     const canvas = page.locator('.menu-backdrop canvas')
     await expect(chooser).toBeVisible()
     await expect(canvas).toBeVisible()
@@ -754,15 +754,15 @@ for (const narrow of [false, true]) {
     const requestedClips = () => assetRequests.filter(url => url.includes('/menu/clips/'))
     expect(requestedClips()).toHaveLength(1)
     expect(new Set(assetRequests.filter(url => url.includes('/menu/gamedata/')).map(url => url.split('/gamedata/')[1].split('/')[0])).size).toBe(1)
-    for (const title of ['Octopode in the Vaults', 'Lightning in the Vaults', 'Vaults skirmish', 'Deep troll in the Vaults', 'Blademaster in the Elven Halls', 'Tormentor in the Abyss', 'Stand against Jeremiah', 'Djinni descent']) {
+    for (const title of ['Octopode in the Vaults', 'Lightning in the Vaults', 'Vaults skirmish', 'Deep troll in the Vaults', 'Blademaster in the Elven Halls', 'Tormentor in the Abyss', 'Stand against Jeremiah', 'Djinni descent', 'Volcano Lake (scripted)']) {
       const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
       await chooser.selectOption({ label: title })
       await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(before)
       await expect(canvas).toBeVisible()
     }
-    expect(requestedClips()).toHaveLength(9)
+    expect(requestedClips()).toHaveLength(10)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toEqual({ depthTilt: 65 })
-    await chooser.selectOption({ label: 'Lightning in the Vaults' })
+    await chooser.selectOption({ label: 'Volcano Temple (scripted)' })
     await page.waitForTimeout(500)
     await page.screenshot({ path: `test-results/menu-chooser-${narrow ? 'narrow' : 'desktop'}.png` })
     const chosen = await chooser.inputValue()

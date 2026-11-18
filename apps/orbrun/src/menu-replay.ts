@@ -4,7 +4,7 @@ export interface ReplayClip {
   format: 1
   version: string
   initial: ServerMessage[]
-  frames: { after: number; messages: ServerMessage[] }[]
+  frames: { after: number; projectileTimeMs?: number; messages: ServerMessage[] }[]
 }
 
 /** Bundled recordings contain state, never client commands or executable WebTiles HTML. */
@@ -17,7 +17,8 @@ export function readReplay(value: unknown, version: string): ReplayClip {
   if (!clip || clip.format !== 1 || clip.version !== version || !messages(clip.initial)
     || !clip.initial.some(m => m.msg === 'map') || !clip.initial.some(m => m.msg === 'player')
     || !Array.isArray(clip.frames) || !clip.frames.length || clip.frames.length > 3000
-    || !clip.frames.every(f => f && Number.isFinite(f.after) && f.after >= 16 && f.after <= 2000 && messages(f.messages))) {
+    || !clip.frames.every(f => f && Number.isFinite(f.after) && f.after >= 0 && f.after <= 2000
+      && (f.projectileTimeMs === undefined || Number.isFinite(f.projectileTimeMs) && f.projectileTimeMs >= 0) && messages(f.messages))) {
     throw new Error('Invalid menu recording')
   }
   return clip
@@ -64,7 +65,7 @@ export class ReplayClock {
   private timer: ReturnType<typeof setTimeout> | undefined
 
   constructor(private clip: ReplayClip, private reset: (messages: ServerMessage[]) => void,
-    private apply: (messages: ServerMessage[]) => void, private finished: () => void, private failed: (error: unknown) => void) {
+    private apply: (messages: ServerMessage[], projectileTimeMs?: number) => void, private finished: () => void, private failed: (error: unknown) => void) {
     this.begin()
   }
 
@@ -75,8 +76,8 @@ export class ReplayClock {
     this.remaining = this.clip.frames[0].after
   }
 
-  private schedule() {
-    this.due = performance.now() + this.remaining
+  private schedule(from = performance.now()) {
+    this.due = from + this.remaining
     this.timer = setTimeout(() => {
       this.timer = undefined
       if (!this.active || this.destroyed) return
@@ -86,13 +87,23 @@ export class ReplayClock {
           this.finished()
           if (this.destroyed) return
           this.begin()
+          this.schedule()
         } else {
-          this.apply(structuredClone(frames[this.frame++].messages))
+          // Processing a map consumes part of the interval to the next one.
+          // After a stalled tab, resume here instead of rushing through turns.
+          const now = performance.now()
+          const start = now - this.due > 1000 / 30 ? now : this.due
+          // Same-timestamp maps can describe multiple confirmed projectile
+          // positions. Publish each before yielding to the next paint.
+          do {
+            const frame = frames[this.frame++]
+            this.apply(structuredClone(frame.messages), frame.projectileTimeMs)
+          } while (frames[this.frame]?.after === 0)
           this.remaining = frames[this.frame]?.after ?? 1600
+          this.schedule(start)
         }
-        this.schedule()
       } catch (error) { this.destroy(); this.failed(error) }
-    }, this.remaining)
+    }, Math.max(0, this.due - performance.now()))
   }
 
   setActive(active: boolean) {

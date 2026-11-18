@@ -4,17 +4,17 @@ import type { MenuDemo } from './menu-demo'
 import { ReplayPlaylist } from './menu-replay'
 import manifest from '../data/menu-replays.json'
 
-/** Silent recorded gameplay with an immediate, lightweight dungeon entrance while loading. */
+/** Silent menu scenes with a lightweight dungeon entrance while loading. */
 export class MenuBackdrop {
   readonly el = h('div', { class: 'menu-backdrop' })
   readonly canvas = h('canvas', { hidden: true, 'aria-hidden': 'true' })
   private tilt = h('input', { type: 'range', min: 25, max: 85, step: 1, 'aria-label': 'Dungeon tilt' })
   private tiltValue = h('span', { class: 'menu-replay-angle', 'aria-hidden': 'true' })
-  private recording = h('select', { 'aria-label': 'Choose recording' },
+  private recording = h('select', { 'aria-label': 'Choose scene' },
     h('option', { value: '' }, 'Shuffle all'),
     ...manifest.clips.map(clip => h('option', { value: clip.file }, clip.title)))
   private controls = h('div', { class: 'menu-replay-controls', hidden: true },
-    h('label', { class: 'menu-replay-picker' }, h('span', {}, 'Choose recording'), this.recording),
+    h('label', { class: 'menu-replay-picker' }, h('span', {}, 'Choose scene'), this.recording),
     h('label', { class: 'menu-replay-tilt' }, h('span', {}, 'Dungeon tilt'), this.tiltValue, this.tilt))
   private status = h('span', { role: 'status' })
   private retry = h('button', { type: 'button', hidden: true }, 'Retry replay')

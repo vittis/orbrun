@@ -1,14 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { loadGamedata } from '@orbrun/gamedata'
-import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
+import { initialState, mapKey, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { emptyScene } from '@orbrun/scene'
 import { buildScene } from '@orbrun/scene-webtiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { readReplay, ReplayClock, ReplayPlaylist, type ReplayClip } from '../src/menu-replay'
 import { verifyMenuReplays } from '../menu-replay-assets'
 import manifest from '../data/menu-replays.json'
-import { curate } from '../../../tools/record/curate-menu.mjs'
+import { curate, curateStaged } from '../../../tools/record/curate-menu.mjs'
 
 const version = 'a'.repeat(40)
 const clip = (id: number): ReplayClip => ({ format: 1, version, initial: [{ msg: 'map', cells: [{ x: id }] }, { msg: 'player', pos: { x: id, y: 0 } }],
@@ -69,6 +69,29 @@ it('curates state-only clips with complete preceding deltas and bounded idle gap
   expect(() => curate(records, 0, 5000)).toThrow('Missing initial state')
 })
 
+it('preserves native projectile delays within a network burst and across spaced deliveries', () => {
+  const map = { msg: 'map', cells: [] }
+  const result = curate([
+    { t: 0, m: { msg: 'game_client', version } },
+    { t: 1, m: map }, { t: 2, m: { msg: 'player' } },
+    { t: 100, m: map }, { t: 100, m: { msg: 'delay', t: 20 } }, { t: 100, m: map },
+    { t: 100, m: { msg: 'delay', t: 20 } }, { t: 140, m: map }, { t: 140, m: map },
+  ], 50, 150)
+  expect(result.frames.map(f => [f.after, f.projectileTimeMs ?? 0])).toEqual([[50, 0], [20, 20], [20, 40], [0, 40]])
+  expect(result.frames.flatMap(f => f.messages)).toEqual([map, map, map, map])
+})
+
+it('paces a staged input separately from the projectile maps it produces', () => {
+  const map = { msg: 'map', cells: [] }
+  const result = curateStaged([
+    { input: 0, t: 0, m: { msg: 'player', pos: { x: 0, y: 0 } } },
+    { input: 0, t: 0, m: { ...map, clear: true } },
+    { input: 1, t: 2000, m: map }, { input: 1, t: 2018, m: map },
+    { input: 1, t: 2037, m: { msg: 'player', turn: 5 } }, { input: 1, t: 2037, m: map },
+  ], version)
+  expect(result.frames.map(f => f.after)).toEqual([370, 18, 19])
+})
+
 it('bundles matching artwork and moving/combat sequences that replay identically twice', async () => {
   verifyMenuReplays()
   const root = new URL('../public/menu/', import.meta.url)
@@ -80,6 +103,7 @@ it('bundles matching artwork and moving/combat sequences that replay identically
     for (const entry of manifest.clips) {
       const data = versions.find(data => data.version === entry.version)!
       const recording = readReplay(JSON.parse(readFileSync(new URL(entry.file, root), 'utf8')), entry.version)
+      const cryptQuakes = entry.engineCommit && recording.initial.some(m => m.msg === 'player' && m.place === 'Crypt')
       const original = structuredClone(recording)
       const run = () => {
         const state = initialState(); reduce(state, { msg: 'game_started' })
@@ -96,6 +120,12 @@ it('bundles matching artwork and moving/combat sequences that replay identically
           feedback.takeSpells()
           positions.add(JSON.stringify(state.player.pos))
           expect(scene.playerOnLevel, entry.title).toBe(true)
+          if (cryptQuakes) {
+            const { x, y } = scene.player
+            expect(state.map.viewCenter).toEqual({ x, y })
+            expect(state.map.cells.get(mapKey(x, y))?.g).toBe('@')
+            expect(scene.billboards.find(b => b.kind === 'player')).toMatchObject({ x, y })
+          }
         }
         expect(events, entry.title).toBeGreaterThan(0)
         // The Djinni holds position throughout the fight against Jeremiah.

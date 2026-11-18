@@ -158,6 +158,14 @@
   .command-line .item { flex-basis: 100%; }
   .command-also { padding-left: 26px; }
 }
+/* Keep the encounter visible between the home commands and the scene picker on tall phones. */
+@media (max-width: 700px) and (max-aspect-ratio: 3/4) {
+  .menu-backdrop canvas {
+    top: 44%;
+    height: 48%;
+    mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 72%, transparent);
+  }
+}
 @media (pointer: coarse) {
   .account-bar :is(button, select, input, a), .command-also button, .polished-footer button { min-height: 44px; }
   .account-bar input { font-size: 16px; }
