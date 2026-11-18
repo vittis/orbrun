@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.132 — 2026-11-18
+
+- The main menu groups server selection and login on the left. Shorter server labels show the city or region, and the login fields use placeholders.
+- On narrow screens, the replay controls have their own space below the menu so the footer links stay reachable.
+
 ## 0.3.131 — 2026-11-18
 
 - Gameplay, menus and replays now use full animation regardless of the device motion preference. The Dungeon animation setting has been removed. Existing movement and combat tuning carry over.
