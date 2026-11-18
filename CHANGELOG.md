@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.140 — 2026-11-18
+
+- The dungeon defaults are 35° tilt, 100% zoom, 140 ms movement and 60% combat VFX variation.
+
 ## 0.3.139 — 2026-11-18
 
 - On the mobile main menu, the title and actions sit higher and the replay controls sit just above the footer.

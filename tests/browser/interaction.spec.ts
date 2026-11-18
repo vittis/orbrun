@@ -348,7 +348,7 @@ for (const touch of [false, true]) {
       await zoom.press('End')
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.zoom).toBe(2)
       await quick.getByRole('button', { name: 'Dungeon tilt increase', exact: true }).click()
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions.tilt).toBe(55)
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions.tilt).toBe(40)
       for (const [label, key, value] of [['Move hop height', 'movementHopHeight', 0.35], ['Move squash', 'movementSquash', 0.55], ['Move sway', 'movementSway', 0.95]] as const) {
         await quick.getByRole('button', { name: `${label} decrease`, exact: true }).click()
         await expect.poll(async () => (await result(page)).appliedDungeonOptions[key]).toBe(value)
@@ -361,8 +361,8 @@ for (const touch of [false, true]) {
       const variation = quick.getByRole('slider', { name: 'VFX variation', exact: true })
       await variation.focus()
       await variation.press('ArrowRight')
-      await expect(variation).toHaveAttribute('aria-valuetext', '30%')
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions.combatVfxVariation).toBe(0.3)
+      await expect(variation).toHaveAttribute('aria-valuetext', '65%')
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions.combatVfxVariation).toBe(0.65)
       await quick.getByRole('tab', { name: 'View', exact: true }).click()
       await quick.getByRole('combobox', { name: 'Dungeon movement', exact: true }).selectOption({ label: 'Instant' })
       for (const label of ['Move hop height', 'Move squash', 'Move sway']) await expect(quick.getByRole('slider', { name: label, exact: true })).toBeDisabled()
@@ -380,7 +380,7 @@ for (const touch of [false, true]) {
       await quick.getByRole('tab', { name: 'View', exact: true }).click()
       await quick.getByRole('button', { name: 'Reset view', exact: true }).click()
       await expect(quick.getByRole('tab', { name: 'View', exact: true })).toBeFocused()
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions).toMatchObject({ tilt: 50, zoom: 1, meleeBumpStrength: 1.8,
+      await expect.poll(async () => (await result(page)).appliedDungeonOptions).toMatchObject({ tilt: 35, zoom: 1, movementDuration: 0.14, meleeBumpStrength: 1.8,
         movementHopHeight: 0.4, movementSquash: 0.6, movementSway: 1 })
       await page.getByRole('button', { name: 'Open level map', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')
@@ -481,10 +481,10 @@ test('movement tuning persists in the narrow settings menu and respects instant 
     await expect(row(label).locator('.val')).toHaveText(changed)
   }
   await page.getByRole('button', { name: 'Dungeon move duration next', exact: true }).click()
-  await expect(row('Dungeon move duration').locator('.val')).toHaveText('110 ms')
+  await expect(row('Dungeon move duration').locator('.val')).toHaveText('150 ms')
   await page.reload()
   for (const [label, changed] of gestures) await expect(row(label).locator('.val')).toHaveText(changed)
-  await expect(row('Dungeon move duration').locator('.val')).toHaveText('110 ms')
+  await expect(row('Dungeon move duration').locator('.val')).toHaveText('150 ms')
   await page.getByRole('button', { name: 'Dungeon movement next', exact: true }).click()
   for (const [label, changed] of gestures) {
     await expect(row(label)).toHaveClass(/off/)
@@ -519,7 +519,7 @@ test('fine combat controls work in a narrow settings panel and persist across re
   await page.getByRole('button', { name: 'Death outward spray next', exact: true }).click()
   await expect(row('Death outward spray').locator('.val')).toHaveText('80%')
   await page.getByRole('button', { name: 'VFX variation next', exact: true }).click()
-  await expect(row('VFX variation').locator('.val')).toHaveText('30%')
+  await expect(row('VFX variation').locator('.val')).toHaveText('65%')
   await page.getByRole('button', { name: 'Hit bump speed next', exact: true }).click()
   await expect(row('Hit bump speed').locator('.val')).toHaveText('120%')
   await row('Hit bump speed').press('ArrowRight')
@@ -530,7 +530,7 @@ test('fine combat controls work in a narrow settings panel and persist across re
   await expect(row('Hit bump speed').locator('.val')).toHaveText('120%')
   await expect(row('Hit bump snap').locator('.val')).toHaveText('65%')
   await expect(row('Hit outward spray').locator('.val')).toHaveText('95%')
-  await expect(row('VFX variation').locator('.val')).toHaveText('30%')
+  await expect(row('VFX variation').locator('.val')).toHaveText('65%')
   const bounds = await page.locator('.settings .row .value').evaluateAll(values => values.map(value => {
     const rect = value.getBoundingClientRect()
     return { left: rect.left, right: rect.right, viewport: innerWidth }
@@ -543,7 +543,7 @@ test('fine combat controls work in a narrow settings panel and persist across re
   await page.getByText('Reset to defaults', { exact: true }).click()
   await expect(row('Hit bump speed').locator('.val')).toHaveText('115%')
   await expect(row('Hit outward spray').locator('.val')).toHaveText('100%')
-  await expect(row('VFX variation').locator('.val')).toHaveText('25%')
+  await expect(row('VFX variation').locator('.val')).toHaveText('60%')
 })
 
 // Real ZIP worker, IndexedDB, browser decoding and AudioContext; only the pack HTTP response is local.

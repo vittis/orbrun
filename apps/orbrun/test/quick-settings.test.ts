@@ -32,8 +32,8 @@ describe('quick View and Combat settings', () => {
     expect(variation.disabled).toBe(true)
     panel.root.querySelector<HTMLButtonElement>('#quick-settings-combat .quick-settings-reset')!.click()
     expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSpeed: 1.15, meleeBumpSnap: 0.7,
-      hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25 })
-    expect(variation.getAttribute('aria-valuetext')).toBe('25%')
+      hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.6 })
+    expect(variation.getAttribute('aria-valuetext')).toBe('60%')
   })
 
   it('offers every shared row, applies slider/selector changes once, and preserves unrelated preferences on reset', () => {
@@ -55,7 +55,7 @@ describe('quick View and Combat settings', () => {
     const reset = panel.root.querySelector<HTMLButtonElement>('#quick-settings-view .quick-settings-reset')!
     reset.focus()
     reset.click()
-    expect(getSettings()).toMatchObject({ depthTilt: 50, hitGore: 1.5, uiScale: 1.15 })
+    expect(getSettings()).toMatchObject({ depthTilt: 35, hitGore: 1.5, uiScale: 1.15 })
     expect(control('meleeBumpSpeed').disabled).toBe(false)
     expect(reset.disabled).toBe(true)
     expect(document.activeElement).toBe(panel.root.querySelector('[role="tab"][aria-selected="true"]'))

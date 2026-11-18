@@ -13,6 +13,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('settings storage boundary', () => {
+  it('uses the new dungeon defaults while preserving explicit preferences', () => {
+    expect(getSettings()).toMatchObject({ depthTilt: 35, depthZoom: 1, depthMovementDuration: 0.14, combatVfxVariation: 0.6 })
+    const overrides = { depthTilt: 50, depthZoom: 1.2, depthMovementDuration: 0.1, combatVfxVariation: 0.25 }
+    store.set(key, JSON.stringify(overrides))
+    expect(getSettings()).toMatchObject(overrides)
+    saveSettings(getSettings())
+    expect(JSON.parse(store.get(key)!)).toEqual(overrides)
+  })
+
   it.each(['{', 'null', '[]', '42', 'true', '"settings"'])('ignores malformed or non-object storage: %s', raw => {
     store.set(key, raw)
     expect(getSettings()).toEqual(defaultSettings)

@@ -36,7 +36,7 @@ describe('Dungeon presentation', () => {
   beforeEach(() => saveSettings({ ...defaultSettings }))
 
   it.each([
-    ['Dungeon tilt', 'depthTilt', 50, 55, 45, 42.5, 45, 40],
+    ['Dungeon tilt', 'depthTilt', 35, 40, 30, 42.5, 45, 40],
     ['Dungeon zoom', 'depthZoom', 1, 1.05, 0.95, 1.12, 1.15, 1.1],
   ] as const)('adjusts %s in fine steps and preserves custom saved values until adjusted', (label, key, initial, next, previous, custom, above, below) => {
     const setting = row(label)
@@ -63,11 +63,11 @@ describe('Dungeon presentation', () => {
 
   it('persists movement options, gates gesture controls during instant movement, and resets the View defaults', () => {
     saveSettings({ ...defaultSettings })
-    expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')
+    expect(settingValue(row('Dungeon move duration'))).toBe('140 ms')
     expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
     adjustSetting(row('Dungeon move duration'), 1)
     adjustSetting(row('Dungeon move easing'), 1)
-    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.11, depthMovementEasing: 'smooth' })
+    expect(getSettings()).toMatchObject({ depthMovementDuration: 0.15, depthMovementEasing: 'smooth' })
     const gestures = ['Move hop height', 'Move squash', 'Move sway']
     for (const label of gestures) adjustSetting(row(label), -1)
     expect(getSettings()).toMatchObject({ depthMovementHopHeight: 0.35, depthMovementSquash: 0.55, depthMovementSway: 0.95 })
@@ -76,7 +76,7 @@ describe('Dungeon presentation', () => {
     expect(rowOff(row('Dungeon move duration'))).toBe(true)
     for (const label of gestures) expect(rowOff(row(label))).toBe(true)
     resetGroup('View')
-    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out',
+    expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.14, depthMovementEasing: 'ease-out',
       depthMovementHopHeight: 0.4, depthMovementSquash: 0.6, depthMovementSway: 1 })
   })
 })
@@ -252,7 +252,7 @@ describe('settings: reset a page to its defaults', () => {
   beforeEach(() => store.clear())
 
   it("puts back only the page's own settings, and leaves the rest as they were", () => {
-    saveSettings({ ...defaultSettings, depthTilt: 35, depthZoom: 1.4, uiScale: 1.3, messageLines: 8 })
+    saveSettings({ ...defaultSettings, depthTilt: 45, depthZoom: 1.4, uiScale: 1.3, messageLines: 8 })
     expect(groupAtDefaults('View')).toBe(false)
     resetGroup('View')
     const s = getSettings()

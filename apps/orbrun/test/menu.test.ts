@@ -2024,12 +2024,12 @@ describe('the front end: settings and marks', () => {
     pick(screen, 'View')
     expect(screen.view).toBe('settings-group')
     const value = (label: string) => (Array.from(screen.root.querySelectorAll('li.row')).find((r) => r.querySelector('.label')?.textContent === label)?.querySelector('.val') as HTMLElement).textContent
-    expect(value('Dungeon tilt')).toBe('50°')
+    expect(value('Dungeon tilt')).toBe('35°')
     while (focused(screen) !== 'setting:Dungeon tilt') press(screen, 'j')
     press(screen, 'l')
-    expect(value('Dungeon tilt')).toBe('55°')
+    expect(value('Dungeon tilt')).toBe('40°')
     press(screen, 'h')
-    expect(value('Dungeon tilt')).toBe('50°')
+    expect(value('Dungeon tilt')).toBe('35°')
     // back at the default, so it is not written down at all: a default we move later moves for this player too
     expect('depthTilt' in JSON.parse(localStorage.getItem('orbrun.settings')!)).toBe(false)
     expect(screen.root.querySelector('.menu-msg')?.textContent).toBe('The 2.5D camera elevation: lower angles give walls more depth; higher angles show more floor.')
