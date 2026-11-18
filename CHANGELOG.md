@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.137 — 2026-11-18
+
+- The ten newest main-menu showcases now run for 36–55 seconds. Follow the Gauntlet gladiator to the treasure, descend to a second floor of Gehenna, or watch the summoner call dragons against Geryon.
+
 ## 0.3.136 — 2026-11-18
 
 - The main menu now shuffles 36 gameplay scenes. Ten new encounters join the rotation, nine retire, and every scene appears in the chooser under its own title.

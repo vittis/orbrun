@@ -133,72 +133,72 @@
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/ossuary-b933a02228ef9456.json",
+      "file": "clips/ossuary-9a2743958eea64a9.json",
       "title": "The Ossuary Door",
-      "durationMs": 8300,
+      "durationMs": 43190,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/sewer-b369bed871b63240.json",
+      "file": "clips/sewer-a4c7ba11f0bb6935.json",
       "title": "Ice on the Sewer Walls",
-      "durationMs": 4925,
+      "durationMs": 38324,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/elf-d63869ab048ae18f.json",
+      "file": "clips/elf-54140cab7c827be2.json",
       "title": "Venom in the Elven Halls",
-      "durationMs": 8774,
+      "durationMs": 40189,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/dis-2c7587f80d5cca21.json",
+      "file": "clips/dis-f184da4370a74971.json",
       "title": "Crystal Spears in Dis",
-      "durationMs": 6989,
+      "durationMs": 35935,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/tartarus-b0bf01f4172332b5.json",
+      "file": "clips/tartarus-3b7cd1194c3b87d6.json",
       "title": "Duel in Tartarus",
-      "durationMs": 12350,
+      "durationMs": 52599,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/gehenna-e10b191426e8a678.json",
+      "file": "clips/gehenna-3a4922bd0d9693fd.json",
       "title": "Polar Vortex in Gehenna",
-      "durationMs": 6620,
+      "durationMs": 54672,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/wizlab-28f4218f9b74ea84.json",
+      "file": "clips/wizlab-c597e9fd23061f0b.json",
       "title": "Plasma in the Wizlab",
-      "durationMs": 5776,
+      "durationMs": 52794,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/depths-15677ab55d1b3219.json",
+      "file": "clips/depths-30a2537450efb363.json",
       "title": "Bolts in the Depths",
-      "durationMs": 8817,
+      "durationMs": 52207,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/hell-1930a9783392244a.json",
+      "file": "clips/hell-f63167188721c850.json",
       "title": "Geryon’s Horn",
-      "durationMs": 4700,
+      "durationMs": 47091,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
     {
-      "file": "clips/gauntlet-e7f78cf0af05618f.json",
+      "file": "clips/gauntlet-e6d8fc3c939d851b.json",
       "title": "The Gauntlet Transporter",
-      "durationMs": 6770,
+      "durationMs": 40405,
       "version": "0703b2fa62e821390161d95cf52f9da1183761d4",
       "engineCommit": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796"
     },
@@ -678,45 +678,45 @@
       "size": 1027727,
       "sha256": "eacd132836bb0fa1981e03ce54dc572731070877ef603314739e89bcf27b0b7f"
     },
-    "clips/ossuary-b933a02228ef9456.json": {
-      "size": 35131,
-      "sha256": "b933a02228ef9456fe7bc2d5ec5e0ddb4672821e160841361719e00a32d69c3c"
+    "clips/ossuary-9a2743958eea64a9.json": {
+      "size": 120111,
+      "sha256": "9a2743958eea64a91279d0a0bee36e0059b59e97d08f5a989e1c47d261868c4b"
     },
-    "clips/sewer-b369bed871b63240.json": {
-      "size": 63248,
-      "sha256": "b369bed871b632405c8cac6112049fbe6f23242baad0925581d4624dd0450eba"
+    "clips/sewer-a4c7ba11f0bb6935.json": {
+      "size": 188379,
+      "sha256": "a4c7ba11f0bb693590d0637cf438c885fc400d53af7eefdd39df3ffe1d99ded4"
     },
-    "clips/elf-d63869ab048ae18f.json": {
-      "size": 36673,
-      "sha256": "d63869ab048ae18f09acb0ffcfedae5a6cf261161c415905677db076371c0070"
+    "clips/elf-54140cab7c827be2.json": {
+      "size": 175859,
+      "sha256": "54140cab7c827be26413fbcf9764c418974b4676773a2903d36e0fde55061a7a"
     },
-    "clips/dis-2c7587f80d5cca21.json": {
-      "size": 90687,
-      "sha256": "2c7587f80d5cca21021a8841edc27baf0fb1a84635debf8d93c096cbff3e4dde"
+    "clips/depths-30a2537450efb363.json": {
+      "size": 307503,
+      "sha256": "30a2537450efb36309c7da3b986bda4563ee2a101d5dc99480ef1badd4e346b7"
     },
-    "clips/tartarus-b0bf01f4172332b5.json": {
-      "size": 78612,
-      "sha256": "b0bf01f4172332b5c03fb6c88baefbdf9cc2954da786e25c76c46fae42e8d932"
+    "clips/tartarus-3b7cd1194c3b87d6.json": {
+      "size": 217541,
+      "sha256": "3b7cd1194c3b87d6d4f8db1c0e231294e1b25a0b22490505270813a4e4030f5d"
     },
-    "clips/gehenna-e10b191426e8a678.json": {
-      "size": 84268,
-      "sha256": "e10b191426e8a67819fa5b67a0484d9dc0202f7449adc5f40595dd34b7d0a05c"
+    "clips/gehenna-3a4922bd0d9693fd.json": {
+      "size": 573026,
+      "sha256": "3a4922bd0d9693fd85b94665c77ef40d5fa217825087032db2efd0ad911956e3"
     },
-    "clips/wizlab-28f4218f9b74ea84.json": {
-      "size": 69687,
-      "sha256": "28f4218f9b74ea84aae11a9e6dc386cdc09a6bec85c645e76fbff08b2d412075"
+    "clips/wizlab-c597e9fd23061f0b.json": {
+      "size": 449535,
+      "sha256": "c597e9fd23061f0b6f9a32753dee9a486d0b48058318fbb51877057359ec2af1"
     },
-    "clips/depths-15677ab55d1b3219.json": {
-      "size": 60936,
-      "sha256": "15677ab55d1b32190c9588fe05b1e2d44ff298aa6418f082323dc16daebf2a16"
+    "clips/gauntlet-e6d8fc3c939d851b.json": {
+      "size": 259481,
+      "sha256": "e6d8fc3c939d851bea5b0c12e4756fa94a5c817f15ecd021ea630bd68d8c683e"
     },
-    "clips/hell-1930a9783392244a.json": {
-      "size": 58800,
-      "sha256": "1930a9783392244a60cac10353bd495dc78030105d3d3a2ddf08fdb7b2fd14f5"
+    "clips/dis-f184da4370a74971.json": {
+      "size": 322201,
+      "sha256": "f184da4370a7497167c268c849c44eb95d73c1a68bf9011f63468c66303f031c"
     },
-    "clips/gauntlet-e7f78cf0af05618f.json": {
-      "size": 148683,
-      "sha256": "e7f78cf0af05618fa707463497530070228d5a9c51c201c4946328a0d68cd69c"
+    "clips/hell-f63167188721c850.json": {
+      "size": 713422,
+      "sha256": "f63167188721c8506c233ad104550309b9aedf7f7d2c511867506fc20afce2f0"
     }
   }
 }

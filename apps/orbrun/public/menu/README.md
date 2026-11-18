@@ -57,16 +57,16 @@ the ordered player, map and message packets through its final turn.
 | Clockwork in the Salt | 735 | 26–85 | A Mountain Dwarf Forgewright winds a clockwork bee in the salt fog. A lightning spire fires on the saltlings while a blazeheart golem fights beside the dwarf. Its exposed core explodes and kills a guardian serpent. |
 | Firestorm on Cocytus | 917 | 23–35 | A Deep Elf Fire Elementalist follows the narrow footing between pools with Plasma Beam and Starburst. Scalding steam and fire vortices catch a harpy simulacrum before Fire Storm melts a quicksilver dragon and an alligator simulacrum. |
 | Butterflies in Pandemonium | 628 | 37–117 | A Gargoyle Hunter shoots down a reaper and a ynoxinul with a holy triple crossbow. After scouting two gates, the hunter reads a scroll of butterflies to make room against the Pandemonium lord Tatacsir and a Brimstone Fiend. |
-| The Ossuary Door | 1101 | 4–24 | A Gargoyle Fighter opens a burial chamber and destroys a mummy and its zombie guards with a holy eveningstar. |
-| Ice on the Sewer Walls | 1102 | 4–45 | A Merfolk swims across the channel, opens the side chambers and freezes kobolds and a frilled lizard with Frozen Ramparts. |
-| Venom in the Elven Halls | 1103 | 2–30 | A Naga Alchemist poisons a deep elf patrol, then casts Ignite Poison as a zephyrmancer returns fire. |
-| Crystal Spears in Dis | 1104 | 2–18 | A Gargoyle Earth Elementalist trades Bombard and crystal spears for an iron dragon’s breath of metal splinters. |
-| Duel in Tartarus | 1105 | 16–46 | A Mountain Dwarf with a holy broad axe fights a profane servitor and a spectral alligator snapping turtle. |
-| Polar Vortex in Gehenna | 1106 | 22–31 | A Barachi carries a freezing vortex through a pack of hell hogs. A balrug opens a door and falls to Refrigeration. |
-| Plasma in the Wizlab | 1107 | 2–12 | A Tengu rides a transporter into a laboratory and casts Plasma Beam at the creatures guarding a corrupted altar. |
-| Bolts in the Depths | 1108 | 18–36 | An Oni Hunter fires an arbalest of electrocution into a pack of undead. The summoned undead vanish when the vampire mage falls. |
-| Geryon’s Horn | 1109 | 2–17 | Geryon sounds his horn in the Vestibule of Hell. A Deep Elf Summoner calls hydras and cactus giants to meet the sin beasts. |
-| The Gauntlet Transporter | 1110 | 16–32 | A Minotaur Gladiator enters a transporter maze and uses a flaming triple sword against a brown ugly thing and a great orb of eyes. |
+| The Ossuary Door | 1101 | 4–108 | The Gargoyle opens three burial chambers, fights zombies and mummies with a holy eveningstar and collects the potions and scrolls inside. |
+| Ice on the Sewer Walls | 1102 | 4–162 | The Merfolk crosses the sewer channel to freeze kobolds against the walls, then explores the side rooms and spears a jelly, a brain worm and a clockroach. |
+| Venom in the Elven Halls | 1103 | 2–292 | After igniting the first patrol, the Naga constricts a dancing flail, follows the galleries and fights another zephyrmancer and a deep elf knight. |
+| Crystal Spears in Dis | 1104 | 11–143 | The Gargoyle trades crystal spears and iron shots with an iron dragon and a Hell Sentinel. On the next floor a caustic shrike and a war gargoyle guard the stairs. |
+| Duel in Tartarus | 1105 | 27–264 | A Mountain Dwarf destroys a profane servitor and a spectral snapping turtle with a holy broad axe. Beyond them lie a spectral quicksilver dragon, hellions, a shadow wraith and a spectral dire elephant. |
+| Polar Vortex in Gehenna | 1106 | 31–294 | A Barachi takes Polar Vortex through a pack of hell hogs, descends to Gehenna:2 and fights through an alarm with Refrigeration. |
+| Plasma in the Wizlab | 1107 | 15–295 | A Tengu takes the transporter and uses Plasma Beam and Chain Lightning against air elementals, a ghost moth and a death yak before crossing the webs to Lugonu’s altar. |
+| Bolts in the Depths | 1108 | 27–152 | An Oni Hunter shoots an arbalest of electrocution at a vampire mage and its summons. The hunt continues past a spark wasp and a vampire knight to an ice dragon and a fire giant. |
+| Geryon’s Horn | 1109 | 31–104 | Geryon sounds his horn as the Deep Elf calls hydras, cactus giants and dragons. The fight crosses the Vestibule until a teleport carries the summoner away from the hell knights. |
+| The Gauntlet Transporter | 1110 | 25–246 | A Minotaur Gladiator takes successive transporters through the orb of eyes and the occultists, duels the labyrinth’s minotaur and collects its ring and the treasure at the exit. |
 
 All staged clips use the existing 0.34 artwork bundle. The seven tile
 tables, enums and status icon table match the recording build byte for byte.
