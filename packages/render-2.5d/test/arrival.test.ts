@@ -88,7 +88,7 @@ describe('directional arrival sweep', () => {
     expect(draw(1.06)).toBe(false)
   })
 
-  it('skips initial positions, off-level browsing, returning to a level and Still arrivals', () => {
+  it('skips initial positions, off-level browsing, returning to a level and arrivals while paused', () => {
     const { scene, arrival, draw } = world()
     arrival.clear()
     scene.player.x = 20

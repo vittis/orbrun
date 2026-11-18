@@ -8,6 +8,6 @@ Stabilization completion is tracked in [STABILIZATION.md](STABILIZATION.md). The
 - **Proxy abuse controls:** current deadlines, bytes and concurrency budgets are per isolate. Distributed rate budgets and DNS resolution pinning are not implemented; bundled host DNS/TLS remains trusted.
 - **Optional engine coverage:** provision pinned engine artifacts in a suitable JSPI toolchain and run required-engine lanes separately. Online-only production does not imply engine acceptance.
 - **Dependency maintenance:** assess current audit findings with exposure context; do not reuse historical advisory counts or perform force-upgrades without verification.
-- **Performance/accessibility matrix:** repeat the automated Chromium baseline on additional browser engines; measure on target handhelds, narrow touch devices and reduced-motion setups. Preserve finite presentation work, idle sleep and input-to-send behavior while profiling.
+- **Performance/accessibility matrix:** repeat the automated Chromium baseline on additional browser engines; measure on target handhelds and narrow touch devices. Preserve finite presentation work, idle sleep and input-to-send behavior while profiling.
 
 Do not introduce a renderer framework, GPU rewrite, new UI framework or protocol rewrite merely to address these follow-ups.

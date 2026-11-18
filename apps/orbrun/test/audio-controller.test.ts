@@ -96,9 +96,9 @@ it('restores the selected content identity and stays playable if persistent stor
   expect(next.snapshot().message).toContain('Cache unavailable')
 })
 
-it('persists bounded independent audio settings without changing motion or account data', () => {
+it('persists bounded independent audio settings without changing account data', () => {
   localStorage.setItem('orbrun.tokens', 'untouched')
-  saveSettings({ ...defaultSettings, audioEnabled: true, masterVolume: -4, effectsVolume: 3, singleSoundChannel: false, depthAnimate: false })
-  expect(getSettings()).toMatchObject({ audioEnabled: true, masterVolume: 0, effectsVolume: 1, singleSoundChannel: false, depthAnimate: false })
+  saveSettings({ ...defaultSettings, audioEnabled: true, masterVolume: -4, effectsVolume: 3, singleSoundChannel: false })
+  expect(getSettings()).toMatchObject({ audioEnabled: true, masterVolume: 0, effectsVolume: 1, singleSoundChannel: false })
   expect(localStorage.getItem('orbrun.tokens')).toBe('untouched')
 })

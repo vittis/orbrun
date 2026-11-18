@@ -8,7 +8,7 @@
 
 This fork of [Caeous's Orbrun](https://github.com/Caeous/orbrun) connects to the public DCSS WebTiles servers. Accounts, saves, rc files and gameplay remain on the selected server. Anonymous spectating needs no account.
 
-Dungeon (2.5D) is the gameplay view: slanted floors, raised walls, upright creatures, lighting, spell effects and confirmed combat feedback. Tilt, zoom, animation and movement presentation remain configurable. Still mode and reduced motion limit animation. Traditional flat tiles remain for the minimap and temporary level-map/overview displays; closing a map returns to the dungeon. Movement and targeting use compass directions.
+Dungeon (2.5D) is the gameplay view: slanted floors, raised walls, upright creatures, lighting, spell effects and confirmed combat feedback. Tilt, zoom and movement presentation remain configurable. Traditional flat tiles remain for the minimap and temporary level-map/overview displays; closing a map returns to the dungeon. Movement and targeting use compass directions.
 
 <p align="center"><img src="apps/orbrun/public/room/poster.jpg" alt="The bundled front room rendered in Dungeon 2.5D" width="720"></p>
 

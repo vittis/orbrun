@@ -9,12 +9,9 @@ vi.mock('../src/settings', async original => ({ ...await original<object>(), get
 const { load, demo } = vi.hoisted(() => ({ load: vi.fn(), demo: { setActive: vi.fn(), refresh: vi.fn(), destroy: vi.fn() } }))
 vi.mock('../src/menu-demo', () => ({ loadMenuDemo: load }))
 let view: MenuBackdrop
-let reduced: EventTarget & { matches: boolean }
 beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks()
   settings = { ...defaultSettings }
-  reduced = Object.assign(new EventTarget(), { matches: false })
-  vi.stubGlobal('matchMedia', () => reduced)
   vi.stubGlobal('Worker', undefined)
   vi.stubGlobal('WebAssembly', {})
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
@@ -47,15 +44,13 @@ it('previews tilt on input, preserves other settings, and hides controls outside
   v.cover(true); expect(controls.hidden).toBe(true)
   settings.depthTilt = 35
   v.cover(false); expect(controls.hidden).toBe(false); expect(slider.value).toBe('35')
-  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
-  expect(controls.hidden).toBe(true)
   v.destroy()
   const refreshes = demo.refresh.mock.calls.length
   window.dispatchEvent(new Event('orbrun-settings'))
   expect(demo.refresh).toHaveBeenCalledTimes(refreshes)
 })
 
-it('chooses a recording immediately, retains the choice across reduced motion, and returns to shuffle', async () => {
+it('chooses a recording immediately and returns to shuffle', async () => {
   const v = create(); await start()
   const picker = v.el.querySelector('select')!
   const file = picker.options[1].value
@@ -65,9 +60,6 @@ it('chooses a recording immediately, retains the choice across reduced motion, a
   const count = load.mock.calls.length
   load.mock.lastCall?.[3].finished()
   expect(load).toHaveBeenCalledTimes(count) // A manual choice loops the loaded clip.
-  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
-  reduced.matches = false; reduced.dispatchEvent(new Event('change')); await start()
-  expect(load.mock.lastCall?.[2].file).toBe(file)
   picker.value = ''; picker.dispatchEvent(new Event('change')); await start()
   const shuffled = load.mock.lastCall?.[2].file
   load.mock.lastCall?.[3].finished(); await start()
@@ -75,15 +67,13 @@ it('chooses a recording immediately, retains the choice across reduced motion, a
   expect(saveSettings).not.toHaveBeenCalled()
 })
 
-it('never loads for initial Still, and cancels short visits', async () => {
-  settings.depthAnimate = false
-  const v = create(); await start(); expect(load).not.toHaveBeenCalled()
-  settings.depthAnimate = true; v.applySettings(); v.cover(true)
+it('cancels a load when immediately covered', async () => {
+  const v = create(); v.cover(true)
   await start(); expect(load).not.toHaveBeenCalled()
   v.cover(false); await start(); expect(load).toHaveBeenCalledOnce()
 })
 
-it('pauses while covered or hidden, releases the demo for reduced motion, and cleans up listeners', async () => {
+it('pauses while covered or hidden and cleans up listeners', async () => {
   const v = create(); await start()
   expect(load).toHaveBeenCalledTimes(1)
   expect(demo.setActive).toHaveBeenLastCalledWith(true)
@@ -92,14 +82,10 @@ it('pauses while covered or hidden, releases the demo for reduced motion, and cl
   Object.defineProperty(document, 'hidden', { value: true }); document.dispatchEvent(new Event('visibilitychange'))
   expect(demo.setActive).toHaveBeenLastCalledWith(false)
   Object.defineProperty(document, 'hidden', { value: false }); document.dispatchEvent(new Event('visibilitychange'))
-  reduced.matches = true; reduced.dispatchEvent(new Event('change'))
-  expect(v.el.parentElement?.dataset.menuMotion).toBe('off')
-  expect(demo.destroy).toHaveBeenCalledTimes(1)
-  reduced.matches = false; reduced.dispatchEvent(new Event('change')); await start()
-  expect(load).toHaveBeenCalledTimes(2)
+  expect(demo.setActive).toHaveBeenLastCalledWith(true)
   v.destroy()
   const calls = demo.setActive.mock.calls.length
-  document.dispatchEvent(new Event('visibilitychange')); reduced.dispatchEvent(new Event('change'))
+  document.dispatchEvent(new Event('visibilitychange'))
   await start(); expect(demo.setActive).toHaveBeenCalledTimes(calls)
   expect(v.el.isConnected).toBe(false)
 })
@@ -154,8 +140,6 @@ it('releases a loaded demo if starting playback fails', async () => {
 it('removes only retired menu asset caches, preserving development engines and saves', async () => {
   const remove = vi.fn(async () => true)
   vi.stubGlobal('caches', { keys: async () => ['orbrun-menu-assets-v1-old', 'orbrun-offline', 'orbrun-shell-v1'], delete: remove })
-  settings.depthAnimate = false
   create(); await start()
   expect(remove.mock.calls).toEqual([['orbrun-menu-assets-v1-old']])
-  expect(load).not.toHaveBeenCalled()
 })

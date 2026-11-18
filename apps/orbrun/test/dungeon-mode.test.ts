@@ -1,25 +1,16 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
-import { Render25d } from '@orbrun/render-2.5d'
+import { dungeonOptions } from '../src/dungeon-options'
 import { Render2d } from '@orbrun/render-2d'
 import { GameScreen } from '../src/game'
 import { defaultSettings } from '../src/settings'
 
 describe('effective dungeon animation', () => {
   it('passes configured movement properties to the renderer', () => {
-    const screen = Object.assign(Object.create(GameScreen.prototype), { reducedMotion: false })
-    expect(screen.render25dOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth',
+    expect(dungeonOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth',
       depthMovementHopHeight: 0, depthMovementSquash: 0.5, depthMovementSway: 1.5 })).toMatchObject({
       movement: false, movementDuration: 0.18, movementEasing: 'smooth', movementHopHeight: 0, movementSquash: 0.5, movementSway: 1.5,
     })
-  })
-  it.each([
-    ['auto', false, true], ['auto', true, false],
-    [true, false, true], [true, true, true],
-    [false, false, false], [false, true, false],
-  ] as const)('honours %s with device reduced motion %s', (depthAnimate, reducedMotion, expected) => {
-    const screen = Object.assign(Object.create(GameScreen.prototype), { reducedMotion })
-    expect(screen.render25dOptions({ ...defaultSettings, depthAnimate }).animate).toBe(expected)
   })
 })
 

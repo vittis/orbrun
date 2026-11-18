@@ -1566,8 +1566,7 @@ export class FrontEnd {
     this.settingsGroup = group
     this.setView('settings-group', 'settings')
     this.at({ kind: 'menu', path: 'settings/' + group.toLowerCase() })
-    // Keep the menu media in sync with persisted motion preferences.
-    const panel = settingsPanel(group, { onchange: () => this.media.applySettings(), controls: () => this.showControls() })
+    const panel = settingsPanel(group, { controls: () => this.showControls() })
     // Only the front-end instance gets the title-screen treatment; the pause
     // menu keeps its compact in-game rows and hotkeys.
     for (const el of panel.rows) {

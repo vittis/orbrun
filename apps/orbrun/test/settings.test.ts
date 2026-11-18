@@ -66,15 +66,20 @@ describe('settings storage boundary', () => {
   })
 
   it('validates booleans and unions on both read and write', () => {
-    const invalid = { depthAnimate: 'yes', depthFog: 'false', depthAtmosphere: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
+    const invalid = { depthFog: 'false', depthAtmosphere: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
     expect(getSettings()).toEqual(defaultSettings)
     saveSettings({ ...defaultSettings, ...invalid } as unknown as Settings)
     expect(store.get(key)).toBe('{}')
-    for (const depthAnimate of [true, false, 'auto'] as const) {
-      saveSettings({ ...defaultSettings, depthAnimate, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
-      expect(getSettings()).toMatchObject({ depthAnimate, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
-    }
+    saveSettings({ ...defaultSettings, depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
+    expect(getSettings()).toMatchObject({ depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
+  })
+
+  it('ignores the retired animation preference and preserves other saved values', () => {
+    store.set(key, JSON.stringify({ depthAnimate: false, depthZoom: 1.5 }))
+    expect(getSettings()).toEqual({ ...defaultSettings, depthZoom: 1.5 })
+    saveSettings(getSettings())
+    expect(JSON.parse(store.get(key)!)).toEqual({ depthZoom: 1.5 })
   })
 })
 

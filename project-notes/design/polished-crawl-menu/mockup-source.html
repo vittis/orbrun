@@ -136,8 +136,7 @@
 #polished-crawl-final .type-stage h1 .pc-metal{position:relative;width:fit-content}
 #polished-crawl-final .type-stage h1 .pc-metal::after{content:attr(data-title);position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 41%,#ffedb32b 46%,#fff9e4e6 50%,#ffedb342 54%,transparent 59%);background-size:300% 100%;background-position:100% 0;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:pc-title-shine 8s linear infinite;opacity:0}
 @keyframes pc-title-shine{0%,70%{background-position:100% 0;opacity:0}72%{opacity:1}86%{background-position:0% 0;opacity:1}88%,100%{background-position:0% 0;opacity:0}}
-#polished-crawl-final.pc-shine-off .type-stage h1 .pc-metal::after,[data-ui-motion="still"] #polished-crawl-final .type-stage h1 .pc-metal::after{animation:none;opacity:0}
-@media(prefers-reduced-motion:reduce){#polished-crawl-final .type-stage h1 .pc-metal::after{animation:none;opacity:0}}
+#polished-crawl-final.pc-shine-off .type-stage h1 .pc-metal::after{animation:none;opacity:0}
 </style>
 <script>
 (() => {
@@ -165,12 +164,10 @@
  modal.addEventListener('close',()=>{syncMotion();if(opener)opener.focus();});
  modal.addEventListener('click',event=>{if(event.target!==modal)return;const bounds=modal.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)modal.close();});
  stage.onkeydown=e=>{if(e.key==='Escape')status.hidden=true;};
- const design={signedIn:true,dimming:.08,still:false};
- const motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
- function syncMotion(){root.classList.toggle('pc-shine-off',design.still||motionMedia.matches||document.hidden||modal.open);}
- motionMedia.addEventListener('change',syncMotion);
+ const design={signedIn:true,dimming:.08};
+ function syncMotion(){root.classList.toggle('pc-shine-off',document.hidden||modal.open);}
  document.addEventListener('visibilitychange',syncMotion);
  syncMotion();
- if(globalThis.Tweak){const tweak=new Tweak({container:stage,onChange:()=>{signedIn(design.signedIn);stage.style.setProperty('--oc-dim',design.dimming);syncMotion();}});tweak.addToggle(design,'signedIn',{label:'Signed-in example'});tweak.addToggle(design,'still',{label:'Still mode'});tweak.addSlider(design,'dimming',{label:'Background dimming',min:0,max:.5,step:.02});}
+ if(globalThis.Tweak){const tweak=new Tweak({container:stage,onChange:()=>{signedIn(design.signedIn);stage.style.setProperty('--oc-dim',design.dimming);syncMotion();}});tweak.addToggle(design,'signedIn',{label:'Signed-in example'});tweak.addSlider(design,'dimming',{label:'Background dimming',min:0,max:.5,step:.02});}
 })();
 </script>

@@ -57,7 +57,7 @@ for (const [width, height, tilt, dpr] of [[900, 600, 50, 1], [390, 600, 25, 2], 
   assert('atmosphere opt-out leaves a black void and retains explored terrain', metrics(fog()).peak === 0 && equalPixels(terrain, center()) && r.pick(width / 2, height / 2) === cellKey(0, 0))
   r.setOptions({ unexploredAtmosphere: true }); r.render(0)
   r.render(60)
-  assert('Still freezes stars and the frontier and sleeps', equalPixels(still, image()) && !r.animating)
+  assert('Pausing the renderer freezes stars and the frontier', equalPixels(still, image()) && !r.animating)
   r.setOptions({ unexploredFog: false }); r.render(0)
   assert('toggle removes atmosphere without altering explored ground', !equalPixels(still, image()) && equalPixels(terrain, center()) && !r.animating)
   r.setOptions({ unexploredFog: true, animate: true }); r.render(0)

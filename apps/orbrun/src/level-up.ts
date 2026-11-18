@@ -79,26 +79,25 @@ export class LevelUp {
     })
   }
 
-  render(now: number, visible: boolean, still: boolean) {
+  render(now: number, visible: boolean) {
     const age = now - this.born
     if (age >= DURATION_MS) this.clear()
     this.root.hidden = !this.active || !visible
-    this.root.classList.toggle('still', still)
     if (!this.active || !visible) return
-    const tick = still ? 0 : Math.floor(Math.max(0, age) / 33)
-    const frame = `${this.announced}:${still}:${tick}`
+    const tick = Math.floor(Math.max(0, age) / 33)
+    const frame = `${this.announced}:${tick}`
     if (frame === this.frame) return
     this.frame = frame
-    this.paint(still ? 450 : tick * 33, still)
+    this.paint(tick * 33)
   }
 
-  private paint(age: number, still: boolean) {
+  private paint(age: number) {
     const ctx = this.canvas.getContext('2d')
     if (!ctx) return
     const dpr = this.canvas.width / WIDTH
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, WIDTH, HEIGHT)
-    ctx.globalAlpha = still ? 1 : Math.min(1, 0.45 + age / 120) * Math.min(1, (DURATION_MS - age) / 450)
+    ctx.globalAlpha = Math.min(1, 0.45 + age / 120) * Math.min(1, (DURATION_MS - age) / 450)
     // A small, feathered backing belongs to the label, never to the screen edges.
     ctx.save()
     ctx.translate(120, 78)
@@ -109,32 +108,30 @@ export class LevelUp {
     ctx.fillStyle = mist
     ctx.fillRect(-70, -70, 140, 140)
     ctx.restore()
-    if (!still) {
-      const colours = ['#e7ad73', '#bf6a48', '#f0d4a3', '#aa4c34']
-      const t = age / 1000
-      for (let i = 0; i < 20; i++) {
-        const angle = i * 2.399963, seed = (i * 37 % 23) / 23
-        const x = 120 + Math.cos(angle) * (21 + seed * 36) + Math.sin(t * 3 + i) * 4
-        const y = 110 - (t * 39 + i * 11 % 49)
-        ctx.save()
-        ctx.globalAlpha *= (0.5 + seed * 0.4) * Math.min(1, age / 120) * Math.max(0, 1 - age / 1500)
-        ctx.fillStyle = colours[i % colours.length]
-        ctx.strokeStyle = ctx.fillStyle
-        ctx.shadowColor = ctx.fillStyle
-        ctx.shadowBlur = i % 4 === 0 ? 4 : 1.5
+    const colours = ['#e7ad73', '#bf6a48', '#f0d4a3', '#aa4c34']
+    const t = age / 1000
+    for (let i = 0; i < 20; i++) {
+      const angle = i * 2.399963, seed = (i * 37 % 23) / 23
+      const x = 120 + Math.cos(angle) * (21 + seed * 36) + Math.sin(t * 3 + i) * 4
+      const y = 110 - (t * 39 + i * 11 % 49)
+      ctx.save()
+      ctx.globalAlpha *= (0.5 + seed * 0.4) * Math.min(1, age / 120) * Math.max(0, 1 - age / 1500)
+      ctx.fillStyle = colours[i % colours.length]
+      ctx.strokeStyle = ctx.fillStyle
+      ctx.shadowColor = ctx.fillStyle
+      ctx.shadowBlur = i % 4 === 0 ? 4 : 1.5
+      ctx.beginPath()
+      ctx.arc(x, y, (i % 6 === 0 ? 1.5 : 0.95) + seed * 0.25, 0, Math.PI * 2)
+      ctx.fill()
+      if (i % 3 === 0) {
+        ctx.globalAlpha *= 0.5
+        ctx.lineWidth = 0.75
         ctx.beginPath()
-        ctx.arc(x, y, (i % 6 === 0 ? 1.5 : 0.95) + seed * 0.25, 0, Math.PI * 2)
-        ctx.fill()
-        if (i % 3 === 0) {
-          ctx.globalAlpha *= 0.5
-          ctx.lineWidth = 0.75
-          ctx.beginPath()
-          ctx.moveTo(x, y + 1)
-          ctx.lineTo(x - Math.cos(angle) * 2, y + 6)
-          ctx.stroke()
-        }
-        ctx.restore()
+        ctx.moveTo(x, y + 1)
+        ctx.lineTo(x - Math.cos(angle) * 2, y + 6)
+        ctx.stroke()
       }
+      ctx.restore()
     }
     const text = (value: string, y: number, size: number, colour: string, weight: number, tracking = 0) => {
       ctx.save()

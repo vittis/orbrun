@@ -26,13 +26,13 @@ export interface Render25dOptions extends MovementAppearance {
   tilt?: number
   /** 0.25–3; 1 fits the full field of view, higher values trade coverage for detail. */
   zoom?: number
-  /** Animated atmosphere, automatically disabled by the app for reduced motion. */
+  /** Enable renderer animation. The menu pauses it while playback is suspended. */
   animate?: boolean
   /** Black starfield and feathered exploration edges; gameplay opts in. */
   unexploredFog?: boolean
   /** Optional stars and faint swirls; disabling them retains the soft frontier. */
   unexploredAtmosphere?: boolean
-  /** Animate confirmed travel and creature gaits; still/reduced motion disables both. */
+  /** Animate confirmed travel and creature gaits. */
   movement?: boolean
   /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
   movementDuration?: number
@@ -593,7 +593,7 @@ export class Render25d implements MapRenderer {
   }
 
   /** Neutral, world-anchored mist behind known geometry; uses no hidden map data.
-   * Static wisps also preserve still mode and let an idle scene sleep. */
+   * Static wisps let an idle scene sleep. */
   private unexploredFog(ctx: Context2d, p: Projection, time: number) {
     const starfield = this.opts.unexploredFog && this.scene.playerOnLevel
     ctx.fillStyle = starfield ? '#000' : '#010202'

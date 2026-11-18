@@ -6,7 +6,7 @@ This fork preserves DCSS WebTiles behavior with a 2.5D dungeon and keyboard, gam
 
 The npm workspace contains the Vite app in `apps/orbrun`, focused libraries in `packages`, optional offline sources in `engine`, fixture recorders in `tools/record` and build/asset utilities in `tools/build`. See [architecture](project-notes/ARCHITECTURE.md) and package READMEs.
 
-Dungeon (2.5D) is the only gameplay presentation. Flat rendering supports the minimap, temporary level maps and development comparisons. Keep authoritative state server-derived, commands responsive and combat/visibility effects based on confirmed information. Preserve Still/reduced-motion behavior. Do not introduce another renderer framework or rewrite the protocol/UI for routine changes.
+Dungeon (2.5D) is the only gameplay presentation. Flat rendering supports the minimap, temporary level maps and development comparisons. Keep authoritative state server-derived, commands responsive and combat/visibility effects based on confirmed information. Do not introduce another renderer framework or rewrite the protocol/UI for routine changes.
 
 ## Commands
 

@@ -84,7 +84,7 @@ function play(kind: string) {
   if (paused) {
     if (renderer instanceof Render25d) {
       renderer.setOptions({ animate: false })
-      renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
+      renderer.setOptions({ animate: true })
     }
   }
   restoreVictim()
@@ -126,10 +126,9 @@ function play(kind: string) {
   if (kind === 'heal') send({ msg: 'player', hp: state.player.hp + 7 })
   const now = performance.now()
   const speed = Number((document.getElementById('bump-speed') as HTMLSelectElement).value)
-  const reduced = (document.getElementById('reduced') as HTMLInputElement).checked
   if (renderer instanceof Render25d) {
     if (kind === 'kill' || kind === 'searingDeath') renderer.setOptions({ animate: false })
-    renderer.setOptions({ animate: !reduced,
+    renderer.setOptions({ animate: true,
       meleeBumpStrength: Number((document.getElementById('bump-strength') as HTMLSelectElement).value),
       meleeBumpSnap: Number((document.getElementById('bump-snap') as HTMLSelectElement).value),
       hitGore: Number((document.getElementById('hit-gore') as HTMLSelectElement).value),
@@ -140,7 +139,7 @@ function play(kind: string) {
   }
   const events = feedback.flush(scene)
   renderer.setScene(scene, now / 1000)
-  presentCombat(renderer, scene, events, feedback.takeSpells(), state.player.inv[0].name, now, !reduced, speed)
+  presentCombat(renderer, scene, events, feedback.takeSpells(), state.player.inv[0].name, now, speed)
   attackAt = now
   attackDuration = bumpTiming(speed).duration * 1000
   lastEffect = kind
@@ -163,8 +162,4 @@ document.getElementById('effect-age')!.addEventListener('input', () => {
 })
 document.getElementById('death-age')!.addEventListener('change', () => {
   if (paused && (lastEffect === 'kill' || lastEffect === 'searingDeath')) play(lastEffect)
-})
-document.getElementById('reduced')!.addEventListener('change', () => {
-  if (renderer instanceof Render25d) renderer.setOptions({ animate: !(document.getElementById('reduced') as HTMLInputElement).checked })
-  wake()
 })

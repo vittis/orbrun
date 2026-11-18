@@ -46,7 +46,7 @@ export async function visibilityChecks(source: TileSource) {
     cell.visibility = 'visible'; scene.revision++; r.setScene(scene, 3.08); r.render(3.08)
     assert('LOS reversal has no brightness jump', Math.abs(sample()[channel] - before) <= 1, { before, after: sample() })
     r.setOptions({ animate: false }); r.render(3.08)
-    assert('Still mode immediately settles the brightness', sample()[channel] === bright && !r.animating, { bright, sample: sample() })
+    assert('Pausing rendering immediately settles the brightness', sample()[channel] === bright && !r.animating, { bright, sample: sample() })
     cell.visibility = 'unseen'; scene.revision++; r.setScene(scene, 4); r.render(4)
     assert('unseen tiles cannot be picked during a fade', r.pick(q.x, q.y) !== cellKey(0, 0), {})
     r.destroy(); releaseCanvas(canvas)

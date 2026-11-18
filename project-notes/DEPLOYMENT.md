@@ -36,7 +36,7 @@ The menu recordings and matching artwork are checked into the repository. `menu-
 
 ## Production checks
 
-Check root and About, the intended version and immutable source links, 2.5D replay menu/gameplay, anonymous lobby/spectating, supporting flat maps and restoration where local/production fixtures permit, desktop/narrow layouts and Still/reduced motion. Retrieve a representative real versioned gamedata file. Confirm response CSP and rejection of an unlisted proxy host. Avoid disruptive public tests, chat sends and credential use.
+Check root and About, the intended version and immutable source links, 2.5D replay menu/gameplay, anonymous lobby/spectating, supporting flat maps and restoration where local/production fixtures permit, and desktop/narrow layouts. Retrieve a representative real versioned gamedata file. Confirm response CSP and rejection of an unlisted proxy host. Avoid disruptive public tests, chat sends and credential use.
 
 Report hardware, authenticated-play, unavailable live games and unprovisioned development-engine checks honestly. Capture small evidence without secrets. Do not call deployment successful without observed hosted identity matching the intended release.
 

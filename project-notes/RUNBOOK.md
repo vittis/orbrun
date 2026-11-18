@@ -56,7 +56,7 @@ npm run verify:release
 
 `test:changed` uses Vitest's import dependency graph against HEAD, including staged/unstaged/untracked files. It checks both unit and deployment projects when affected. For committed branch changes use `npx vitest run --changed origin/main` (fetch the comparison ref first). Missing bases fail. A zero-test result is allowed for editing convenience and is not acceptance. CSS, readFile fixtures, assets and build configuration can escape dependency selection: explicitly run the appropriate wider command above. `verify` runs the whole retained unit suite regardless of selection.
 
-`verify:browser` starts only the strict dev server on 5286. Its smoke profile runs 298 raster assertions across all nine concerns, 12 atmosphere assertions, native reduced-motion/Still/On behavior, and actual narrow mouse/touch HUD and map/overview/settings/resize/targeting. `verify:render` substitutes the complete 4,504 raster matrix. Both profiles assert exact counts and fixture completion. `verify:production` builds once, starts only preview on 5287 and checks the online-only production shell. Public WebSockets are intercepted. `verify:release` runs forced TypeScript, both Vitest projects, one production build, then the full browser/production suite with both servers. No duplicate build inside Playwright.
+`verify:browser` starts only the strict dev server on 5286. Its smoke profile runs 298 raster assertions across all nine concerns, 12 atmosphere assertions, uninterrupted animation across device preference changes, and actual narrow mouse/touch HUD and map/overview/settings/resize/targeting. `verify:render` substitutes the complete 4,504 raster matrix. Both profiles assert exact counts and fixture completion. `verify:production` builds once, starts only preview on 5287 and checks the online-only production shell. Public WebSockets are intercepted. `verify:release` runs forced TypeScript, both Vitest projects, one production build, then the full browser/production suite with both servers. No duplicate build inside Playwright.
 
 Ports are strict and never reuse another checkout's server. Browser contexts and unit files remain isolated; browser retries stay at zero. Reports and failure traces/screenshots go to ignored `test-results/`. Do not install Chromium or run full release verification for ordinary unit-only edits. Retain deliberate browser quiet windows proving that animation stops; use fake time for unit timing.
 
@@ -72,12 +72,12 @@ Security-focused regressions include gamedata parsing, WebSocket connection, pro
 
 Exercise the actual app at desktop and narrow/mobile viewport sizes:
 
-1. Confirm the Polished Crawl recorded gameplay/static entrance, inline login, document modals, settings, resize and repeated navigation lifecycle. Check Still/OS reduced motion, modal coverage and hidden-tab suspension. No projection selector or first-person setting should remain.
+1. Confirm the Polished Crawl recorded gameplay/static entrance, inline login, document modals, settings, resize and repeated navigation lifecycle. Check modal coverage and hidden-tab suspension. No projection selector or first-person setting should remain.
 2. Confirm fresh settings and migrated saved projection settings use Dungeon (2.5D), preserving unrelated preferences.
 3. Open `/watch/cdi`, wait for the anonymous lobby and spectate an active player when available. Check real tiles, HUD, messages, minimap and server-driven updates. Never send chat or gameplay commands to another player's session.
 4. Use deterministic local fixtures to check level-map entry/exit, repeated transitions, cursor/selection, settings changes while open and resize. Check `X` separately from `Ctrl+X`.
 5. Check compass movement and targeting through keyboard/gamepad/touch simulation, then report hardware coverage separately.
-6. Check Still/reduced motion, visibility, wall/corridor behavior, confirmed combat effects and cleanup. Inspect console and failed network requests.
+6. Check visibility, wall/corridor behavior, confirmed combat effects and cleanup. Inspect console and failed network requests.
 7. Run retained development rendering fixtures such as `/testbed/dungeon.html`, `/testbed/dungeon-checks.html`, `/testbed/arrival-checks.html`, `/testbed/impact-checks.html`, `/testbed/projectile-checks.html`, `/testbed/room.html` and `/testbed/combat.html`. Record current results, not historical counts.
 8. Repeat representative shell, settings and spectating checks against production preview; this verifies production flags and emitted assets.
 
@@ -109,8 +109,8 @@ Follow [DEPLOYMENT.md](DEPLOYMENT.md). Prefer focused checks and manual hosted v
 Use this checkout's actual Vite port (another checkout may occupy 5173).
 
 - `/testbed/dungeon-checks.html`: full raster acceptance matrix. On constrained browsers use `?lane=tiles`, `markers`, `surfaces`, `movement`, `depth`, `visibility`, `arrival`, `coherence`, and `corridors`; together these execute the same assertions. The full profile is the manual fixture default and release/render gate; routine browser checks explicitly select smoke. `&profile=smoke` is explicitly representative, never reported as full acceptance. `&capture=1` retains visual captures; default runs release canvases and yield between bounded cases. JSON in `#result`/`window.__orbrunFixture` reports status, profile, checks, failures and duration.
-- `/testbed/living-checks.html`: 12 retained Dungeon/flat atmosphere, Still and impact assertions at desktop and narrow/DPR sizes.
-- `/testbed/live-animation.html`: actual GameScreen scheduler, combat receipt timing and reduced-motion controls. `?native-motion=1&motion=auto` uses browser media emulation; default synthetic controls support manual inspection. Pixel sampling is opt-in and bounded (`sample=1`), so the probe does not stall the scheduler.
+- `/testbed/living-checks.html`: 12 retained Dungeon/flat atmosphere, paused rendering and impact assertions at desktop and narrow/DPR sizes.
+- `/testbed/live-animation.html`: actual GameScreen scheduler and combat receipt timing. Pixel sampling is opt-in and bounded (`sample=1`), so the probe does not stall the scheduler.
 - `/testbed/map-lifecycle.html`: local message-driven GameScreen transitions, overview hold, cursor, settings changes, cleanup and input evidence. The renderer factory receives the actual presentation requested by GameScreen, supplies fixture tiles and reports applied Dungeon options. Production preview separately exercises default selection.
 - `/testbed/room.html`: authored 2.5D scenery/flat overview; `?poster` for committed poster/card generation.
 

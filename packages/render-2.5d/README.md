@@ -1,7 +1,7 @@
 # @orbrun/render-2.5d
 
 The sole gameplay renderer: a north-up, slanted dungeon view using existing
-DCSS tile art. Tilt, zoom, animation, movement duration and easing remain
+DCSS tile art. Tilt, zoom, movement duration and easing remain
 available in View settings.
 Movement defaults to a snappy 100 ms ease-out; Smooth and Linear curves and
 60–250 ms presets are available. Movement can be disabled independently of
@@ -97,13 +97,13 @@ and picking regions.
   continue from the drawn brightness. Floors, walls, standing art, light
   exposure and memory fog follow the same fade. First discoveries brighten
   from black; the initial view, multi-cell player arrivals (including fast
-  explore/travel), level changes, remote maps and Still mode snap. Hidden
+  explore/travel), level changes and remote maps snap. Hidden
   entities disappear immediately; picking uses confirmed LOS.
   Multi-cell arrivals add a separate, soft directional sweep across the map:
   at most 14% shade clears from the origin side toward the travel direction
   over 320 ms, with the destination visible throughout. It leaves targeting
-  markers readable, stops on a normal step, replaces rather than queues repeated
-  arrivals, and is disabled in Still mode. Level changes and remote maps skip it.
+  markers readable, stops on a normal step and replaces rather than queues repeated
+  arrivals. Level changes and remote maps skip it.
   Reusable scratch surfaces per raster size preserve alpha and flashes without
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
   the renderer awake, alongside existing atmosphere and movement.
@@ -125,7 +125,7 @@ and picking regions.
   popup settings; zero-damage results still show their effect. Server cell
   flashes also leave a short burst when received and cleared between frames.
   These bursts last 0.5–0.85 seconds and never change damage or game state.
-  Histories clear on level changes, remote maps, lost visibility and Still mode.
+  Histories clear on level changes, remote maps and lost visibility.
   Projectile appearance is independent of light emission: Sandblast/rock/metal
   spells leave dust or chips without glowing. Compact missiles preserve their
   original texels; continuous beams retain alpha thinning. Short-lived server
@@ -142,8 +142,7 @@ Time is presentation-only: fluid breathing and swaying, drifting clouds and reme
 continuous water ripples, fountain ripples,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
-effects need it. Still mode and the operating system's reduced motion
-preference stop animation. No renderer starts a separate timer or RAF loop.
+effects need it. No renderer starts a separate timer or RAF loop.
 Server flashes keep their supplied colours. The renderer receives typed spell
 feedback from the app; it never parses messages or determines damage.
 Idle motion uses device-pixel-snapped offsets. Breathing is a visible vertical
@@ -155,7 +154,7 @@ Severe wound flags add a guarded lean and uneven breathing without obscuring
 identifying sprite art.
 Lights have compact bright cores and up to six embers or four magical motes each,
 with an 88-mote frame budget; fountains add five small spray droplets.
-Movement also stops in Still/reduced-motion mode. Only visible, on-screen
+Only visible, on-screen
 tweens keep frames awake, and motion history is discarded on destroy.
 
 ## Input and integration
@@ -180,10 +179,10 @@ player directly; long-distance moves demonstrate multi-cell tweening.
 **Cast** previews contact spells, abilities, buffs and four projectile trace families. Append `?effectFrame=0.1` to freeze
 each triggered effect 100 ms into its lifetime for deterministic captures.
 **Toggle LOS** dims/reveals the area around the player; press again mid-fade
-to inspect a continuous reversal, or disable Animation to compare Still mode.
+to inspect a continuous reversal.
 **Travel direction** and **Travel** jump two to four cells to a visible floor
 in the chosen direction to preview the arrival sweep. `?effectFrame=0.16`
-freezes its midpoint; disable Animation to compare an instant arrival.
+freezes its midpoint.
 Open `/testbed/arrival-checks.html` for 96 focused Canvas checks of sweep
 direction, subtle brightness and exact expiry across desktop/portrait layouts.
 
@@ -225,7 +224,7 @@ scene's matching plain material without reflecting those decorations.
 
 For richer combat effects, extend the typed, confirmed presentation contract
 with stable identities and timestamps. Keep bounded lifetimes in the effect
-layer and respect visibility and reduced motion. Do not parse combat prose in
+layer and respect visibility. Do not parse combat prose in
 the renderer. Spell traces use semantic light colours and pulses; they do not
 invent persistent hazards. Camera rotation, perspective projection and full
 shadow maps are not implemented; a future GPU backend can reuse these contracts.

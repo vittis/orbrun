@@ -33,8 +33,6 @@ export class MenuBackdrop {
     h('div', { class: 'menu-replay-status' }, this.status, this.retry))
   private playlist = new ReplayPlaylist(manifest.clips.length)
   private entry = manifest.clips[this.playlist.next()]
-  private media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-  private observer: MutationObserver
   private covered = false
   private destroyed = false
   private failure = ''
@@ -56,11 +54,8 @@ export class MenuBackdrop {
       this.switchTo(chosen ?? manifest.clips[this.playlist.next(manifest.clips.indexOf(this.entry))])
     })
     host.prepend(this.el)
-    this.media?.addEventListener?.('change', this.applySettings)
     document.addEventListener('visibilitychange', this.applySettings)
     window.addEventListener('orbrun-settings', this.applySettings)
-    this.observer = new MutationObserver(this.applySettings)
-    this.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-ui-motion'] })
     // Release immutable downloads left by the retired menu engine, never offline saves.
     if (typeof caches !== 'undefined') void caches.keys().then(names => Promise.all(
       names.filter(name => name.startsWith('orbrun-menu-assets-v1-')).map(name => caches.delete(name)),
@@ -79,20 +74,17 @@ export class MenuBackdrop {
     this.applySettings()
   }
 
-  applySettings = () => {
+  private applySettings = () => {
     const settings = getSettings()
     this.tilt.value = String(settings.depthTilt)
     this.tiltValue.textContent = `${settings.depthTilt}°`
     this.tilt.setAttribute('aria-valuetext', `${settings.depthTilt} degrees`)
-    const still = settings.depthAnimate === false || !!this.media?.matches
-    const active = !this.destroyed && !this.covered && !document.hidden && !still
+    const active = !this.destroyed && !this.covered && !document.hidden
     this.controls.hidden = !active || !this.hasPlayed
     this.el.dataset.loading = String(active && !this.demo && !this.failure)
     this.entrance.hidden = this.destroyed || this.covered || document.hidden
     this.retry.hidden = !active || !this.failure
-    const message = settings.depthAnimate === false ? 'Replays paused in Still mode'
-      : this.media?.matches ? 'Replay paused · Device requests reduced motion'
-      : this.failure || 'Loading dungeon replay…'
+    const message = this.failure || 'Loading dungeon replay…'
     if (this.status.textContent !== message) this.status.textContent = message
     this.host.dataset.menuMotion = active ? 'on' : 'off'
     this.demo?.setActive(active)
@@ -100,7 +92,6 @@ export class MenuBackdrop {
     if (!active) {
       clearTimeout(this.deadline)
       this.loading?.abort(); this.loading = null
-      if (still) { this.hasPlayed = false; this.demo?.destroy(); this.demo = null; this.canvas.hidden = true }
       return
     }
     if (this.demo || this.loading || this.failure) return
@@ -153,8 +144,6 @@ export class MenuBackdrop {
     this.destroyed = true
     this.applySettings()
     this.demo?.destroy(); this.demo = null
-    this.observer.disconnect()
-    this.media?.removeEventListener?.('change', this.applySettings)
     document.removeEventListener('visibilitychange', this.applySettings)
     window.removeEventListener('orbrun-settings', this.applySettings)
     this.el.remove()

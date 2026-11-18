@@ -517,7 +517,7 @@ describe('bounded dungeon combat presentation', () => {
     expect(fx.visibleBursts(1.15)[0].spray).toBeDefined()
   })
 
-  it('clears histories across levels, still mode, remote maps, and loss of visibility', () => {
+  it('clears histories on level changes, animation pause, remote maps and loss of visibility', () => {
     for (const reset of ['level', 'still', 'remote', 'visibility']) {
       const fx = new DungeonEffects(), scene = world()
       scene.billboards = [{ ...spell(), kind: 'cloud' }]

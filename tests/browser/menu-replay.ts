@@ -5,7 +5,7 @@ import { test } from './fixtures'
 type Evidence = { workers: number; opens: string[]; draws: number }
 
 export function menuReplayCheck(production: boolean) {
-  test('recorded menu renders without an engine, sleeps when covered/hidden and respects reduced motion', async ({ page }) => {
+  test('recorded menu renders without an engine and sleeps when covered or hidden', async ({ page }) => {
     const base = production ? 'http://127.0.0.1:5287' : 'http://127.0.0.1:5286'
     const csp = /Content-Security-Policy: (.+)/.exec(readFileSync(new URL('../../apps/orbrun/public/_headers', import.meta.url), 'utf8'))![1]
     await page.route(base + '/**', async route => {
@@ -40,6 +40,7 @@ export function menuReplayCheck(production: boolean) {
       }
     })
     const evidence = () => page.evaluate(() => (window as unknown as { __menuEvidence: Evidence }).__menuEvidence)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto(base)
     const canvas = page.locator('.menu-backdrop canvas')
     await expect(canvas).toBeVisible()
@@ -59,10 +60,6 @@ export function menuReplayCheck(production: boolean) {
     await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')) })
     await park()
     await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')) })
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await expect(canvas).toBeHidden(); await expect(page.locator('.menu-entrance')).toBeVisible()
-    await park()
-    await page.emulateMedia({ reducedMotion: 'no-preference' })
     await expect(canvas).toBeVisible()
     await page.screenshot({ path: `test-results/menu-replay-${production ? 'production' : 'development'}-desktop.png` })
     const beforeResize = (await evidence()).draws

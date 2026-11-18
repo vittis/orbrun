@@ -151,7 +151,7 @@ describe('hybrid projectiles before the next animation frame', () => {
     } finally { draw.mockRestore(); renderer.destroy(); session.close() }
   })
 
-  it('keeps ordinary movement/terrain updates batched and never replays projectile art in Still mode', () => {
+  it('keeps ordinary movement/terrain updates batched and never replays projectile art while rendering is paused', () => {
     const { session, deliver, renderer, frames } = harness(false)
     try {
       deliver({ msg: 'map', cells: [{ x: 1, y: 0, g: '.' }] })

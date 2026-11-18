@@ -34,7 +34,7 @@ try {
   await page.goto(new URL('/testbed/dungeon.html', origin).href)
   await page.waitForFunction(() => window.__ready)
   await page.bringToFront()
-  await page.locator('#animate').uncheck()
+  await page.evaluate(() => window.renderer.setOptions({ animate: false }))
   await page.evaluate(async variants => {
     window.losClasses = {}
     for (const v of variants) window.losClasses[v.name] = (await import(v.url)).Render25d

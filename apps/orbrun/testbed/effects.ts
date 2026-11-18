@@ -26,8 +26,6 @@ const setLight = () => {
 }
 setLight()
 const stage = document.getElementById('stage')!
-const still = document.getElementById('still') as HTMLInputElement
-still.addEventListener('change', () => renderer.setOptions({ animate: !still.checked }))
 document.getElementById('light')!.addEventListener('change', setLight)
 new ResizeObserver(() => renderer.resize(stage.clientWidth, stage.clientHeight, devicePixelRatio)).observe(stage)
 function frame(now: number) {

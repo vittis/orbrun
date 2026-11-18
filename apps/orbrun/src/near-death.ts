@@ -77,11 +77,11 @@ export class NearDeath {
     return Math.pow(1 - (age - fadeStart) / (FADE_MS - fadeStart), 2)
   }
 
-  render(now: number, visible: boolean, reducedMotion: boolean) {
+  render(now: number, visible: boolean) {
     if (now - this.born >= FADE_MS) this.born = -Infinity
     const opacity = this.opacity(now)
     this.root.hidden = !visible || opacity <= 0
-    this.root.style.opacity = String(opacity * (reducedMotion ? 0.65 : 1))
+    this.root.style.opacity = String(opacity)
   }
 
   get active() { return this.born !== -Infinity }

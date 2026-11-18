@@ -9,8 +9,8 @@ if (!['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname)) throw new Er
 const browser = await chromium.launch({ headless: process.env.LOS_PERF_HEADFUL !== '1', channel: process.env.LOS_PERF_BROWSER || undefined })
 try {
   const results = []
-  const scenarios = (process.env.RESPONSIVENESS_SCENARIOS ?? 'moving,moving-fog,combat-fog,still').split(',')
-  if (scenarios.some(s => !['moving', 'moving-fog', 'moving-los-fog', 'combat-fog', 'still'].includes(s))) throw new Error('Unknown responsiveness scenario')
+  const scenarios = (process.env.RESPONSIVENESS_SCENARIOS ?? 'moving,moving-fog,combat-fog,idle').split(',')
+  if (scenarios.some(s => !['moving', 'moving-fog', 'moving-los-fog', 'combat-fog', 'idle'].includes(s))) throw new Error('Unknown responsiveness scenario')
   const variants = process.env.RESPONSIVENESS_BASELINE ? ['baseline', 'current'] : ['current']
   for (const variant of variants) for (const scenario of scenarios) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: Number(process.env.PERF_DPR ?? 1) })
@@ -23,7 +23,7 @@ try {
       await route.fulfill({ response, body })
     })
     page.on('pageerror', error => errors.push(error.message))
-    await page.goto(new URL(`/testbed/live-animation.html?perf&motion=${scenario === 'still' ? 'still' : 'on'}${scenario.includes('fog') ? '&fog' : ''}${scenario.includes('los') ? '&los' : ''}`, origin).href)
+    await page.goto(new URL(`/testbed/live-animation.html?perf${scenario.includes('fog') ? '&fog' : ''}${scenario.includes('los') ? '&los' : ''}`, origin).href)
     await page.waitForFunction(() => !!window.__orbrunLiveAnimation)
     await page.bringToFront()
     await page.waitForTimeout(1500)

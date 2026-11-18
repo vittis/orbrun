@@ -56,7 +56,7 @@ for (const cell of scene.cells.values()) {
   }
 }
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!
-const renderer = new Render25d({ center: { x: 9, y: 4 }, unexploredFog: true, animate: !matchMedia('(prefers-reduced-motion: reduce)').matches })
+const renderer = new Render25d({ center: { x: 9, y: 4 }, unexploredFog: true })
 renderer.mount(canvas)
 renderer.setTiles(roomSource)
 renderer.setScene(scene)
@@ -65,8 +65,6 @@ original.mount(canvas)
 original.setTiles(roomSource)
 original.setScene(scene)
 const flat = document.querySelector<HTMLInputElement>('#original')!
-const animate = document.querySelector<HTMLInputElement>('#animate')!
-animate.checked = !matchMedia('(prefers-reduced-motion: reduce)').matches
 let raf = 0
 // Optional deterministic effect frame for real-canvas captures, without mutating
 // renderer state from browser automation. Normal preview playback stays live.
@@ -89,9 +87,9 @@ function fit() {
   wake()
 }
 new ResizeObserver(fit).observe(canvas)
-for (const id of ['tilt', 'zoom', 'animate', 'fog', 'atmosphere', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
+for (const id of ['tilt', 'zoom', 'fog', 'atmosphere', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
   const duration = Number((document.getElementById('duration') as HTMLSelectElement).value)
-  renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value), animate: animate.checked,
+  renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value),
     unexploredFog: (document.getElementById('fog') as HTMLInputElement).checked,
     unexploredAtmosphere: (document.getElementById('atmosphere') as HTMLInputElement).checked,
     movement: duration > 0, movementDuration: duration || 0.1, movementEasing: (document.getElementById('easing') as HTMLSelectElement).value as MovementEasing })

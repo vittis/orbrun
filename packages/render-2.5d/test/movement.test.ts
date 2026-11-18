@@ -248,7 +248,7 @@ describe('confirmed entity movement', () => {
     expect(m.position(c, 3).x).toBe(2)
   })
 
-  it('finishes movement immediately for still mode and clears removed entities', () => {
+  it('finishes movement immediately when disabled and clears removed entities', () => {
     const m = new DungeonMovement(), b = actor(1)
     observe(m, scene(actor()), 0); observe(m, scene(b), 1)
     m.finish()

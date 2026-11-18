@@ -5,7 +5,7 @@ import { test, result } from './fixtures'
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
 test('Shift+numpad sends server run commands when Windows consumes the modifier', async ({ page }) => {
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   const sent = await page.evaluate(() => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: { snapshot(): { sent: unknown[] } } }).__orbrunLiveAnimation
@@ -30,7 +30,7 @@ test('Shift+numpad sends server run commands when Windows consumes the modifier'
 })
 
 test('inputs use server replies immediately between paints, including touch and controller presses', async ({ page }) => {
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   const evidence = await page.evaluate(() => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: {
@@ -67,8 +67,8 @@ test('inputs use server replies immediately between paints, including touch and 
 })
 
 test('inventory transitions preserve live updates, stable hover targets, and immediate closing', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   const lifecycle = await page.evaluate(async () => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
@@ -114,24 +114,8 @@ test('inventory transitions preserve live updates, stable hover targets, and imm
   await expect(page.locator('.ui-exit')).toHaveCount(0)
 })
 
-for (const preference of ['still', 'reduced'] as const) {
-  test(`UI windows skip motion with ${preference}, including explicit Dungeon animation On`, async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: preference === 'reduced' ? 'reduce' : 'no-preference' })
-    await page.goto(`/testbed/live-animation.html?native-motion=1&motion=${preference === 'still' ? 'still' : 'on'}`)
-    await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
-    await page.keyboard.press('F5')
-    const menu = page.locator('.overlay-stack > .popup.sysmenu')
-    await expect(menu).toBeVisible()
-    expect(await menu.evaluate(el => el.getAnimations().length)).toBe(0)
-    await page.keyboard.press('Escape')
-    await expect(page.locator('.overlay-stack > .popup')).toHaveCount(0)
-    await expect(page.locator('.ui-exit')).toHaveCount(0)
-  })
-}
-
-test('level gain celebrates without intercepting input, respects motion, and expires', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+test('level gain celebrates and expires without intercepting input', async ({ page }) => {
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   const popup = page.locator('.level-up')
   await expect(popup).toBeHidden()
@@ -142,25 +126,15 @@ test('level gain celebrates without intercepting input, respects motion, and exp
   await expect(popup).toBeVisible()
   await expect(popup).toHaveAttribute('data-level', '4')
   expect(await popup.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none')
-  await expect(popup).toHaveClass(/still/)
   expect(await popup.locator('canvas').evaluate(el => getComputedStyle(el).imageRendering)).toBe('auto')
   expect(await page.locator(':focus').count()).toBe(0)
-  // On can animate the world; native reduced motion still keeps this popup static.
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
-  await expect(popup).not.toHaveClass(/still/)
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(popup).toHaveClass(/still/)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
   await expect(popup).toBeHidden({ timeout: 6000 })
-  const frames = (await result(page)).totalFrames
-  await page.waitForTimeout(350)
-  expect((await result(page)).totalFrames).toBe(frames)
   await page.evaluate(() => (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation.destroy())
   expect((await result(page)).destroyed).toBe(true)
 })
 
 test('level announcement appears before answering the stat choice and follows the rendered character', async ({ page }) => {
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
   await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
@@ -215,9 +189,9 @@ test('level announcement appears before answering the stat choice and follows th
   await expect(popup).toBeHidden()
 })
 
-test('level-up embers rise, then disappear with Still and native reduced motion', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=on')
+test('level-up embers rise during the celebration', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   await page.clock.install({ time: new Date('2026-11-13T12:00:00Z') })
   await page.clock.pauseAt(new Date('2026-11-13T12:00:01Z'))
@@ -243,17 +217,10 @@ test('level-up embers rise, then disappear with Still and native reduced motion'
   const later = await embers()
   expect(later.count).toBeGreaterThan(5)
   expect(later.y).toBeLessThan(first.y - 3)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
-  await page.clock.runFor(100)
-  expect((await embers()).count).toBe(0)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.clock.runFor(100)
-  expect((await embers()).count).toBe(0)
 })
 
 test('message pauses preserve dungeon brightness and menus have no corner vignette', async ({ page }) => {
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await page.goto('/testbed/live-animation.html?frameTime=1')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   const corner = { x: 30, y: 130, width: 40, height: 40 }
   const before = await page.screenshot({ clip: corner })
@@ -339,7 +306,7 @@ for (const touch of [false, true]) {
   })
 }
 
-test('Dungeon and flat atmosphere, Still, and impact', async ({ page }) => {
+test('Dungeon and flat atmosphere, paused frames and impact', async ({ page }) => {
   await page.goto('/testbed/living-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
@@ -352,35 +319,14 @@ test('Dungeon and flat atmosphere, Still, and impact', async ({ page }) => {
   expect(report.failures).toEqual([])
 })
 
-test('real GameScreen follows native reduced motion, Still, and explicit On', async ({ page }) => {
+test('real GameScreen keeps animating after the device motion preference changes', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=auto')
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(2)
+  const beforeChange = (await result(page)).frames
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect.poll(async () => (await result(page)).reduced).toBe(true)
-  await expect.poll(async () => (await result(page)).animating).toBe(false)
-  const reducedFrames = (await result(page)).frames
-  // Intentional quiet observation window: an animation loop must remain asleep.
-  await page.waitForTimeout(350)
-  expect((await result(page)).frames).toBe(reducedFrames)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('on')
   await expect.poll(async () => (await result(page)).animating).toBe(true)
-  await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(2)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('still')
-  await expect.poll(async () => (await result(page)).animating).toBe(false)
-  // Applying Still queues one static redraw; observe sleep after that paint.
-  await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(0)
-  const stillFrames = (await result(page)).frames
-  await page.waitForTimeout(350)
-  expect((await result(page)).frames).toBe(stillFrames)
-  await page.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption('auto')
-  await expect.poll(async () => (await result(page)).animating).toBe(false)
-  const beforeResume = (await result(page)).frames
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await expect.poll(async () => (await result(page)).reduced).toBe(false)
-  await expect.poll(async () => (await result(page)).animating).toBe(true)
-  await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(beforeResume + 2)
-  // Removing floating text must leave confirmed world effects connected to GameScreen.
+  await expect.poll(async () => (await result(page)).frames).toBeGreaterThan(beforeChange + 2)
   const impacts = (await result(page)).impacts
   await page.getByRole('button', { name: 'Trigger local hit', exact: true }).click()
   await expect.poll(async () => (await result(page)).impacts).toBeGreaterThan(impacts)
@@ -418,12 +364,10 @@ for (const touch of [false, true]) {
       await expect(variation).toHaveAttribute('aria-valuetext', '30%')
       await expect.poll(async () => (await result(page)).appliedDungeonOptions.combatVfxVariation).toBe(0.3)
       await quick.getByRole('tab', { name: 'View', exact: true }).click()
-      await quick.getByRole('combobox', { name: 'Dungeon animation', exact: true }).selectOption({ label: 'Still' })
-      await expect.poll(async () => (await result(page)).appliedDungeonOptions.animate).toBe(false)
-      await expect(quick.getByRole('combobox', { name: 'Dungeon movement', exact: true })).toBeDisabled()
+      await quick.getByRole('combobox', { name: 'Dungeon movement', exact: true }).selectOption({ label: 'Instant' })
       for (const label of ['Move hop height', 'Move squash', 'Move sway']) await expect(quick.getByRole('slider', { name: label, exact: true })).toBeDisabled()
       await quick.getByRole('tab', { name: 'Combat', exact: true }).click()
-      await expect(quick.getByRole('slider', { name: 'Hit bump speed', exact: true })).toBeDisabled()
+      await expect(quick.getByRole('slider', { name: 'Hit bump speed', exact: true })).toBeEnabled()
       expect((await result(page)).sent).toEqual([])
       const bounds = await quick.locator('.quick-settings-panel').evaluate(el => {
         const r = el.getBoundingClientRect()
@@ -503,15 +447,13 @@ for (const touch of [false, true]) {
 }
 
 
-test('unexplored atmosphere can be disabled independently, persists in Still and resets', async ({ page }) => {
+test('unexplored atmosphere can be disabled independently, persists and resets', async ({ page }) => {
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.goto('/settings/view')
   const fog = page.locator('[data-focus="setting:Unexplored fog"]')
   const atmosphere = page.locator('[data-focus="setting:Unexplored atmosphere"]')
   await expect(fog.locator('.val')).toHaveText('On')
   await expect(atmosphere.locator('.val')).toHaveText('On')
-  await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
-  await expect(page.locator('[data-focus="setting:Dungeon animation"] .val')).toHaveText('Still')
   await page.getByRole('button', { name: 'Unexplored atmosphere next', exact: true }).click()
   await expect(atmosphere.locator('.val')).toHaveText('Off')
   await expect(fog.locator('.val')).toHaveText('On')
@@ -528,7 +470,7 @@ test('unexplored atmosphere can be disabled independently, persists in Still and
   await expect(atmosphere.locator('.val')).toHaveText('On')
 })
 
-test('movement tuning persists in the narrow settings menu and respects Instant and Still', async ({ page }) => {
+test('movement tuning persists in the narrow settings menu and respects instant movement', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.goto('/settings/view')
@@ -550,8 +492,7 @@ test('movement tuning persists in the narrow settings menu and respects Instant 
     await expect(row(label).locator('.val')).toHaveText(changed)
   }
   await page.getByRole('button', { name: 'Dungeon movement next', exact: true }).click()
-  await page.getByRole('button', { name: 'Dungeon animation previous', exact: true }).click()
-  for (const [label] of gestures) await expect(row(label)).toHaveClass(/off/)
+  for (const [label] of gestures) await expect(row(label)).not.toHaveClass(/off/)
   await page.getByText('Reset to defaults', { exact: true }).click()
   for (const [label, , fallback] of gestures) await expect(row(label).locator('.val')).toHaveText(fallback)
   const bounds = await page.locator('.settings .row .value').evaluateAll(values => values.map(value => {
@@ -651,7 +592,7 @@ test('live sounds follow confirmed message occurrences and stop on screen teardo
   await page.getByRole('button', { name: 'Sound effects next', exact: true }).click()
   await page.getByText('Download / refresh OSP', { exact: true }).click()
   await expect(page.locator('.audio-status')).toContainText('3 sound rules ready')
-  await page.goto('/testbed/live-animation.html?native-motion=1&motion=still')
+  await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
   await page.evaluate(async () => {
     // Vite-only inspection of the same controller owned by this real GameScreen.
@@ -663,9 +604,7 @@ test('live sounds follow confirmed message occurrences and stop on screen teardo
     })
   })
   // A real gesture unlocks Web Audio without sending a game command.
-  await page.locator('#motion').click()
-  // Close the native select popup before Chromium tears down the context.
-  await page.locator('#motion').press('Escape')
+  await page.locator('#controls').click({ position: { x: 2, y: 2 } })
   const receive = (text: string, rollback = 0) => page.evaluate(({ text, rollback }) => {
     const fixture = (window as unknown as { __orbrunLiveAnimation: LiveAnimation }).__orbrunLiveAnimation
     fixture.receive({ msg: 'msgs', rollback, messages: [{ text, turn: 1 }] })
@@ -710,7 +649,6 @@ for (const touch of [false, true]) {
       await page.addInitScript(() => {
         const account = { serverId: 'cdi', username: 'menu-test' }
         localStorage.setItem('orbrun.accounts', JSON.stringify([account])); localStorage.setItem('orbrun.account', JSON.stringify(account))
-        localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false }))
       })
       await page.goto('/')
       const user = page.getByRole('textbox', { name: 'User', exact: true }), pass = page.getByLabel('Pass', { exact: true })
@@ -773,19 +711,14 @@ for (const touch of [false, true]) {
   })
 }
 
-test('menu entrance remains usable when recordings are unavailable and motion follows preferences', async ({ page }) => {
+test('menu entrance remains usable when recordings are unavailable despite an old saved animation setting', async ({ page }) => {
   let requests = 0
   await page.route('**/menu/clips/**', route => ++requests === 1 ? route.fulfill({ status: 404, body: '' }) : route.continue())
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.addInitScript(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: false })) })
   await page.goto('/')
-  await page.waitForTimeout(1000)
-  expect(requests).toBe(0)
   const canvas = page.locator('.menu-backdrop canvas')
-  await expect(canvas).toBeHidden()
   const shine = page.locator('.crawl-title')
-  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
-  await page.evaluate(() => { localStorage.setItem('orbrun.settings', JSON.stringify({ depthAnimate: true })); document.documentElement.dataset.uiMotion = 'auto' })
   await expect(page.getByRole('button', { name: 'Retry replay' })).toBeVisible()
   expect(requests).toBe(1)
   await expect(canvas).toBeHidden()
@@ -793,10 +726,6 @@ test('menu entrance remains usable when recordings are unavailable and motion fo
   await page.locator('[data-focus="about"]').click()
   expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
   await page.keyboard.press('Escape')
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  expect(await shine.evaluate(el => getComputedStyle(el, '::after').animationName)).toBe('none')
-  await expect(page.locator('.menu-replay-status')).toContainText('reduced motion')
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.getByRole('button', { name: 'Retry replay' }).click()
   await expect(canvas).toBeVisible()
   await page.locator('[data-focus="settings"]').click()
@@ -839,9 +768,6 @@ for (const narrow of [false, true]) {
     const chosen = await chooser.inputValue()
     await page.locator('[data-focus="about"]').click(); await expect(chooser).toBeHidden()
     await page.keyboard.press('Escape'); await expect(chooser).toHaveValue(chosen)
-    await page.emulateMedia({ reducedMotion: 'reduce' }); await expect(chooser).toBeHidden()
-    await page.emulateMedia({ reducedMotion: 'no-preference' }); await expect(chooser).toBeVisible()
-    await expect(chooser).toHaveValue(chosen)
     await chooser.selectOption({ label: 'Shuffle all' }); await expect(chooser).toHaveValue('')
     await chooser.selectOption({ label: 'Djinni descent' })
     await page.reload(); await expect(chooser).toBeVisible(); await expect(chooser).toHaveValue('')
@@ -885,8 +811,5 @@ for (const narrow of [false, true]) {
     await expect(slider).toHaveValue('71')
     await slider.press('Home'); await expect(slider).toHaveValue('25')
     await slider.press('End'); await expect(slider).toHaveValue('85')
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await expect(slider).toBeHidden()
-    await expect(canvas).toBeHidden()
   })
 }

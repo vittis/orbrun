@@ -73,7 +73,7 @@ for (const [width, height, dpr] of [[960, 600, 1], [390, 600, 2]]) for (const na
   checks.push({ name: `${name} ${width} exit visible`, passed: !equalPixels(leaving, sample(empty, emptyCanvas, 1.64)) })
   checks.push({ name: `${name} ${width} exit sleeps`, passed: equalPixels(sample(view, canvas, 1.8), sample(empty, emptyCanvas, 1.8)) && !view.animating })
   view.setOptions({ animate: false }); view.setScene(world(), 2); view.setScene({ ...scene, revision: 2 }, 3)
-  checks.push({ name: `${name} ${width} Still`, passed: equalPixels(sample(view, canvas, 3.01), sample(view, canvas, 3.2)) && !view.animating })
+  checks.push({ name: `${name} ${width} paused`, passed: equalPixels(sample(view, canvas, 3.01), sample(view, canvas, 3.2)) && !view.animating })
   view.setOptions({ animate: true }); view.setScene(world(), 4); view.setScene({ ...scene, revision: 3 }, 5)
   const hidden = world()
   for (const cell of hidden.cells.values()) cell.visibility = 'remembered'

@@ -1,13 +1,13 @@
 # Working on Orbrun
 
-Keep the existing 2.5D gameplay presentation and flat supporting maps. Preserve server-authoritative state, confirmed combat/visibility, Still/reduced motion, storage compatibility, and production's online-only boundary. See project-notes/ARCHITECTURE.md for ownership.
+Keep the existing 2.5D gameplay presentation and flat supporting maps. Preserve server-authoritative state, confirmed combat/visibility, storage compatibility, and production's online-only boundary. See project-notes/ARCHITECTURE.md for ownership.
 
 ## Fast iteration
 
 - Inspect `git status` first and preserve unrelated edits. Install dependencies only when missing or the lockfile changed. Chromium is needed only for browser checks.
 - While editing, use `npm run test:changed` (changes since HEAD, including staged/unstaged/untracked files), `npm test -- <test-file-or-filter>`, or `npm run test:watch -- <filter>`. For a committed branch diff, use `npx vitest run --changed origin/main`.
 - Prioritize fast iteration and manual verification. Run focused tests for changed behavior and typecheck when TypeScript changes; do not run full verification/release gates automatically for routine publishing.
-- Visually inspect UI changes at desktop and narrow sizes, including loading and Still/reduced motion where relevant. Use representative browser tests when they provide useful coverage, not the entire matrix by default.
+- Visually inspect UI changes at desktop and narrow sizes, including loading where relevant. Use representative browser tests when they provide useful coverage, not the entire matrix by default.
 - For deployment tooling, run the affected deployment tests. Reuse unchanged app builds and pinned engine artifacts. `npm run verify:release` remains an optional broad audit, not a publishing prerequisite.
 - Changed-test selection follows imports and can miss CSS, assets, readFile fixtures and build configuration. Apply the broader commands above even when it selects zero tests. A zero-test run is not verification.
 - Engine changes need the separately provisioned `REQUIRE_ENGINE=1 npm run e2e`. Missing artifacts are an explicit coverage limitation, not success.

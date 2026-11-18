@@ -2790,11 +2790,6 @@ export class Overlays {
     return true
   }
 
-  /** A motion preference changed while windows were arriving or leaving. */
-  settleMotion() {
-    this.windows.settle()
-  }
-
   /** Stop presentation and scroll work when the screen leaves. */
   destroy() {
     this.windows.destroy()

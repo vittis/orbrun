@@ -2027,8 +2027,7 @@ html&gt;body{padding:0}&lt;/style&gt;
 #polished-crawl-final .type-stage h1 .pc-metal{position:relative;width:fit-content}
 #polished-crawl-final .type-stage h1 .pc-metal::after{content:attr(data-title);position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 41%,#ffedb32b 46%,#fff9e4e6 50%,#ffedb342 54%,transparent 59%);background-size:300% 100%;background-position:100% 0;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:pc-title-shine 8s linear infinite;opacity:0}
 @keyframes pc-title-shine{0%,70%{background-position:100% 0;opacity:0}72%{opacity:1}86%{background-position:0% 0;opacity:1}88%,100%{background-position:0% 0;opacity:0}}
-#polished-crawl-final.pc-shine-off .type-stage h1 .pc-metal::after,[data-ui-motion=&quot;still&quot;] #polished-crawl-final .type-stage h1 .pc-metal::after{animation:none;opacity:0}
-@media(prefers-reduced-motion:reduce){#polished-crawl-final .type-stage h1 .pc-metal::after{animation:none;opacity:0}}
+#polished-crawl-final.pc-shine-off .type-stage h1 .pc-metal::after{animation:none;opacity:0}
 &lt;/style&gt;
 &lt;script&gt;
 (() =&gt; {
@@ -2056,13 +2055,11 @@ html&gt;body{padding:0}&lt;/style&gt;
  modal.addEventListener(&#x27;close&#x27;,()=&gt;{syncMotion();if(opener)opener.focus();});
  modal.addEventListener(&#x27;click&#x27;,event=&gt;{if(event.target!==modal)return;const bounds=modal.getBoundingClientRect();if(event.clientX&lt;bounds.left||event.clientX&gt;bounds.right||event.clientY&lt;bounds.top||event.clientY&gt;bounds.bottom)modal.close();});
  stage.onkeydown=e=&gt;{if(e.key===&#x27;Escape&#x27;)status.hidden=true;};
- const design={signedIn:true,dimming:.08,still:false};
- const motionMedia=matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;);
- function syncMotion(){root.classList.toggle(&#x27;pc-shine-off&#x27;,design.still||motionMedia.matches||document.hidden||modal.open);}
- motionMedia.addEventListener(&#x27;change&#x27;,syncMotion);
+ const design={signedIn:true,dimming:.08};
+ function syncMotion(){root.classList.toggle(&#x27;pc-shine-off&#x27;,document.hidden||modal.open);}
  document.addEventListener(&#x27;visibilitychange&#x27;,syncMotion);
  syncMotion();
- if(globalThis.Tweak){const tweak=new Tweak({container:stage,onChange:()=&gt;{signedIn(design.signedIn);stage.style.setProperty(&#x27;--oc-dim&#x27;,design.dimming);syncMotion();}});tweak.addToggle(design,&#x27;signedIn&#x27;,{label:&#x27;Signed-in example&#x27;});tweak.addToggle(design,&#x27;still&#x27;,{label:&#x27;Still mode&#x27;});tweak.addSlider(design,&#x27;dimming&#x27;,{label:&#x27;Background dimming&#x27;,min:0,max:.5,step:.02});}
+ if(globalThis.Tweak){const tweak=new Tweak({container:stage,onChange:()=&gt;{signedIn(design.signedIn);stage.style.setProperty(&#x27;--oc-dim&#x27;,design.dimming);syncMotion();}});tweak.addToggle(design,&#x27;signedIn&#x27;,{label:&#x27;Signed-in example&#x27;});tweak.addSlider(design,&#x27;dimming&#x27;,{label:&#x27;Background dimming&#x27;,min:0,max:.5,step:.02});}
 })();
 &lt;/script&gt;
 

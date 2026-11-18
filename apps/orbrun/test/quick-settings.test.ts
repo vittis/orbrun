@@ -21,17 +21,15 @@ function setup() {
 }
 
 describe('quick View and Combat settings', () => {
-  it('persists VFX variation, honors Still, and resets to the screenshot baseline', () => {
+  it('persists VFX variation, honors gore settings, and resets to the screenshot baseline', () => {
     const { panel, control } = setup()
     const variation = control('combatVfxVariation')
     variation.value = '0'
     variation.dispatchEvent(new Event('input', { bubbles: true }))
     expect(getSettings().combatVfxVariation).toBe(0)
-    saveSettings({ ...getSettings(), depthAnimate: false })
+    saveSettings({ ...getSettings(), hitGore: 0, deathGore: 0 })
     panel.refresh()
     expect(variation.disabled).toBe(true)
-    saveSettings({ ...getSettings(), depthAnimate: true })
-    panel.refresh()
     panel.root.querySelector<HTMLButtonElement>('#quick-settings-combat .quick-settings-reset')!.click()
     expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSpeed: 1.15, meleeBumpSnap: 0.7,
       hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25 })
@@ -53,17 +51,11 @@ describe('quick View and Combat settings', () => {
     increase.click()
     expect(getSettings().depthTilt).toBe(85)
     expect(changed).toHaveBeenCalledTimes(1)
-    const still = SETTING_ROWS.find(r => r.key === 'depthAnimate')!.values.indexOf(false)
-    control('depthAnimate').value = String(still)
-    control('depthAnimate').dispatchEvent(new Event('change', { bubbles: true }))
-    expect(getSettings().depthAnimate).toBe(false)
-    expect(control('depthMovement').disabled).toBe(true)
-    expect(control('meleeBumpSpeed').disabled).toBe(true)
     expect(control('exploreDelay').disabled).toBe(true)
     const reset = panel.root.querySelector<HTMLButtonElement>('#quick-settings-view .quick-settings-reset')!
     reset.focus()
     reset.click()
-    expect(getSettings()).toMatchObject({ depthTilt: 50, depthAnimate: 'auto', hitGore: 1.5, uiScale: 1.15 })
+    expect(getSettings()).toMatchObject({ depthTilt: 50, hitGore: 1.5, uiScale: 1.15 })
     expect(control('meleeBumpSpeed').disabled).toBe(false)
     expect(reset.disabled).toBe(true)
     expect(document.activeElement).toBe(panel.root.querySelector('[role="tab"][aria-selected="true"]'))

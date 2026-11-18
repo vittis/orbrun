@@ -15,7 +15,7 @@ import { findServer, OFFLINE_SERVER, setChosenAccount, setGames, setToken, type 
 vi.mock('../src/menu-backdrop', () => ({ MenuBackdrop: class {
   el = document.createElement('div')
   constructor(host: HTMLElement) { host.prepend(this.el) }
-  cover() {} applySettings() {} destroy() { this.el.remove() }
+  cover() {} destroy() { this.el.remove() }
 } }))
 
 // happy-dom's localStorage has no working methods; give servers.ts a plain one

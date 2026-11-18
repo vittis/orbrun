@@ -47,7 +47,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     h.text('You stab the goblin!' + suffix)
     const events = h.feedback.flush(h.scene, 1000)
     expect(events).toHaveLength(1)
-    presentCombat(renderer, h.scene, events, h.feedback.takeSpells(), 'a +2 dagger of venom', 1000, true)
+    presentCombat(renderer, h.scene, events, h.feedback.takeSpells(), 'a +2 dagger of venom', 1000)
     expect(renderer.bump).toHaveBeenCalledOnce()
     expect(fx.bursts).toHaveLength(1)
     const particles = sampleHitSpray(h.scene, fx.bursts[0], 1.15)
@@ -59,7 +59,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     const h = harness(), removed = world(false), { fx, deaths, renderer } = presentation(removed)
     h.state.player.inv[0] = { slot: 0, name: 'a +2 dagger of venom' }; h.state.player.weapon_index = 0
     h.text('You stab the goblin! You kill the goblin!')
-    presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), 'a +2 dagger of venom', 1000, true)
+    presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), 'a +2 dagger of venom', 1000)
     expect(fx.bursts).toEqual([])
     const particles = deaths.sample(removed, 1.15)
     expect(particles.some(p => elementalPalettes.poison.includes(p.colour) && p.sprite === 'bubble')).toBe(true)
@@ -71,7 +71,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     h.text('You hit the goblin! The blast of energy engulfs the goblin!!')
     const events = h.feedback.flush(h.scene, 1000), spells = h.feedback.takeSpells()
     expect(spells).toMatchObject([{ kind: 'magic', actorId: 'id:1' }])
-    presentCombat(renderer, h.scene, events, spells, 'mace', 1000, true)
+    presentCombat(renderer, h.scene, events, spells, 'mace', 1000)
     expect(fx.bursts).toHaveLength(1)
     expect(sampleHitSpray(h.scene, fx.bursts[0], 1.15).some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
   })
@@ -87,7 +87,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     const { fx, renderer } = presentation(moved)
     h.text(line)
     const events = h.feedback.flush(moved, 1000)
-    presentCombat(renderer, moved, events, h.feedback.takeSpells(), undefined, 1000, true)
+    presentCombat(renderer, moved, events, h.feedback.takeSpells(), undefined, 1000)
     expect(renderer.bump).not.toHaveBeenCalled()
     expect(fx.bursts).toHaveLength(1)
     expect(fx.bursts[0]).toMatchObject({ actorId: 'id:1', x: 2, y: 0, kind: 'magic' })
@@ -103,7 +103,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     'carries %s into the confirmed death instead of spawning a second impact', line => {
       const h = harness(), removed = world(false), { fx, deaths, renderer } = presentation(removed)
       h.text(line + ' You kill the goblin!')
-      presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+      presentCombat(renderer, removed, h.feedback.flush(removed, 1000), h.feedback.takeSpells(), undefined, 1000)
       expect(fx.bursts).toEqual([])
       const particles = deaths.sample(removed, 1.1)
       expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(true)
@@ -114,7 +114,7 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
     const h = harness(), scene = result === 'death' ? world(false) : h.scene
     const { fx, deaths, renderer } = presentation(scene)
     h.text('The searing ray hits the goblin!' + (result === 'death' ? ' You kill the goblin!' : ''))
-    presentCombat(renderer, scene, h.feedback.flush(scene, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+    presentCombat(renderer, scene, h.feedback.flush(scene, 1000), h.feedback.takeSpells(), undefined, 1000)
     const particles = result === 'death' ? deaths.sample(scene, 1.15) : sampleHitSpray(scene, fx.bursts[0], 1.15)
     expect(particles.some(p => elementalPalettes.fire.includes(p.colour))).toBe(true)
     expect(particles.some(p => elementalPalettes.magic.includes(p.colour))).toBe(false)
@@ -148,19 +148,19 @@ describe('confirmed spell splatter through the presentation pipeline', () => {
       life: { projectile: { kind: 'poison', colour: [110, 220, 85], beam: false, family: 'BOLT_STING' } } })
     const { fx, renderer } = presentation(h.scene)
     h.text(`The glob of mercury hits ${target}!`)
-    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000, true)
+    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000)
     expect(fx.bursts).toMatchObject([{ kind: 'physical', spray: { kind: 'flesh' } }])
     expect(sampleHitSpray(h.scene, fx.bursts[0], 1.15).some(p => elementalPalettes.poison.includes(p.colour))).toBe(false)
   })
 
-  it.each(['zero', 'miss', 'hidden', 'remote', 'still'] as const)('does not shed spell debris for %s results', mode => {
+  it.each(['zero', 'miss', 'hidden', 'remote'] as const)('does not shed spell debris for %s results', mode => {
     const h = harness()
     if (mode === 'hidden') h.scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     if (mode === 'remote') h.scene.playerOnLevel = false
     const { fx, deaths, renderer } = presentation(h.scene)
     h.text(mode === 'zero' ? 'The mystic blast hits the goblin but does no damage.'
       : mode === 'miss' ? 'The mystic blast misses the goblin.' : 'The mystic blast hits the goblin!')
-    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000, mode !== 'still')
+    presentCombat(renderer, h.scene, h.feedback.flush(h.scene, 1000), h.feedback.takeSpells(), undefined, 1000)
     expect(fx.bursts.every(b => !b.spray)).toBe(true)
     expect(deaths.sample(h.scene, 1.1)).toEqual([])
   })

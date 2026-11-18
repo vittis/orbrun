@@ -80,7 +80,7 @@ describe('living dungeon visibility', () => {
     s.cells.get(cellKey(0, 0))!.visibility = 'remembered'
     expect(lightingFor(s).field.size).toBe(0)
   })
-  it.each(['breath', 'plant', 'float', 'ooze', 'cloud', 'serpent'] as const)('keeps %s still in memory, reduced motion and held states', motion => {
+  it.each(['breath', 'plant', 'float', 'ooze', 'cloud', 'serpent'] as const)('keeps %s still when animation is disabled or the creature is held', motion => {
     const life: TileLife = { motion }
     const still = livingPose(undefined, 1, 1, 1)
     expect(livingPose(life, 1, 1, 1, false)).toEqual(still)

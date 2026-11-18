@@ -205,7 +205,7 @@ describe('picking and visibility', () => {
   })
 
 
-  it('draws direct spells on its frame clock, sleeps after expiry, and respects Still mode', () => {
+  it('draws direct spells on its frame clock, sleeps after expiry, and clears effects when paused', () => {
     const { r } = renderer()
     const art = vi.spyOn(ImpactArt.prototype, 'draw').mockImplementation(() => {})
     const scene = sceneOf(cell(0, 0), cell(1, 0))
@@ -373,7 +373,7 @@ describe('picking and visibility', () => {
     } finally { art.mockRestore(); spray.mockRestore(); r.destroy() }
   })
 
-  it('keeps frames awake while revealing terrain, then sleeps; Still mode settles immediately', () => {
+  it('keeps frames awake while revealing terrain, then sleeps; pausing settles immediately', () => {
     const { r } = renderer()
     const c = cell(0, 0, { visibility: 'remembered' }), scene = sceneOf(c)
     r.setScene(scene, 0)
@@ -399,7 +399,7 @@ describe('picking and visibility', () => {
     expect(r.animating).toBe(false)
   })
 
-  it('draws the arrival cue without delaying picking, then sleeps; Still mode cancels it', () => {
+  it('draws the arrival cue without delaying picking, then sleeps; pausing cancels it', () => {
     const cue = vi.spyOn(DungeonArrival.prototype, 'draw')
     try {
       const { r } = renderer()
@@ -641,7 +641,7 @@ describe('picking and visibility', () => {
     expect(r.animating).toBe(false)
   })
 
-  it('stops animation in still mode and releases scene state on destroy', () => {
+  it('stops animation when paused and releases scene state on destroy', () => {
     const { r } = renderer()
     r.setScene(sceneOf(cell(0, 0, { life: { motion: 'flame', lights: [{ colour: [255, 158, 64], radius: 3, power: 0.5, pulse: 'fire' }] } })))
     r.render(0)
@@ -768,7 +768,7 @@ describe('environmental lighting', () => {
     expect(movingCenter.y).toBeCloseTo(project(p, -0.5, 0.05).y - p.scale * 0.5)
   })
 
-  it.each<TileLife>([{ motion: 'breath' }, { motion: 'fly' }, { motion: 'serpent' }, { flying: true }])('smooths $motion idle poses from crisp enlarged pixels and honours still mode and explicit smoothing', life => {
+  it.each<TileLife>([{ motion: 'breath' }, { motion: 'fly' }, { motion: 'serpent' }, { flying: true }])('smooths $motion idle poses from crisp enlarged pixels and honours paused rendering and explicit smoothing', life => {
     const { r } = renderer(), samples: { smooth: boolean; rasterScale: number }[] = []
     const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, _layers, _x, _y, _size, _light, _memory, _flash, _lighting, _sample, rasterScale = 1) => {
       samples.push({ smooth: ctx.imageSmoothingEnabled, rasterScale }); return true

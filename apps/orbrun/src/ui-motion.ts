@@ -1,10 +1,5 @@
-/** UI motion always respects the OS preference, including with Dungeon animation On. */
-export function uiMotionEnabled(el: HTMLElement): boolean {
-  return !el.closest('[data-ui-motion="still"]') && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-}
-
 function canAnimate(el: HTMLElement): boolean {
-  if (!el.isConnected || !uiMotionEnabled(el) || typeof el.animate !== 'function') return false
+  if (!el.isConnected || typeof el.animate !== 'function') return false
   const rect = el.getBoundingClientRect()
   return rect.width > 0 && rect.height > 0
 }
@@ -74,13 +69,9 @@ export class WindowTransitions {
     if (this.exits.size > 4) this.exits.values().next().value?.()
   }
 
-  settle() {
+  destroy() {
     for (const entry of this.windows.values()) entry.animation?.cancel()
     for (const clean of this.exits.values()) clean()
-  }
-
-  destroy() {
-    this.settle()
     this.windows.clear()
   }
 }

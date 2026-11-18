@@ -72,7 +72,7 @@ class RecordedMenuDemo implements MenuDemo {
     this.dirty = true
     this.flush()
     if (!this.scene.playerOnLevel || !this.scene.cells.size) throw new Error('Menu recording has no dungeon')
-    this.renderer = new Render25d({ ...dungeonOptions(getSettings(), false), minibars: null })
+    this.renderer = new Render25d({ ...dungeonOptions(getSettings()), minibars: null })
     this.renderer.mount(this.canvas)
     this.renderer.setTiles(this.data)
     this.fit()
@@ -115,11 +115,11 @@ class RecordedMenuDemo implements MenuDemo {
         this.lastFrame = now
         this.flush()
         if (this.dirty || this.renderer.animating) {
-          this.renderer.setOptions({ ...dungeonOptions(getSettings(), false), center: this.state.map.viewCenter, minibars: null })
+          this.renderer.setOptions({ ...dungeonOptions(getSettings()), center: this.state.map.viewCenter, minibars: null })
           this.renderer.setScene(this.scene, now / 1000)
           const events = this.feedback.flush(this.scene, now)
           presentCombat(this.renderer, this.scene, events, this.feedback.takeSpells(), this.state.player.inv[this.state.player.weapon_index]?.name,
-            now, true, getSettings().meleeBumpSpeed)
+            now, getSettings().meleeBumpSpeed)
           this.renderer.render(now / 1000)
           this.canvas.hidden = false
           this.dirty = false

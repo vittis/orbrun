@@ -8,7 +8,6 @@ import type { Session } from './session'
 import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
-import { dungeonAnimation } from './effects-motion'
 import { dungeonOptions } from './dungeon-options'
 import { Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
@@ -120,7 +119,6 @@ export class GameScreen {
   private mapHold = new MapHold()
   private session: Session
 
-  private reducedMotion = false
   private heading: import("@orbrun/scene").Dir8 = 0
   private runner: Runner
   private hud: Hud
@@ -310,7 +308,6 @@ export class GameScreen {
     this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
     const st = hooks.settings()
-    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
     // the settings' Explore delay row says whether it reaches this game
     const rc = session.deviceRc()
     setExploreGame(rc === null ? { online: true } : { online: false, rc })
@@ -325,19 +322,7 @@ export class GameScreen {
       this.shrinkText()
       this.relayout(true)
     }
-    const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    this.reducedMotion = motionPreference?.matches ?? false
     this.renderer = this.makeRenderer()
-    const motionChanged = () => {
-      this.reducedMotion = motionPreference?.matches ?? false
-      if (this.reducedMotion) this.overlays?.settleMotion()
-      if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(this.settings()))
-      else if (this.renderer instanceof Render2d) this.renderer.setOptions({ animate: !this.reducedMotion })
-      this.needsRender = true
-      this.wake()
-    }
-    motionPreference?.addEventListener('change', motionChanged)
-    this.unsub.push(() => motionPreference?.removeEventListener('change', motionChanged))
     this.hud = new Hud(this.root, {
       onBarAction: (a) => this.runner.execute(a),
       onMinimapClick: () => this.minimapTap(),
@@ -695,13 +680,9 @@ export class GameScreen {
     return Math.min(window.devicePixelRatio || 1, VIEW_MAX_DPR)
   }
 
-  private render25dOptions(st: Settings) {
-    return dungeonOptions(st, this.reducedMotion)
-  }
-
   private makeRenderer(): MapRenderer {
     const st = this.hooks.settings()
-    const r: MapRenderer = this.hooks.renderer?.(this.presentation) ?? (this.presentation === 'dungeon' ? new Render25d(this.render25dOptions(st)) : new Render2d({ cellSize: 32, living: true, animate: !this.reducedMotion }))
+    const r: MapRenderer = this.hooks.renderer?.(this.presentation) ?? (this.presentation === 'dungeon' ? new Render25d(dungeonOptions(st)) : new Render2d({ cellSize: 32, living: true }))
     r.mount(this.canvas)
     if (this.session.gamedata) {
       r.setTiles(this.session.gamedata)
@@ -713,12 +694,10 @@ export class GameScreen {
   applySettings() {
     this.settingsCache = null
     const st = this.settings()
-    this.root.dataset.uiMotion = st.depthAnimate === false ? 'still' : 'auto'
-    if (st.depthAnimate === false || this.reducedMotion) this.overlays.settleMotion()
     document.documentElement.style.setProperty('--ui-scale', String(st.uiScale))
     this.grid.setTextSize(this.textPx())
     this.shrinkText()
-    if (this.renderer instanceof Render25d) this.renderer.setOptions(this.render25dOptions(st))
+    if (this.renderer instanceof Render25d) this.renderer.setOptions(dungeonOptions(st))
     // the minimap's size is the layout's to set
     this.hud.setMinimapTiles(st.minimapTiles, st.minimapCell)
     // the engine read its delay at Play: a change reaches it as the client's set_option (Instant spelled out, as -1)
@@ -888,8 +867,7 @@ export class GameScreen {
       this.syncRendererScene(this.session.scene, now / 1000)
       if (!this.mapShown) {
         const weapon = st.player.inv[st.player.weapon_index]?.name
-        const animate = this.presentation === 'dungeon' ? dungeonAnimation(settings, this.reducedMotion) : !this.reducedMotion
-        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, animate, settings.meleeBumpSpeed)
+        presentCombat(this.renderer, this.session.scene, combat, spells, weapon, now, settings.meleeBumpSpeed)
       }
       this.renderer.render(now / 1000)
       rendered = true
@@ -898,7 +876,7 @@ export class GameScreen {
       if (perf) this.perf.net.drew()
     }
     this.nearDeath.render(now, !this.mapShown && !this.overlays.hasClientOverlay
-      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'), this.reducedMotion)
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'))
     if (this.levelUp.active && this.viewPx) {
       const scene = this.session.scene
       const player = scene.billboards.find(b => b.kind === 'player')
@@ -912,8 +890,7 @@ export class GameScreen {
       })
     }
     this.levelUp.render(now, !this.mapShown && !this.overlays.hasClientOverlay
-      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'),
-      this.reducedMotion || !dungeonAnimation(settings, this.reducedMotion))
+      && this.session.scene.playerOnLevel && (st.phase === 'playing' || st.phase === 'watching'))
     this.fps.update(now, rendered)
     perf?.end()
   }
@@ -1110,7 +1087,6 @@ export class GameScreen {
         cellSize: this.cellPixels(Math.max(8, Math.round((px * scale) / 100)), mode),
         mode,
         living: !mapView,
-        animate: !this.reducedMotion,
         foot: mapView ? this.mapFoot : 0,
         filterScaling: o.tile_filter_scaling === true,
         glyphFont: rcFont(o.glyph_mode_font),

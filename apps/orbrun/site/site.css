@@ -43,7 +43,7 @@
 }
 * { box-sizing: border-box }
 html { background: var(--bg); scroll-padding-top: 5rem }
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+html { scroll-behavior: smooth }
 body { margin: 0; color: var(--ink); background: var(--bg); font: 1.075rem/1.7 var(--serif); -webkit-font-smoothing: antialiased }
 a { color: var(--gold-bright); text-decoration-color: rgba(243, 217, 138, 0.35); text-underline-offset: 0.2em }
 a:hover { text-decoration-color: currentColor }

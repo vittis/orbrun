@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.131 — 2026-11-18
+
+- Gameplay, menus and replays now use full animation regardless of the device motion preference. The Dungeon animation setting has been removed. Existing movement and combat tuning carry over.
+
 ## 0.3.130 — 2026-11-18
 
 - Menu replays now load one recording and its artwork at a time. Slow downloads can continue while assets arrive, and failed loads offer a retry.

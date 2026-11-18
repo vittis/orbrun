@@ -1,11 +1,10 @@
 import type { Render25dOptions } from '@orbrun/render-2.5d'
-import { dungeonAnimation } from './effects-motion'
 import type { Settings } from './settings'
 
 /** Shared appearance for gameplay and the recorded menu; owns no input, audio or storage. */
-export function dungeonOptions(st: Settings, reducedMotion: boolean): Render25dOptions {
+export function dungeonOptions(st: Settings): Render25dOptions {
   return {
-    tilt: st.depthTilt, zoom: st.depthZoom, animate: dungeonAnimation(st, reducedMotion),
+    tilt: st.depthTilt, zoom: st.depthZoom, animate: true,
     unexploredFog: st.depthFog, unexploredAtmosphere: st.depthAtmosphere,
     meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
     hitGore: st.hitGore, deathGore: st.deathGore,

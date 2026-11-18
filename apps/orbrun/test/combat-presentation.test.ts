@@ -42,41 +42,37 @@ describe('combat contact timing', () => {
     const events = feedback.flush(scene)
     expect(events).toHaveLength(4)
     const spells = feedback.takeSpells()
-    presentCombat(renderer, scene, events, spells, 'shortbow', 1000, true)
+    presentCombat(renderer, scene, events, spells, 'shortbow', 1000)
     expect(renderer.bump).toHaveBeenCalledTimes(4)
     expect(vi.mocked(renderer.bump!).mock.calls.map(([b]) => b.fromId)).toEqual(['id:1', 'id:2', 'id:3', 'id:4'])
     expect(renderer.hit).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
     expect(renderer.impact).toHaveBeenCalledTimes(outcome === 'hit' ? 4 : 2)
     expect(renderer.spell).not.toHaveBeenCalled()
-    presentCombat(renderer, scene, events, spells, 'shortbow', 2000, false)
-    expect(renderer.bump).toHaveBeenCalledTimes(4)
   })
 
   it('keeps minotaur headbutt damage without drawing another axe, including retaliation', () => {
     const { scene, renderer } = harness()
     const placed = (text: string) => combatText(text).map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
-    presentCombat(renderer, scene, placed('You hit the goblin! You headbutt the goblin!'), [], '+0 war axe', 1000, true)
+    presentCombat(renderer, scene, placed('You hit the goblin! You headbutt the goblin!'), [], '+0 war axe', 1000)
     expect(renderer.bump).toHaveBeenCalledTimes(1)
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ to: { x: 1, y: 0 } }), 1)
     expect(renderer.hit).toHaveBeenCalledTimes(2)
-    presentCombat(renderer, scene, placed('You furiously retaliate! You headbutt the goblin!'), [], '+0 war axe', 2000, true)
+    presentCombat(renderer, scene, placed('You furiously retaliate! You headbutt the goblin!'), [], '+0 war axe', 2000)
     expect(renderer.bump).toHaveBeenCalledTimes(1)
     expect(renderer.hit).toHaveBeenCalledTimes(3)
   })
-  it.each(['long sword', 'mace', 'battleaxe'])('spawns death VFX immediately for %s and ranged kills, respecting Still mode', weapon => {
+  it.each(['long sword', 'mace', 'battleaxe'])('spawns death VFX immediately for %s and ranged kills', weapon => {
     const { scene, renderer } = harness()
     const death = deathFor({ kind: 'monster', id: 1, name: 'jelly', tile: 1, height: 0.8, x: 1, y: 0 }, scene.player)
     const events = combatText('You slash the jelly! You kill the jelly!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1', ...(e.kind === 'kill' ? { death } : {}) }))
-    presentCombat(renderer, scene, events, [], weapon, 1000, true)
+    presentCombat(renderer, scene, events, [], weapon, 1000)
     expect(renderer.bump).toHaveBeenCalledTimes(1)
     expect(renderer.death).toHaveBeenLastCalledWith(death, 1)
     expect(renderer.hit).not.toHaveBeenCalled()
     expect(renderer.impact).not.toHaveBeenCalled()
     expect(vi.mocked(renderer.death!).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(renderer.bump!).mock.invocationCallOrder[0])
-    presentCombat(renderer, scene, [events[1]], [], undefined, 2000, true)
+    presentCombat(renderer, scene, [events[1]], [], undefined, 2000)
     expect(renderer.death).toHaveBeenLastCalledWith(death, 2)
-    presentCombat(renderer, scene, events, [], weapon, 3000, false)
-    expect(renderer.death).toHaveBeenCalledTimes(2)
   })
   it('suppresses lethal hit and spell bursts while preserving another actor at the same cell', () => {
     const { scene, renderer } = harness()
@@ -85,7 +81,7 @@ describe('combat contact timing', () => {
       { kind: 'hit', x: 1, y: 0, actorId: 'id:1', amount: 12 },
       { kind: 'kill', x: 1, y: 0, actorId: 'id:1', death },
       { kind: 'hit', x: 1, y: 0, actorId: 'id:2', amount: 5 },
-    ], [{ x: 1, y: 0, actorId: 'id:1', kind: 'fire' }, { x: 2, y: 0, kind: 'cold' }], undefined, 1000, true)
+    ], [{ x: 1, y: 0, actorId: 'id:1', kind: 'fire' }, { x: 2, y: 0, kind: 'cold' }], undefined, 1000)
     expect(renderer.hit).toHaveBeenCalledTimes(1)
     expect(renderer.hit).toHaveBeenCalledWith(expect.objectContaining({ actorId: 'id:2' }), 1)
     expect(renderer.impact).toHaveBeenCalledTimes(1)
@@ -96,7 +92,7 @@ describe('combat contact timing', () => {
   it.each([0.5, 1, 2])('aligns elemental burst, flash and ripple with the body bump at %sx speed', speed => {
     const { scene, renderer } = harness()
     const events = combatText('You slash the goblin for 8!').map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
-    presentCombat(renderer, scene, events, [{ x: 1, y: 0, kind: 'fire' }], 'long sword', 1000, true, speed)
+    presentCombat(renderer, scene, events, [{ x: 1, y: 0, kind: 'fire' }], 'long sword', 1000, speed)
     const contact = 0.055 / speed
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: true, speed }), 1)
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1 + contact)
@@ -109,7 +105,7 @@ describe('combat contact timing', () => {
     presentCombat(renderer, scene, [
       { kind: 'hurt', amount: 12, player: true },
       { kind: 'hit', x: 2, y: 0, tone: 'magic', intensity: 'solid' },
-    ], [], undefined, 1000, true)
+    ], [], undefined, 1000)
     expect(renderer.hit).toHaveBeenCalledWith({ x: 0, y: 0, actorId: 'player', turn: undefined, tone: undefined, intensity: undefined }, 1)
     expect(renderer.bump).not.toHaveBeenCalled()
     expect(renderer.hit).toHaveBeenCalledWith({ x: 2, y: 0, actorId: undefined, turn: undefined, tone: 'magic', intensity: 'solid' }, 1)
@@ -119,7 +115,7 @@ describe('combat contact timing', () => {
     const { scene, renderer } = harness()
     for (const text of ['You miss the goblin.', 'You hit the goblin but do no damage.']) {
       const events = combatText(text).map(e => ({ ...e, x: 1, y: 0 }))
-      presentCombat(renderer, scene, events, [], 'mace', 0, true)
+      presentCombat(renderer, scene, events, [], 'mace', 0)
     }
     expect(renderer.bump).toHaveBeenCalledTimes(2)
     expect(renderer.impact).not.toHaveBeenCalled()
@@ -137,37 +133,34 @@ describe('combat contact timing', () => {
     reduce(state, msg); feedback.observe(state, msg)
     const events = feedback.flush(scene)
     const spells = feedback.takeSpells()
-    presentCombat(renderer, scene, events, spells, 'mace', 1000, true, speed)
+    presentCombat(renderer, scene, events, spells, 'mace', 1000, speed)
     expect(renderer.bump).toHaveBeenCalledTimes(2)
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'id:1', toId: 'player', hit: false, speed }), 1)
     expect(renderer.bump).toHaveBeenCalledWith(expect.objectContaining({ fromId: 'player', toId: 'id:1', hit: false, speed }), 1)
     expect(renderer.hit).not.toHaveBeenCalled()
     expect(renderer.impact).not.toHaveBeenCalled()
     expect(renderer.spell).not.toHaveBeenCalled()
-    presentCombat(renderer, scene, events, spells, 'mace', 2000, false, speed)
-    expect(renderer.bump).toHaveBeenCalledTimes(2)
   })
 
-  it('flashes direct spell damage but ignores resisted, utility, zero-damage and Still-mode results', () => {
+  it('flashes direct spell damage but ignores resisted, utility and zero-damage results', () => {
     const { scene, renderer } = harness()
     for (const text of ['Flames lash the goblin!', 'The goblin convulses!', 'The electricity discharges through the goblin!', 'The goblin shatters!']) {
       const events = combatText(text).map(e => ({ ...e, x: 1, y: 0, actorId: 'id:1' }))
-      presentCombat(renderer, scene, events, [], undefined, 1000, true)
+      presentCombat(renderer, scene, events, [], undefined, 1000)
     }
     expect(renderer.hit).toHaveBeenCalledTimes(4)
     for (const text of ['The goblin resists.', 'The goblin struggles to resist.', 'The goblin looks drowsy...', 'You heal the goblin.', 'You freeze the goblin but do no damage.']) {
-      presentCombat(renderer, scene, combatText(text).map(e => ({ ...e, x: 1, y: 0 })), [], undefined, 1000, true)
+      presentCombat(renderer, scene, combatText(text).map(e => ({ ...e, x: 1, y: 0 })), [], undefined, 1000)
     }
-    presentCombat(renderer, scene, [{ kind: 'hurt', amount: 4, player: true }], [], undefined, 1000, false)
     expect(renderer.hit).toHaveBeenCalledTimes(4)
   })
 
-  it.each(['still', 'unsupported', 'hidden'] as const)('does not delay feedback without a visible animated bump (%s)', mode => {
+  it.each(['unsupported', 'hidden'] as const)('does not delay feedback without a visible animated bump (%s)', mode => {
     const { scene, renderer } = harness()
     if (mode === 'unsupported') renderer.bump = undefined
     if (mode === 'hidden') scene.cells.get(cellKey(1, 0))!.visibility = 'remembered'
     const events = combatText('You hit the goblin for 8!').map(e => ({ ...e, x: 1, y: 0 }))
-    presentCombat(renderer, scene, events, [], 'long sword', 1000, mode !== 'still')
+    presentCombat(renderer, scene, events, [], 'long sword', 1000)
     expect(renderer.impact).toHaveBeenCalledWith(1, 0, 0.6, 1)
   })
 })
@@ -185,7 +178,7 @@ it('keeps reciprocal player, enemy and ally hits on the same contact clock', () 
   feedback.flush(scene)
   const msg = { msg: 'msgs', messages: [{ text: 'You hit the goblin! The goblin hits you! Your orc hits the goblin! The goblin hits your orc!' }] }
   reduce(state, msg); feedback.observe(state, msg)
-  presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), 'mace', 1000, true)
+  presentCombat(renderer, scene, feedback.flush(scene), feedback.takeSpells(), 'mace', 1000)
   expect(renderer.bump).toHaveBeenCalledTimes(4)
   for (const id of ['player', 'id:1', 'id:2']) {
     expect(renderer.hit).toHaveBeenCalledWith(expect.objectContaining({ actorId: id }), 1 + bumpTiming().contact)

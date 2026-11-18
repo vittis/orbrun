@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import { test, result } from './fixtures'
 
-test('LOS shading joins straight and diagonal terrain boundaries in Still mode', async ({ page }) => {
+test('LOS shading joins straight and diagonal terrain boundaries in a static frame', async ({ page }) => {
   await page.goto('/testbed/los-boundary-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }
@@ -45,7 +45,7 @@ test('elemental splatters stay visible at tile scale and lightning has bright zi
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-test('native spell tiles fade without deformation, settle and respect visibility/Still', async ({ page }) => {
+test('native spell tiles fade without deformation, settle and respect visibility and renderer pauses', async ({ page }) => {
   await page.goto('/testbed/spawn-checks.html')
   await expect.poll(async () => {
     try { return (await result(page)).status } catch { return 'loading' }

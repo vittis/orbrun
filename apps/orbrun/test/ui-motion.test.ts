@@ -5,7 +5,6 @@ import { WindowTransitions } from '../src/ui-motion'
 beforeEach(() => {
   vi.useFakeTimers()
   document.body.replaceChildren()
-  delete document.documentElement.dataset.uiMotion
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 400, height: 300 } as DOMRect)
 })
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
@@ -56,30 +55,19 @@ describe('window presentation lifecycle', () => {
     windows.destroy()
   })
 
-  it('settles pending motion and removes retiring windows on preference changes and destruction', () => {
+  it('settles pending motion and removes retiring windows on cleanup', () => {
     const { root, windows, show } = setup()
     show('spells')
     windows.close('spells')
     const inventory = show('inventory')
-    windows.settle()
+    windows.destroy()
     expect(root.querySelector('.ui-exit')).toBeNull()
     expect(inventory.getAnimations()).toHaveLength(0)
-    inventory.remove()
-    expect(show('inventory').getAnimations()).toHaveLength(0)
-    windows.destroy()
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('opens and closes immediately with Still, reduced motion, or no laid-out surface', () => {
+  it('opens and closes immediately without a laid-out surface', () => {
     const { root, windows, show } = setup()
-    root.dataset.uiMotion = 'still'
-    expect(show('still').getAnimations()).toHaveLength(0)
-    windows.close('still')
-    delete root.dataset.uiMotion
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
-    expect(show('reduced').getAnimations()).toHaveLength(0)
-    windows.close('reduced')
-    vi.mocked(window.matchMedia).mockReturnValue({ matches: false } as MediaQueryList)
     vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockReturnValue({ width: 0, height: 0 } as DOMRect)
     show('hidden')
     windows.close('hidden')

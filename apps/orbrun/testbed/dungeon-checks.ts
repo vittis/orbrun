@@ -210,7 +210,7 @@ if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (cons
     if (Math.abs(mist[i] - mist[i + 2]) > 2) neutral = false
   }
   checks++
-  if (!neutral || max - min < 2 || max > 24 || r.pick(5, 192) !== null || r.animating) failures.push({ kind: 'neutral textured unknown fog / hidden entity / still mode', dpr, filterScaling, degrees, zoom, min, max, neutral })
+  if (!neutral || max - min < 2 || max > 24 || r.pick(5, 192) !== null || r.animating) failures.push({ kind: 'neutral textured unknown fog / hidden entity / paused renderer', dpr, filterScaling, degrees, zoom, min, max, neutral })
   if (captures && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
   r.destroy()
   if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }

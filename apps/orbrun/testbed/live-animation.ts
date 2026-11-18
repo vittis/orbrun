@@ -2,7 +2,6 @@
 // No testbed RAF drives the renderer, and there is no server connection.
 import '../src/styles.css'
 import { GameScreen } from '../src/game'
-import { dungeonAnimation } from '../src/effects-motion'
 import { Render25d } from '@orbrun/render-2.5d'
 import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
 import { cellKey, type TileSource } from '@orbrun/scene'
@@ -39,20 +38,8 @@ const updateLOS = () => {
   for (const cell of scene.cells.values()) cell.visibility = cell.x + cell.y * 0.65 < (scene.player.x === 11 ? 10 : 11) ? 'remembered' : 'visible'
 }
 updateLOS()
-const nativeMotion = params.has('native-motion')
-const initialMotion = params.get('motion') ?? (nativeMotion ? 'auto' : 'on')
-let settings: Settings = { ...defaultSettings, depthAnimate: initialMotion === 'auto' ? 'auto' : initialMotion === 'on', hints: 'off' }
-;(document.getElementById('motion') as HTMLSelectElement).value = initialMotion
-const deviceMotion = new EventTarget() as EventTarget & { matches: boolean; media: string }
-deviceMotion.matches = false; deviceMotion.media = '(prefers-reduced-motion: reduce)'
-const nativeMatch = window.matchMedia.bind(window)
-if (!nativeMotion) window.matchMedia = query => query === deviceMotion.media ? deviceMotion as unknown as MediaQueryList : nativeMatch(query)
-const preference = window.matchMedia(deviceMotion.media)
-const reducedInput = document.getElementById('reduced') as HTMLInputElement
-reducedInput.disabled = nativeMotion; reducedInput.checked = preference.matches
-const syncPreference = () => { reducedInput.checked = preference.matches }
-preference.addEventListener('change', syncPreference)
-const renderer = new Render25d({ animate: dungeonAnimation(settings, preference.matches), unexploredFog: params.has('fog') }); renderer.setTiles(tiles as TileSource)
+const settings: Settings = { ...defaultSettings, hints: 'off' }
+const renderer = new Render25d({ unexploredFog: params.has('fog') }); renderer.setTiles(tiles as TileSource)
 let frames = 0, totalFrames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
 let pixelSamples = 0, lastSampleAt = -Infinity, destroyed = false
 let hits = 0
@@ -60,9 +47,11 @@ let moves = 0, maxPlayerDrift = 0
 let impacts = 0
 const impact = renderer.impact.bind(renderer)
 renderer.impact = (...args) => { impacts++; impact(...args) }
+// A fixed sample time allows exact pixel comparisons across HUD changes.
+const sampleTime = params.has('frameTime') ? Number(params.get('frameTime')) : undefined
 const draw = renderer.render.bind(renderer)
 renderer.render = now => {
-  draw(now); frames++; totalFrames++; frameTimes.push(now!); frameTimes = frameTimes.slice(-120)
+  draw(sampleTime ?? now); frames++; totalFrames++; frameTimes.push(now!); frameTimes = frameTimes.slice(-120)
   const player = scene.billboards.find(b => b.kind === 'player')!
   const feet = renderer.projectBillboard(player)
   const frameCanvas = document.querySelector<HTMLCanvasElement>('#app canvas.view')
@@ -84,14 +73,6 @@ const screen = new GameScreen(document.getElementById('app')!, session, {
   gamepad: { kind: 'xbox', isHeld: () => false, virtualRelease() {} } as unknown as GamepadInput,
 })
 ;(screen as unknown as { hideLoading(): void }).hideLoading()
-const reset = () => { frames = 0; frameTimes = []; actorImages.clear() }
-document.getElementById('motion')!.addEventListener('change', event => {
-  const value = (event.target as HTMLSelectElement).value
-  settings = { ...settings, depthAnimate: value === 'auto' ? 'auto' : value === 'on' }; screen.applySettings(); reset()
-})
-document.getElementById('reduced')!.addEventListener('change', event => {
-  deviceMotion.matches = (event.target as HTMLInputElement).checked; deviceMotion.dispatchEvent(new Event('change')); reset()
-})
 const hit = (text = 'You perforate the goblin like a sieve!!!') => {
   hits++
   const msg = { msg: 'msgs', messages: [{ text, turn: ++state.player.turn }] }
@@ -127,15 +108,13 @@ const snapshot = () => {
   const scale = renderer.project(scene.player.x + 1, scene.player.y).x - renderer.project(scene.player.x, scene.player.y).x
   const rect = document.querySelector('canvas.view')?.getBoundingClientRect()
   const playerProjection = { x: (rect?.left ?? 0) + feet.x, y: (rect?.top ?? 0) + feet.y, scale }
-  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, sent: [...sent], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, xl: state.player.xl, playerProjection, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, reduced: preference.matches, motion: settings.depthAnimate, nativeMotion, destroyed }
+  return { frames, totalFrames, hits, moves, maxPlayerDrift, impacts, sent: [...sent], messages: state.messages.lines.length, listeners: listeners.size, playerOnLevel: scene.playerOnLevel, xl: state.player.xl, playerProjection, uniqueActorFrames: actorImages.size, pixelSamples, clockAdvances: frameTimes.length > 1 && frameTimes.at(-1)! > frameTimes[0], animating: renderer.animating, destroyed }
 }
 const interval = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify(snapshot()) }, 100)
 function destroy() {
   if (destroyed) return
   destroyed = true; clearInterval(interval); timers.forEach(clearTimeout)
-  preference.removeEventListener('change', syncPreference)
   screen.destroy()
-  if (!nativeMotion) window.matchMedia = nativeMatch
   document.getElementById('result')!.textContent = JSON.stringify(snapshot())
 }
 const receive = (msg: ServerMessage) => {

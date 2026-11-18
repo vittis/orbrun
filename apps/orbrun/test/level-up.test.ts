@@ -22,7 +22,7 @@ describe('level-up popup', () => {
     receive({ msg: 'msgs', messages: [{ text: 'Welcome to level 9!', turn: 1 }] })
     expect(popup.active).toBe(false)
     receive({ msg: 'player', xl: 9 })
-    popup.render(1100, true, false)
+    popup.render(1100, true)
     expect(popup.root.hidden).toBe(false)
     expect(popup.root.dataset.level).toBe('9')
     expect(popup.announcement.textContent).toBe('Level up. You are now level 9.')
@@ -30,7 +30,7 @@ describe('level-up popup', () => {
     expect(popup.announcement.getAttribute('role')).toBe('status')
     // Duplicates and unrelated updates cannot extend the presentation lifetime.
     receive({ msg: 'player', xl: 9, hp: 29 }, 4000)
-    popup.render(4000, true, false)
+    popup.render(4000, true)
     expect(popup.root.hidden).toBe(true)
     expect(popup.active).toBe(false)
   })
@@ -43,7 +43,7 @@ describe('level-up popup', () => {
       { text: 'Your experience leads to an increase in your attributes!', channel: 11, turn: 41 },
       { text: 'Increase (S)trength, (I)ntelligence, or (D)exterity?', channel: 2, turn: 41 },
     ] })
-    popup.render(1000, true, false)
+    popup.render(1000, true)
     expect(state.player.xl).toBe(2) // The server has not sent XL yet.
     expect(popup.root.hidden).toBe(false)
     expect(popup.root.dataset.level).toBe('3')
@@ -51,10 +51,10 @@ describe('level-up popup', () => {
     receive({ msg: 'msgs', rollback: 3, messages: [
       { text: 'You have reached level 3!', channel: 11, turn: 41 },
     ] }, 3500)
-    popup.render(4000, true, false)
+    popup.render(4000, true)
     expect(popup.active).toBe(false)
     receive({ msg: 'player', xl: 3 }, 8000)
-    popup.render(8000, true, false)
+    popup.render(8000, true)
     expect(popup.active).toBe(false)
     expect(popup.root.hidden).toBe(true)
   })
@@ -78,12 +78,12 @@ describe('level-up popup', () => {
     const { popup, receive } = setup()
     receive({ msg: 'player', xl: 4 })
     receive({ msg: 'player', xl: 7 }, 1200)
-    popup.render(1250, true, false)
+    popup.render(1250, true)
     expect(popup.root.dataset.level).toBe('7')
-    popup.render(1300, false, false)
+    popup.render(1300, false)
     expect(popup.root.hidden).toBe(true)
-    popup.render(4200, false, false)
-    popup.render(4300, true, false)
+    popup.render(4200, false)
+    popup.render(4300, true)
     expect(popup.active).toBe(false)
     expect(popup.root.hidden).toBe(true)
   })
@@ -105,15 +105,12 @@ describe('level-up popup', () => {
     expect(popup.active).toBe(false)
   })
 
-  it('keeps the milestone readable in Still mode and clears the announcement at expiry', () => {
+  it('shows the milestone and clears the announcement at expiry', () => {
     const { popup, receive } = setup()
     receive({ msg: 'player', xl: 4 })
-    popup.render(1000, true, true)
+    popup.render(1000, true)
     expect(popup.root.hidden).toBe(false)
-    expect(popup.root.classList.contains('still')).toBe(true)
-    popup.render(1500, true, false)
-    expect(popup.root.classList.contains('still')).toBe(false)
-    popup.render(4000, true, true)
+    popup.render(4000, true)
     expect(popup.root.hidden).toBe(true)
     expect(popup.announcement.textContent).toBe('')
   })

@@ -61,7 +61,7 @@ describe('Dungeon presentation', () => {
     expect(getSettings()[key]).toBe(initial)
   })
 
-  it('persists movement options, gates them in still mode, and resets the View defaults', () => {
+  it('persists movement options, gates gesture controls during instant movement, and resets the View defaults', () => {
     saveSettings({ ...defaultSettings })
     expect(settingValue(row('Dungeon move duration'))).toBe('100 ms')
     expect(settingValue(row('Dungeon move easing'))).toBe('Snappy')
@@ -75,8 +75,6 @@ describe('Dungeon presentation', () => {
     expect(getSettings().depthMovement).toBe(false)
     expect(rowOff(row('Dungeon move duration'))).toBe(true)
     for (const label of gestures) expect(rowOff(row(label))).toBe(true)
-    saveSettings({ ...getSettings(), depthMovement: true, depthAnimate: false })
-    for (const label of ['Dungeon movement', 'Dungeon move duration', 'Dungeon move easing', ...gestures]) expect(rowOff(row(label))).toBe(true)
     resetGroup('View')
     expect(getSettings()).toMatchObject({ depthMovement: true, depthMovementDuration: 0.1, depthMovementEasing: 'ease-out',
       depthMovementHopHeight: 0.4, depthMovementSquash: 0.6, depthMovementSway: 1 })
@@ -327,19 +325,17 @@ describe('Dungeon-only settings migration', () => {
   it('offers Dungeon settings immediately with no projection or first-person controls', () => {
     expect(getSettings()).toEqual(defaultSettings)
     for (const label of ['Projection', 'Hands', 'Field of view', 'Camera height', 'Camera angle', 'Nearby', 'Predictive movement', 'Keyboard left/right', 'Gamepad left/right', 'Swipe to turn', 'Look sensitivity', 'Invert look']) expect(SETTING_ROWS.some(r => r.label === label)).toBe(false)
-    for (const label of ['Dungeon tilt', 'Dungeon zoom', 'Dungeon animation']) expect(rowOff(row(label))).toBe(false)
+    for (const label of ['Dungeon tilt', 'Dungeon zoom']) expect(rowOff(row(label))).toBe(false)
   })
 })
 
 
 describe('Hit bump preferences', () => {
   beforeEach(() => store.clear())
-  it('persists bump tuning, honors Still/Off, and resets only combat', () => {
+  it('persists bump tuning, honors bump strength, and resets only combat', () => {
     saveSettings({ ...defaultSettings, meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, meleeBumpSpeed: 0.75, depthZoom: 1.2 })
     expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.5, meleeBumpSnap: 0.5, meleeBumpSpeed: 0.75 })
-    expect(rowOff(row('Hit bump strength'), { ...defaultSettings, depthAnimate: false })).toBe(true)
     expect(rowOff(row('Hit bump snap'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
-    expect(rowOff(row('Hit bump speed'), { ...defaultSettings, depthAnimate: false })).toBe(true)
     expect(rowOff(row('Hit bump speed'), { ...defaultSettings, meleeBumpStrength: 0 })).toBe(true)
     resetGroup('Combat')
     expect(getSettings()).toMatchObject({ meleeBumpStrength: 1.75, meleeBumpSnap: 0.7, meleeBumpSpeed: 1.15, depthZoom: 1.2 })

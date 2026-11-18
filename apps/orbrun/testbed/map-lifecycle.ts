@@ -1,7 +1,6 @@
 /** Local server-message fixture exercising real GameScreen renderer swaps and input. */
 import '../src/styles.css'
 import { GameScreen } from '../src/game'
-import { dungeonAnimation } from '../src/effects-motion'
 import { Render25d } from '@orbrun/render-2.5d'
 import { Render2d } from '@orbrun/render-2d'
 import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
@@ -39,7 +38,6 @@ const screen = new GameScreen(document.getElementById('app')!, session, {
     if (mode === 'flat-map') active = new Render2d()
     else {
       const options = {
-        animate: dungeonAnimation(settings, matchMedia('(prefers-reduced-motion: reduce)').matches),
         tilt: settings.depthTilt, zoom: settings.depthZoom,
         movement: settings.depthMovement, movementDuration: settings.depthMovementDuration, movementEasing: settings.depthMovementEasing,
         movementHopHeight: settings.depthMovementHopHeight, movementSquash: settings.depthMovementSquash, movementSway: settings.depthMovementSway,
@@ -79,6 +77,5 @@ document.getElementById('target')!.onclick = () => {
   send({ msg: 'input_mode', mode: MouseMode.TARGET }); send({ msg: 'cursor', id: 0, loc: { x: 11, y: 3 } })
 }
 document.getElementById('settings')!.onclick = () => { saveSettings({ ...settings, depthTilt: settings.depthTilt === 50 ? 65 : 50, depthZoom: settings.depthZoom === 1 ? 1.2 : 1 }); screen.applySettings() }
-document.getElementById('still')!.onclick = () => { saveSettings({ ...settings, depthAnimate: settings.depthAnimate === false ? 'auto' : false }); screen.applySettings() }
-const timer = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify({ presentation, appliedDungeonOptions, renderer: active.constructor.name, cursor, created, destroyed, canvases: document.querySelectorAll('canvas.view').length, tilt: settings.depthTilt, zoom: settings.depthZoom, still: settings.depthAnimate === false, sent: sent.slice(-8) }) }, 100)
+const timer = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify({ presentation, appliedDungeonOptions, renderer: active.constructor.name, cursor, created, destroyed, canvases: document.querySelectorAll('canvas.view').length, tilt: settings.depthTilt, zoom: settings.depthZoom, sent: sent.slice(-8) }) }, 100)
 window.addEventListener('pagehide', () => { clearInterval(timer); screen.destroy() }, { once: true })

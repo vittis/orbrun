@@ -771,11 +771,6 @@ a.item.beside {
     opacity: 0.25;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .frame.menu-frame .item .conn-dot {
-    animation: none;
-  }
-}
 
 /* the utilities: one line of chips, walked left and right, big enough for a thumb */
 .frame.menu-frame .chips {
@@ -833,11 +828,6 @@ a.item.beside {
   50% {
     box-shadow: 0 0 2px rgba(255, 212, 92, 0.3);
     opacity: 0.75;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .frame.menu-frame .item .dot {
-    animation: none;
   }
 }
 /* a document (What's new, a morgue file): read in a region of its own under the head, as the roster is */
@@ -1662,21 +1652,6 @@ a.item.beside {
   font-family: var(--mono);
   color: var(--ink-dim);
 }
-@media (prefers-reduced-motion: reduce) {
-  .frame {
-    animation: none;
-  }
-  .menu-msg.said {
-    animation: none;
-    opacity: 1;
-  }
-  .frame .item::before,
-  .frame .item .marker,
-  .popup.ours .row::before,
-  .popup.ours .row .marker {
-    transition: none;
-  }
-}
 
 /* ------------------------------------------------------------------ game */
 
@@ -1911,11 +1886,6 @@ a.item.beside {
 @keyframes touch-ring {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .touch-ring {
-    animation: none;
-  }
 }
 /* the portrait (hud.md): the player's cell on the pane's first rows, the title and god lines beside it */
 .stats canvas.portrait {
@@ -2682,14 +2652,6 @@ canvas.minimap.hidden,
   filter: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .actionbar .chip,
-  .actionbar .chip.enter,
-  .actionbar.contextual {
-    transition: none;
-    animation: none;
-  }
-}
 
 .status-line {
   position: absolute;
@@ -4130,11 +4092,6 @@ canvas.minimap.hidden,
   /* a touch past and back, as a pulled thing let go does */
   transition: left 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@media (prefers-reduced-motion: reduce) {
-  .menu .pack-tabs .tab-lean.settle {
-    transition: none;
-  }
-}
 /* X's actions as tabs (overlays.ts actionStrip): one width whichever of crawl's menus is up, so a turn never resizes the frame */
 .popup.menu.action-tabs {
   width: min(48rem, 94vw);
@@ -4530,20 +4487,6 @@ canvas.minimap.hidden,
   color: var(--color-10);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .popup.ours,
-  .popup.menu.game,
-  .overlay-stack:has(> .popup.sysmenu)::before,
-  .overlay-stack.dim::before {
-    animation: none;
-  }
-  .overlay-stack::before {
-    transition: none;
-  }
-  .overlay-stack > .popup {
-    transition: none;
-  }
-}
 /* A dialog over the screen already up (menu.ts `list` with `over`): the front stays readable behind it,
    as client.html's own #exit_game dialog stands over the lobby. What is behind keeps its place, so a
    report that lands a moment after a game was left never replaces the screen it just arrived on. */
@@ -4701,25 +4644,6 @@ canvas.minimap.hidden,
   }
 }
 
-/* Still removes UI transitions too; OS reduced motion always takes precedence for UI. */
-[data-ui-motion='still'] {
-  --ui-feedback: 0s;
-  --ui-panel: 0s;
-  --frame-in: 0s;
-  --menu-hover-in: 0s;
-}
-[data-ui-motion='still'] .menu .pack-tabs .tab-lean.settle {
-  transition: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --ui-feedback: 0s;
-    --ui-panel: 0s;
-  }
-  .prompt-card {
-    animation: none;
-  }
-}
 @media (pointer: coarse) {
   .quick-settings button, .quick-settings select { min-height: 44px; }
   .quick-setting-range button { flex-basis: 40px; }
