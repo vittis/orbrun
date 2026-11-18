@@ -26,9 +26,9 @@ interface HomeActions {
 /** Persistent header/form and keyed command rows. Lobby updates never replace a focused node. */
 export class HomeView {
   readonly el = h('div', { class: 'polished-home' })
-  private select = h('select', { 'aria-label': 'Server', dataset: { focus: 'server' } })
-  readonly user = h('input', { name: 'username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', required: true, pattern: '.*\\S.*', dataset: { focus: 'username' } })
-  private pass = h('input', { type: 'password', name: 'password', autocomplete: 'current-password', required: true, dataset: { focus: 'password' } })
+  private select = h('select', { 'aria-label': 'Server', title: 'Server', dataset: { focus: 'server' } })
+  readonly user = h('input', { name: 'username', 'aria-label': 'Username', placeholder: 'Username', title: 'Username', autocomplete: 'username', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', required: true, pattern: '.*\\S.*', dataset: { focus: 'username' } })
+  private pass = h('input', { type: 'password', name: 'password', 'aria-label': 'Password', placeholder: 'Password', title: 'Password', autocomplete: 'current-password', required: true, dataset: { focus: 'password' } })
   private login = h('button', { type: 'submit', dataset: { focus: 'login' } }, 'Log in')
   private form: HTMLFormElement
   private identity = h('button', { type: 'button', dataset: { focus: 'account' }, title: 'Manage accounts' })
@@ -51,13 +51,15 @@ export class HomeView {
       e.preventDefault()
       if (!this.login.disabled && actions.login(this.user.value.trim(), this.pass.value)) this.pass.value = ''
     } },
-      h('label', null, 'User', this.user), h('label', null, 'Pass', this.pass), this.login)
+      this.user, this.pass, this.login)
     this.signedIn = h('div', { class: 'signed-in' }, this.identity, h('button', { type: 'button', dataset: { focus: 'logout' }, onclick: actions.logout }, 'Log out'))
     this.authLinks = h('div', { class: 'auth-links' }, h('button', { type: 'button', dataset: { focus: 'register' }, onclick: actions.register }, 'Register'), this.recovery,
       h('button', { type: 'button', dataset: { focus: 'accounts' }, onclick: actions.accounts }, 'Accounts'))
     this.news = h('button', { type: 'button', dataset: { focus: 'news' }, onclick: actions.news }, 'What’s new')
     this.footer = h('footer', { class: 'polished-footer' }, h('button', { type: 'button', dataset: { focus: 'about' }, onclick: actions.about }, 'About & credits'), this.news)
-    this.el.append(h('header', { class: 'account-bar' }, h('label', { class: 'server-picker' }, 'Server', this.select), h('div', { class: 'account-controls' }, this.form, this.signedIn, this.authStatus, this.authLinks)),
+    this.el.append(h('header', { class: 'account-bar' },
+      this.select, this.form, this.signedIn,
+      h('div', { class: 'account-details' }, this.authLinks, this.authStatus)),
       h('main', { class: 'polished-main' }, h('h1', { class: 'polished-title', 'aria-label': 'Polished Crawl' }, h('span', { class: 'polished-eyebrow', 'aria-hidden': 'true' }, 'POLISHED'), h('span', { class: 'crawl-title', 'aria-hidden': 'true', 'data-text': 'CRAWL' }, 'CRAWL')),
         h('p', { class: 'polished-subtitle' }, 'Classic Crawl, with a 2.5D perspective and enhanced visual effects.'), this.status, this.commands), this.footer)
   }
@@ -65,11 +67,15 @@ export class HomeView {
   update(opts: { servers: ServerInfo[]; server: ServerInfo; username: string | null; remembered: string; busy: boolean; authStatus: string; rows: HomeRow[]; notices: HTMLElement[]; unread: boolean }): Focusable[] {
     const shape = JSON.stringify(opts.servers.map(s => [s.id, s.name, s.location]))
     if (shape !== this.serverShape) {
-      this.select.replaceChildren(...opts.servers.map(s => h('option', { value: s.id }, [s.name, s.location].filter(Boolean).join(' · '))))
+      this.select.replaceChildren(...opts.servers.map(s => {
+        const place = s.location?.split(',', 1)[0].trim()
+        return h('option', { value: s.id }, place ? `${s.name} · ${place}` : s.name)
+      }))
       this.serverShape = shape
     }
     if (this.serverId !== opts.server.id) { this.user.value = opts.remembered; this.pass.value = ''; this.serverId = opts.server.id }
     this.select.value = opts.server.id
+    this.select.title = [opts.server.name, opts.server.location].filter(Boolean).join(' · ')
     this.form.hidden = !!opts.username || !!opts.server.offline
     this.signedIn.hidden = !opts.username
     this.authLinks.hidden = !!opts.username || !!opts.server.offline

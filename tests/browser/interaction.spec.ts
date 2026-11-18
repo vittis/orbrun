@@ -651,7 +651,7 @@ for (const touch of [false, true]) {
         localStorage.setItem('orbrun.accounts', JSON.stringify([account])); localStorage.setItem('orbrun.account', JSON.stringify(account))
       })
       await page.goto('/')
-      const user = page.getByRole('textbox', { name: 'User', exact: true }), pass = page.getByLabel('Pass', { exact: true })
+      const user = page.getByRole('textbox', { name: 'Username', exact: true }), pass = page.getByLabel('Password', { exact: true })
       // Cover both a remembered account and a server where this device has never logged in.
       if (touch) await page.getByRole('combobox', { name: 'Server', exact: true }).selectOption('cao')
       await user.fill('menu-test'); await pass.fill('fixture-password')
@@ -678,13 +678,13 @@ for (const touch of [false, true]) {
       await login.click()
       await expect(login).toBeDisabled()
       await expect(page.locator('.account-bar [role="status"]')).toHaveText('Logging in…')
-      await page.screenshot({ path: `test-results/polished-login-${touch ? 'mobile' : 'desktop'}.png` })
       await pass.fill('fixture-password')
       await pass.press('Enter')
       send(sockets.at(-1)!, [{ msg: touch ? 'auth_error' : 'login_fail', reason: 'Incorrect password.' }])
       await expect(page.locator('.account-bar [role="status"]')).toHaveText('Incorrect password.')
       await expect(pass).toHaveValue('fixture-password')
       await expect(login).toBeEnabled()
+      await page.screenshot({ path: `test-results/polished-login-${touch ? 'mobile' : 'desktop'}.png` })
       await pass.press('Enter')
       await expect(page.locator('[data-focus="play:dcss-0.34"]')).toBeVisible()
       await expect(page.locator('.signed-in')).toContainText('menu-test')
@@ -791,6 +791,10 @@ for (const narrow of [false, true]) {
     expect(controls!.x).toBeGreaterThanOrEqual(0)
     expect(controls!.x + controls!.width).toBeLessThanOrEqual(narrow ? 390 : 1280)
     expect(controls!.x + controls!.width / 2).toBeCloseTo(narrow ? 195 : 1280 * .68, 0)
+    if (narrow) {
+      const menu = await page.locator('.polished-home').boundingBox()
+      expect(menu!.y + menu!.height).toBeLessThanOrEqual(controls!.y)
+    }
     const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
     // A real pointer click catches controls accidentally buried under the full-screen home layer.
     await slider.click()
