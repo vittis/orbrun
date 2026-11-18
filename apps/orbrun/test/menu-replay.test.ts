@@ -1,8 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { loadGamedata } from '@orbrun/gamedata'
-import { initialState, mapKey, reduce, type ServerMessage } from '@orbrun/webtiles'
-import { emptyScene } from '@orbrun/scene'
+import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { buildScene } from '@orbrun/scene-webtiles'
 import { CombatFeedback } from '../src/combat-feedback'
 import { readReplay, ReplayClock, ReplayPlaylist, type ReplayClip } from '../src/menu-replay'
@@ -92,6 +91,17 @@ it('paces a staged input separately from the projectile maps it produces', () =>
   expect(result.frames.map(f => f.after)).toEqual([370, 18, 19])
 })
 
+it('presents an atomic screen shake only after the map returns to the player', () => {
+  const player = { msg: 'player', pos: { x: 0, y: 0 } }
+  const map = (x: number) => ({ msg: 'map', cells: [{ x, y: 0, g: '@' }] })
+  const shake = [map(1), map(0), map(-1), map(0)]
+  const result = curateStaged([
+    { input: 0, t: 0, m: player }, { input: 0, t: 0, m: { ...map(0), clear: true } },
+    ...shake.map((m, i) => ({ input: 1, t: 100 + 20 * i, m })),
+  ], version, new Set([1]))
+  expect(result.frames.map(frame => frame.messages)).toEqual([shake])
+})
+
 it('bundles matching artwork and moving/combat sequences that replay identically twice', async () => {
   verifyMenuReplays()
   const root = new URL('../public/menu/', import.meta.url)
@@ -103,7 +113,6 @@ it('bundles matching artwork and moving/combat sequences that replay identically
     for (const entry of manifest.clips) {
       const data = versions.find(data => data.version === entry.version)!
       const recording = readReplay(JSON.parse(readFileSync(new URL(entry.file, root), 'utf8')), entry.version)
-      const cryptQuakes = entry.engineCommit && recording.initial.some(m => m.msg === 'player' && m.place === 'Crypt')
       const original = structuredClone(recording)
       const run = () => {
         const state = initialState(); reduce(state, { msg: 'game_started' })
@@ -120,12 +129,6 @@ it('bundles matching artwork and moving/combat sequences that replay identically
           feedback.takeSpells()
           positions.add(JSON.stringify(state.player.pos))
           expect(scene.playerOnLevel, entry.title).toBe(true)
-          if (cryptQuakes) {
-            const { x, y } = scene.player
-            expect(state.map.viewCenter).toEqual({ x, y })
-            expect(state.map.cells.get(mapKey(x, y))?.g).toBe('@')
-            expect(scene.billboards.find(b => b.kind === 'player')).toMatchObject({ x, y })
-          }
         }
         expect(events, entry.title).toBeGreaterThan(0)
         // The Djinni holds position throughout the fight against Jeremiah.

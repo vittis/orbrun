@@ -1,13 +1,13 @@
 # Recorded menu gameplay
 
-The menu shuffles eighteen spectator recordings and seventeen staged engine recordings through
+The menu shuffles eleven spectator recordings and twenty-five staged engine recordings through
 Orbrun's normal 2.5D renderer and confirmed combat presentation. No game engine,
 video, external replay player, gameplay commands or public spectator connection
 is used by the backdrop. The home screen's ordinary server lobby is independent.
 
-## Scripted Volcano encounters
+## Volcano encounters
 
-**Volcano Temple (scripted)** follows a level-19 Deep Elf Ice Elementalist through a
+**Volcano Temple** follows a level-19 Deep Elf Ice Elementalist through a
 generated Volcano in Crawl 0.34.1, seed 180. In the entrance hall, the caster
 summons an ice beast, freezes the walls and raises two hoarfrost cannons.
 A phial of floods knocks a salamander back and floods the hall. On the lava
@@ -24,7 +24,7 @@ run. The final gold pickup coincides with a volcanic eruption on turn 67.
 The clip preserves all 254 player, map and message packets in order. Its 100
 timed updates and final hold play in 19.695 seconds.
 
-**Volcano Lake (scripted)** follows a level-20 Tengu Air Elementalist flying
+**Volcano Lake** follows a level-20 Tengu Air Elementalist flying
 along a lava island in a different generated Volcano (seed 147). A phial of
 floods knocks back a fire bat. The Tengu uses Shock, Arcjolt and Plasma Beam
 against the bats and lava snakes, then uses Iskenderun's Mystic Blast to push
@@ -37,7 +37,7 @@ through turn 54. The 96 timed updates and final hold play in 10.992 seconds.
 
 ## Other staged encounters
 
-These level-21 and level-24 characters enter different generated locations
+These characters enter different generated locations
 in Crawl 0.34.1. Wizard mode prepared the characters and branch entrances
 before capture. Each clip opens with a full spectator snapshot and retains
 the ordered player, map and message packets through its final turn.
@@ -47,23 +47,28 @@ the ordered player, map and message packets through its final turn.
 | Storm on the Shoals | 31 | 41–67 | A Merfolk Air Elementalist swims through kelp with harpies in pursuit. Freezing Cloud spreads across the water and ball lightning catches a manticore. |
 | Silk and Cinders | 92 | 24–44 | A Minotaur Fighter cracks open a tin of tremorstones, then cleaves through spiders and their simulacra with a flaming broad axe. A blink lands on gold as Aizul comes into view. |
 | The Walking Grove | 58 | 2–176 | A Barachi Summoner calls a forest, a hydra and a cactus giant. A swamp worm harpoons the hydra. Later, tree roots strike an alligator that drags the caster through the shallows. |
-| Breaking the Crypt | 115 | 25–42 | A Gargoyle Earth Elementalist uses Shatter in a vaulted hall. Bombard destroys a vampire mage and its summons vanish. A final quake destroys a vampire knight. |
 | Fire Under the Ice | 83 | 4–25 | A Deep Elf Fire Elementalist follows a tunnel through the Ice Cave. Foxfire and Starburst melt dragon simulacra, and a rime drake encases the caster in ice before it falls. |
 | The Dead March in Orc | 45 | 16–47 | A Demonspawn Necromancer pins a two-headed ogre with zombie hands. Animate Dead and Death Channel turn the orc patrol into a crowd of zombies and spectral allies. |
 | Crossfire in the Snake Pit | 89 | 30–44 | A Coglin Hunter fires paired flaming and freezing hand cannons at a black mamba, a guardian serpent and naga magi. One mage constricts the hunter before the last volley. |
 | Mirrors of the Tomb | 174 | 62–122 | A Mountain Dwarf uses a phantom mirror on a mummy priest. The reflection smites the original. Farther down the gallery, the dwarf meets a swarm of death scarabs with a holy axe. |
 | Ignition in the Slime Pits | 228 | 9–23 | A Deep Elf Alchemist pushes past corrosive walls and mutating eyes. Ignition sets off a series of blasts across the converging slimes. The caster blinks clear and reaches the stairs. |
 | Dragons at the Zot Gate | 318 | 67–129 | A Deep Elf Conjurer calls up dragons and tentacled monstrosities. A moth of wrath sends allies berserk against a quicksilver dragon. Beyond the gate, Orbs of Destruction intercept a white draconian breathing frost. |
-| Saint Roka’s Ultimatum | 383 | 25–46 | A Troll Monk throws boulders at an orc knight and claws Saint Roka. When the priests offer quarter, the Troll converts to Beogh. The orcs cheer and their summoned demons vanish. |
 | Unseen in the Bailey | 522 | 16–62 | A Spriggan Enchanter slips through the gate, confuses an orc and puts a gnoll to sleep. A potion of invisibility lets the Spriggan carry the ambush into the next room. |
 | Clockwork in the Salt | 735 | 26–85 | A Mountain Dwarf Forgewright winds a clockwork bee in the salt fog. A lightning spire fires on the saltlings while a blazeheart golem fights beside the dwarf. Its exposed core explodes and kills a guardian serpent. |
 | Firestorm on Cocytus | 917 | 23–35 | A Deep Elf Fire Elementalist follows the narrow footing between pools with Plasma Beam and Starburst. Scalding steam and fire vortices catch a harpy simulacrum before Fire Storm melts a quicksilver dragon and an alligator simulacrum. |
 | Butterflies in Pandemonium | 628 | 37–117 | A Gargoyle Hunter shoots down a reaper and a ynoxinul with a holy triple crossbow. After scouting two gates, the hunter reads a scroll of butterflies to make room against the Pandemonium lord Tatacsir and a Brimstone Fiend. |
+| The Ossuary Door | 1101 | 4–24 | A Gargoyle Fighter opens a burial chamber and destroys a mummy and its zombie guards with a holy eveningstar. |
+| Ice on the Sewer Walls | 1102 | 4–45 | A Merfolk swims across the channel, opens the side chambers and freezes kobolds and a frilled lizard with Frozen Ramparts. |
+| Venom in the Elven Halls | 1103 | 2–30 | A Naga Alchemist poisons a deep elf patrol, then casts Ignite Poison as a zephyrmancer returns fire. |
+| Crystal Spears in Dis | 1104 | 2–18 | A Gargoyle Earth Elementalist trades Bombard and crystal spears for an iron dragon’s breath of metal splinters. |
+| Duel in Tartarus | 1105 | 16–46 | A Mountain Dwarf with a holy broad axe fights a profane servitor and a spectral alligator snapping turtle. |
+| Polar Vortex in Gehenna | 1106 | 22–31 | A Barachi carries a freezing vortex through a pack of hell hogs. A balrug opens a door and falls to Refrigeration. |
+| Plasma in the Wizlab | 1107 | 2–12 | A Tengu rides a transporter into a laboratory and casts Plasma Beam at the creatures guarding a corrupted altar. |
+| Bolts in the Depths | 1108 | 18–36 | An Oni Hunter fires an arbalest of electrocution into a pack of undead. The summoned undead vanish when the vampire mage falls. |
+| Geryon’s Horn | 1109 | 2–17 | Geryon sounds his horn in the Vestibule of Hell. A Deep Elf Summoner calls hydras and cactus giants to meet the sin beasts. |
+| The Gauntlet Transporter | 1110 | 16–32 | A Minotaur Gladiator enters a transporter maze and uses a flaming triple sword against a brown ugly thing and a great orb of eyes. |
 
-In Breaking the Crypt, each Shatter animation shares a single frame with the
-map that restores the room to its original coordinates. The player stays visible through all five casts.
-
-All seventeen staged clips use the existing 0.34 artwork bundle. The seven tile
+All staged clips use the existing 0.34 artwork bundle. The seven tile
 tables, enums and status icon table match the recording build byte for byte.
 The manifest pins the [engine commit](https://github.com/crawl/crawl/tree/1eebc1a2892e1c89776a0d7a10691f8dac8d9796).
 
@@ -75,18 +80,15 @@ seconds, with an initial full map and 280 map updates, all in Lair:1.
 
 - Yaks in the Lair: 24.406 seconds, source capture 1–30 seconds.
 - Wolves and Gastronok: 32.621 seconds, source capture 30–66 seconds.
-- Snakes in the Lair: 24.828 seconds, source capture 66–92.253 seconds.
 
 The Djinni recording contains 2,346 complete, ordered messages over 111.706
-seconds, with 454 map updates across Dungeon:1–3. Its three Foxfire combat
-clips join the existing Lair clips in the same shuffled playlist:
+seconds, with 454 map updates across Dungeon:1–3. The playlist includes two excerpts:
 
 - Djinni descent: 28.864 seconds, source capture 1–30 seconds.
-- Foxfire in the Dungeon: 29.023 seconds, source capture 48–78 seconds.
 - Djinni on Dungeon:3: 22.959 seconds, source capture 90.5–111.859 seconds.
 
 Source ranges for these clips refer to the Djinni capture's own timestamps.
-Both raw recordings are kept out of tracked source. These six clips share the
+Both raw recordings are kept out of tracked source. These four clips share the
 same artwork version; adding the Djinni clips does not duplicate tile assets.
 
 The Lair and Djinni clips use DCSS `0.35-a0-1570-g3d2b70d1f1`, source commit
@@ -100,7 +102,6 @@ The Octopode capture is from **CUE (Amsterdam, Netherlands)** on 2026-11-17:
 and continuing into Vaults:1. The long idle/menu interval is omitted:
 
 - Octopode in the Vaults: 16.564 seconds, source capture 8–29 seconds.
-- Lightning in the Vaults: 18.894 seconds, source capture 66–93 seconds.
 - Vaults skirmish: 24.782 seconds, source capture 93–119.603 seconds.
 
 These use DCSS `0.34.1-5-gfd259fce64` and gamedata version
@@ -110,7 +111,7 @@ downloads in commit `db6c39d`. The manifest lists each clip's version and both
 asset sources; playback switches tile tables with the recording, never reuses
 tile IDs from a different DCSS version.
 
-Seven additional clips come from the November 17 captures. The Brazilian server supplied the three Djinni clips “Foxfire at the entrance”, “Blastmotes on Dungeon:5” and “Stand against Jeremiah”. CDI supplied two Formicid clips from the Vaults and Swamp, a Mummy recording from the Elven Halls and a Demonspawn recording from the Abyss. The shorter Demonspawn capture contains only the opening snapshot. Each playable excerpt has its original time range in the manifest. The three additional artwork versions use downloads from the versioned CDI gamedata directories.
+Three more clips come from the November 17 captures. The Brazilian server supplied “Stand against Jeremiah”. CDI supplied a Formicid recording from the Swamp and a Mummy recording from the Elven Halls. The manifest records their original time ranges and pins the corresponding server artwork.
 
 The Tengu Air Elementalist clip uses seconds 61–92 of a November 17 Brazilian server capture. It shows Shock and lightning arcs against an adder and shares the Lair recording’s artwork version.
 

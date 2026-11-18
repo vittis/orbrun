@@ -754,7 +754,7 @@ for (const narrow of [false, true]) {
     const requestedClips = () => assetRequests.filter(url => url.includes('/menu/clips/'))
     expect(requestedClips()).toHaveLength(1)
     expect(new Set(assetRequests.filter(url => url.includes('/menu/gamedata/')).map(url => url.split('/gamedata/')[1].split('/')[0])).size).toBe(1)
-    for (const title of ['Octopode in the Vaults', 'Lightning in the Vaults', 'Vaults skirmish', 'Deep troll in the Vaults', 'Blademaster in the Elven Halls', 'Tormentor in the Abyss', 'Stand against Jeremiah', 'Djinni descent', 'Volcano Lake (scripted)']) {
+    for (const title of ['Octopode in the Vaults', 'Crystal Spears in Dis', 'Vaults skirmish', 'Ghoul in the Swamp', 'Blademaster in the Elven Halls', 'The Gauntlet Transporter', 'Stand against Jeremiah', 'Djinni descent', 'Volcano Lake']) {
       const before = await canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
       await chooser.selectOption({ label: title })
       await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(before)
@@ -762,7 +762,7 @@ for (const narrow of [false, true]) {
     }
     expect(requestedClips()).toHaveLength(10)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('orbrun.settings')!))).toEqual({ depthTilt: 65 })
-    await chooser.selectOption({ label: 'Volcano Temple (scripted)' })
+    await chooser.selectOption({ label: 'Polar Vortex in Gehenna' })
     await page.waitForTimeout(500)
     await page.screenshot({ path: `test-results/menu-chooser-${narrow ? 'narrow' : 'desktop'}.png` })
     const chosen = await chooser.inputValue()

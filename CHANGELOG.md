@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.136 — 2026-11-18
+
+- The main menu now shuffles 36 gameplay scenes. Ten new encounters join the rotation, nine retire, and every scene appears in the chooser under its own title.
+
 ## 0.3.135 — 2026-11-18
 
 - Browse main-menu replays with the scene arrows or open the scene title to choose a recording. Adjust tilt from 20° to 90° and zoom from 50% to 200% directly beneath the replay.
