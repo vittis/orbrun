@@ -64,6 +64,7 @@ export function onIOS(): boolean {
 const KEY = 'orbrun.servers'
 const TOKEN_KEY = 'orbrun.tokens'
 const LAST_KEY = 'orbrun.last'
+const HOME_SERVER_KEY = 'orbrun.homeServer'
 const GAMES_KEY = 'orbrun.games'
 
 function load<T>(key: string, fallback: T): T {
@@ -86,6 +87,14 @@ function save(key: string, value: unknown) {
 export function listServers(): ServerInfo[] {
   const custom = customServersAllowed() ? load<ServerInfo[]>(KEY, []) : []
   return [...(bundled as ServerInfo[]), ...custom]
+}
+
+export function getHomeServer(): ServerInfo | null {
+  return findServer(load(HOME_SERVER_KEY, '')) ?? findServer(getLast()?.serverId ?? '')
+}
+
+export function setHomeServer(id: string) {
+  save(HOME_SERVER_KEY, id)
 }
 
 /**

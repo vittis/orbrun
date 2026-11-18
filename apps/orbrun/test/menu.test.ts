@@ -7,7 +7,7 @@ import { engines } from '../src/engines'
 import { settingsPanel } from '../src/settings-panel'
 import { GamepadInput } from '../src/gamepad'
 import type { Session } from '../src/session'
-import { findServer, OFFLINE_SERVER, setChosenAccount, setGames, setToken, type Account, type ServerInfo } from '../src/servers'
+import { findServer, OFFLINE_SERVER, setChosenAccount, setGames, setLast, setToken, type Account, type ServerInfo } from '../src/servers'
 
 
 // Playback/visibility is covered by menu-backdrop.test and real-browser checks.
@@ -91,7 +91,7 @@ afterEach(() => {
 })
 
 /** The front end on a screen, with no session up unless `session` gives one. */
-function make(session?: (server: ServerInfo, username: string | null) => Session | null, padConnected = false): Made {
+function make(session?: (server: ServerInfo, username: string | null) => Session | null, padConnected = false, ping?: (server: ServerInfo) => Promise<number | null>): Made {
   const host = document.createElement('div')
   document.body.append(host)
   const connect = vi.fn((server: ServerInfo, username: string | null, _intent?: Intent) => session?.(server, username) ?? fakeSession(server, username))
@@ -100,7 +100,7 @@ function make(session?: (server: ServerInfo, username: string | null) => Session
   const logout = vi.fn()
   const page = vi.fn()
   const at = vi.fn()
-  const screen = new FrontEnd(host, { connect, session: (s, u) => session?.(s, u) ?? null, logout, play, watch, at, page, padConnected: () => padConnected })
+  const screen = new FrontEnd(host, { connect, session: (s, u) => session?.(s, u) ?? null, logout, play, watch, at, page, padConnected: () => padConnected, ping })
   made.push(screen)
   return { screen, connect, watch, play, logout, page, at }
 }
@@ -627,6 +627,46 @@ describe('the front end: accounts and servers', () => {
   beforeEach(() => {
     store.clear()
     document.body.replaceChildren()
+  })
+
+  it.each([['responding servers', 'crg'], ['no readings', 'cdi']])('chooses the initial server with %s', async (scenario, expected) => {
+    const ping = async (server: ServerInfo) => scenario === 'no readings' ? null : server.id === 'crg' ? 20 : 80
+    const { screen, connect } = make(undefined, false, ping)
+    screen.homeRoute()
+    const picker = screen.root.querySelector<HTMLSelectElement>('.account-bar select')!
+    expect(picker.value).toBe('cdi')
+    await vi.waitFor(() => expect(picker.value).toBe(expected))
+    expect(connect.mock.lastCall?.[0].id).toBe(expected)
+  })
+
+  it('skips latency probes for a previously used server', () => {
+    setLast({ serverId: 'crg' })
+    const ping = vi.fn(async () => 10)
+    const { screen } = make(undefined, false, ping)
+    screen.homeRoute()
+    expect(screen.root.querySelector<HTMLSelectElement>('.account-bar select')?.value).toBe('crg')
+    expect(ping).not.toHaveBeenCalled()
+  })
+
+  it('keeps an explicit server selection made while probing, including after reopening', async () => {
+    let finish!: (ms: number) => void
+    const pending = new Promise<number>(resolve => { finish = resolve })
+    const ping = vi.fn((server: ServerInfo) => server.id === 'crg' ? pending : Promise.resolve(null))
+    const { screen, connect } = make(undefined, false, ping)
+    screen.homeRoute()
+    const picker = screen.root.querySelector<HTMLSelectElement>('.account-bar select')!
+    picker.value = 'cao'
+    picker.dispatchEvent(new Event('change'))
+    finish(20)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(picker.value).toBe('cao')
+    expect(connect.mock.lastCall?.[0].id).toBe('cao')
+    screen.destroy()
+    ping.mockClear()
+    const reopened = make(undefined, false, ping).screen
+    reopened.homeRoute()
+    expect(reopened.root.querySelector<HTMLSelectElement>('.account-bar select')?.value).toBe('cao')
+    expect(ping).not.toHaveBeenCalled()
   })
 
   it.each(['accounts/add/server', 'watch/add'])('production routes %s to the public registry instead of a custom server form', (path) => {

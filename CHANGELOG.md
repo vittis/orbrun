@@ -2,6 +2,11 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.139 — 2026-11-18
+
+- On the mobile main menu, the title and actions sit higher and the replay controls sit just above the footer.
+- The first online visit picks the server with the lowest measured latency and falls back to the first listed server when no measurements are available. Saved choices take precedence.
+
 ## 0.3.138 — 2026-11-18
 
 - All 36 main-menu scenes now show at least 30 seconds of gameplay. The longer cuts include the approach to Jeremiah, a second volley of tremorstones in the Spider Nest and a fight with a frost giant in Cocytus.

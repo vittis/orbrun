@@ -2,6 +2,25 @@ import { menuReplayCheck } from './menu-replay'
 import { expect } from '@playwright/test'
 import { test } from './fixtures'
 
+test('a fresh production home selects a responding server and remembers it on reload', async ({ page }) => {
+  let probes = 0
+  await page.route('https://crawl.roguelikes.gg/', route => {
+    if (route.request().method() !== 'HEAD') return route.fallback()
+    probes++
+    return route.fulfill({ status: 200 })
+  })
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+  await page.goto('http://127.0.0.1:5287/')
+  const server = page.getByRole('combobox', { name: 'Server', exact: true })
+  await expect(server).toHaveValue('crg')
+  await expect(page.locator('[data-focus="watch"]')).toContainText('0 playing')
+  expect(probes).toBe(3)
+  await page.reload()
+  await expect(server).toHaveValue('crg')
+  await expect(page.locator('[data-focus="watch"]')).toContainText('0 playing')
+  expect(probes).toBe(3)
+})
+
 test('production shell loads local fonts under CSP and offers only bundled online play', async ({ page }) => {
   const { readFileSync } = await import('node:fs')
   const csp = /Content-Security-Policy: (.+)/.exec(readFileSync(new URL('../../apps/orbrun/public/_headers', import.meta.url), 'utf8'))![1]

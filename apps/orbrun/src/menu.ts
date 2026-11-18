@@ -9,7 +9,7 @@ import { HomeView, homeGame } from './menu-home'
 import { MenuModal } from './menu-modal'
 import about from '../../../ABOUT.md?raw'
 import { renderMarkdown } from './markdown'
-import { addAccount, addServer, customServersAllowed, ensureDeviceAccount, removeServer, openPage, characterOf, describeCharacter, describePlace, findServer, getChosenAccount, getGames, getLast, getMorgueDir, listAccounts, listServers, loginState, OFFLINE_SERVER, offlineOffered, offlineRuns, onIOS, morgueUrlFor, removeAccount, sameAccount, setChosenAccount, setLast, setMorgueDir, type Account, type LastCharacter, type MenuRoute, type Route, type ServerInfo } from './servers'
+import { addAccount, addServer, customServersAllowed, ensureDeviceAccount, removeServer, openPage, characterOf, describeCharacter, describePlace, findServer, getChosenAccount, getGames, getHomeServer, getLast, getMorgueDir, listAccounts, listServers, loginState, OFFLINE_SERVER, offlineOffered, offlineRuns, onIOS, morgueUrlFor, removeAccount, sameAccount, setChosenAccount, setHomeServer, setLast, setMorgueDir, type Account, type LastCharacter, type MenuRoute, type Route, type ServerInfo } from './servers'
 import { morgueDirGuesses, parseWhereis, saveWaiting, whereisUrl, type Whereis } from './whereis'
 import { deviceDump, deviceMorgues, morgueDate, morgueStamp, parseMorgue, serverMorgue, serverMorgueHead, serverMorgues, type MorgueSummary } from './morgues'
 import { morgueHtml } from './morgue-text'
@@ -265,6 +265,7 @@ export class FrontEnd {
   private home: HomeView
   private modal: MenuModal | null = null
   private homeServer: ServerInfo | null = null
+  private homeServerProbe: 'idle' | 'pending' | 'done' = 'idle'
   private inlineLogin: Session | null = null
   private syncLoginForm: (() => void) | null = null
   /** what the settings screen goes back to: the screen it was opened from */
@@ -337,6 +338,7 @@ export class FrontEnd {
         const server = findServer(id)
         if (!server) return
         this.homeServer = server
+        setHomeServer(id)
         this.inlineLogin = null
         setChosenAccount(listAccounts().find(a => a.serverId === id) ?? null)
         const chosen = getChosenAccount()
@@ -478,6 +480,7 @@ export class FrontEnd {
   /** Native Tab, pointer and assistive-technology focus share the pad's cursor. */
   private onNativeFocus = (ev: FocusEvent) => {
     const target = ev.target as HTMLElement
+    if (target.matches('.account-bar :is(input, select)')) this.homeServerProbe = 'done'
     const at = this.navItems.findIndex((f) => f.el === target || f.el.contains(target))
     if (at >= 0 && this.nav.current() !== this.navItems[at]) this.nav.focus(at)
   }
@@ -1117,7 +1120,7 @@ export class FrontEnd {
     this.watchOn = null
     this.hooks.warm?.()
     const chosen = this.chosen()
-    this.homeServer = chosen?.server ?? this.homeServer ?? findServer(getLast()?.serverId ?? '') ?? listServers()[0]
+    this.homeServer = chosen?.server ?? this.homeServer ?? getHomeServer() ?? listServers()[0]
     const server = this.homeServer
     // A disconnected anonymous lobby stays owned by main.ts's reconnect backoff.
     const s = chosen ? this.sessionOn(chosen.server, chosen.account.username) ?? (this.session?.server.id === server.id && this.session.username === chosen.account.username ? this.session : null)
@@ -2446,6 +2449,30 @@ export class FrontEnd {
   homeRoute() {
     this.closeModal(false)
     this.showHome()
+    void this.chooseInitialServer()
+  }
+
+  private async chooseInitialServer() {
+    const ping = this.hooks.ping
+    if (this.homeServerProbe !== 'idle' || !ping || deviceOffline() || getChosenAccount() || getHomeServer()) return
+    this.homeServerProbe = 'pending'
+    const servers = listServers()
+    const readings = await Promise.all(servers.map(server => ping(server).catch(() => null)))
+    if (this.homeServerProbe !== 'pending') return
+    this.homeServerProbe = 'done'
+    if (this.destroyed || this._view !== 'home' || this.modal || getChosenAccount() || getHomeServer()) return
+    let fastest: ServerInfo | undefined
+    let lowest = Infinity
+    for (const [index, ms] of readings.entries()) {
+      if (ms === null || ms >= lowest) continue
+      lowest = ms
+      fastest = servers[index]
+    }
+    if (fastest) {
+      this.homeServer = fastest
+      setHomeServer(fastest.id)
+      this.showHome()
+    }
   }
 
   /** Through Log in or Register (client.js logged_in): the account is kept, chosen, and its screen comes up. */
