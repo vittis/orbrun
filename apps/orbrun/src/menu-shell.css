@@ -87,7 +87,7 @@
 .inline-login, .signed-in { display: flex; align-items: center; gap: 6px; }
 .account-bar select, .account-bar input { font: inherit; color: #d6d7c9; background: #0c130deb; border: 0; border-bottom: 1px solid #535b47; border-radius: 0; min-height: 26px; padding: 4px 6px; min-width: 0; }
 .account-bar select { justify-self: start; max-width: 22ch; font-size: 11px; }
-.polished-home:has(> .fullscreen-control) .account-bar {
+.polished-home:has(> .fullscreen-control:not([hidden])) .account-bar {
   margin-right: max(var(--gutter), calc(var(--fullscreen-right) + var(--fullscreen-size) + 4px));
 }
 .account-bar input { width: 13ch; }

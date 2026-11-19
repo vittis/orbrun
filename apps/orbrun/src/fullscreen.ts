@@ -7,21 +7,16 @@ export function installFullscreenButton(host: HTMLElement, signal: AbortSignal) 
   if (!isAndroid() || !document.fullscreenEnabled || !root.requestFullscreen) return
 
   let pending = false
-  const button = h('button', { type: 'button', class: 'fullscreen-control' })
-  const update = () => {
-    const active = document.fullscreenElement === root
-    const label = active ? 'Exit fullscreen' : 'Enter fullscreen'
-    button.setAttribute('aria-label', label)
-    button.title = label
-    button.replaceChildren(fullscreenGlyph(active))
-  }
+  const label = 'Enter fullscreen'
+  const button = h('button', { type: 'button', class: 'fullscreen-control', 'aria-label': label, title: label }, fullscreenGlyph())
+  const update = () => { button.hidden = !!document.fullscreenElement }
   button.addEventListener('click', async event => {
-    if (pending) return
+    if (pending || button.hidden) return
     if (event.detail) button.blur()
     pending = true
     try {
-      if (document.fullscreenElement === root) await document.exitFullscreen()
-      else await root.requestFullscreen({ navigationUI: 'hide' })
+      await root.requestFullscreen({ navigationUI: 'hide' })
+      button.title = label
     } catch {
       button.title = 'Fullscreen is unavailable. Tap to retry.'
     } finally {

@@ -94,7 +94,7 @@ test.describe('Android fullscreen', () => {
     const waitForClip = new Promise<void>(resolve => { releaseClip = resolve })
     await page.route('**/menu/clips/**', async route => { await waitForClip; await route.continue() })
     const enter = page.getByRole('button', { name: 'Enter fullscreen' })
-    const exit = page.getByRole('button', { name: 'Exit fullscreen' })
+    const fullscreenControl = page.locator('.fullscreen-control')
     const fullscreen = () => page.evaluate(() => document.fullscreenElement === document.documentElement)
     await page.goto('/')
     await page.getByRole('combobox', { name: 'Server' }).selectOption('cdi')
@@ -108,9 +108,8 @@ test.describe('Android fullscreen', () => {
     await page.screenshot({ path: 'test-results/fullscreen-menu-android.png' })
     releaseClip()
     await enter.tap()
-    await expect(exit).toBeVisible()
+    await expect(fullscreenControl).toBeHidden()
     expect(await fullscreen()).toBe(true)
-    // The label also follows a fullscreen exit initiated outside the toggle.
     await page.evaluate(() => document.exitFullscreen())
     await expect(enter).toBeVisible()
 
@@ -132,9 +131,10 @@ test.describe('Android fullscreen', () => {
       await page.screenshot({ path: `test-results/fullscreen-game-${viewport.width}.png` })
     }
     const before = (await result(page)).sent
-    await enter.tap()
-    await expect(exit).toBeVisible()
-    await exit.press('Enter')
+    await enter.press('Enter')
+    await expect(fullscreenControl).toBeHidden()
+    expect(await fullscreen()).toBe(true)
+    await page.evaluate(() => document.exitFullscreen())
     await expect(enter).toBeVisible()
     expect(await fullscreen()).toBe(false)
     expect((await result(page)).sent).toEqual(before)

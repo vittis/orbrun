@@ -1684,6 +1684,10 @@ button.fullscreen-control {
   pointer-events: auto;
 }
 
+button.fullscreen-control[hidden] {
+  display: none;
+}
+
 button.fullscreen-control:is(:focus-visible, :active) {
   background: rgb(0 0 0 / 75%);
   color: #efd28c;

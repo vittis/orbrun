@@ -30,10 +30,8 @@ function n(tag: string, attrs: Record<string, string | number>): SVGElement {
   return el
 }
 
-export function fullscreenGlyph(active: boolean): SVGSVGElement {
-  const d = active
-    ? 'M3 9h6V3m12 6h-6V3M3 15h6v6m12-6h-6v6'
-    : 'M3 9V3h6m6 0h6v6M3 15v6h6m6 0h6v-6'
+export function fullscreenGlyph(): SVGSVGElement {
+  const d = 'M3 9V3h6m6 0h6v6M3 15v6h6m6 0h6v-6'
   return svg(24, 24, n('path', { d, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }))
 }
 
