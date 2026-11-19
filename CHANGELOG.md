@@ -1,5 +1,9 @@
 # What's new
 
+## 0.1.159 — 2026-11-19
+
+- Settings → View now lets you adjust player and monster idle animation from Off to 200%.
+
 ## 0.1.158 — 2026-11-19
 
 - The browser tab and Android home screen now use a gold C inspired by the shiny CRAWL title.

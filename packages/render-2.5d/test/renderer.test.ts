@@ -687,6 +687,22 @@ describe('actor animation continuity', () => {
       r.destroy()
     })
 
+  it('scales idle breathing around the resting wound pose and lets the renderer sleep at Off', () => {
+    const { r, ctx } = renderer()
+    const scene = sceneOf(cell(0, 0))
+    scene.billboards = [{ kind: 'player', x: 0, y: 0, tile: 2, height: 1, damage: 'heavily_damaged' }]
+    r.setScene(scene, 0)
+    const normal = spritePose(r, ctx, 1)[2][1]
+    r.setOptions({ idleIntensity: 0 })
+    const still = spritePose(r, ctx, 1)
+    expect(spritePose(r, ctx, 2)).toEqual(still)
+    expect(r.animating).toBe(false)
+    expect(normal).not.toBeCloseTo(still[2][1], 5)
+    r.setOptions({ idleIntensity: 0.5 })
+    expect(spritePose(r, ctx, 1)[2][1]).toBeCloseTo((normal + still[2][1]) / 2, 10)
+    expect(r.animating).toBe(true)
+  })
+
   it('changes animation speed without jumping phase, including long-running sessions', () => {
     const { r, ctx } = renderer()
     const scene = sceneOf(cell(0, 0))

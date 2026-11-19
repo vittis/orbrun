@@ -26,6 +26,8 @@ export interface Render25dOptions extends MovementAppearance {
   zoom?: number
   /** Enable renderer animation. The menu pauses it while playback is suspended. */
   animate?: boolean
+  /** Amplitude of player and monster idle poses, from 0 to 2. */
+  idleIntensity?: number
   /** Fade newly known and remembered terrain as confirmed visibility changes. */
   visibilityFade?: boolean
   /** Blend terrain shading across confirmed cell boundaries. */
@@ -87,7 +89,7 @@ export class Render25d implements MapRenderer {
     visibilityFade: true, visibilitySmoothing: true,
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
-    movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
+    idleIntensity: 1, movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
     movementHopHeight: 0.4, movementSquash: 0.6, movementSway: 1,
   }
 
@@ -101,7 +103,7 @@ export class Render25d implements MapRenderer {
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(DUNGEON_ZOOM.min, Math.min(DUNGEON_ZOOM.max, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
     if (!['ease-out', 'smooth', 'linear'].includes(this.opts.movementEasing)) this.opts.movementEasing = 'ease-out'
-    for (const [key, fallback] of [['movementHopHeight', 0.4], ['movementSquash', 0.6], ['movementSway', 1]] as const) {
+    for (const [key, fallback] of [['idleIntensity', 1], ['movementHopHeight', 0.4], ['movementSquash', 0.6], ['movementSway', 1]] as const) {
       this.opts[key] = Number.isFinite(this.opts[key]) ? Math.max(0, Math.min(2, this.opts[key])) : fallback
     }
     for (const [key, min, max, fallback] of [['meleeBumpStrength', 0, 2, 1.75], ['meleeBumpSnap', 0, 1, 0.7], ['hitGore', 0, 2, 1], ['deathGore', 0, 2, 0.5], ['combatVfxVariation', 0, 1, 0.25]] as const) {
@@ -607,11 +609,12 @@ export class Render25d implements MapRenderer {
     const creature = b.kind === 'player' || b.kind === 'monster' && !b.scenery
     const cloud = b.kind === 'cloud'
     const life = b.life ?? { motion: cloud ? 'cloud' : creature ? 'breath' : undefined }
-    const animatedPose = !b.lying && !life.held && this.opts.animate && visible && life.motion !== 'still'
+    const idleIntensity = creature ? this.opts.idleIntensity : 1
+    const animatedPose = idleIntensity > 0 && !b.lying && !life.held && this.opts.animate && visible && life.motion !== 'still'
       && (!!life.motion || !!life.flying || !!life.weary || !!life.fleeing || !!life.wading)
     const animation = this.movement.animation(b, time)
     const pose = livingPose({ ...life, rate: 1 }, animation.x, animation.y, animation.time,
-      this.opts.animate && visible, { strength: cloud ? 2 : 3, smooth: true })
+      this.opts.animate && visible && idleIntensity > 0, { strength: (cloud ? 2 : 3) * idleIntensity, smooth: true })
     if (this.opts.animate && visible && !position.retiring) {
       const stride = this.movement.pose(b, time, this.opts)
       pose.x += stride.x; pose.y += stride.y
@@ -625,10 +628,10 @@ export class Render25d implements MapRenderer {
       const strain = wound / 5, phase = animation.x * 2.31 + animation.y * 1.73
       pose.angle -= strain * 0.035
       pose.sy -= strain * 0.025
-      if (this.opts.animate) {
+      if (this.opts.animate && idleIntensity > 0) {
         const effort = Math.sin(time * 1.8 + phase) * Math.sin(time * 0.9 + phase)
-        pose.sy += effort * strain * 0.012
-        pose.x += Math.sin(time * 0.85 + phase) * strain * 0.007
+        pose.sy += effort * strain * 0.012 * idleIntensity
+        pose.x += Math.sin(time * 0.85 + phase) * strain * 0.007 * idleIntensity
       }
     }
     if (animatedPose) this.active = true

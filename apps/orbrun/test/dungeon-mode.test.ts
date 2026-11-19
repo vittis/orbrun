@@ -7,9 +7,9 @@ import { defaultSettings } from '../src/settings'
 
 describe('effective dungeon animation', () => {
   it('passes configured movement properties to the renderer', () => {
-    expect(dungeonOptions({ ...defaultSettings, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth',
+    expect(dungeonOptions({ ...defaultSettings, depthIdleIntensity: 0.25, depthMovement: false, depthMovementDuration: 0.18, depthMovementEasing: 'smooth',
       depthMovementHopHeight: 0, depthMovementSquash: 0.5, depthMovementSway: 1.5 })).toMatchObject({
-      movement: false, movementDuration: 0.18, movementEasing: 'smooth', movementHopHeight: 0, movementSquash: 0.5, movementSway: 1.5,
+      idleIntensity: 0.25, movement: false, movementDuration: 0.18, movementEasing: 'smooth', movementHopHeight: 0, movementSquash: 0.5, movementSway: 1.5,
     })
   })
 })
