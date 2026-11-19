@@ -738,40 +738,51 @@ const syncBack = installBack(
   },
 )
 
-// gamepad loop: every frame while a pad is there; with none, a look every quarter second on a timer (navigator.getGamepads
-// is not free, and a keyboard-only session should not pay it, or an animation frame, sixty times a second), and at once
-// when one is plugged in
+// Sample connected hardware between paints. Button and direction commands leave in
+// the sampling task, while continuous pan and UI upkeep still run once per frame.
+const ACTIVE_POLL_MS = 4
+const VIRTUAL_POLL_MS = 16
 const IDLE_POLL_MS = 250
 let pollTimer = 0
 let pollFrame = 0
-function tick(now: number) {
+function padFrame() {
   pollFrame = 0
-  gamepad.poll(now)
+  gamepad.panFrame()
   lobby?.updateInputHints()
   syncBack()
-  // a touch bar arrow held down repeats on the pad's timing, so it is polled as a pad would be
-  if (gamepad.connected || gamepad.virtualHeld) pollFrame = requestInputFrame(tick)
-  else pollTimer = window.setTimeout(() => { pollFrame = requestInputFrame(tick) }, IDLE_POLL_MS)
+  if (gamepad.isPanning) pollFrame = requestInputFrame(padFrame)
 }
-window.addEventListener('gamepadconnected', () => {
+function samplePad() {
+  pollTimer = 0
+  if (document.hidden) return
+  gamepad.poll(performance.now(), false)
+  if (!pollFrame) pollFrame = requestInputFrame(padFrame)
+  const delay = gamepad.connected ? ACTIVE_POLL_MS : gamepad.virtualHeld ? VIRTUAL_POLL_MS : IDLE_POLL_MS
+  if (!pollTimer) pollTimer = window.setTimeout(samplePad, delay)
+}
+function restartPadPolling() {
   clearTimeout(pollTimer)
-  cancelFrame(pollFrame)
-  pollFrame = requestInputFrame(tick)
+  pollTimer = document.hidden ? 0 : window.setTimeout(samplePad, 0)
+}
+window.addEventListener('gamepadconnected', restartPadPolling)
+window.addEventListener('gamepaddisconnected', restartPadPolling)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    cancelFrame(pollFrame)
+    pollFrame = 0
+  }
+  restartPadPolling()
 })
 gamepad.on((e) => {
-  // a finger on the touch bar wakes the loop now rather than at the next idle look, for a held arrow's repeat
-  if (e.type === 'press' && e.touch && !gamepad.connected) {
-    clearTimeout(pollTimer)
-    cancelFrame(pollFrame)
-    pollFrame = requestInputFrame(tick)
-  }
+  // A stand-in arrow also starts its repeat clock from the initial press.
+  if (e.type === 'press' && gamepad.virtualHeld && !gamepad.connected) restartPadPolling()
   if (isPadActivity(e)) {
     lastInput = 'pad'
   }
   if (game) game.pad(e)
   else lobby?.pad(e)
 })
-pollFrame = requestInputFrame(tick)
+restartPadPolling()
 
 window.addEventListener('beforeunload', (ev) => {
   if (session && session.playing) {

@@ -66,6 +66,26 @@ test('inputs use server replies immediately between paints, including touch and 
   expect(evidence.sent.slice(-8)).toEqual(Array.from({ length: 8 }, () => ({ msg: 'input', text: 'l' })))
 })
 
+test('controller buttons navigate even while display frames are suspended', async ({ page }) => {
+  await page.addInitScript(() => {
+    // Simulate a browser that can run input tasks while a new paint is pending.
+    window.requestAnimationFrame = () => 1
+    const buttons = Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 }))
+    const pad = { id: 'Xbox test controller', index: 0, connected: true, mapping: 'standard', axes: [0, 0, 0, 0], buttons }
+    Object.defineProperty(navigator, 'getGamepads', { value: () => [pad] })
+    window.addEventListener('test-controller-button', event => {
+      buttons[(event as CustomEvent<number>).detail].pressed = true
+    })
+  })
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Polished Crawl', exact: true })).toBeVisible()
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('test-controller-button', { detail: 2 })))
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('test-controller-button', { detail: 1 })))
+  await expect(page.getByRole('heading', { name: 'Polished Crawl', exact: true })).toBeVisible()
+})
+
 test('inventory transitions preserve live updates, stable hover targets, and immediate closing', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/testbed/live-animation.html')

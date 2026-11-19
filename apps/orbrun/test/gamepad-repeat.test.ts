@@ -20,6 +20,35 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+it.each(['standard', 'linux'] as const)('registers light trigger pulls without chatter on %s pads', mapping => {
+  const pad = fakePad(null)
+  const rawAxes = [0, 0, -1, 0, 0, -1, 0, 0]
+  const raw = { ...pad, mapping: '', buttons: pad.buttons.slice(0, 11), axes: rawAxes }
+  vi.stubGlobal('navigator', { getGamepads: () => [mapping === 'standard' ? pad : raw] })
+  const gp = new GamepadInput()
+  const events: PadEvent[] = []
+  gp.on(e => events.push(e))
+
+  const pull = (value: number, now: number) => {
+    if (mapping === 'standard') Object.assign(pad.buttons[7], { value })
+    else rawAxes[5] = value * 2 - 1
+    gp.poll(now)
+  }
+
+  pull(0, 0)
+  pull(0.15, 4)
+  pull(0.24, 8)
+  pull(0.16, 12)
+  pull(0.22, 16)
+  pull(0.06, 20)
+  pull(0.23, 24)
+  expect(events).toEqual([
+    { type: 'press', button: 'RT', t: 8 },
+    { type: 'release', button: 'RT', t: 20, held: 12 },
+    { type: 'press', button: 'RT', t: 24 },
+  ])
+})
+
 /**
  * A held button beats like a held key, because what it repeats is autofight,
  * which the keyboard plays by leaning on Tab: the OS's own key repeat is the

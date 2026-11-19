@@ -120,6 +120,21 @@ describe('which pad is primary on a Steam Deck with an external controller', () 
     expect(gp.isHeld('SELECT')).toBe(true)
     expect(gp.isHeld('LT')).toBe(false)
   })
+
+  it('does not press the same button twice when the Steam Input copy arrives one sample later', () => {
+    const standard = fakePad([0, 0, 0, 0])
+    const raw = rawPad(1)
+    vi.stubGlobal('navigator', { getGamepads: () => [standard, raw] })
+    const gp = new GamepadInput()
+    const events: PadEvent[] = []
+    gp.on(e => events.push(e))
+    gp.poll(0)
+    raw.buttons[0] = { pressed: true, touched: true, value: 1 }
+    gp.poll(4)
+    standard.buttons[0] = raw.buttons[0]
+    gp.poll(8)
+    expect(events).toEqual([{ type: 'press', button: 'A', t: 4 }])
+  })
 })
 
 describe('an unmapped pad is read in the standard layout', () => {
@@ -228,7 +243,7 @@ describe('a pad that goes away', () => {
     expect(gp.connected).toBe(false)
     expect(gp.isPanning).toBe(false)
     expect(gp.isHeld('A')).toBe(false)
-    expect(events).toContainEqual({ type: 'release', button: 'A', t: 16, held: 16 })
+    expect(events).toContainEqual({ type: 'release', button: 'A', t: 16, held: 16, cancelled: true })
     expect(events.at(-1)).toEqual({ type: 'pan', dx: 0, dy: 0 })
     const n = events.length
     gp.poll(32)

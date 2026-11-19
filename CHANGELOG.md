@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.150 — 2026-11-18
+
+- Controller buttons and movement are sampled between display frames. Explore and Autofight respond earlier in the trigger pull.
+
 ## 0.3.149 — 2026-11-18
 
 - Removed the left-center Tune panel from gameplay and spectating. Its controls are available in Settings → View and Settings → Combat.

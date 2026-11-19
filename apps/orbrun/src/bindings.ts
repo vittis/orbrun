@@ -1751,7 +1751,7 @@ export function resolve(ev: PadEvent, ctx: Context): Action | null {
     // the hold half fires from the frame loop as soon as HOLD_MS passes (see holdAction);
     // a release before that is the tap
     const a = t[ev.button]
-    if (a?.kind === 'hold' && ev.held < HOLD_MS) return a.tap
+    if (!ev.cancelled && a?.kind === 'hold' && ev.held < HOLD_MS) return a.tap
     return null
   }
   if (ev.type === 'dir' || ev.type === 'dirRepeat') {

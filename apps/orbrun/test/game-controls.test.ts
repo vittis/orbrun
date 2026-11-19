@@ -83,6 +83,13 @@ describe('direct game input', () => {
     expect(h.execute).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ seq: [{ text: '.' }] }))
   })
 
+  it('a controller disconnect during an LB press spends no turn', () => {
+    const h = harness()
+    h.event({ type: 'press', button: 'LB', t: 0 })
+    h.event({ type: 'release', button: 'LB', t: 100, held: 100, cancelled: true })
+    expect(h.execute).not.toHaveBeenCalled()
+  })
+
   it('reports how far a held LB has come towards the rest, for its corner prompt, and nothing once released or fired', () => {
     const h = harness()
     h.event({ type: 'press', button: 'LB', t: 0 })

@@ -15,7 +15,7 @@ export type DirSource = 'dpad' | 'lstick'
 export type PadEvent =
   /** `touch`: an on-screen button stood in for the pad's (hud.ts touch bar); the pad itself did not speak */
   | { type: 'press'; button: Button; t: number; touch?: boolean }
-  | { type: 'release'; button: Button; t: number; held: number; touch?: boolean }
+  | { type: 'release'; button: Button; t: number; held: number; touch?: boolean; cancelled?: boolean }
   | { type: 'repeat'; button: Button; n: number }
   /** `touch` as on a press: the touch bar's arrows moved the d-pad, the pad's own did not */
   | { type: 'dir'; source: DirSource; dir: Dir8 | null; touch?: boolean }
@@ -83,12 +83,14 @@ export class GamepadInput {
   private dirRepeat = new Map<DirSource, { next: number; n: number }>()
   private opts: Required<GamepadOptions>
   private listeners = new Set<(e: PadEvent) => void>()
-  private lastActive = -1
+  private primaryPad: Gamepad | null = null
   /** Each pad's axes as first seen, keyed by id and index: what "at rest" means for that pad. */
   private rest = new Map<string, readonly number[]>()
   kind: PadKind = 'generic'
   connected = false
   private panning = false
+  private rx = 0
+  private ry = 0
 
   constructor(opts: GamepadOptions = {}) {
     this.opts = {
@@ -161,47 +163,42 @@ export class GamepadInput {
     return this.panning
   }
 
-  /** Call every animation frame. */
-  poll(now: number) {
+  /** Sample buttons and directions immediately. Continuous pan can wait for a display frame. */
+  poll(now: number, pan = true) {
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : []
-    let pad: Gamepad | null = null
-    // most recently active pad is primary
-    for (const p of pads) {
-      if (!p) continue
-      if (this.lastActive === p.index) pad = p
+    // Keep the primary when the pads are idle. If Steam Input and its raw twin
+    // both report activity, prefer the standard mapping.
+    let primary: { pad: Gamepad; view: ReturnType<typeof standardView> } | undefined
+    let active: typeof primary
+    for (const pad of pads) {
+      if (!pad) continue
+      const continuing = this.primaryPad !== null && samePad(this.primaryPad, pad)
+      const view = standardView(pad, continuing && this.pressed.has('LT'), continuing && this.pressed.has('RT'))
+      const candidate = { pad, view }
+      if (continuing || !primary) primary = candidate
+      let rest = this.rest.get(pad.id + pad.index)
+      if (!rest) this.rest.set(pad.id + pad.index, (rest = view.axes.slice()))
+      const moved = view.axes.some((a, i) => Math.abs(a - (rest[i] ?? 0)) > 0.5)
+      if ((moved || view.buttons.some(Boolean)) && (!active || (active.pad.mapping !== 'standard' && pad.mapping === 'standard'))) active = candidate
     }
-    if (!pad) for (const p of pads) if (p) pad = pad || p
-    // An axis counts as moved against where that pad's axis rested when first seen, not
-    // against 0: an unmapped pad (a Steam Deck's external controller as Chrome sees the raw
-    // device) rests its triggers at -1, and would otherwise be "active" every frame and
-    // take the primary from the pad actually in use. When several wake on the same frame,
-    // as Steam Input's virtual pad and its raw twin do, the standard-mapped one wins.
-    let woke: Gamepad | null = null
-    for (const p of pads) {
-      if (!p) continue
-      let rest = this.rest.get(p.id + p.index)
-      if (!rest) this.rest.set(p.id + p.index, (rest = p.axes.slice()))
-      const active = p.buttons.some((b) => b.pressed) || p.axes.some((a, i) => Math.abs(a - (rest[i] ?? 0)) > 0.5)
-      if (active && (!woke || (woke.mapping !== 'standard' && p.mapping === 'standard'))) woke = p
+    const selected = active ?? primary
+    this.connected = !!selected
+    if (selected) {
+      // A handoff cancels released buttons. A button down on both views can
+      // be the same physical press reported by Steam Input and its raw twin.
+      const switched = this.primaryPad !== null && !samePad(this.primaryPad, selected.pad)
+      this.primaryPad = selected.pad
+      this.kind = detectKind(selected.pad.id)
+      this.read(now, selected.view.buttons, selected.view.axes, switched)
+    } else {
+      this.primaryPad = null
+      this.read(now, [], [], true)
     }
-    if (woke) {
-      this.lastActive = woke.index
-      pad = woke
-    }
-    this.connected = !!pad
-    if (!pad) {
-      // unplugged, or its link dropped: what it held is let go and its sticks come to
-      // rest, or a held button would stay held and a pushed right stick pan the map indefinitely
-      this.read(now, [], [])
-      return
-    }
-    this.kind = detectKind(pad.id)
-    const { buttons, axes } = standardView(pad)
-    this.read(now, buttons, axes)
+    if (pan) this.panFrame()
   }
 
-  /** One frame of a pad's buttons and sticks, in the standard layout. */
-  private read(now: number, buttons: boolean[], axes: number[]) {
+  /** One sample of a pad's buttons and sticks, in the standard layout. */
+  private read(now: number, buttons: boolean[], axes: number[], cancelled = false) {
     // buttons
     for (let i = 0; i < BUTTON_INDEX.length; i++) {
       const b = BUTTON_INDEX[i]
@@ -215,7 +212,7 @@ export class GamepadInput {
         const t0 = this.pressed.get(b) ?? now
         this.pressed.delete(b)
         this.repeatState.delete(b)
-        this.emit({ type: 'release', button: b, t: now, held: now - t0 })
+        this.emit({ type: 'release', button: b, t: now, held: now - t0, ...(cancelled && { cancelled }) })
       } else if (down) {
         const r = this.repeatState.get(b)
         if (r && now >= r.next) {
@@ -230,12 +227,17 @@ export class GamepadInput {
     const stick = this.sector(this.stickDir, axes[0] || 0, axes[1] || 0)
     this.dirFrom('lstick', this.stickDir, stick, now)
     this.stickDir = stick
+    this.rx = axes[2] || 0
+    this.ry = axes[3] || 0
+  }
+
+  /** Keep the continuous map and document scroll at its display-frame cadence. */
+  panFrame() {
     // right stick pan, with hysteresis like the left stick: a worn stick
     // resting a little off centre must not pan the map, nor count as the
     // pad speaking every frame (game.ts `pad`), which would keep the prompts
     // in pad glyphs while the player is on the keyboard
-    const rx = axes[2] || 0
-    const ry = axes[3] || 0
+    const { rx, ry } = this
     const rm = Math.hypot(rx, ry)
     if (rm > (this.panning ? this.opts.deadzoneR : this.opts.enterR)) {
       const k = ((rm - this.opts.deadzoneR) / (1 - this.opts.deadzoneR)) ** 2
@@ -295,6 +297,10 @@ export class GamepadInput {
   }
 }
 
+function samePad(a: Gamepad, b: Gamepad): boolean {
+  return a.index === b.index && a.id === b.id
+}
+
 /** Keep the held cadence anchored across uneven frames. Missed beats are
  * skipped, never replayed as a burst of commands after a stalled frame. */
 function nextRepeat(due: number, now: number, interval: number): number {
@@ -316,31 +322,39 @@ const BT_BUTTONS = [0, 1, -1, 2, 3, -1, 4, 5, -1, -1, 8, 9, 16, 10, 11]
  * pad on a Steam Deck, read raw) comes in the order Linux lists its controls, with the
  * triggers on axes resting at -1 and the d-pad as a hat on the two axes after the rest.
  */
-export function standardView(pad: Gamepad): { buttons: boolean[]; axes: number[] } {
-  const raw = pad.buttons.map((b) => b.pressed || b.value > 0.5)
-  if (pad.mapping === 'standard') return { buttons: raw, axes: pad.axes.slice(0, 4) }
+export function standardView(pad: Gamepad, ltHeld = false, rtHeld = false): { buttons: boolean[]; axes: number[] } {
   // Android Chrome can supply canonical buttons/sticks while leaving mapping
   // empty (UnknownGamepadMappings). In particular, 16/17 buttons are NOT the
   // Linux Bluetooth layout. Remapping those drops the d-pad and moves triggers
   // into bumper slots. Only recognize the raw layouts we actually support,
   // including their six stick/trigger axes and two hat axes.
-  const bt = pad.buttons.length === BT_BUTTONS.length && pad.axes.length === 8
-  const xpad = pad.buttons.length === XPAD_BUTTONS.length && pad.axes.length === 8
+  const linuxRaw = pad.mapping !== 'standard' && pad.axes.length === 8
+  const bt = linuxRaw && pad.buttons.length === BT_BUTTONS.length
+  const xpad = linuxRaw && pad.buttons.length === XPAD_BUTTONS.length
   if (!bt && !xpad) {
     // Preserve browser-supplied slots. Extra axes on an unknown controller are
     // not necessarily a hat; guessing can create phantom d-pad presses.
-    const buttons = raw.slice()
+    const buttons = pad.buttons.map((b, i) => {
+      if (b.pressed) return true
+      if (i === 6) return triggerDown(b.value, ltHeld)
+      if (i === 7) return triggerDown(b.value, rtHeld)
+      return b.value > 0.5
+    })
     return { buttons, axes: pad.axes.slice(0, 4) }
   }
   const buttons: boolean[] = new Array(BUTTON_INDEX.length).fill(false)
   const slots = bt ? BT_BUTTONS : XPAD_BUTTONS
-  slots.forEach((slot, i) => { if (slot >= 0 && raw[i]) buttons[slot] = true })
+  slots.forEach((slot, i) => { if (slot >= 0 && (pad.buttons[i].pressed || pad.buttons[i].value > 0.5)) buttons[slot] = true })
   const a = pad.axes
-  const trigger = (v: number | undefined) => v !== undefined && v > 0.2
-  buttons[6] = buttons[6] || trigger(bt ? a[5] : a[2])
-  buttons[7] = buttons[7] || trigger(bt ? a[4] : a[5])
-  if (a.length >= 8) hat(buttons, a[6], a[7])
+  buttons[6] = triggerDown((a[bt ? 5 : 2] + 1) / 2, ltHeld)
+  buttons[7] = triggerDown((a[bt ? 4 : 5] + 1) / 2, rtHeld)
+  hat(buttons, a[6], a[7])
   return { buttons, axes: bt ? [a[0], a[1], a[2], a[3]] : [a[0], a[1], a[3], a[4]] }
+}
+
+/** Engage early in the trigger pull, with room for sensor noise on release. */
+function triggerDown(value: number, held: boolean): boolean {
+  return value >= (held ? 0.10 : 0.20)
 }
 
 function hat(buttons: boolean[], hx: number, hy: number) {
