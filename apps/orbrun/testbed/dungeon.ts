@@ -189,7 +189,7 @@ document.getElementById('travel')!.addEventListener('click', () => {
   renderer.setScene(scene, now)
   original.setOptions({ center: scene.player })
   original.setScene(scene)
-  captureTime = effectFrame ? now + effectFrame : null
+  captureTime = null
   wake()
 })
 document.getElementById('los')!.addEventListener('click', () => {

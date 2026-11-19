@@ -68,6 +68,34 @@ export async function visibilityChecks(source: TileSource) {
     await fixtureYield('visibility-checks')
   }
 
+  // Isolate LOS from camera tweening and compare the first arrival frame with
+  // the same white floor painted before travel.
+  for (const [width, height, dpr] of [[640, 480, 1], [390, 600, 2]]) {
+    const canvas = document.createElement('canvas')
+    const r = new Render25d({ movement: false })
+    const scene = { ...emptyScene(), levelKey: 'D:1', playerOnLevel: true }
+    const floor: SceneCell = { x: 0, y: 0, kind: 'floor', visibility: 'visible', occluder: false,
+      floorTile: 1, flags: { water: false, lava: false, excluded: false, travelTrail: false, newStair: false,
+        cursor: false, outOfRange: false, magicMapped: false } }
+    scene.cells.set(cellKey(0, 0), floor)
+    r.mount(canvas); r.resize(width, height, dpr); r.setTiles(source)
+    const ctx = canvas.getContext('2d')!
+    const sample = () => [...ctx.getImageData(width * dpr / 2, height * dpr / 2, 1, 1).data]
+    r.setScene(scene, 0); r.render(0)
+    const before = sample()
+    scene.player = { x: 8, y: 0 }
+    const destination = cellKey(8, 0)
+    scene.cells.set(destination, { ...floor, x: 8 })
+    scene.revision++; r.setScene(scene, 1); r.render(1)
+    const after = sample()
+    checks++
+    if (before[0] !== 255 || after.some((value, i) => value !== before[i])
+      || r.pick(width / 2, height / 2) !== destination || r.animating) {
+      failures.push({ name: 'fast travel draws the confirmed destination at full brightness immediately', width, height, dpr, before, after, animating: r.animating })
+    }
+    r.destroy(); releaseCanvas(canvas)
+  }
+
   // A still-visible torch must fade off a departing LOS receiver rather than
   // disappearing before that receiver begins its brightness transition.
   for (const dpr of [1, 2]) {

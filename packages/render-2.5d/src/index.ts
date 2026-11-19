@@ -15,7 +15,6 @@ import { DungeonDeaths, type DeathParticle } from './death.js'
 import { sampleHitSpray } from './hit-spray.js'
 import { drawWallShadows, shadeWallFace, wallRoof } from './wall-depth.js'
 import { DungeonVisibility, MEMORY_DARKNESS, type VisibilityShade } from './visibility.js'
-import { DungeonArrival } from './arrival.js'
 
 export { fittedScale, project, unproject } from './projection.js'
 export type { MovementEasing } from './movement.js'
@@ -73,7 +72,6 @@ export class Render25d implements MapRenderer {
   private impactArt = new ImpactArt()
   private claimedImpacts = new WeakSet<object>()
   private visibility = new DungeonVisibility()
-  private arrival = new DungeonArrival()
   private frameTime = 0
   private cursor: SceneCursor | null = null
   private tiles = new TileCache()
@@ -115,7 +113,7 @@ export class Render25d implements MapRenderer {
     if (this.opts.deathGore === 0) this.deaths.clear()
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
     if (!this.opts.animate || visibilityFade && !this.opts.visibilityFade) this.visibility.finish()
-    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.arrival.finish() }
+    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -132,7 +130,6 @@ export class Render25d implements MapRenderer {
     this.tiles.source = source
     this.tiles.clear()
     this.visibility.clear()
-    this.arrival.clear()
   }
 
   setScene(scene: Scene, now = performance.now() / 1000) {
@@ -140,7 +137,6 @@ export class Render25d implements MapRenderer {
     this.scene = scene
     this.revision = scene.revision
     this.visibility.observe(scene, now, this.opts.animate && this.opts.visibilityFade)
-    this.arrival.observe(scene, now, this.opts.animate)
     this.life.observe({ ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }, now)
     this.effects.observe(scene, now, this.opts.animate)
     this.deaths.observe(scene, this.opts.animate)
@@ -518,8 +514,6 @@ export class Render25d implements MapRenderer {
       this.inFrame(p, b.from) || this.inFrame(p, b.to))) this.active = true
     this.impactRipples(ctx, p, time)
 
-    if (this.opts.animate && this.arrival.draw(ctx, p, now)) this.active = true
-
     // Travel, exclusion and targeting information must remain readable over depth/effects.
     for (const cell of cells) {
       const q = project(p, cell.x - 0.5, cell.y - 0.5)
@@ -781,7 +775,6 @@ export class Render25d implements MapRenderer {
     this.impactArt.clear()
     this.claimedImpacts = new WeakSet()
     this.visibility.clear()
-    this.arrival.clear()
     this.tiles.clear()
     this.tiles.source = null
     this.canvas = null

@@ -5,7 +5,6 @@ import { lightField } from '../src/lighting.js'
 import { drawTile, TileCache } from '../src/tiles.js'
 import { glowCenter, glowRadius } from '../src/lighting.js'
 import { planeRect } from '../src/projection.js'
-import { DungeonArrival } from '../src/arrival.js'
 import { ImpactArt } from '../src/impact-draw.js'
 import { DeathArt } from '../src/death-draw.js'
 import { elementalPalettes } from '../src/elemental-spray.js'
@@ -399,35 +398,6 @@ describe('picking and visibility', () => {
     c.visibility = 'visible'; scene.revision++
     r.setScene(scene, 1); r.render(1.1)
     expect(r.animating).toBe(false)
-  })
-
-  it('draws the arrival cue without delaying picking, then sleeps; pausing cancels it', () => {
-    const cue = vi.spyOn(DungeonArrival.prototype, 'draw')
-    try {
-      const { r } = renderer()
-      const scene = sceneOf(cell(0, 0), cell(8, 0), cell(16, 0))
-      r.setScene(scene, 0)
-      scene.player.x = 8; scene.revision++
-      r.setScene(scene, 1); r.render(1.16)
-      expect(r.animating).toBe(true)
-      expect(cue.mock.results.at(-1)?.value).toBe(true)
-      expect(r.pick(450, 350)).toBe(cellKey(8, 0))
-      r.render(1.32)
-      expect(cue.mock.results.at(-1)?.value).toBe(false)
-      // The existing landing ripple has its own lifetime, independent of the sweep.
-      r.render(1.91)
-      expect(r.animating).toBe(false)
-      scene.player.x = 16; scene.revision++
-      r.setScene(scene, 2); r.render(2.16)
-      expect(r.animating).toBe(true)
-      r.setOptions({ animate: false }); r.render(2.17)
-      expect(r.animating).toBe(false)
-      r.setOptions({ animate: true }); r.render(2.18)
-      expect(cue.mock.results.at(-1)?.value).toBe(false)
-      expect(r.pick(450, 350)).toBe(cellKey(16, 0))
-      r.render(2.91)
-      expect(r.animating).toBe(false)
-    } finally { cue.mockRestore() }
   })
 
   it('keeps melee sprites, shadows and picking together, then sleeps after the stroke', () => {
