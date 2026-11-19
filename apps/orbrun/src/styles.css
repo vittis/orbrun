@@ -1984,7 +1984,8 @@ canvas.minimap.hidden,
   font-size: var(--font-lbl-size, inherit);
 }
 
-/* Preserve the hidden attribute when the HUD omits the list. */
+/* Preserve the hidden attribute when the HUD omits either element. */
+.stats canvas.portrait[hidden],
 .monsters[hidden] {
   display: none;
 }

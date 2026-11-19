@@ -27,6 +27,8 @@ export interface Settings {
   deathSprayOutward: number
   combatVfxVariation: number
   uiScale: number
+  showCharacterPortrait: boolean
+  showNearbyMonsters: boolean
   confirmStairs: boolean
   /** Zero lets the layout choose a minimap size. */
   minimapTiles: number
@@ -77,6 +79,8 @@ export const defaultSettings: Settings = {
   deathSprayOutward: 0.75,
   combatVfxVariation: 0.6,
   uiScale: 1,
+  showCharacterPortrait: false,
+  showNearbyMonsters: false,
   confirmStairs: false,
   minimapTiles: 0,
   minimapCell: 0,

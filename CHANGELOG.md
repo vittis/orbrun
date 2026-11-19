@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.151 — 2026-11-18
+
+- The character portrait and nearby monster list are hidden by default. Turn either on in Settings → Interface.
+
 ## 0.3.150 — 2026-11-18
 
 - Controller buttons and movement are sampled between display frames. Explore and Autofight respond earlier in the trigger pull.

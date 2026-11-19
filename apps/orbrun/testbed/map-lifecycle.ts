@@ -6,7 +6,8 @@ import { Render2d } from '@orbrun/render-2d'
 import { initialState, reduce, MouseMode, UiState, type ServerMessage } from '@orbrun/webtiles'
 import type { GamepadInput } from '../src/gamepad'
 import type { MapRenderer, SceneCursor } from '@orbrun/scene'
-import { defaultSettings, getSettings, saveSettings, type Settings } from '../src/settings'
+import { defaultSettings, getSettings, saveSettings } from '../src/settings'
+import { settingsPanel } from '../src/settings-panel'
 import type { Session, SessionEvent } from '../src/session'
 import { antechamberScene } from '../src/room/scene'
 import { loadRoomTiles } from '../src/room/tiles'
@@ -25,13 +26,13 @@ const session = { state, scene, gamedata: null, loading: false, watching: false,
   on: (fn: (e: SessionEvent) => void) => { listeners.add(fn); return () => listeners.delete(fn) },
   flushScene: () => false, send: (msg: unknown) => sent.push(msg), deviceRc: () => null,
 } as unknown as Session
-let settings: Settings = { ...defaultSettings, hints: 'off' }, active: MapRenderer, created = 0, destroyed = 0
-saveSettings(settings)
+let settings = { ...getSettings(), hints: 'off' as const }, active: MapRenderer, created = 0, destroyed = 0
 let presentation = 'dungeon', cursor: SceneCursor | null = null
 let appliedDungeonOptions: Parameters<Render25d['setOptions']>[0] | null = null
 const screen = new GameScreen(document.getElementById('app')!, session, {
   gamepad: { kind: 'xbox', isHeld: () => false, virtualRelease() {} } as unknown as GamepadInput,
-  settings: () => (settings = getSettings()), onSystem: () => {}, settingsPanel: () => ({ el: document.createElement('div'), rows: [] }),
+  settings: () => (settings = { ...getSettings(), hints: 'off' }), onSystem: () => {},
+  settingsPanel: (group, back, controls) => settingsPanel(group, { back, controls, onchange: () => screen.applySettings() }),
   renderer: mode => {
     presentation = mode
     appliedDungeonOptions = null

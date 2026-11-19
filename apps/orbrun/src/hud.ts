@@ -17,7 +17,7 @@ import { glyph, glyphName } from './glyphs'
 import type { Context } from './context'
 import type { Button, PadKind } from './gamepad'
 import type { InputDevice } from './game'
-import { TOUCH_BUTTON_H, TOUCH_BUTTON_W, isPortrait, type CellRect, type GameLayout, type Grid } from './grid/console'
+import { PORTRAIT_MAP_COLS, TOUCH_BUTTON_H, TOUCH_BUTTON_W, isPortrait, type CellRect, type GameLayout, type Grid } from './grid/console'
 import type { GridHost } from './grid/host'
 import type { Spell } from './spell-bar'
 import type { TouchLesson } from './touch-hints'
@@ -538,8 +538,15 @@ export class Hud {
    * `toggle_full_window_dungeon_view`, which hides the whole `#right_column`);
    * the stats pane alone steps aside while the new-game chooser is up.
    */
-  layout(host: GridHost, cells: GameLayout, free: CellRect, hidden: { stats: boolean; sidebar: boolean; messages: boolean }) {
+  layout(host: GridHost, cells: GameLayout, free: CellRect, hidden: { stats: boolean; sidebar: boolean; messages: boolean; portrait?: boolean; monsters?: boolean }) {
     this.host = host
+    const portrait = isPortrait(host.grid)
+    // Upright Dungeon has no minimap column. Give the enabled list room below the stats.
+    const uprightList = portrait && !this.minimapEnabled && !hidden.monsters && !cells.sidebar.w
+    if (uprightList) {
+      const width = Math.min(PORTRAIT_MAP_COLS, host.grid.cols)
+      cells = { ...cells, sidebar: { ...cells.sidebar, x: host.grid.cols - width, w: width } }
+    }
     this.cells = cells
     this.spellbarW = null
     this.touchbarH = null
@@ -554,12 +561,16 @@ export class Hud {
     // Compact status badges scroll with the monster list rather than lying over the clear view.
     if (cells.stackedDesktop) this.sidebar.prepend(this.statuses)
     else if (this.statuses.parentElement !== this.root) this.root.insertBefore(this.statuses, this.actionPanel)
-    host.place(this.sidebar, cells.sidebar)
+    const sidebar = cells.sidebar
+    const statsRowsShown = uprightList && !hidden.stats ? this.stats.childElementCount : 0
+    host.place(this.sidebar, { ...sidebar, y: sidebar.y + statsRowsShown, h: Math.max(0, sidebar.h - statsRowsShown) })
     host.place(this.messages, cells.messages)
     this.stats.hidden = hidden.stats || cells.stats.w === 0
     this.sidebar.hidden = hidden.sidebar || cells.sidebar.w === 0
+    this.portraitCanvas.hidden = !!hidden.portrait
+    this.monsters.hidden = !!hidden.monsters
     // the portrait is a square as tall as the pane's rows for it (one row on a compact pane); the rows beside it start a cell after it
-    const side = cells.stats.w > 0 ? host.grid.ch * PORTRAIT_ROWS : 0
+    const side = !hidden.portrait && cells.stats.w > 0 ? host.grid.ch * PORTRAIT_ROWS : 0
     this.portraitCols = side ? Math.min(cells.stats.w, Math.ceil(side / host.grid.cw) + 1) : 0
     const dpr = window.devicePixelRatio || 1
     if (side !== this.portraitPx || dpr !== this.portraitDpr) {
@@ -588,7 +599,6 @@ export class Hud {
     // stats pane, a cell's gutter short of it: on a narrow screen the pane and the column share the top rows. Held upright
     // it stands in the screen's top-right corner instead, the stats pane beside it (bandFit). With the touch bar at the column's foot the map leaves
     // the bar its three rows.
-    const portrait = isPortrait(host.grid)
     const sidePx = host.px(cells.sidebar)
     const statsPx = host.px(cells.stats)
     const statsOnRight = cells.stats.x > cells.view.x
@@ -701,7 +711,7 @@ export class Hud {
     // the monster list's column
     const stripLeft = statsRight === null ? this.freePx.left : statsRight + host.grid.cw
     const besideCols = minimapLeft === null || portrait ? 0 : Math.floor((minimapLeft - host.grid.cw - stripLeft) / this.statusPx)
-    if (!this.minimapEnabled) this.statusAt = this.sidebar.hidden || !sidePx.width ? null : { right: sidePx.left + sidePx.width, top: sidePx.top + host.grid.ch, below: host.grid.ch }
+    if (!this.minimapEnabled) this.statusAt = portrait || this.sidebar.hidden || !sidePx.width ? null : { right: sidePx.left + sidePx.width, top: sidePx.top + host.grid.ch, below: host.grid.ch }
     else if (portrait) this.statusAt = this.sidebar.hidden || !sidePx.width ? null : { right: across, top: host.px(cells.band).top + size + host.grid.ch, below: host.grid.ch }
     else if (minimapLeft === null) this.statusAt = null
     else if (besideCols >= 1) this.statusAt = { right: minimapLeft - host.grid.cw, top: Math.max(sidePx.top, at.top), below: 0 }
@@ -848,7 +858,7 @@ export class Hud {
     // Status lights can wrap beyond the character pane's reserved rows.
     // Keep the 2.5D list and badges below its actual text as conditions change.
     const host = this.host
-    if (host && !this.cells.stackedDesktop && !this.minimapEnabled && !corner && this.cells.sidebar.y > this.cells.stats.y) {
+    if (host && !this.stats.hidden && !this.sidebar.hidden && !this.cells.stackedDesktop && !this.minimapEnabled && (corner || this.cells.sidebar.y > this.cells.stats.y)) {
       const sidebar = host.px(this.cells.sidebar)
       const stats = host.px(this.cells.stats)
       const top = Math.max(sidebar.top, stats.top + (rows.length + 1) * host.grid.ch)
@@ -1226,6 +1236,7 @@ export class Hud {
    * compass bearing arrow.
    */
   private renderMonsters(scene: Scene, state: GameState, gd: Gamedata | null) {
+    if (this.monsters.hidden) return
     const pre = [scene.revision, state.rev.any, gd]
     if (!changed(this.monstersPre, pre)) return
     this.monstersPre = pre

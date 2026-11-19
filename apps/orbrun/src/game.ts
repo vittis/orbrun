@@ -569,6 +569,7 @@ export class GameScreen {
     this.hud.setMinimapEnabled(!dungeon)
     const st = this.session.state
     const o = st.options
+    const settings = this.settings()
     const g = this.grid.grid
     const mapView = this.mapShown
     const hideSidebar = mapView && o.tile_level_map_hide_sidebar === true
@@ -583,7 +584,7 @@ export class GameScreen {
     const beside = touchBeside(g) && !hideSidebar
     const barRows = Math.ceil(this.hud.touchbarHeight / g.ch)
     // the Message lines setting; on Auto a phone's few, elsewhere what the server's `layout` asks for
-    const msgRows = messageLinesOf(this.settings(), st.messages.paneHeight, this.grid.phone)
+    const msgRows = messageLinesOf(settings, st.messages.paneHeight, this.grid.phone)
     // off a phone, the settings' Message lines row reads Auto with what this server asks for
     setAutoMessageLines(st.messages.paneHeight)
     // upright, the minimap and the stats pane share a band across the top (gameSplit); the level map takes the band too,
@@ -597,7 +598,7 @@ export class GameScreen {
     const underPx = (spells ? SPELL_ROW_PX : 0) + (glance ? glanceRowPx(g.ch) + GLANCE_GAP_PX : 0)
     // the log's last row, the --more-- line's, is bare but for a --more--, so what stands under the log takes it (hud.ts placeLog)
     const spellRows = underPx ? Math.max(0, Math.ceil(underPx / g.ch) - 1) : 0
-    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance, dungeon].join(',')
+    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance, dungeon, settings.showCharacterPortrait, settings.showNearbyMonsters].join(',')
     if (!force && key === this.layoutKey) return
     this.layoutKey = key
     const cells = gameSplit(g, msgRows, undefined, beside ? 0 : barRows, beside ? barRows : 0, beside && barRows ? touchColumn(g) : undefined, band.rows, band.cols, spellRows, dungeon)
@@ -648,7 +649,10 @@ export class GameScreen {
     const free = map ?? cells.clear
     this.hud.spellRow = spells
     this.hud.glanceRow = glance
-    this.hud.layout(this.grid, cells, free, { stats: hideStats, sidebar: hideSidebar, messages: hideMessages })
+    this.hud.layout(this.grid, cells, free, {
+      stats: hideStats, sidebar: hideSidebar, messages: hideMessages,
+      portrait: !settings.showCharacterPortrait, monsters: !settings.showNearbyMonsters,
+    })
     // the settings' minimap rows read Auto with what it came out as here (kept while the level map has the column)
     if (this.hud.minimapShown) setAutoMinimap(this.hud.minimapShown)
     // a popup and its dim stop short of the touch bar, so its buttons stay in reach under any of them (styles.css .overlay-stack)

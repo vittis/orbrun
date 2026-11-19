@@ -366,6 +366,7 @@ for (const touch of [false, true]) {
   test.describe(touch ? 'narrow touch' : 'narrow mouse', () => {
     test.use({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: touch, deviceScaleFactor: 3 })
     test('readable HUD and repeated map/overview restoration', async ({ page }) => {
+      await page.addInitScript(() => localStorage.setItem('orbrun.settings', JSON.stringify({ showCharacterPortrait: true })))
       await page.goto('/testbed/map-lifecycle.html')
       await expect.poll(async () => (await result(page)).renderer).toBe('Render25d')
       expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(touch)
@@ -429,6 +430,53 @@ test.describe('desktop browser zoom below 100%', () => {
     expect(scale).toBeCloseTo(0.75)
   })
 })
+
+for (const narrow of [false, true]) {
+  test.describe(narrow ? 'narrow HUD' : 'desktop HUD', () => {
+    test.use(narrow ? { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true } : {})
+
+    test('HUD portrait and nearby monsters start hidden and can be enabled independently', async ({ page }) => {
+      await page.goto('/testbed/map-lifecycle.html')
+      const stats = page.locator('.hud .stats')
+      const portrait = stats.locator('canvas.portrait')
+      const monsters = page.locator('.hud .monsters')
+      await expect(stats.getByText('Map lifecycle', { exact: true })).toBeVisible()
+      await expect(portrait).toBeHidden()
+      await expect(monsters).toBeHidden()
+
+      await page.locator('canvas.view').press('F5')
+      await page.getByRole('tab', { name: 'System', exact: true }).click()
+      await page.getByRole('button', { name: 'Settings', exact: true }).click()
+      await page.locator('.settings-groups').getByText('Interface', { exact: true }).click()
+      const portraitValue = page.locator('[data-focus="setting:Character portrait"] .val')
+      const monstersValue = page.locator('[data-focus="setting:Nearby monsters"] .val')
+      await expect(portraitValue).toHaveText('Off')
+      await expect(monstersValue).toHaveText('Off')
+      await page.screenshot({ path: `test-results/hud-settings-${narrow ? 'narrow' : 'desktop'}.png` })
+      await page.getByRole('button', { name: 'Character portrait next' }).click()
+      await expect(portrait).toBeVisible()
+      await expect(monsters).toBeHidden()
+      await page.getByRole('button', { name: 'Nearby monsters next' }).click()
+      await expect(monsters.getByText('goblin')).toBeVisible()
+      await page.getByRole('button', { name: 'Character portrait next' }).click()
+      await expect(portrait).toBeHidden()
+      await expect(monsters.getByText('goblin')).toBeVisible()
+
+      await page.reload()
+      await expect(stats.getByText('Map lifecycle', { exact: true })).toBeVisible()
+      await expect(portrait).toBeHidden()
+      await expect(monsters.getByText('goblin')).toBeVisible()
+      await page.evaluate(async () => {
+        await document.fonts.ready
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+      })
+      const statsBounds = (await stats.boundingBox())!
+      const listBounds = (await monsters.boundingBox())!
+      expect(listBounds.y).toBeGreaterThanOrEqual(statsBounds.y + statsBounds.height)
+      await page.screenshot({ path: `test-results/hud-visibility-${narrow ? 'narrow' : 'desktop'}.png` })
+    })
+  })
+}
 
 test('unexplored atmosphere can be disabled independently, persists and resets', async ({ page }) => {
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
