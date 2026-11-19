@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.157 — 2026-11-19
+
+- Movement renders more efficiently by reusing visibility-fade images and reducing fog-boundary calculations, with the same resolution, effects and animation timing.
+
 ## 0.3.156 — 2026-11-19
 
 - The Android fullscreen icon disappears while fullscreen is active.

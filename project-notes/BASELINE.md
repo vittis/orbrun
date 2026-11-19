@@ -172,3 +172,65 @@ LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome PERF_DPR=2 RESPONSIVENESS_SCENARIOS=m
 ```
 
 Verification on the final code passed TypeScript, all 516 cases selected by `npm run test:changed`, and 22 Playwright cases including the full 5,160-assertion dungeon raster matrix. The default browser port was occupied, so the checks used an isolated strict loopback port, 5398. A pre-existing Snake Pit timing test referenced a five-cell shot from a retired clip. Its replacement checks the current recording's six confirmed cells and their exact inter-frame delays. A fake 120 Hz display also exercises the menu paint cadence and recovery from a stall.
+
+## Movement rendering headroom — 2026-11-19
+
+Compared against `27e674732a8e1823ed232d70505c1e534ecccc57` after an Odin 3
+report of lower FPS during movement. The device itself was not available.
+A hardware Chrome CPU profile identified the moving exploration mask's blur and
+distance transform, plus repeated submission/rewriting of scalar fade canvases.
+
+The blur now visits only the silhouette plus the full three-pass feather and
+traverses vertical sums in contiguous rows, retaining Float64 accumulation and
+Float32 output. Zero-distance seeds skip redundant neighbour calculations.
+Uniform visibility fades now share immutable, size-specific rasters within a
+frame, just as spatial terrain fades already did. The additional pool is bounded
+to two megapixels and 512 submissions per frame; overflow retains the original
+scratch fallback. Artwork resolution, fog samples, effects and animation timing
+are unchanged. No protocol, visibility authority or settings changes.
+
+Final A/B: Chrome 157.0.8103.79, Apple M3 Pro/ANGLE Metal, hardware Canvas and GPU
+compositing enabled, 1280×720 renderer at DPR 2. Confirmed steps every 90 ms,
+1.5 seconds of moving warmup and three seconds sampled per variant, alternating
+variant order. Performance probes ran without competing tests or builds.
+
+| Scene | Before median / p95 CPU render | After median / p95 CPU render |
+|---|---:|---:|
+| Moving room, fog, lights and LOS fades | 3.6 / 4.0 ms | 2.8 / 3.1 ms |
+| Moving 1,089-cell map, two A/B pairs | 3.1–3.2 / 3.4 ms | 3.2–3.3 / 3.5–3.6 ms |
+
+The room's median render work fell about 22%. Its 360 measured frames previously
+rewrote shared scratch rasters 1,800 times; the new version did so zero times.
+Both versions allocated zero new canvases/pixel buffers after warmup and uploaded
+the same mask-pixel count. The large-map case showed a small CPU cost increase,
+not an improvement. Both scenes retained approximately 8.3 ms median frame
+intervals locally; this is extra headroom, not an observed FPS increase or an
+Odin 3 / Android acceptance claim.
+
+Reproduce from this checkout's strict loopback Vite server:
+
+```sh
+LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome LOS_PERF_SCENARIOS=room-moving,map-moving,map-moving node tools/perf/los-shading.mjs http://127.0.0.1:5297 27e6747
+MOVEMENT_PARITY_RASTERS=1 LOS_PERF_HEADFUL=1 LOS_PERF_BROWSER=chrome node tools/perf/movement-parity.mjs http://127.0.0.1:5297 27e6747
+```
+
+The separate pixel diagnostic compared 100 moving frames across desktop,
+960×540/DPR 2, narrow 390×600/DPR 1.5 and fractional-DPR viewports. All **34,400
+individual shaded tile rasters matched byte-for-byte**. The fog-only change also
+matched every final-frame pixel. With fade pooling, final Canvas composition was
+not bit-exact: the desktop and handheld-size samples had respectively 392 and
+696 differing color channels across their 25 frames (less than 0.001%), with
+maximum differences of 5 and 16/255 around shaded sprite edges. The other two
+sizes matched exactly. An unchanged-renderer control matched exactly. The tool
+reports these differences rather than silently treating them as exact equality;
+`MOVEMENT_PARITY_STRICT=1` deliberately fails on any final-pixel difference.
+Desktop and narrow captures were visually inspected. Diagnostic reports and
+captures remain under ignored `test-results/movement-parity/`.
+
+Final checks passed: `npm run typecheck`, `npm run test:changed` (**345 tests**),
+and `BROWSER_SUITE=full npx playwright test tests/browser/raster.spec.ts`
+(**16 browser tests**, including the **5,160-assertion** dungeon matrix). Focused
+regressions cover an independent convolution oracle, distance boundaries,
+scalar/field frame reuse and mixed sprite sizes. Changed-unit tests emitted
+existing mock/network-error diagnostics but exited successfully. No engine,
+release gate, deployment or physical-device checks were run.

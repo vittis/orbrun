@@ -53,7 +53,8 @@ try {
     }
   }, variants)
   const results = []
-  for (const scenario of scenarios) for (const { name } of variants) {
+  // Alternate variant order across scenarios/repeats to reduce warm-cache bias.
+  for (const [index, scenario] of scenarios.entries()) for (const { name } of index % 2 ? [...variants].reverse() : variants) {
     const result = await page.evaluate(async ({ scenario, name, frames }) => {
       const large = scenario.startsWith('map'), moving = scenario.endsWith('moving'), fading = moving || scenario.endsWith('los')
       const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:720px;z-index:100'; document.body.append(canvas)

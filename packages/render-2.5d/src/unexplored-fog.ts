@@ -1,3 +1,4 @@
+import { blurFog, fogDistances } from './fog-field.js'
 import type { SceneCell } from '@orbrun/scene'
 import { groundDepth, planeRect, project, type Projection, type SurfaceRect } from './projection.js'
 import type { Context2d } from './tiles.js'
@@ -32,57 +33,6 @@ function noise(field: Float32Array, x: number, y: number) {
   return a + (b - a) * fx + (c - a + (d - c - b + a) * fx) * fy
 }
 
-/** Eight-neighbour distance transform over the shared silhouette. Padding keeps
- * the viewport edge from becoming a false exploration boundary. */
-function distances(field: Float32Array, width: number, height: number) {
-  const diagonal = Math.SQRT2
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const i = y * width + x
-    let d = field[i]
-    if (x) d = Math.min(d, field[i - 1] + 1)
-    if (y) {
-      d = Math.min(d, field[i - width] + 1)
-      if (x) d = Math.min(d, field[i - width - 1] + diagonal)
-      if (x + 1 < width) d = Math.min(d, field[i - width + 1] + diagonal)
-    }
-    field[i] = d
-  }
-  for (let y = height - 1; y >= 0; y--) for (let x = width - 1; x >= 0; x--) {
-    const i = y * width + x
-    let d = field[i]
-    if (x + 1 < width) d = Math.min(d, field[i + 1] + 1)
-    if (y + 1 < height) {
-      d = Math.min(d, field[i + width] + 1)
-      if (x) d = Math.min(d, field[i + width - 1] + diagonal)
-      if (x + 1 < width) d = Math.min(d, field[i + width + 1] + diagonal)
-    }
-    field[i] = d
-  }
-}
-/** Three box passes approximate a Gaussian over the union, rounding corners
- * and joining neighbouring tiles before the animated feather is applied. */
-function blur(field: Float32Array, scratch: Float32Array, width: number, height: number, radius: number) {
-  const count = radius * 2 + 1
-  for (let pass = 0; pass < 3; pass++) {
-    for (let y = 0; y < height; y++) {
-      const row = y * width
-      let sum = 0
-      for (let k = -radius; k <= radius; k++) sum += field[row + Math.max(0, Math.min(width - 1, k))]
-      for (let x = 0; x < width; x++) {
-        scratch[row + x] = sum / count
-        sum += field[row + Math.min(width - 1, x + radius + 1)] - field[row + Math.max(0, x - radius)]
-      }
-    }
-    for (let x = 0; x < width; x++) {
-      let sum = 0
-      for (let k = -radius; k <= radius; k++) sum += scratch[Math.max(0, Math.min(height - 1, k)) * width + x]
-      for (let y = 0; y < height; y++) {
-        field[y * width + x] = sum / count
-        sum += scratch[Math.min(height - 1, y + radius + 1) * width + x] - scratch[Math.max(0, y - radius) * width + x]
-      }
-    }
-  }
-}
 const smooth = (v: number) => { const t = Math.max(0, Math.min(1, v)); return t * t * (3 - 2 * t) }
 
 /** A simple black starfield and the retained feathered exploration boundary.
@@ -106,6 +56,7 @@ export class UnexploredFog {
   private origin = 0
   private prepared = false
   private scratch = new Float32Array(0)
+  private sums = new Float64Array(0)
   private maskKey = ''
   private maskCells: readonly SceneCell[] | null = null
 
@@ -136,6 +87,7 @@ export class UnexploredFog {
       this.occupied = new Uint8Array(width * height)
       this.coverage = new Float32Array(width * height); this.outside = new Float32Array(width * height)
       this.scratch = new Float32Array(width * height)
+      this.sums = new Float64Array(width)
       this.previousOccupied = new Uint8Array(width * height)
       this.veilArea = new Uint32Array((width + 1) * (height + 1))
       this.blurRadius = -1
@@ -169,8 +121,8 @@ export class UnexploredFog {
           this.coverage[i] = this.occupied[i]
           this.outside[i] = this.occupied[i] ? 0 : 1e6
         }
-        blur(this.coverage, this.scratch, width, height, radius)
-        distances(this.outside, width, height)
+        blurFog(this.coverage, this.scratch, width, height, radius, this.sums)
+        fogDistances(this.outside, width, height)
         this.boundary.length = 0
         const edge = this.edgePixels.data, stride = width + 1
         for (let y = 0, k = 0; y < height; y++) {
@@ -313,6 +265,7 @@ export class UnexploredFog {
     this.stars = this.swirl = null
     this.edgeCanvas = null; this.edgeInk = null; this.edgePixels = null; this.prepared = false
     this.occupied = new Uint8Array(0); this.coverage = this.outside = this.scratch = new Float32Array(0)
+    this.sums = new Float64Array(0)
     this.previousOccupied = new Uint8Array(0); this.veilArea = new Uint32Array(0); this.boundary = []; this.blurRadius = -1
     this.maskKey = ''; this.maskCells = null
   }

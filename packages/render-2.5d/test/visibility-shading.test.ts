@@ -61,7 +61,7 @@ it('uploads many changing masks once per frame and reuses an unchanged atlas', (
   expect(canvas.buffers).toBe(1)
 })
 
-it('keeps submitted terrain rasters separate within a frame and reuses them in later frames', () => {
+it.each(['scalar', 'field'] as const)('keeps submitted %s fades separate within a frame and reuses them in later frames', kind => {
   vi.stubGlobal('OffscreenCanvas', Canvas)
   const tiles = new TileCache(), atlas = new Canvas(32, 32)
   tiles.source = {
@@ -69,7 +69,7 @@ it('keeps submitted terrain rasters separate within a frame and reuses them in l
     atlas: () => atlas as unknown as OffscreenCanvas, atlasNames: () => ['test'],
   }
   const drawImage = vi.fn(), ctx = { drawImage } as unknown as Context2d
-  const field = (value: number) => [0, 0, 0, 0, value, value, 0, 0, 0]
+  const field = (value: number) => kind === 'scalar' ? value : [0, 0, 0, 0, value, value, 0, 0, 0]
   const draw = (value: number) => tiles.drawPlane(ctx, [{ tile: 1 }], { x: 0, y: 0, width: 32, height: 32 }, 1, field(value))
   tiles.beginFrame()
   draw(0.1); draw(0.2); draw(0.1)
@@ -97,4 +97,23 @@ it('continues matching visibility into atlas gutters on both sides of a shared t
   const edgeB = (pixel(b.x - 1, by) + pixel(b.x, by)) / 2
   expect(edgeA).toBe(edgeB)
   expect(edgeA / 255).toBeCloseTo(MEMORY_DARKNESS / 2, 2)
+})
+
+
+it('preserves padded sprite sizes when uniform and spatial fades share the frame pool', () => {
+  vi.stubGlobal('OffscreenCanvas', Canvas)
+  const tiles = new TileCache(), atlas = new Canvas(32, 64)
+  tiles.source = {
+    tile: id => ({ atlas: 'test', sx: 0, sy: 0, w: 32, h: id === 2 ? 64 : 32, ox: 0, oy: id === 2 ? -32 : 0, cell: 32 }),
+    atlas: () => atlas as unknown as OffscreenCanvas, atlasNames: () => ['test'],
+  }
+  const drawImage = vi.fn(), ctx = { drawImage } as unknown as Context2d
+  const floor = () => tiles.drawPlane(ctx, [{ tile: 1 }], { x: 0, y: 0, width: 32, height: 32 }, 1, [0, 0, 0, 0, 0.2, 0, 0, 0, 0])
+  const actor = (tile: number, scale = 1) => tiles.draw(ctx, [{ tile }], 0, 0, 32, 1, 0.2, undefined, undefined, undefined, scale)
+  tiles.beginFrame(); floor(); actor(1); actor(2); actor(2, 2)
+  const images = drawImage.mock.calls.map(([image]) => image as Canvas)
+  expect(images.map(image => image.width)).toEqual([32, 36, 96, 192])
+  expect(drawImage.mock.calls.map(([, x, , width]) => [x, width])).toEqual([[0, 32], [-2, 36], [-32, 96], [-32, 96]])
+  tiles.beginFrame(); actor(2, 2); actor(2); floor(); actor(1)
+  expect(drawImage.mock.calls.slice(4).map(([image]) => image)).toEqual([images[3], images[2], images[0], images[1]])
 })

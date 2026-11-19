@@ -28,16 +28,22 @@ export class TileCache {
   private pixels = 0
   private fading = new Map<number, HTMLCanvasElement | OffscreenCanvas>()
   private fieldRasters: (HTMLCanvasElement | OffscreenCanvas)[] = []
-  private frameFields = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
   private fieldCursor = 0
+  private fadeRasters = new Map<number, { canvases: (HTMLCanvasElement | OffscreenCanvas)[]; used: number }>()
+  private fadePixels = 0
+  private frameFades = new Map<string, HTMLCanvasElement | OffscreenCanvas>()
+  private fadeCursor = 0
   source: TileSource | null = null
   readonly visibility = new VisibilityShading()
 
-  beginFrame() { this.frameFields.clear(); this.fieldCursor = 0 }
+  beginFrame() {
+    this.frameFades.clear(); this.fadeCursor = 0; this.fieldCursor = 0
+    for (const pool of this.fadeRasters.values()) pool.used = 0
+  }
 
   clear() {
     this.entries.clear(); this.pixels = 0; this.fading.clear(); this.visibility.clear()
-    this.fieldRasters = []; this.beginFrame()
+    this.fieldRasters = []; this.fadeRasters.clear(); this.fadePixels = 0; this.beginFrame()
   }
 
   draw(ctx: Context2d, layers: Layer[], x: number, y: number, size: number, light: number, memory: boolean | number, flash?: { r: number; g: number; b: number; a: number }, lighting?: SurfaceLighting, sample?: SurfaceRect, rasterScale = 1): boolean {
@@ -181,20 +187,30 @@ export class TileCache {
     if (fading) {
       // Shade a reusable scratch surface, preserving sprite alpha and flash
       // ordering without quantized cache entries for every animation frame.
-      const fieldKey = field ? JSON.stringify([key, field, flash]) : undefined
-      if (fieldKey) {
-        const cached = this.frameFields.get(fieldKey)
-        if (cached) return cached
+      const fadeKey = JSON.stringify([key, field ?? darkness, flash])
+      const cached = this.frameFades.get(fadeKey)
+      if (cached) return cached
+      // Both scalar fades (actors and uniform terrain) and spatial fields
+      // must remain immutable after submission. Pool by size so mixed padded
+      // sprites and floor tiles never resize or clip each other's rasters.
+      let slot: number | undefined, rasters: (HTMLCanvasElement | OffscreenCanvas)[] | undefined
+      const pixels = surface.width * surface.height
+      if (field) {
+        // Spatial fields are always native 32px terrain; keep their hot path
+        // as a direct array lookup, independent of padded scalar sprites.
+        if (this.fieldCursor < 512) { slot = this.fieldCursor++; rasters = this.fieldRasters }
+      } else {
+        let pool = this.fadeRasters.get(surface.width)
+        if (!pool) this.fadeRasters.set(surface.width, pool = { canvases: [], used: 0 })
+        if (this.fadeCursor < 512 && (pool.used < pool.canvases.length || this.fadePixels + pixels <= 2 * 1024 * 1024)) {
+          slot = pool.used++; rasters = pool.canvases; this.fadeCursor++
+        }
       }
-      // A terrain raster remains immutable after submission for this frame.
-      // Rewriting one shared canvas forces Chrome to preserve its earlier
-      // draws. Reuse the pool on following frames.
-      const slot = field && this.fieldCursor < 512 ? this.fieldCursor++ : undefined
-      let fadingSurface = slot !== undefined ? this.fieldRasters[slot] : this.fading.get(surface.width)
+      let fadingSurface = slot !== undefined ? rasters![slot] : this.fading.get(surface.width)
       if (!fadingSurface) {
         fadingSurface = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(surface.width, surface.height)
           : Object.assign(document.createElement('canvas'), { width: surface.width, height: surface.height })
-        if (slot !== undefined) this.fieldRasters[slot] = fadingSurface
+        if (slot !== undefined) { rasters![slot] = fadingSurface; if (!field) this.fadePixels += pixels }
         else this.fading.set(surface.width, fadingSurface)
       }
       const c = fadingSurface.getContext('2d') as Context2d | null
@@ -213,7 +229,7 @@ export class TileCache {
         c.fillStyle = `rgba(${flash.r},${flash.g},${flash.b},${flash.a / 255})`
         c.fillRect(0, 0, surface.width, surface.height)
       }
-      if (fieldKey && slot !== undefined) this.frameFields.set(fieldKey, fadingSurface)
+      if (slot !== undefined) this.frameFades.set(fadeKey, fadingSurface)
       return fadingSurface
     }
     return surface
