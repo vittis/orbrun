@@ -8,7 +8,7 @@ import type { Session } from './session'
 import { deriveContext, deriveMode, type Context, type Mode } from './context'
 import { CONTINUE, HOLD_MS, LEVEL_MAP, barLabels, buttonAction, contextualLabel, armsTapOrHold, holdAction, resolve, screenKey, touchExtraAction, touchLabels, typedInLog, type TouchLabel, type Action, type BindingLabel, type CommandCategory, type RelDir } from './bindings'
 import type { CommandMenu } from './command-menu'
-import { dungeonOptions } from './dungeon-options'
+import { dungeonOptions, phoneDungeonDpr } from './dungeon-options'
 import { Runner, type LastStep } from './runner'
 import { GLANCE_GAP_PX, Hud, glanceRowPx, rcFont } from './hud'
 import { GridHost, isPhone } from './grid/host'
@@ -37,8 +37,6 @@ import { NearDeath } from './near-death'
 import { LevelUp } from './level-up'
 import { QuickSettings } from './quick-settings'
 
-/** Bound the phone dungeon's backing store to 2.25 times its CSS pixel area. */
-const PHONE_DUNGEON_MAX_DPR = 1.5
 /** at rest the frame loop sleeps, waking to run its body this often, so nothing that changed without waking it waits longer */
 const IDLE_TICK_MS = 250
 /** how long crawl and we must have said nothing before the spell bar looks its list up (spell-bar.ts) */
@@ -651,7 +649,7 @@ export class GameScreen {
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
     const phoneDungeon = this.grid.phone && !mapView
-    const dpr = Math.min(window.devicePixelRatio || 1, phoneDungeon ? PHONE_DUNGEON_MAX_DPR : 1)
+    const dpr = phoneDungeon ? phoneDungeonDpr() : 1
     this.canvas.classList.toggle('view-hidpi', dpr > 1)
     if (this.renderer instanceof Render25d) this.renderer.setOptions({ filterCreatureScaling: phoneDungeon })
     this.renderer.resize(px.width, px.height, dpr)

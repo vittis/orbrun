@@ -1,6 +1,11 @@
 import type { Render25dOptions } from '@orbrun/render-2.5d'
 import type { Settings } from './settings'
 
+/** Bound the phone dungeon's backing store to 2.25 times its CSS pixel area. */
+export function phoneDungeonDpr(): number {
+  return Math.min(window.devicePixelRatio || 1, 1.5)
+}
+
 /** Shared appearance for gameplay and the recorded menu; owns no input, audio or storage. */
 export function dungeonOptions(st: Settings): Render25dOptions {
   return {

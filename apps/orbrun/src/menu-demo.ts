@@ -5,10 +5,15 @@ import { buildScene } from '@orbrun/scene-webtiles'
 import { initialState, reduce, type ServerMessage } from '@orbrun/webtiles'
 import { CombatFeedback } from './combat-feedback'
 import { presentCombat } from './combat-presentation'
-import { dungeonOptions } from './dungeon-options'
+import { onDprChange } from './dom'
+import { dungeonOptions, phoneDungeonDpr } from './dungeon-options'
+import { isPhone } from './grid/host'
 import { getSettings } from './settings'
 import { readReplay, ReplayClock, type ReplayClip } from './menu-replay'
 import type manifest from '../data/menu-replays.json'
+
+/** Limit the extra replay pixels to the backing area of a 720p frame. */
+const REPLAY_PIXEL_BUDGET = 1280 * 720
 
 export interface MenuDemo {
   setActive(active: boolean): void
@@ -46,6 +51,7 @@ class RecordedMenuDemo implements MenuDemo {
   private scene: Scene = emptyScene()
   private feedback = new CombatFeedback(this.state)
   private resize: ResizeObserver | null = null
+  private stopWatchingDpr?: () => void
   private clock!: ReplayClock
   private active = false
   private destroyed = false
@@ -56,8 +62,10 @@ class RecordedMenuDemo implements MenuDemo {
   constructor(private canvas: HTMLCanvasElement, private data: Gamedata, clip: ReplayClip, finished: () => void, private failed: (error: unknown) => void) {
     try {
       this.clock = new ReplayClock(clip, messages => this.reset(messages), (messages, projectileTimeMs) => this.apply(messages, projectileTimeMs), finished, error => this.fail(error))
-      this.resize = new ResizeObserver(() => { this.fit(); this.wake() })
+      const refit = () => { this.fit(); this.wake() }
+      this.resize = new ResizeObserver(refit)
       this.resize.observe(canvas)
+      this.stopWatchingDpr = onDprChange(refit)
     } catch (error) { this.clock?.destroy(); this.renderer?.destroy(); this.resize?.disconnect(); throw error }
   }
 
@@ -104,8 +112,12 @@ class RecordedMenuDemo implements MenuDemo {
   private fit() {
     if (!this.renderer) return
     const rect = this.canvas.getBoundingClientRect()
-    const scale = Math.min(1, 1280 / Math.max(1, rect.width), 720 / Math.max(1, rect.height))
-    this.renderer.resize(Math.max(1, rect.width), Math.max(1, rect.height), scale)
+    const width = Math.max(1, rect.width), height = Math.max(1, rect.height)
+    const phone = isPhone()
+    const maxDpr = Math.sqrt(REPLAY_PIXEL_BUDGET / (width * height))
+    const dpr = phone ? Math.max(1, Math.min(phoneDungeonDpr(), maxDpr)) : 1
+    this.renderer.setOptions({ filterCreatureScaling: phone })
+    this.renderer.resize(width, height, dpr)
     this.dirty = true
   }
 
@@ -166,6 +178,7 @@ class RecordedMenuDemo implements MenuDemo {
     this.clock.destroy()
     cancelAnimationFrame(this.raf)
     this.resize?.disconnect()
+    this.stopWatchingDpr?.()
     this.renderer?.destroy()
     this.data.dispose()
     this.canvas.hidden = true

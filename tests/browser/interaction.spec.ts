@@ -781,6 +781,32 @@ test('menu entrance remains usable when recordings are unavailable despite an ol
 
 menuReplayCheck(false)
 
+test.describe('menu replay on a high-density phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 })
+
+  test('uses extra backing pixels in portrait and caps the canvas area in landscape', async ({ page }) => {
+    await page.routeWebSocket(/^wss:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+    await page.addInitScript(() => { Math.random = () => 0.999 })
+    await page.goto('/')
+    const canvas = page.locator('.menu-backdrop canvas')
+    await expect(canvas).toBeVisible()
+    const measure = () => canvas.evaluate(el => {
+      const { width, height } = el.getBoundingClientRect()
+      const { width: pixelsWide, height: pixelsHigh } = el as HTMLCanvasElement
+      return { scale: pixelsWide / width, area: pixelsWide * pixelsHigh, cssArea: width * height }
+    })
+    await expect.poll(async () => (await measure()).scale).toBeCloseTo(1.5)
+    await page.setViewportSize({ width: 960, height: 440 })
+    const budget = 1280 * 720
+    await expect.poll(async () => (await measure()).area / budget).toBeCloseTo(1)
+    const landscape = await measure()
+    expect(landscape.cssArea * 1.5 ** 2).toBeGreaterThan(budget)
+    expect(landscape.scale).toBeCloseTo(Math.sqrt(budget / landscape.cssArea))
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect.poll(async () => (await measure()).scale).toBeCloseTo(1.5)
+  })
+})
+
 for (const narrow of [false, true]) {
   test(`menu recording chooser loads only the current recording and resets on reload at ${narrow ? 'narrow' : 'desktop'} width`, async ({ page }) => {
     await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1280, height: 720 })

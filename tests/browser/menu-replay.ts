@@ -5,8 +5,8 @@ import { test } from './fixtures'
 type Evidence = { workers: number; opens: string[]; draws: number }
 
 export function menuReplayCheck(production: boolean) {
-  test('recorded menu renders without an engine and sleeps when covered or hidden', async ({ page }) => {
-    const base = production ? 'http://127.0.0.1:5287' : 'http://127.0.0.1:5286'
+  test('recorded menu renders without an engine and sleeps when covered or hidden', async ({ page, baseURL }) => {
+    const base = production ? 'http://127.0.0.1:5287' : baseURL!
     const csp = /Content-Security-Policy: (.+)/.exec(readFileSync(new URL('../../apps/orbrun/public/_headers', import.meta.url), 'utf8'))![1]
     await page.route(base + '/**', async route => {
       if (route.request().resourceType() !== 'document') return route.continue()
@@ -44,6 +44,7 @@ export function menuReplayCheck(production: boolean) {
     await page.goto(base)
     const canvas = page.locator('.menu-backdrop canvas')
     await expect(canvas).toBeVisible()
+    expect(await canvas.evaluate(el => (el as HTMLCanvasElement).width / el.getBoundingClientRect().width)).toBeCloseTo(1)
     const pixels = () => canvas.evaluate(el => (el as HTMLCanvasElement).toDataURL())
     const initial = await pixels()
     await expect.poll(pixels).not.toBe(initial)
