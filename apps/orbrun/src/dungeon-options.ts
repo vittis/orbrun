@@ -11,6 +11,7 @@ export function dungeonOptions(st: Settings): Render25dOptions {
   return {
     tilt: st.depthTilt, zoom: st.depthZoom, animate: true,
     unexploredFog: st.depthFog, unexploredAtmosphere: st.depthAtmosphere,
+    visibilityFade: st.depthLosFade, visibilitySmoothing: st.depthLosSmoothing,
     meleeBumpStrength: st.meleeBumpStrength, meleeBumpSnap: st.meleeBumpSnap,
     hitGore: st.hitGore, deathGore: st.deathGore,
     hitSprayOutward: st.hitSprayOutward, deathSprayOutward: st.deathSprayOutward,

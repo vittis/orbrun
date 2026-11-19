@@ -32,6 +32,10 @@ export interface Render25dOptions extends MovementAppearance {
   unexploredFog?: boolean
   /** Optional stars and faint swirls; disabling them retains the soft frontier. */
   unexploredAtmosphere?: boolean
+  /** Fade newly known and remembered terrain as confirmed visibility changes. */
+  visibilityFade?: boolean
+  /** Blend terrain shading across confirmed cell boundaries. */
+  visibilitySmoothing?: boolean
   /** Animate confirmed travel and creature gaits. */
   movement?: boolean
   /** Seconds per move, clamped to 0.04–0.25. Retargets never queue. */
@@ -89,6 +93,7 @@ export class Render25d implements MapRenderer {
   private active = false
   private opts: Required<Render25dOptions> = {
     tilt: 50, zoom: 1, animate: true, unexploredFog: false, unexploredAtmosphere: true, center: null, minibars: null, filterScaling: false, filterCreatureScaling: false,
+    visibilityFade: true, visibilitySmoothing: true,
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
@@ -98,7 +103,9 @@ export class Render25d implements MapRenderer {
   constructor(options: Render25dOptions = {}) { this.setOptions(options) }
 
   setOptions(options: Render25dOptions) {
+    const { visibilityFade, visibilitySmoothing } = this.opts
     Object.assign(this.opts, options)
+    if (visibilityFade !== this.opts.visibilityFade || visibilitySmoothing !== this.opts.visibilitySmoothing) this.lighting.clear()
     this.opts.tilt = Number.isFinite(this.opts.tilt) ? Math.max(DUNGEON_TILT.min, Math.min(DUNGEON_TILT.max, this.opts.tilt)) : 50
     this.opts.zoom = Number.isFinite(this.opts.zoom) ? Math.max(DUNGEON_ZOOM.min, Math.min(DUNGEON_ZOOM.max, this.opts.zoom)) : 1
     this.opts.movementDuration = Number.isFinite(this.opts.movementDuration) ? Math.max(0.04, Math.min(0.25, this.opts.movementDuration)) : 0.1
@@ -114,7 +121,8 @@ export class Render25d implements MapRenderer {
     }
     if (this.opts.deathGore === 0) this.deaths.clear()
     if (!this.opts.animate || !this.opts.movement) this.movement.finish()
-    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.visibility.finish(); this.arrival.finish() }
+    if (!this.opts.animate || visibilityFade && !this.opts.visibilityFade) this.visibility.finish()
+    if (!this.opts.animate) { this.effects.clear(); this.deaths.clear(); this.arrival.finish() }
   }
 
   get animating() { return this.opts.animate && this.active }
@@ -138,7 +146,7 @@ export class Render25d implements MapRenderer {
     if (scene === this.scene && scene.revision === this.revision) return
     this.scene = scene
     this.revision = scene.revision
-    this.visibility.observe(scene, now, this.opts.animate)
+    this.visibility.observe(scene, now, this.opts.animate && this.opts.visibilityFade)
     this.arrival.observe(scene, now, this.opts.animate)
     this.life.observe({ ...scene, billboards: scene.billboards.filter(b => b.kind !== 'projectile') }, now)
     this.effects.observe(scene, now, this.opts.animate)
@@ -212,6 +220,10 @@ export class Render25d implements MapRenderer {
 
   private darkness(cell: SceneCell) { return this.visibility.darkness(cell, this.frameTime) }
 
+  private visibilityShade(cell: SceneCell, face = false) {
+    return this.opts.visibilitySmoothing ? this.visibility.surface(cell, this.frameTime, face) : this.darkness(cell)
+  }
+
   private lightExposure(cell: SceneCell) { return Math.max(0, 1 - this.darkness(cell) / MEMORY_DARKNESS) }
 
   private surfaceLighting(cell: SceneCell): SurfaceLighting | undefined {
@@ -227,7 +239,7 @@ export class Render25d implements MapRenderer {
 
   private terrainLighting(cell: SceneCell, face = false): SurfaceLighting | undefined {
     if (!this.lighting.active) return undefined
-    const shade = this.visibility.surface(cell, this.frameTime, face)
+    const shade = this.visibilityShade(cell, face)
     if (typeof shade === 'number') return this.surfaceLighting(cell)
     const exposure = this.tiles.visibility.mask(shade, true)
     if (!exposure) return this.surfaceLighting(cell)
@@ -242,7 +254,7 @@ export class Render25d implements MapRenderer {
   private plane(ctx: Context2d, p: Projection, cell: SceneCell, layers: Layer[], z = 0, illuminate = true) {
     const rect = planeRect(p, cell.x, cell.y, z, this.dpr)
     // Uniform ambient light keeps the LOS boundary distinct from environmental glows.
-    return this.tiles.drawPlane(ctx, layers, rect, this.light(), this.visibility.surface(cell, this.frameTime), cell.flash, illuminate ? this.terrainLighting(cell) : undefined,
+    return this.tiles.drawPlane(ctx, layers, rect, this.light(), this.visibilityShade(cell), cell.flash, illuminate ? this.terrainLighting(cell) : undefined,
       rect)
   }
 
@@ -362,7 +374,7 @@ export class Render25d implements MapRenderer {
         // Reachability is cached for the scene revision. Include newly visible
         // receivers before their exposure starts rising on subsequent frames.
         if (cell.visibility === 'visible' || this.visibility.moving(cell, now)) return true
-        const shade = this.visibility.surface(cell, now)
+        const shade = this.visibilityShade(cell)
         return typeof shade === 'number' ? shade < MEMORY_DARKNESS : shade.some(value => value < MEMORY_DARKNESS)
       })
     this.hits = []
@@ -373,10 +385,10 @@ export class Render25d implements MapRenderer {
     if (this.tiles.source) {
       const fields: VisibilityShade[] = []
       for (const cell of cells) {
-        const shade = this.visibility.surface(cell, now)
+        const shade = this.visibilityShade(cell)
         if (typeof shade === 'number') continue
         fields.push(shade)
-        if (cell.occluder) fields.push(this.visibility.surface(cell, now, true))
+        if (cell.occluder) fields.push(this.visibilityShade(cell, true))
       }
       this.tiles.visibility.prepare(fields, this.lighting.active)
     }
@@ -396,7 +408,7 @@ export class Render25d implements MapRenderer {
       const layers: Layer[] = []
       const material = liquidMaterial(cell)
       if (material) {
-        this.tiles.drawLiquidFloor(ctx, material, cell, rect, this.visibility.surface(cell, now), time, this.dpr)
+        this.tiles.drawLiquidFloor(ctx, material, cell, rect, this.visibilityShade(cell), time, this.dpr)
         this.active = true
       } else layers.push({ tile: cell.floorTile })
       layers.push(...(cell.underlays ?? []).map(tile => ({ tile })))
@@ -438,12 +450,12 @@ export class Render25d implements MapRenderer {
 
     if (this.lighting.active) {
       ctx.save(); ctx.beginPath()
-      for (const cell of cells) if (!cell.occluder && this.visibility.surface(cell, now) === 0) {
+      for (const cell of cells) if (!cell.occluder && this.visibilityShade(cell) === 0) {
         const rect = planeRect(p, cell.x, cell.y, 0, this.dpr); ctx.rect(rect.x, rect.y, rect.width, rect.height)
       }
       ctx.clip(); this.lighting.draw(ctx, { x: 0, y: 0, width: this.width, height: this.height }); ctx.restore()
       for (const cell of cells) if (!cell.occluder) {
-        const shade = this.visibility.surface(cell, now)
+        const shade = this.visibilityShade(cell)
         if (shade === 0 || typeof shade === 'number' && shade >= MEMORY_DARKNESS) continue
         const rect = planeRect(p, cell.x, cell.y, 0, this.dpr)
         this.terrainLighting(cell)?.draw(ctx, rect)
@@ -737,10 +749,10 @@ export class Render25d implements MapRenderer {
     // Keep the original cap and continue its edge into shaded stonework.
     const layers = [{ tile }, ...(cell.wallOverlays ?? []).map(tile => ({ tile }))]
     this.tiles.drawPlane(ctx, layers, roof,
-      this.light(), this.visibility.surface(cell, this.frameTime), cell.flash, this.terrainLighting(cell), roof)
+      this.light(), this.visibilityShade(cell), cell.flash, this.terrainLighting(cell), roof)
     // Decorations belong to the cap, never the reflected material underneath.
     this.tiles.drawWallFace(ctx, [{ tile: cell.wallMaterialTile ?? tile }], face,
-      this.light(), this.visibility.surface(cell, this.frameTime, true), cell.flash, this.terrainLighting(cell, true))
+      this.light(), this.visibilityShade(cell, true), cell.flash, this.terrainLighting(cell, true))
     shadeWallFace(ctx, face)
     this.frontierFog(ctx, p, [cell], this.opts.animate ? this.frameTime : 0)
     ctx.restore()

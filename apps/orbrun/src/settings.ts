@@ -11,6 +11,8 @@ export interface Settings {
   depthZoom: number
   depthFog: boolean
   depthAtmosphere: boolean
+  depthLosFade: boolean
+  depthLosSmoothing: boolean
   depthMovement: boolean
   /** Seconds per confirmed move in Dungeon. */
   depthMovementDuration: number
@@ -65,6 +67,8 @@ export const defaultSettings: Settings = {
   depthZoom: 1,
   depthFog: true,
   depthAtmosphere: true,
+  depthLosFade: true,
+  depthLosSmoothing: true,
   depthMovement: true,
   depthMovementDuration: 0.14,
   depthMovementEasing: 'ease-out',

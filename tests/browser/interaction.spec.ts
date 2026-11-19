@@ -701,6 +701,36 @@ test('unexplored atmosphere can be disabled independently, persists and resets',
   await expect(atmosphere.locator('.val')).toHaveText('On')
 })
 
+test('line of sight preferences are enabled by default and persist independently', async ({ page }) => {
+  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
+  await page.goto('/settings/view')
+  const fade = page.locator('[data-focus="setting:Line of sight fade"] .val')
+  const smoothingRow = page.locator('[data-focus="setting:Smooth LOS edges"]')
+  const smoothing = smoothingRow.locator('.val')
+  const fadeNext = page.getByRole('button', { name: 'Line of sight fade next', exact: true })
+  const smoothingNext = page.getByRole('button', { name: 'Smooth LOS edges next', exact: true })
+  await expect(fade).toHaveText('On')
+  await expect(smoothing).toHaveText('On')
+  await fadeNext.click()
+  await expect(fade).toHaveText('Off')
+  await expect(smoothing).toHaveText('On')
+  await smoothingNext.click()
+  await page.reload()
+  await expect(fade).toHaveText('Off')
+  await expect(smoothing).toHaveText('Off')
+  await fadeNext.click()
+  await expect(fade).toHaveText('On')
+  await expect(smoothing).toHaveText('Off')
+  await page.getByText('Reset to defaults', { exact: true }).click()
+  await expect(smoothing).toHaveText('On')
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await smoothingRow.scrollIntoViewIfNeeded()
+    await expect(smoothingNext).toBeInViewport({ ratio: 1 })
+    await page.screenshot({ path: `test-results/los-settings-${viewport.width}.png` })
+  }
+})
+
 test('movement tuning persists in the narrow settings menu and respects instant movement', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())

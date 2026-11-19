@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.158 — 2026-11-19
+
+- Settings → View now offers independent, default-on controls for line-of-sight fades and smooth shading between visible and remembered terrain.
+
 ## 0.3.157 — 2026-11-19
 
 - Movement renders more efficiently by reusing visibility-fade images and reducing fog-boundary calculations, with the same resolution, effects and animation timing.

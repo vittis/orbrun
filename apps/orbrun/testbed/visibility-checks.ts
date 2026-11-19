@@ -47,7 +47,22 @@ export async function visibilityChecks(source: TileSource) {
     assert('LOS reversal has no brightness jump', Math.abs(sample()[channel] - before) <= 1, { before, after: sample() })
     r.setOptions({ animate: false }); r.render(3.08)
     assert('Pausing rendering immediately settles the brightness', sample()[channel] === bright && !r.animating, { bright, sample: sample() })
-    cell.visibility = 'unseen'; scene.revision++; r.setScene(scene, 4); r.render(4)
+    if (kind === 'floor' && dpr === 2 && filterScaling) {
+      const edge = () => canvas.getContext('2d')!.getImageData(Math.floor((q.x - p.scale * 0.42) * dpr), Math.floor(q.y * dpr), 1, 1).data[0]
+      r.setOptions({ animate: true, visibilitySmoothing: false })
+      cell.visibility = 'remembered'; scene.revision++; r.setScene(scene, 4); r.render(4.11)
+      const midFade = sample()[channel]
+      r.setOptions({ visibilityFade: false }); r.render(4.11)
+      const dim = sample()[channel], sharpEdge = edge()
+      r.setOptions({ visibilitySmoothing: true }); r.render(4.11)
+      const smoothEdge = edge()
+      cell.visibility = 'visible'; scene.revision++; r.setScene(scene, 5); r.render(5)
+      assert('LOS fading and edge smoothing can be toggled independently on a live renderer',
+        midFade > dim && midFade < bright && smoothEdge > sharpEdge && sample()[channel] === bright && !r.animating,
+        { midFade, dim, smoothEdge, sharpEdge, revealed: sample()[channel], bright })
+      r.setOptions({ animate: false })
+    }
+    cell.visibility = 'unseen'; scene.revision++; r.setScene(scene, 6); r.render(6)
     assert('unseen tiles cannot be picked during a fade', r.pick(q.x, q.y) !== cellKey(0, 0), {})
     r.destroy(); releaseCanvas(canvas)
     await fixtureYield('visibility-checks')

@@ -101,9 +101,9 @@ test('spell glyph and artwork updates preserve terrain with lighting and VFX ena
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-const fullChecks = { tiles: 350, markers: 216, surfaces: 28, movement: 1134, depth: 162, visibility: 96, arrival: 96, coherence: 648, corridors: 2430 }
+const fullChecks = { tiles: 350, markers: 216, surfaces: 28, movement: 1134, depth: 162, visibility: 97, arrival: 96, coherence: 648, corridors: 2430 }
 // A smoke run still exercises every rendering concern; the profile reduces combinations.
-const smokeChecks = { tiles: 20, markers: 16, surfaces: 14, movement: 126, depth: 12, visibility: 36, arrival: 24, coherence: 48, corridors: 72 }
+const smokeChecks = { tiles: 20, markers: 16, surfaces: 14, movement: 126, depth: 12, visibility: 37, arrival: 24, coherence: 48, corridors: 72 }
 for (const lane of Object.keys(fullChecks) as (keyof typeof fullChecks)[]) {
   test(`raster: ${lane}`, async ({ page }, testInfo) => {
     const profile = testInfo.project.metadata.profile as 'smoke' | 'full'
