@@ -56,7 +56,7 @@ for (const cell of scene.cells.values()) {
   }
 }
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!
-const renderer = new Render25d({ center: { x: 9, y: 4 }, unexploredFog: true })
+const renderer = new Render25d({ center: { x: 9, y: 4 } })
 renderer.mount(canvas)
 renderer.setTiles(roomSource)
 renderer.setScene(scene)
@@ -87,11 +87,9 @@ function fit() {
   wake()
 }
 new ResizeObserver(fit).observe(canvas)
-for (const id of ['tilt', 'zoom', 'fog', 'atmosphere', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
+for (const id of ['tilt', 'zoom', 'original', 'duration', 'easing']) document.getElementById(id)!.addEventListener('change', () => {
   const duration = Number((document.getElementById('duration') as HTMLSelectElement).value)
   renderer.setOptions({ tilt: Number((document.getElementById('tilt') as HTMLSelectElement).value), zoom: Number((document.getElementById('zoom') as HTMLSelectElement).value),
-    unexploredFog: (document.getElementById('fog') as HTMLInputElement).checked,
-    unexploredAtmosphere: (document.getElementById('atmosphere') as HTMLInputElement).checked,
     movement: duration > 0, movementDuration: duration || 0.1, movementEasing: (document.getElementById('easing') as HTMLSelectElement).value as MovementEasing })
   fit()
 })

@@ -75,7 +75,7 @@ describe('settings storage boundary', () => {
   })
 
   it('validates booleans and unions on both read and write', () => {
-    const invalid = { depthFog: 'false', depthAtmosphere: 'false', depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
+    const invalid = { depthMovement: 'false', confirmStairs: 1, depthMovementEasing: 'bounce' }
     store.set(key, JSON.stringify(invalid))
     expect(getSettings()).toEqual(defaultSettings)
     saveSettings({ ...defaultSettings, ...invalid } as unknown as Settings)
@@ -84,20 +84,12 @@ describe('settings storage boundary', () => {
     expect(getSettings()).toMatchObject({ depthMovement: false, confirmStairs: true, depthMovementEasing: 'linear' })
   })
 
-  it('ignores the retired animation preference and preserves other saved values', () => {
-    store.set(key, JSON.stringify({ depthAnimate: false, depthZoom: 1.5 }))
+  it('ignores retired rendering preferences and preserves other saved values', () => {
+    store.set(key, JSON.stringify({ depthAnimate: false, depthFog: true, depthAtmosphere: false, depthZoom: 1.5 }))
     expect(getSettings()).toEqual({ ...defaultSettings, depthZoom: 1.5 })
     saveSettings(getSettings())
     expect(JSON.parse(store.get(key)!)).toEqual({ depthZoom: 1.5 })
   })
-})
-
-it('persists an atmosphere opt-out independently of the exploration transition', () => {
-  saveSettings({ ...defaultSettings, depthFog: true, depthAtmosphere: false })
-  expect(getSettings()).toMatchObject({ depthFog: true, depthAtmosphere: false })
-  expect(JSON.parse(store.get(key)!)).toEqual({ depthAtmosphere: false })
-  saveSettings({ ...getSettings(), depthFog: false })
-  expect(getSettings()).toMatchObject({ depthFog: false, depthAtmosphere: false })
 })
 
 const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'depthMovementHopHeight', 'depthMovementSquash', 'depthMovementSway', 'uiScale', 'characterPanelScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const

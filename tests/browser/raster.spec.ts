@@ -57,17 +57,6 @@ test('ruined columns and similar wall-category props keep floor-supported silhou
   expect(report.failures, JSON.stringify(report)).toEqual([])
 })
 
-test('soft circular stars and subtle curls can be disabled while preserving exploration edges', async ({ page }) => {
-  await page.goto('/testbed/fog-checks.html')
-  await expect.poll(async () => {
-    try { return (await result(page)).status } catch { return 'loading' }
-  }).toMatch(/complete|error/)
-  const report = await result(page)
-  expect(report.status, JSON.stringify(report)).toBe('complete')
-  expect(report.checks).toBe(111)
-  expect(report.failures, JSON.stringify(report)).toEqual([])
-})
-
 test('elemental splatters stay visible at tile scale and lightning has bright zigzag cores', async ({ page }) => {
   await page.goto('/testbed/elemental-checks.html')
   await expect.poll(async () => {

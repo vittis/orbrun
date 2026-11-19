@@ -39,7 +39,7 @@ const updateLOS = () => {
 }
 updateLOS()
 const settings: Settings = { ...defaultSettings, hints: 'off' }
-const renderer = new Render25d({ unexploredFog: params.has('fog') }); renderer.setTiles(tiles as TileSource)
+const renderer = new Render25d(); renderer.setTiles(tiles as TileSource)
 let frames = 0, totalFrames = 0, frameTimes: number[] = [], actorImages = new Set<number>()
 let pixelSamples = 0, lastSampleAt = -Infinity, destroyed = false
 let hits = 0

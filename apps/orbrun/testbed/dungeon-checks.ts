@@ -54,7 +54,6 @@ if (run('tiles')) for (const [width, height, dpr] of [[390, 600, 1], [1280, 720,
     r.resize(width, height, dpr)
     r.setTiles(source)
     const scene = emptyScene()
-    // Keep samples away from the deliberate fog fade at the known-map boundary.
     for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) scene.cells.set(cellKey(x, y), cell(x, y))
     r.setScene(scene)
     r.render(0)
@@ -195,7 +194,7 @@ if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (cons
   const actual = [left, top, right, bottom]
   checks++
   if (actual.some((value, i) => Math.abs(value - expected[i]) > 2) || Math.abs(redLeft - ground.x * dpr) > 2 || Math.abs(redTop - ground.y * dpr) > 2) failures.push({ kind: 'item cursor / independent ground badge', dpr, filterScaling, degrees, zoom, actual, expected, redLeft, redTop, ground })
-  // Unknown fog stays neutral and textured, without revealing unseen entities.
+  // Unexplored space stays opaque black, including cells supplied as unseen.
   const unknown = cell(-6, 0)
   unknown.visibility = 'unseen'
   scene.cells.set(cellKey(-6, 0), unknown)
@@ -203,14 +202,11 @@ if (run('markers')) for (const dpr of matrix([1, 1.25, 2], [1.25, 2])) for (cons
   scene.revision++
   r.setScene(scene)
   r.render(0)
-  const mist = ctx.getImageData(0, 0, Math.round(90 * dpr), canvas.height).data
-  let min = 255, max = 0, neutral = true
-  for (let i = 0; i < mist.length; i += 4) {
-    min = Math.min(min, mist[i]); max = Math.max(max, mist[i])
-    if (Math.abs(mist[i] - mist[i + 2]) > 2) neutral = false
-  }
+  const background = ctx.getImageData(0, 0, Math.round(90 * dpr), canvas.height).data
+  const black = background.every((value, i) => value === (i % 4 === 3 ? 255 : 0))
+  const hiddenPosition = r.project(unknown.x, unknown.y)
   checks++
-  if (!neutral || max - min < 2 || max > 24 || r.pick(5, 192) !== null || r.animating) failures.push({ kind: 'neutral textured unknown fog / hidden entity / paused renderer', dpr, filterScaling, degrees, zoom, min, max, neutral })
+  if (!black || r.pick(hiddenPosition.x, hiddenPosition.y) !== null || r.animating) failures.push({ kind: 'opaque black background / hidden entity / paused renderer', dpr, filterScaling, degrees, zoom, black })
   if (captures && dpr === 1 && !filterScaling && degrees === 50 && zoom === 1) document.querySelector('#captures')!.append(canvas)
   r.destroy()
   if (!canvas.isConnected) { canvas.width = 0; canvas.height = 0 }

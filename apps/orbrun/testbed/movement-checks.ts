@@ -80,7 +80,7 @@ export async function movementChecks(source: TileSource) {
       let mass = 0, x = 0, y = 0, left = Infinity, right = -1
       for (let py = 0; py < canvas.height; py++) for (let px = 0; px < canvas.width; px++) {
         const i = (py * canvas.width + px) * 4
-        // Match the synthetic blue sprite, excluding the blue-black fog.
+        // Match the synthetic blue sprite.
         const weight = pixels[i + 2] > 100 && pixels[i + 2] > pixels[i] * 1.6 && pixels[i + 2] > pixels[i + 1] * 1.3
           ? pixels[i + 2] - Math.max(pixels[i], pixels[i + 1]) : 0
         mass += weight; x += px * weight; y += py * weight

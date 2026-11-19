@@ -40,7 +40,8 @@ export async function surfaceLightChecks() {
     r.setScene(scene); r.render(0)
     const ambient = sample(0, 0.2), memory = sample(5, 0.2)
     const distant = sample(-6, 0.2), blockedAmbient = sample(-2, -2.3), extendedAmbient = sample(1.2, 0.2)
-    assert('near terrain is warm and distant terrain dims without hiding memory', ambient[0] > ambient[2] + 8 && distant[0] < ambient[0] - 10 && memory[0] < ambient[0] * 0.5 && memory[0] > 15, { dpr, ambient, distant, memory })
+    assert('visible terrain keeps its atlas colour while memory is dimmer', ambient.slice(0, 3).every(value => value === 64)
+      && ambient.every((value, i) => value === distant[i]) && memory[0] < ambient[0] * 0.5 && memory[0] > 15, { dpr, ambient, distant, memory })
     scene.cells.get(cellKey(-1, 0))!.life = { lights: [fire] }; scene.revision++
     r.setScene(scene); r.render(0)
     const edge = [-0.56, -0.52, -0.48, -0.44].map(x => sample(x, 0.2)[0])
@@ -119,19 +120,22 @@ export async function surfaceLightChecks() {
     assert('authored art oracle rejects changed width, thickness and gaps', Object.values(mutations).every(count => count > 0), { dpr, mutations })
     releaseCanvas(reference)
 
-    // Hold the camera still while the player moves, to distinguish a world
-    // anchored grade from a fixed screen vignette. No semantic emitter exists.
-    scene.billboards = []; scene.levelKey = 'ambient'; scene.player = { x: 0, y: 0 }
+    // Hold the camera still and change the confirmed player position. Use an
+    // upright tile with a transparent lower edge so the floor at the feet is visible.
+    scene.billboards = []; scene.levelKey = 'player'; scene.player = { x: 0, y: 0 }
     scene.revision++; r.setOptions({ center: { x: 0, y: 0 } }); r.setScene(scene); r.render(0)
-    const beforeLeft = sample(-3, 0.2), beforeRight = sample(3, 0.2)
-    scene.player = { x: 2, y: 0 }; scene.revision++; r.setScene(scene); r.render(0)
-    const afterLeft = sample(-3, 0.2), afterRight = sample(3, 0.2)
-    assert('ambient exposure follows the player independently of the camera', afterLeft[0] < beforeLeft[0] - 3 && afterRight[0] > beforeRight[0] + 3 && !r.animating, { dpr, beforeLeft, beforeRight, afterLeft, afterRight })
-    const unknown = ctx.getImageData(0, 0, 1, 1).data
-    assert('ambient warmth never reveals unexplored space', Math.max(...unknown.slice(0, 3)) < 10 && r.pick(0, 0) === null, { dpr, unknown: [...unknown] })
-    scene.playerOnLevel = false; scene.revision++; r.setScene(scene); r.render(0)
-    const remote = sample(0, 0.2)
-    assert('remote maps retain ungraded atlas colours', remote[0] === 64 && remote[1] === 64 && remote[2] === 64, { dpr, remote })
+    const terrain = [sample(-3, 0.2), sample(3, 0.2)]
+    const floor = sample(2, 0.31)
+    scene.player = { x: 2, y: 0 }
+    scene.billboards = [{ kind: 'player', tile: 2, x: 2, y: 0, height: 1, life: { motion: 'still' } }]
+    scene.revision++; r.setScene(scene); r.render(0)
+    const aroundPlayer = [sample(-3, 0.2), sample(3, 0.2)]
+    assert('terrain colour is independent of player position', terrain.every((before, i) => before.every((value, channel) => value === aroundPlayer[i][channel])),
+      { dpr, terrain, aroundPlayer })
+    const feet = sample(2, 0.31), sprite = sample(2, -0.2)
+    assert('the player sprite is visible without darkening the ground at its feet', sprite[2] > sprite[0] * 2 && feet.every((value, i) => value === floor[i]), { dpr, feet, floor, sprite })
+    r.setOptions({ animate: true }); r.render(8)
+    assert('a still room with remembered terrain and unexplored space sleeps', !r.animating, { dpr })
     r.destroy()
     releaseCanvas(canvas)
   }

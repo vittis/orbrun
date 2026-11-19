@@ -678,32 +678,10 @@ for (const [layout, width, height, hasTouch] of [
   })
 }
 
-test('unexplored atmosphere can be disabled independently, persists and resets', async ({ page }) => {
-  await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
-  await page.goto('/settings/view')
-  const fog = page.locator('[data-focus="setting:Unexplored fog"]')
-  const atmosphere = page.locator('[data-focus="setting:Unexplored atmosphere"]')
-  await expect(fog.locator('.val')).toHaveText('On')
-  await expect(atmosphere.locator('.val')).toHaveText('On')
-  await page.getByRole('button', { name: 'Unexplored atmosphere next', exact: true }).click()
-  await expect(atmosphere.locator('.val')).toHaveText('Off')
-  await expect(fog.locator('.val')).toHaveText('On')
-  await page.reload()
-  await expect(atmosphere.locator('.val')).toHaveText('Off')
-  await expect(fog.locator('.val')).toHaveText('On')
-  await page.getByRole('button', { name: 'Unexplored fog next', exact: true }).click()
-  await expect(fog.locator('.val')).toHaveText('Off')
-  await expect(atmosphere).toHaveClass(/\boff\b/)
-  await page.reload()
-  await expect(fog.locator('.val')).toHaveText('Off')
-  await page.getByText('Reset to defaults', { exact: true }).click()
-  await expect(fog.locator('.val')).toHaveText('On')
-  await expect(atmosphere.locator('.val')).toHaveText('On')
-})
-
 test('line of sight preferences are enabled by default and persist independently', async ({ page }) => {
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
   await page.goto('/settings/view')
+  await expect(page.locator('[data-focus="setting:Unexplored fog"], [data-focus="setting:Unexplored atmosphere"]')).toHaveCount(0)
   const fade = page.locator('[data-focus="setting:Line of sight fade"] .val')
   const smoothingRow = page.locator('[data-focus="setting:Smooth LOS edges"]')
   const smoothing = smoothingRow.locator('.val')

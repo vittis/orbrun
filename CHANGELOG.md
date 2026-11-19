@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.159 — 2026-11-19
+
+- Unexplored dungeon space is now plain black. Removed mist, stars, the Unexplored fog and atmosphere settings, the player-centered color gradient, and the shadow under the player.
+
 ## 0.3.158 — 2026-11-19
 
 - Settings → View now offers independent, default-on controls for line-of-sight fades and smooth shading between visible and remembered terrain.

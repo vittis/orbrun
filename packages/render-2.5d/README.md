@@ -41,7 +41,7 @@ and picking regions.
   Joined foreground roofs share their cutaway height across passage junctions;
   other walls retain their raised height. Both stay stable through LOS fades.
   Sprites retain doll composition, atlas offsets, clipping, status badges and
-  player minibars. Ground fog renders beneath raised terrain and upright art.
+  player minibars.
   Monsters and ordinary objects use the same atlas scale as the player;
   the artwork defines their relative proportions. Only corpses lie flat.
   Contact shadows replace the original flat-view wall-shadow decals.
@@ -49,8 +49,7 @@ and picking regions.
   shadows. Original wall artwork maps onto the raised horizontal roof. Its
   bottom texel extends down into the vertical face, with directional shading
   and a darker foot. The texture never stretches across both planes or restarts
-  on the face. Joined roofs keep their shared pixel boundaries, and frontier
-  fog feathers their exposed edges into unexplored black.
+  on the face. Joined roofs keep their shared pixel boundaries.
   Picking walks the raised surfaces front to back before intersecting the
   floor, so wall roofs and upright creatures select their own cells.
 - `lighting.ts` builds one continuous world-space light texture from semantic
@@ -61,11 +60,7 @@ and picking regions.
   tile fades its exposure to still-visible emitters with its terrain brightness.
   Light pools use 85% of the semantic emitter radius, capped at six cells,
   so torches and magic illuminate neighbouring terrain instead of only their
-  source tile. The player emits no semantic light. A separate continuous
-  ambient grade warms nearby stone and cools distant terrain, following the
-  drawn player during movement. Its faint warm lift is clipped to known
-  terrain; remote level maps retain their original atlas exposure. Neither
-  ambient grading nor the static vignette keeps idle scenes awake.
+  source tile. The player has no ambient light gradient or contact shadow.
 - `movement.ts` tweens confirmed entity positions and the following camera on
   the renderer's existing clock. Every billboard kind shares the same motion;
   shadows, glows, depth sorting, upright badges/bars and hit regions follow the
@@ -95,7 +90,7 @@ and picking regions.
 - `visibility.ts` fades LOS brightness over 220 ms with a smooth curve. It
   snapshots scalar visibility values, so mutable scenes and rapid reversals
   continue from the drawn brightness. Floors, walls, standing art, light
-  exposure and memory fog follow the same fade. First discoveries brighten
+  exposure follow the same fade. First discoveries brighten
   from black; the initial view, multi-cell player arrivals (including fast
   explore/travel), level changes and remote maps snap. Hidden
   entities disappear immediately; picking uses confirmed LOS.
@@ -106,7 +101,7 @@ and picking regions.
   arrivals. Level changes and remote maps skip it.
   Reusable scratch surfaces per raster size preserve alpha and flashes without
   growing the tile cache or quantizing fade steps. Only on-screen fades keep
-  the renderer awake, alongside existing atmosphere and movement.
+  the renderer awake alongside active effects and movement.
 - `effects.ts` keeps bounded melee and spell histories on the existing frame
   clock. Confirmed `CombatBump` events identify player, enemy and ally attackers
   and defenders. A shared wind-up, lunge and recovery blends overlapping attacks
@@ -132,13 +127,11 @@ and picking regions.
   overlays remain visible for up to 180 ms after removal, without delaying game
   state, so a flight received entirely between frames cannot disappear unseen.
 
-Unexplored space uses neutral, world-anchored dark mist behind known geometry.
-Remembered tiles and standing art receive 56% black shading before ambient
-grading, with faint dark fog; visible tiles remain bright. Server item cursors
-share the upright item frame, while other cell badges keep their ground anchor.
-The unexplored mist is static, so it does not keep idle scenes awake.
+Unexplored space is opaque black. Remembered tiles and standing art are dimmed
+by LOS shading. Server item cursors share the upright item frame, while other
+cell badges keep their ground anchor.
 
-Time is presentation-only: fluid breathing and swaying, drifting clouds and remembered-terrain fog,
+Time is presentation-only: fluid breathing and swaying, drifting clouds,
 water, lava and bog textures refracted within their native edges, fountain spray,
 emissive glow and embers never change game state. `MapRenderer.animating`
 keeps the application's existing frame scheduler awake only when visible
@@ -191,7 +184,7 @@ switches to the standard renderer at the same atlas scale for comparison.
 Open `/testbed/dungeon-checks.html` for real Canvas pixel checks: uniform
 floor/wall joins at three elevations, zooms and DPRs, filtering on/off, and
 equal-atlas player/monster/item silhouettes with upright picking, item cursor
-alignment, independent ground badges, LOS contrast and neutral unexplored mist.
+alignment, independent ground badges, LOS contrast and a solid black background.
 Movement checks sample all three easing curves at the start, midpoint and
 landing, checking sprite pixels, item cursors, badges, picking and sleep, plus
 a steady centred player and moving world under camera follow. These

@@ -58,7 +58,7 @@ try {
     const result = await page.evaluate(async ({ scenario, name, frames }) => {
       const large = scenario.startsWith('map'), moving = scenario.endsWith('moving'), fading = moving || scenario.endsWith('los')
       const canvas = document.createElement('canvas'); canvas.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:720px;z-index:100'; document.body.append(canvas)
-      const renderer = new window.losClasses[name]({ animate: true, unexploredFog: !large })
+      const renderer = new window.losClasses[name]({ animate: true })
       renderer.mount(canvas); renderer.resize(1280, 720, 2); renderer.setTiles(window.tiles)
       let scratchComposites = 0
       const composite = renderer.tiles.composite.bind(renderer.tiles)

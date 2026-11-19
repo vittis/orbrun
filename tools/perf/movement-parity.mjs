@@ -35,7 +35,7 @@ try {
       const canvases = classes.map(() => document.createElement('canvas'))
       const composites = [[], []]
       const renderers = classes.map((Type, i) => {
-        const renderer = new Type({ animate: true, unexploredFog: true })
+        const renderer = new Type({ animate: true })
         if (raster) {
           const composite = renderer.tiles.composite.bind(renderer.tiles)
           renderer.tiles.composite = (...args) => {
