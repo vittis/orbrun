@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.143 — 2026-11-18
+
+- The mobile main menu fits the server picker and login controls on one row and brings the title and main buttons closer to the top.
+
 ## 0.3.142 — 2026-11-18
 
 - The dungeon FPS counter is off by default. Enable it in Settings → View or in-game Quick settings → View. It now sits slightly lower in the dungeon view.

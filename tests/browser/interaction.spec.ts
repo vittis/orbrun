@@ -661,8 +661,15 @@ for (const touch of [false, true]) {
       })
       await page.goto('/')
       const user = page.getByRole('textbox', { name: 'Username', exact: true }), pass = page.getByLabel('Password', { exact: true })
+      const server = page.getByRole('combobox', { name: 'Server', exact: true })
+      const login = page.getByRole('button', { name: 'Log in', exact: true })
       // Cover both a remembered account and a server where this device has never logged in.
-      if (touch) await page.getByRole('combobox', { name: 'Server', exact: true }).selectOption('cao')
+      if (touch) {
+        await server.selectOption('cao')
+        const [picker, ...fields] = await Promise.all([server, user, pass, login].map(control => control.boundingBox()))
+        for (const field of fields) expect(field!.y + field!.height / 2).toBeCloseTo(picker!.y + picker!.height / 2)
+        await expect(login).toBeInViewport({ ratio: 1 })
+      }
       await user.fill('menu-test'); await pass.fill('fixture-password')
       const handle = await pass.elementHandle()
       send(sockets.at(-1)!, [{ msg: 'lobby_entry', id: 1, username: 'viewer', game_id: 'dcss-0.34' }, { msg: 'lobby_complete' }])
@@ -682,7 +689,6 @@ for (const touch of [false, true]) {
         await expect(pass).toHaveValue('fixture-password')
       }
       expect(await page.evaluate(() => localStorage.getItem('orbrun.newsSeen'))).toBeTruthy()
-      const login = page.getByRole('button', { name: 'Log in', exact: true })
       await pass.fill('rejected-password')
       await login.click()
       await expect(login).toBeDisabled()
