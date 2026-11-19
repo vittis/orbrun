@@ -1,4 +1,4 @@
-import { cm, Keys, MouseMode, MSGCH, type ClientMessage } from '@orbrun/webtiles'
+import { cm, Keys, MouseMode, MSGCH, UiState, type ClientMessage } from '@orbrun/webtiles'
 import { dirFromDelta, type Dir8 } from '@orbrun/scene'
 import type { Session } from './session'
 import { AUTOFIGHT, hasInteractionChoice, type Action, type CommandCategory, type KeyOrText, type RelDir } from './bindings'
@@ -43,6 +43,7 @@ export class Runner {
   private session: Session
   private hooks: RunnerHooks
   private sequence: { steps: (() => Promise<boolean>)[]; abort: () => void } | null = null
+  private pendingSearch = false
   /** Last manual step, used by movement teaching feedback. */
   lastStep: LastStep | null = null
   /** a dangerous action awaiting its confirming second press */
@@ -56,6 +57,8 @@ export class Runner {
   }
 
   send(msg: ClientMessage) {
+    // Manual input cancels an automatic search reply before it can reach a later prompt.
+    if (this.pendingSearch) this.abortSequence()
     if (this.session.watching) return
     if (this.hooks.context().mode === 'command' && isLookAround(msg)) this.look = { state: 'pending', t: this.hooks.now() }
     this.session.send(msg)
@@ -103,6 +106,48 @@ export class Runner {
     }
     this.abortSequence()
     from(0)
+  }
+
+  /** Leave the level map before Ctrl-F (which would forget the map there).
+   * The shortcut answers only Crawl's stash-search field, never a generic prompt.
+   */
+  findItems(onLevel: boolean) {
+    if (this.session.watching || this.session.state.uiState !== UiState.VIEW_MAP) return
+    this.abortSequence()
+    this.hooks.keepMap?.()
+    if (onLevel) {
+      let done = false
+      const finish = () => {
+        done = true
+        unsub()
+        clearTimeout(timer)
+        this.pendingSearch = false
+        this.sequence = null
+      }
+      const timer = setTimeout(() => {
+        finish()
+        this.hooks.status('Item search timed out')
+      }, 5000)
+      const unsub = this.session.on(e => {
+        if (done) return
+        if (e.type === 'closed') { finish(); return }
+        if (e.type !== 'state') return
+        const st = this.session.state
+        if (st.messages.more || st.menus.length || st.ui.length || (st.textInput && st.textInput.tag !== 'stash_search')) {
+          finish()
+        } else if (st.textInput?.tag === 'stash_search') {
+          finish()
+          // Match the ordinary text field's submission, including clearing RC/history prefill.
+          this.send(cm.key(21))
+          this.send(cm.key(11))
+          this.send(cm.textInput('.\r'))
+        }
+      })
+      this.sequence = { steps: [], abort: finish }
+    }
+    this.send(cm.key(Keys.ESC))
+    this.send(cm.key(6))
+    this.pendingSearch = onLevel && this.sequence !== null
   }
 
   /**

@@ -2022,6 +2022,13 @@ export class GameScreen {
       case 'levelmap':
         this.runner.execute(LEVEL_MAP)
         break
+      case 'findItems':
+        if (this.ctx.mode !== 'levelmap') break
+        this.overlays.showChoices('Find items', [
+          { label: 'Items on this level', sub: 'known items on the current floor', tile: 'CMD_SEARCH_STASHES', run: () => this.runner.findItems(true) },
+          { label: 'Search items…', sub: 'search across explored levels', tile: 'CMD_SEARCH_STASHES', run: () => this.runner.findItems(false) },
+        ])
+        break
       case 'scrollLog':
         if (arg) this.hud.scrollLog(arg)
         break

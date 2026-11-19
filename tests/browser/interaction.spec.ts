@@ -4,6 +4,84 @@ import { test, result } from './fixtures'
 
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
+type MapWindow = Window & { __orbrunMapLifecycle: { receive(msg: Record<string, unknown>): void; pad(event: import('../../apps/orbrun/src/gamepad').PadEvent): void; snapshot(): { sent: unknown[]; presentation: string } } }
+
+for (const touch of [false, true]) {
+  test.describe(`level items ${touch ? 'touch' : 'controller'}`, () => {
+    test.use({ viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 720 }, hasTouch: touch })
+    test('Find offers the current level and custom search without typing', async ({ page }) => {
+      await page.goto('/testbed/map-lifecycle.html')
+      await expect.poll(async () => (await result(page)).renderer).toBe('Render25d')
+      const press = (button: 'SELECT' | 'L3' | 'A' | 'B') => page.evaluate(button => {
+        ;(window as unknown as MapWindow).__orbrunMapLifecycle.pad({ type: 'press', button, t: performance.now() })
+      }, button)
+      const sent = () => page.evaluate(() => (window as unknown as MapWindow).__orbrunMapLifecycle.snapshot().sent)
+      const opening = touch ? [] : [{ msg: 'input', text: 'X' }]
+      if (!touch) await press('SELECT')
+      expect(await sent()).toEqual(opening)
+      const mapButton = page.getByRole('button', { name: 'Open level map', exact: true })
+      if (touch) await mapButton.tap()
+      else await mapButton.click()
+      await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')
+      const find = () => touch ? page.getByRole('button', { name: 'Find…', exact: true }).tap() : press('L3')
+      await find()
+      const option = page.getByRole('button', { name: 'Items on this level', exact: true })
+      await expect(option).toBeVisible()
+      expect(await sent()).toHaveLength(opening.length)
+      await page.screenshot({ path: `test-results/find-items-${touch ? 'touch' : 'controller'}.png`, animations: 'disabled' })
+      // Cancelling the chooser leaves the map open and sends nothing to Crawl.
+      if (touch) await page.getByRole('button', { name: 'Esc', exact: true }).tap()
+      else await press('B')
+      await expect(option).toBeHidden()
+      expect(await sent()).toHaveLength(opening.length)
+      await find()
+      if (touch) await option.tap()
+      else await press('A')
+      await expect.poll(sent).toEqual([...opening, { msg: 'key', keycode: 27 }, { msg: 'key', keycode: 6 }])
+      await page.evaluate(() => {
+        const f = (window as unknown as MapWindow).__orbrunMapLifecycle
+        f.receive({ msg: 'ui_state', state: 0 })
+        f.receive({ msg: 'init_input', type: 'messages', tag: 'stash_search', prefill: 'old search' })
+      })
+      await expect.poll(sent).toEqual([
+        ...opening, { msg: 'key', keycode: 27 }, { msg: 'key', keycode: 6 },
+        { msg: 'key', keycode: 21 }, { msg: 'key', keycode: 11 }, { msg: 'text_input', text: '.\r' },
+      ])
+      await page.evaluate(() => {
+        const f = (window as unknown as MapWindow).__orbrunMapLifecycle
+        f.receive({ msg: 'close_input' })
+        f.receive({ msg: 'menu', tag: 'stash_search', title: { text: 'Search results' }, flags: 0, items: [{ text: 'a +0 mace', hotkeys: [97], quantity: 1 }] })
+      })
+      await expect(page.getByText('a +0 mace', { exact: true })).toBeVisible()
+      expect((await result(page)).renderer).toBe('Render2d')
+      await page.evaluate(() => {
+        const f = (window as unknown as MapWindow).__orbrunMapLifecycle
+        f.receive({ msg: 'close_menu' })
+        f.receive({ msg: 'ui_state', state: 2 })
+      })
+      await find()
+      if (touch) {
+        const search = page.getByRole('button', { name: 'Search items…', exact: true })
+        await search.tap() // Command lists focus an unfocused row before activating it.
+        await expect(search).toHaveClass(/focused/)
+        expect(await sent()).toHaveLength(opening.length + 5)
+        await search.tap()
+      } else {
+        await page.evaluate(() => (window as unknown as MapWindow).__orbrunMapLifecycle.pad({ type: 'dir', dir: 4, source: 'dpad' }))
+        await press('A')
+      }
+      await expect.poll(async () => (await sent()).length).toBe(opening.length + 7)
+      await page.evaluate(() => {
+        const f = (window as unknown as MapWindow).__orbrunMapLifecycle
+        f.receive({ msg: 'ui_state', state: 0 })
+        f.receive({ msg: 'init_input', type: 'messages', tag: 'stash_search' })
+      })
+      await expect(page.locator('.text-input.in-log input')).toBeVisible()
+      expect(await sent()).toHaveLength(opening.length + 7)
+    })
+  })
+}
+
 test.describe('Android fullscreen', () => {
   test.use({
     viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 },

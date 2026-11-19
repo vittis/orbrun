@@ -400,6 +400,13 @@ describe('direct command controls', () => {
     expect(resolve({ type: 'repeat', button: 'LT', n: 3 }, map)).toMatchObject({ seq: [{ key: 123 }] })
     for (const button of ['LB', 'RB', 'X', 'Y', 'L3', 'R3'] as const) expect(resolve({ type: 'repeat', button, n: 1 }, map), button).toBeNull()
   })
+  it('the level map exposes the same item chooser on the controller and touch bar', () => {
+    const map = ctx({ mode: 'levelmap', mapCursorHome: true })
+    const action = { kind: 'ui', op: 'findItems' }
+    expect(resolve({ type: 'press', button: 'L3', t: 0 }, map)).toEqual(action)
+    expect(touchLabels(barLabels(map), map).find(l => l.button === 'L3')?.action).toEqual(action)
+    expect(promptLabels(map).find(l => l.button === 'L3')?.action).toEqual(action)
+  })
   it('a held RT stops where the swing led somewhere else: nothing repeats in a more, an aim or a menu', () => {
     for (const c of [ctx({ mode: 'more' }), ctx({ mode: 'targeting' }), ctx({ mode: 'targeting', examining: true }), ctx({ mode: 'menu' })]) {
       expect(resolve({ type: 'repeat', button: 'RT', n: 1 }, c)).toBeNull()

@@ -57,7 +57,7 @@ export type Action =
   | { kind: 'prompt'; hotkey: string }
   /** the focus layer's cursor over the top overlay (popup, prompt, CRT screen, dialog) */
   | { kind: 'focus'; op: FocusOp }
-  | { kind: 'ui'; op: 'commands' | 'actionTab' | 'equipment' | 'palette' | 'system' | 'keyboard' | 'levelmap' | 'bindings' | 'scrollLog' | 'popupAction'; arg?: number; category?: CommandCategory; section?: string }
+  | { kind: 'ui'; op: 'commands' | 'actionTab' | 'equipment' | 'palette' | 'system' | 'keyboard' | 'levelmap' | 'findItems' | 'bindings' | 'scrollLog' | 'popupAction'; arg?: number; category?: CommandCategory; section?: string }
   | { kind: 'osk'; op: 'move' | 'type' | 'backspace' | 'space' | 'submit' | 'cancel' | 'shift'; dir?: Dir8 }
 
 /** Which section of the command palette applies: the cmd-keys.h key table for the mode. */
@@ -322,7 +322,7 @@ function levelmapTable(ctx: Context): Partial<Record<Button, Action>> {
     // held, the triggers keep zooming, a step (tileweb.cc ZOOM_INC) every repeat
     LT: { kind: 'keys', seq: [{ key: 123 }], label: 'Zoom out', contextual: true, repeats: true },
     RT: { kind: 'keys', seq: [{ text: '}' }], label: 'Zoom in', contextual: true, repeats: true },
-    L3: offMap('Find…', { key: 6 }),
+    L3: { kind: 'ui', op: 'findItems' },
     R3: offMap('Overview', { key: 15 }),
     SELECT: kc(Keys.ESC, 'Close'),
   }
@@ -1326,6 +1326,7 @@ const UI_ICONS: Partial<Record<Extract<Action, { kind: 'ui' }>['op'], TouchIcon>
   keyboard: KEYBOARD,
   system: { icon: 'CMD_GAME_MENU' },
   levelmap: { icon: 'CMD_DISPLAY_MAP' },
+  findItems: { icon: 'CMD_SEARCH_STASHES' },
   scrollLog: LIST,
 }
 
@@ -1464,7 +1465,7 @@ function isContextual(a: Action, ctx: Context): boolean {
       return a.op === 'examine' && !!ctx.menu && menuRowExamines(ctx.menu)
     }
     case 'ui':
-      return a.op === 'popupAction' && !!ctx.popupActions?.[a.arg ?? 0]
+      return a.op === 'findItems' || (a.op === 'popupAction' && !!ctx.popupActions?.[a.arg ?? 0])
     default:
       return false
   }
@@ -1565,7 +1566,7 @@ function staticLabel(a: Action): string {
     case 'keys':
       return a.label
     case 'ui':
-      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Orbrun menu', keyboard: 'Keyboard', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
+      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Orbrun menu', keyboard: 'Keyboard', levelmap: 'Level map', findItems: 'Find…', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
     default:
       return actionLabel(a, EMPTY_CTX)
   }
@@ -1640,7 +1641,7 @@ export function actionLabel(a: Action, ctx: Context, button?: Button): string {
       // the bumpers on X's actions name the tab they turn to
       if (a.op === 'actionTab') return ((a.arg ?? 1) < 0 ? ctx.menu?.actions?.prev : ctx.menu?.actions?.next) ?? 'Actions tab'
       // X and Y name the first tab of what they open (action-tabs.ts, pack-tabs.ts)
-      return { commands: 'Spells', equipment: 'Gear', palette: 'Commands', system: 'Character', keyboard: 'Keyboard', levelmap: 'Level map', bindings: 'Gamepad', scrollLog: 'Log' }[a.op]
+      return { commands: 'Spells', equipment: 'Gear', palette: 'Commands', system: 'Character', keyboard: 'Keyboard', levelmap: 'Level map', findItems: 'Find…', bindings: 'Gamepad', scrollLog: 'Log' }[a.op]
     case 'osk':
       return { move: 'Move', type: 'Type', backspace: 'Backspace', space: 'Space', submit: 'Done', cancel: 'Cancel', shift: 'Shift' }[a.op]
     case 'step':

@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.155 — 2026-11-19
+
+- Touch and controller: open the level map, choose Find…, then Items on this level to list known floor items without typing. Search items… remains available for custom searches.
+
 ## 0.3.154 — 2026-11-19
 
 - The smaller Android fullscreen icon overlays the dungeon without reducing the gameplay viewport.
