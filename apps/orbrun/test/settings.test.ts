@@ -100,7 +100,7 @@ it('persists an atmosphere opt-out independently of the exploration transition',
   expect(getSettings()).toMatchObject({ depthFog: false, depthAtmosphere: false })
 })
 
-const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'depthMovementHopHeight', 'depthMovementSquash', 'depthMovementSway', 'uiScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
+const numericKeys = ['combatVfxVariation', 'meleeBumpSpeed', 'hitSprayOutward', 'deathSprayOutward', 'hitGore', 'deathGore', 'meleeBumpStrength', 'meleeBumpSnap', 'depthTilt', 'depthZoom', 'depthMovementDuration', 'depthMovementHopHeight', 'depthMovementSquash', 'depthMovementSway', 'uiScale', 'characterPanelScale', 'minimapTiles', 'minimapCell', 'messageLines', 'exploreDelay'] as const
 describe('numeric preference validation', () => {
   it.each(numericKeys)('rejects invalid %s values on read and write', name => {
     for (const value of [null, true, '12', {}, [], NaN, Infinity, -Infinity]) {
@@ -126,6 +126,7 @@ describe('numeric preference validation', () => {
     ['depthMovementSquash', -1, 0], ['depthMovementSquash', 3, 2],
     ['depthMovementSway', -1, 0], ['depthMovementSway', 3, 2],
     ['uiScale', 0, 0.85], ['uiScale', 9, 1.5],
+    ['characterPanelScale', 0, 0.6], ['characterPanelScale', 9, 1],
     ['minimapTiles', -10, 0], ['minimapTiles', 2, 15], ['minimapTiles', 130, 61], ['minimapTiles', 18.6, 19],
     ['minimapCell', -1, 0], ['minimapCell', 1, 8], ['minimapCell', 64, 32],
     ['messageLines', -2, 0], ['messageLines', 1, 2], ['messageLines', 99, 20], ['messageLines', 4.6, 5],

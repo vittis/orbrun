@@ -1784,6 +1784,8 @@ a.item.beside {
  * the view stays open behind them.
  */
 .hud .stats {
+  font-size: calc(var(--fs, 16px) * var(--character-panel-scale, 1));
+  line-height: var(--ch, 19px);
   background: rgba(0, 0, 0, 0);
   /* bare like the message pane: the text is shadowed instead of backed */
   text-shadow:

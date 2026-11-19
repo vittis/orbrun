@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.152 — 2026-11-19
+
+- Settings → Interface → Character panel scale shrinks the corner stats, bars, and optional portrait to as little as 60%.
+
 ## 0.3.151 — 2026-11-18
 
 - The character portrait and nearby monster list are hidden by default. Turn either on in Settings → Interface.

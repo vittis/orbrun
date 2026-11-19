@@ -173,8 +173,9 @@ export function touchBeside(grid: Grid): boolean {
  * character sheet keeps a readable width at the top, the list below it, and
  * the messages and clear area span the full width.
  */
-export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, foot = 0, sideFoot = 0, columnWidth = statWidth, band = 0, mapCols = PORTRAIT_MAP_COLS, under = 0, statsOnRight = false): GameLayout {
+export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, foot = 0, sideFoot = 0, columnWidth = statWidth, band = 0, mapCols = PORTRAIT_MAP_COLS, under = 0, statsOnRight = false, characterPanelScale = 1): GameLayout {
   const rows = Math.max(MIN_ROWS - 4, grid.rows - foot)
+  const statsRows = Math.ceil(STATS_ROWS * characterPanelScale)
   // the messages stand on what is under them (the spell bar), the view and the column running on beside it
   const lower = Math.max(MIN_ROWS - 4, rows - under)
   const msgs = Math.max(2, Math.min(msgRows + 1, lower - 4))
@@ -203,7 +204,7 @@ export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, f
     // many lines. Both compact panes scroll instead of losing their contents.
     const narrowMsgs = Math.min(msgs, Math.max(2, lower - 10))
     const clearBottom = lower - narrowMsgs
-    const statsH = Math.min(STATS_ROWS, Math.max(2, clearBottom - 8))
+    const statsH = Math.min(statsRows, Math.max(2, clearBottom - 8))
     const listH = Math.min(Math.ceil(128 / grid.ch), Math.max(2, clearBottom - statsH - 6))
     const listY = statsH + 1
     const top = listY + listH + 1
@@ -219,7 +220,7 @@ export function gameSplit(grid: Grid, msgRows: number, statWidth = STAT_WIDTH, f
   }
   const leftW = grid.cols - side
   const statsW = Math.min(side, statWidth)
-  const statsH = Math.min(STATS_ROWS, rows)
+  const statsH = Math.min(statsRows, rows)
   const sideTop = statsOnRight ? statsH + 1 : 0
   return {
     view,

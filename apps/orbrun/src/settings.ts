@@ -27,6 +27,7 @@ export interface Settings {
   deathSprayOutward: number
   combatVfxVariation: number
   uiScale: number
+  characterPanelScale: number
   showCharacterPortrait: boolean
   showNearbyMonsters: boolean
   confirmStairs: boolean
@@ -79,6 +80,7 @@ export const defaultSettings: Settings = {
   deathSprayOutward: 0.75,
   combatVfxVariation: 0.6,
   uiScale: 1,
+  characterPanelScale: 1,
   showCharacterPortrait: false,
   showNearbyMonsters: false,
   confirmStairs: false,
@@ -114,6 +116,7 @@ const numericDomains: Record<NumericSetting, { min: number; max: number; integer
   deathSprayOutward: { min: 0, max: 1 },
   combatVfxVariation: { min: 0, max: 1 },
   uiScale: { min: 0.85, max: 1.5 },
+  characterPanelScale: { min: 0.6, max: 1 },
   minimapTiles: { min: 15, max: 61, integer: true, auto: true },
   minimapCell: { min: 8, max: 32, auto: true },
   messageLines: { min: 2, max: 20, integer: true, auto: true },

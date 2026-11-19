@@ -315,6 +315,7 @@ export class Hud {
   private sidebar = h('div', { class: 'sidebar' })
   /** the WebTiles `#stats` pane (player.js / game.html) as text rows on the grid (grid/stats.ts) */
   private stats = h('div', { class: 'stats' })
+  private statsRowPx = 0
   /**
    * The portrait: the player's own cell, drawn with the same cell renderer
    * as the monster list's thumbnails (`render_cell`), at the pane's
@@ -538,7 +539,7 @@ export class Hud {
    * `toggle_full_window_dungeon_view`, which hides the whole `#right_column`);
    * the stats pane alone steps aside while the new-game chooser is up.
    */
-  layout(host: GridHost, cells: GameLayout, free: CellRect, hidden: { stats: boolean; sidebar: boolean; messages: boolean; portrait?: boolean; monsters?: boolean }) {
+  layout(host: GridHost, cells: GameLayout, free: CellRect, hidden: { stats: boolean; sidebar: boolean; messages: boolean; portrait?: boolean; monsters?: boolean }, characterPanelScale = 1) {
     this.host = host
     const portrait = isPortrait(host.grid)
     // Upright Dungeon has no minimap column. Give the enabled list room below the stats.
@@ -550,7 +551,14 @@ export class Hud {
     this.cells = cells
     this.spellbarW = null
     this.touchbarH = null
-    host.place(this.stats, cells.stats)
+    const statsOnRight = cells.stats.x > cells.view.x
+    const statsWidth = cells.stats.w * characterPanelScale
+    const statsX = cells.stats.x + (statsOnRight || cells.stackedDesktop ? cells.stats.w - statsWidth : 0)
+    const statsRect = { ...cells.stats, x: statsX, w: statsWidth }
+    host.place(this.stats, statsRect)
+    this.statsRowPx = host.grid.ch * characterPanelScale
+    this.stats.style.setProperty('--ch', this.statsRowPx + 'px')
+    this.stats.style.setProperty('--character-panel-scale', String(characterPanelScale))
     // the pane grows with its rows (the status lights wrap); the cells give it its width and where it starts
     this.root.classList.toggle('stacked-desktop', !!cells.stackedDesktop)
     // The folded chat footer lies over this band's foot. Extra scroll content
@@ -562,7 +570,9 @@ export class Hud {
     if (cells.stackedDesktop) this.sidebar.prepend(this.statuses)
     else if (this.statuses.parentElement !== this.root) this.root.insertBefore(this.statuses, this.actionPanel)
     const sidebar = cells.sidebar
-    const statsRowsShown = uprightList && !hidden.stats ? this.stats.childElementCount : 0
+    const statsRowsShown = uprightList && !hidden.stats && this.stats.childElementCount
+      ? (this.stats.childElementCount - 1) * characterPanelScale + 1
+      : 0
     host.place(this.sidebar, { ...sidebar, y: sidebar.y + statsRowsShown, h: Math.max(0, sidebar.h - statsRowsShown) })
     host.place(this.messages, cells.messages)
     this.stats.hidden = hidden.stats || cells.stats.w === 0
@@ -570,8 +580,8 @@ export class Hud {
     this.portraitCanvas.hidden = !!hidden.portrait
     this.monsters.hidden = !!hidden.monsters
     // the portrait is a square as tall as the pane's rows for it (one row on a compact pane); the rows beside it start a cell after it
-    const side = !hidden.portrait && cells.stats.w > 0 ? host.grid.ch * PORTRAIT_ROWS : 0
-    this.portraitCols = side ? Math.min(cells.stats.w, Math.ceil(side / host.grid.cw) + 1) : 0
+    const side = !hidden.portrait && cells.stats.w > 0 ? this.statsRowPx * PORTRAIT_ROWS : 0
+    this.portraitCols = side ? Math.min(cells.stats.w, Math.ceil(PORTRAIT_ROWS * host.grid.ch / host.grid.cw) + 1) : 0
     const dpr = window.devicePixelRatio || 1
     if (side !== this.portraitPx || dpr !== this.portraitDpr) {
       this.portraitPx = side
@@ -600,8 +610,7 @@ export class Hud {
     // it stands in the screen's top-right corner instead, the stats pane beside it (bandFit). With the touch bar at the column's foot the map leaves
     // the bar its three rows.
     const sidePx = host.px(cells.sidebar)
-    const statsPx = host.px(cells.stats)
-    const statsOnRight = cells.stats.x > cells.view.x
+    const statsPx = host.px(statsRect)
     const statsRight = this.stats.hidden || statsOnRight ? null : statsPx.left + statsPx.width
     const statsLeft = this.stats.hidden || !statsOnRight ? null : statsPx.left
     const gridW = host.grid.cols * host.grid.cw
@@ -861,7 +870,7 @@ export class Hud {
     if (host && !this.stats.hidden && !this.sidebar.hidden && !this.cells.stackedDesktop && !this.minimapEnabled && (corner || this.cells.sidebar.y > this.cells.stats.y)) {
       const sidebar = host.px(this.cells.sidebar)
       const stats = host.px(this.cells.stats)
-      const top = Math.max(sidebar.top, stats.top + (rows.length + 1) * host.grid.ch)
+      const top = Math.max(sidebar.top, stats.top + rows.length * this.statsRowPx + host.grid.ch)
       this.sidebar.style.top = top + 'px'
       this.sidebar.style.height = Math.max(0, sidebar.height - (top - sidebar.top)) + 'px'
       if (this.statusAt && this.statusAt.top !== top + host.grid.ch) this.statusAt = { ...this.statusAt, top: top + host.grid.ch }

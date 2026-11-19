@@ -598,10 +598,10 @@ export class GameScreen {
     const underPx = (spells ? SPELL_ROW_PX : 0) + (glance ? glanceRowPx(g.ch) + GLANCE_GAP_PX : 0)
     // the log's last row, the --more-- line's, is bare but for a --more--, so what stands under the log takes it (hud.ts placeLog)
     const spellRows = underPx ? Math.max(0, Math.ceil(underPx / g.ch) - 1) : 0
-    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance, dungeon, settings.showCharacterPortrait, settings.showNearbyMonsters].join(',')
+    const key = [g.cols, g.rows, g.cw, g.ch, g.ox, g.oy, msgRows, hideStats, hideSidebar, hideMessages, window.devicePixelRatio, barRows, beside, this.grid.phone, band.rows, band.cols, spellRows, spells, glance, dungeon, settings.characterPanelScale, settings.showCharacterPortrait, settings.showNearbyMonsters].join(',')
     if (!force && key === this.layoutKey) return
     this.layoutKey = key
-    const cells = gameSplit(g, msgRows, undefined, beside ? 0 : barRows, beside ? barRows : 0, beside && barRows ? touchColumn(g) : undefined, band.rows, band.cols, spellRows, dungeon)
+    const cells = gameSplit(g, msgRows, undefined, beside ? 0 : barRows, beside ? barRows : 0, beside && barRows ? touchColumn(g) : undefined, band.rows, band.cols, spellRows, dungeon, settings.characterPanelScale)
     this.hud.touchBeside = beside
     // the level map's canvas runs on under the touch bar; what rides the map's edges keeps to the part the bar leaves
     const map = mapView ? levelMapSplit(g, cells, { hideSidebar, hideMessages }) : null
@@ -652,7 +652,7 @@ export class GameScreen {
     this.hud.layout(this.grid, cells, free, {
       stats: hideStats, sidebar: hideSidebar, messages: hideMessages,
       portrait: !settings.showCharacterPortrait, monsters: !settings.showNearbyMonsters,
-    })
+    }, settings.characterPanelScale)
     // the settings' minimap rows read Auto with what it came out as here (kept while the level map has the column)
     if (this.hud.minimapShown) setAutoMinimap(this.hud.minimapShown)
     // a popup and its dim stop short of the touch bar, so its buttons stay in reach under any of them (styles.css .overlay-stack)

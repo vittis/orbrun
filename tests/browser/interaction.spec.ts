@@ -431,6 +431,13 @@ test.describe('desktop browser zoom below 100%', () => {
   })
 })
 
+async function openHudSettings(page: import('@playwright/test').Page) {
+  await page.locator('canvas.view').press('F5')
+  await page.getByRole('tab', { name: 'System', exact: true }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await page.locator('.settings-groups').getByText('Interface', { exact: true }).click()
+}
+
 for (const narrow of [false, true]) {
   test.describe(narrow ? 'narrow HUD' : 'desktop HUD', () => {
     test.use(narrow ? { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true } : {})
@@ -444,10 +451,7 @@ for (const narrow of [false, true]) {
       await expect(portrait).toBeHidden()
       await expect(monsters).toBeHidden()
 
-      await page.locator('canvas.view').press('F5')
-      await page.getByRole('tab', { name: 'System', exact: true }).click()
-      await page.getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.locator('.settings-groups').getByText('Interface', { exact: true }).click()
+      await openHudSettings(page)
       const portraitValue = page.locator('[data-focus="setting:Character portrait"] .val')
       const monstersValue = page.locator('[data-focus="setting:Nearby monsters"] .val')
       await expect(portraitValue).toHaveText('Off')
@@ -474,6 +478,65 @@ for (const narrow of [false, true]) {
       const listBounds = (await monsters.boundingBox())!
       expect(listBounds.y).toBeGreaterThanOrEqual(statsBounds.y + statsBounds.height)
       await page.screenshot({ path: `test-results/hud-visibility-${narrow ? 'narrow' : 'desktop'}.png` })
+    })
+  })
+}
+
+for (const [layout, width, height, hasTouch] of [
+  ['desktop', 1280, 720, false],
+  ['narrow desktop', 390, 844, false],
+  ['upright phone', 390, 844, true],
+] as const) {
+  test.describe(layout, () => {
+    test.use({ viewport: { width, height }, screen: { width, height }, hasTouch })
+
+    test('character panel scale shrinks the stats and portrait in place and persists', async ({ page }) => {
+      await page.addInitScript(() => {
+        if (!localStorage.getItem('orbrun.settings')) {
+          localStorage.setItem('orbrun.settings', JSON.stringify({ showCharacterPortrait: true, showNearbyMonsters: true }))
+        }
+      })
+      await page.goto('/testbed/map-lifecycle.html')
+      const stats = page.locator('.hud .stats')
+      const portrait = stats.locator('canvas.portrait')
+      const messages = page.locator('.hud .messages')
+      const title = stats.getByText('Map lifecycle', { exact: true })
+      await expect(title).toBeVisible()
+      await expect(portrait).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      const measure = () => stats.evaluate(el => {
+        const box = el.getBoundingClientRect()
+        return {
+          width: box.width, right: box.right,
+          font: parseFloat(getComputedStyle(el).fontSize),
+          row: el.querySelector('.line')!.getBoundingClientRect().height,
+          portrait: el.querySelector('canvas')!.getBoundingClientRect().width,
+        }
+      })
+      const before = await measure()
+      const messageFont = await messages.evaluate(el => getComputedStyle(el).fontSize)
+      await openHudSettings(page)
+      const value = page.locator('[data-focus="setting:Character panel scale"] .val')
+      await expect(value).toHaveText('100%')
+      const previous = page.getByRole('button', { name: 'Character panel scale previous', exact: true })
+      await previous.click()
+      await previous.click()
+      await expect(value).toHaveText('80%')
+      await expect.poll(async () => (await measure()).font / before.font).toBeCloseTo(0.8, 2)
+      await page.reload()
+      await expect(title).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      const after = await measure()
+      expect(after.right).toBeCloseTo(before.right, 0)
+      for (const dimension of ['width', 'font', 'row', 'portrait'] as const) {
+        expect(after[dimension] / before[dimension], dimension).toBeCloseTo(0.8, 2)
+      }
+      await expect(messages).toHaveCSS('font-size', messageFont)
+      const monsters = page.locator('.hud .monsters')
+      await expect(monsters.getByText('goblin')).toBeVisible()
+      const panel = (await stats.boundingBox())!
+      expect((await monsters.boundingBox())!.y).toBeGreaterThanOrEqual(panel.y + panel.height)
+      await page.screenshot({ path: `test-results/character-panel-scale-${layout.replaceAll(' ', '-')}.png` })
     })
   })
 }
