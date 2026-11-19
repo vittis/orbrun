@@ -171,14 +171,14 @@
   .menu-replay-controls { position: static; grid-row: 3; justify-self: center; transform: none; }
   .menu-replay-slider input { height: 44px; }
   .account-bar {
-    grid-template-columns: clamp(68px, 20vw, 112px) minmax(0, 1fr);
+    grid-template-columns: clamp(60px, 19vw, 112px) minmax(0, 1fr);
     align-self: stretch; max-width: 400px; gap: 2px 4px;
     margin-top: max(8px, env(safe-area-inset-top));
   }
   .account-bar select { width: 100%; text-overflow: ellipsis; }
   .account-details { align-items: center; }
   .inline-login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 4px; align-items: stretch; }
-  .inline-login input { width: 100%; box-sizing: border-box; }
+  .inline-login input { width: 100%; box-sizing: border-box; padding-inline: 4px; font-family: 'IBM Plex Sans', sans-serif; }
   .inline-login button { padding-inline: 6px; white-space: nowrap; }
   .signed-in button:first-child { min-width: 0; overflow-wrap: anywhere; }
   .signed-in button:last-child { flex: none; }

@@ -637,7 +637,7 @@ test('live sounds follow confirmed message occurrences and stop on screen teardo
 
 for (const touch of [false, true]) {
   test.describe(touch ? 'Polished menu touch' : 'Polished menu desktop', () => {
-    test.use({ viewport: touch ? { width: 328, height: 960 } : { width: 1016, height: 780 }, hasTouch: touch })
+    test.use({ viewport: touch ? { width: 320, height: 960 } : { width: 1016, height: 780 }, hasTouch: touch })
     test('keeps inline auth, keyed rows and modal focus stable as the lobby changes', async ({ page }) => {
       const sockets: import('@playwright/test').WebSocketRoute[] = []
       const sent: { msg: string; username?: string; password?: string }[] = []
