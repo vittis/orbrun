@@ -83,7 +83,7 @@ Confirmed combat events drive player, enemy and ally body bumps, spell bursts, h
 
 ## Settings and layout
 
-View settings and the in-game Tune panel share movement duration/easing and independent hop height, squash/stretch and sway/banking strengths. Strengths range from off to 200%, with defaults of 40% hop height, 60% squash and 100% sway and apply immediately to body poses and contact shadows without changing travel, camera following or idle motion. Instant movement disables the dependent controls. Defaults preserve the authored gaits; existing custom durations remain valid between the menu's 10 ms steps.
+View settings offer movement duration and easing, plus independent controls for hop height, squash/stretch and sway/banking. Strengths range from off to 200%, with defaults of 40% hop height, 60% squash and 100% sway and apply immediately to body poses and contact shadows without changing travel, camera following or idle motion. Instant movement disables the dependent controls. Defaults preserve the authored gaits; existing custom durations remain valid between the menu's 10 ms steps.
 
 `settings.ts` reads and writes only `orbrun.settings`. It preserves existing keys/defaults and legacy hint migration, ignores retired fields, normalizes finite numbers to documented supported domains, and stores only non-default values. Reading never rewrites storage. Server/account/save persistence remains in `servers.ts`.
 

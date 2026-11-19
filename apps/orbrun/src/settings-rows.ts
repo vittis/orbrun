@@ -253,8 +253,7 @@ export function adjustSetting(r: SettingRow, d: number, onchange?: () => void): 
   return chooseSetting(r, n, onchange)
 }
 
-/** Choose an offered value directly, sharing persistence and disabled-state rules with arrows. */
-export function chooseSetting(r: SettingRow, value: unknown, onchange?: () => void): string {
+function chooseSetting(r: SettingRow, value: unknown, onchange?: () => void): string {
   const s = getSettings()
   if (rowOff(r, s) || !(r.values as readonly unknown[]).includes(value)) return settingValue(r, s)
   ;(s as unknown as Record<string, unknown>)[r.key] = value

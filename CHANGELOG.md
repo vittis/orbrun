@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.149 — 2026-11-18
+
+- Removed the left-center Tune panel from gameplay and spectating. Its controls are available in Settings → View and Settings → Combat.
+
 ## 0.3.148 — 2026-11-18
 
 - The level map again follows the browser’s pixel ratio when zoomed below 100% on a standard-density display.
