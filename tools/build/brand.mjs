@@ -5,9 +5,9 @@
  * (assets/fonts/GrenzeGotisch-Bold.ttf, OFL; see ATTRIBUTION.md):
  *
  *   assets/logo.svg                    the README's wordmark: the orb beside the name, as the title screen sets it
- *   apps/orbrun/public/favicon.svg     the orb on a dark rounded square
+ *   apps/orbrun/public/favicon.svg     the hand-drawn gold C (source for launcher icons)
  *   apps/orbrun/public/steam/art/*.png  Steam artwork: icon (the orb), logo, hero, grid, portrait (the wordmark)
- *   apps/orbrun/public/icons/*.png      the web app manifest's icons and the home-screen icon (the orb)
+ *   apps/orbrun/public/icons/*.png      the web app manifest's icons and the home-screen icon (the gold C)
  *
  *   node tools/build/brand.mjs
  *
@@ -120,7 +120,7 @@ function deck(out, src, width, canvasW, canvasH) {
 }
 
 fs.writeFileSync(path.join(root, 'assets/logo.svg'), wordmark())
-fs.writeFileSync(path.join(pub, 'favicon.svg'), mark(64))
+
 
 const word = svg('word.svg', wordmark({ background: false }))
 const wordRounded = svg('word-rounded.svg', wordmark())
@@ -132,12 +132,16 @@ deck(path.join(art, 'hero.png'), word, 1152, 1920, 620)
 deck(path.join(art, 'grid.png'), word, 864, 920, 430)
 deck(path.join(art, 'portrait.png'), word, 540, 600, 900)
 const icons = path.join(pub, 'icons')
-const square = svg('square.svg', mark(512, false))
+const favicon = path.join(pub, 'favicon.svg')
+// Keep the launcher background full bleed and the letter inside the mask's safe circle.
+const inset = svg('inset.svg', fs.readFileSync(favicon, 'utf8')
+  .replace('rx="12"', 'rx="0"')
+  .replace('<g id="letter">', '<g transform="translate(6.4 6.4) scale(.8)">'))
 fs.mkdirSync(icons, { recursive: true })
-deck(path.join(icons, 'icon-192.png'), icon, 192)
-deck(path.join(icons, 'icon-512.png'), icon, 512)
-deck(path.join(icons, 'maskable-512.png'), square, 512)
-deck(path.join(icons, 'apple-touch-icon.png'), square, 180)
+deck(path.join(icons, 'crawl-192.png'), favicon, 192)
+deck(path.join(icons, 'crawl-512.png'), favicon, 512)
+deck(path.join(icons, 'crawl-maskable-512.png'), inset, 512)
+deck(path.join(icons, 'apple-touch-icon.png'), inset, 180)
 for (const f of [
   'assets/logo.svg',
   'apps/orbrun/public/favicon.svg',

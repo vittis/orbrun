@@ -1,5 +1,9 @@
 # What's new
 
+## 0.1.158 — 2026-11-19
+
+- The browser tab and Android home screen now use a gold C inspired by the shiny CRAWL title.
+
 ## 0.1.157 — 2026-11-19
 
 - About now names and links to the original project in Credits.

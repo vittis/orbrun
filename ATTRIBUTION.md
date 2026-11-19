@@ -59,9 +59,7 @@ a handful of DCSS's own tiles, packed into `apps/orbrun/public/room/` by
 `tools/build/pack-room.mjs` from one pinned gamedata version (named in that
 tool; `atlas.json` records it and the source of every tile). These assets serve rendering fixtures and static document artwork; gameplay loads the connected server’s tiles. Orbrun's mark is the Orb of
 Zot's tile of that same version, cut from its `main.png` into
-`apps/orbrun/public/orb.png`: it remains in the existing icons and external artwork,
-and `tools/build/brand.mjs` builds the favicon, the README's wordmark and the
-Steam artwork from it. DCSS's LICENSE states that most tile art is public domain or CC0, with
+`apps/orbrun/public/orb.png`: the README wordmark and Steam artwork use this tile. The browser and launcher icons use an original gold C inspired by the menu title. DCSS's LICENSE states that most tile art is public domain or CC0, with
 exceptions. The atlas records source rectangles and a gamedata version,
 not a per-tile license audit; do not infer that every packed tile is CC0.
 See the upstream [DCSS license](https://github.com/crawl/crawl/blob/master/LICENSE)

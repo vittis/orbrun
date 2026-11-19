@@ -22,4 +22,4 @@ Polished Crawl is an unofficial Dungeon Crawl Stone Soup client for public WebTi
 - The Dungeon Crawl Stone Soup contributors made the game, WebTiles and tile art. Thanks to the public server operators and Crawl community.
 - Thanks to the PocketZot team and to vimuston, creator of Super Dungeon Crawl, for inspiration.
 
-Published under the GNU Affero General Public License v3 or later. [Source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.159) · [Full attribution and licenses](ATTRIBUTION.md)
+Published under the GNU Affero General Public License v3 or later. [Source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.160) · [Full attribution and licenses](ATTRIBUTION.md)

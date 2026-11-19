@@ -29,8 +29,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
 /** where the markdown reader points a link to another file of the repository (markdown.ts REPO_BLOB) */
-const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.159/'
-const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.159'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.160/'
+const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.160'
 const ISSUES = 'https://github.com/vittis/orbrun/issues'
 const SITE_SCRIPT_PATH = '/site-controls.js'
 
@@ -257,7 +257,7 @@ function head(page: Page, css: string, beacon: string): string {
 <meta name="twitter:description" content="${description}" />
 <meta name="twitter:image" content="${SITE_URL}${card.src}" />
 <script type="application/ld+json">${structuredData(page)}</script>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?gold-c" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="application-name" content="Polished Crawl" />
 <meta name="apple-mobile-web-app-title" content="Polished Crawl" />

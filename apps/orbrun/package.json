@@ -1,6 +1,6 @@
 {
   "name": "orbrun",
-  "version": "0.1.157",
+  "version": "0.1.158",
   "private": true,
   "description": "Polished Crawl: a 2.5D Dungeon Crawl Stone Soup WebTiles client for keyboard, controllers and touch.",
   "license": "AGPL-3.0-or-later",
