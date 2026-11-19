@@ -6,6 +6,7 @@ import { h, replace } from './dom'
 import { FocusNav, type Focusable } from './focus'
 import { MenuBackdrop } from './menu-backdrop'
 import { HomeView, homeGame } from './menu-home'
+import { installFullscreenButton } from './fullscreen'
 import { MenuModal } from './menu-modal'
 import about from '../../../ABOUT.md?raw'
 import { renderMarkdown } from './markdown'
@@ -363,6 +364,7 @@ export class FrontEnd {
       register: () => { this.adding = this.homeServer; this.showRegister() },
       about: () => this.showAbout(), news: () => this.showNews(),
     })
+    installFullscreenButton(this.home.el, this.aborter.signal)
     // an offline build checked for, downloading, or new is said on its game's row
     this.unwatchEngines = engines.onChange(() => {
       if (this._view === 'home') this.showHome()

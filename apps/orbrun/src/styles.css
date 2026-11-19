@@ -1660,6 +1660,46 @@ a.item.beside {
   background: #000;
 }
 
+#app {
+  --fullscreen-size: 44px;
+  --fullscreen-top: max(4px, env(safe-area-inset-top, 0px));
+  --fullscreen-right: max(4px, env(safe-area-inset-right, 0px));
+}
+
+/* Give the game and its overlays their own viewport below the corner control. */
+.screen.game:has(> .fullscreen-control) {
+  top: calc(var(--fullscreen-top) + var(--fullscreen-size) + 4px);
+}
+
+button.fullscreen-control {
+  position: fixed;
+  top: var(--fullscreen-top);
+  right: var(--fullscreen-right);
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: var(--fullscreen-size);
+  height: var(--fullscreen-size);
+  padding: 0;
+  border: 1px solid #535b47;
+  border-radius: 4px;
+  background: #10170f;
+  color: #dfc27d;
+  font-size: 20px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+button.fullscreen-control:focus-visible {
+  outline: 2px solid #efd28c;
+  outline-offset: 1px;
+}
+
+.screen.game > .fullscreen-control {
+  position: absolute;
+  top: calc(-1 * var(--fullscreen-size) - 4px);
+}
+
 /* the frame timing readout (perf.ts), over everything and in nothing's way */
 .game pre.perf {
   position: absolute;

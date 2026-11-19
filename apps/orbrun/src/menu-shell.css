@@ -87,6 +87,9 @@
 .inline-login, .signed-in { display: flex; align-items: center; gap: 6px; }
 .account-bar select, .account-bar input { font: inherit; color: #d6d7c9; background: #0c130deb; border: 0; border-bottom: 1px solid #535b47; border-radius: 0; min-height: 26px; padding: 4px 6px; min-width: 0; }
 .account-bar select { justify-self: start; max-width: 22ch; font-size: 11px; }
+.polished-home:has(> .fullscreen-control) .account-bar {
+  margin-right: max(var(--gutter), calc(var(--fullscreen-right) + var(--fullscreen-size) + 8px));
+}
 .account-bar input { width: 13ch; }
 .account-bar input::placeholder { color: #a7ad9d; opacity: 1; }
 .account-details { grid-column: 1 / -1; display: flex; flex-wrap: wrap-reverse; align-items: baseline; gap: 2px 14px; }
@@ -171,6 +174,13 @@
   .polished .menu-orb-altar { font-size: 6px; }
   .polished-home { --gutter: clamp(12px, 4vw, 22px); overflow: visible; pointer-events: none; }
   .polished-content { grid-row: 1; display: flex; flex-direction: column; overflow: auto; pointer-events: auto; }
+  .polished-home:has(> .fullscreen-control) .polished-content {
+    margin-top: calc(var(--fullscreen-top) + var(--fullscreen-size));
+  }
+  .polished-home:has(> .fullscreen-control) .account-bar {
+    margin-top: 8px;
+    margin-right: max(var(--gutter), env(safe-area-inset-right));
+  }
   .menu-replay-controls { position: static; grid-row: 3; justify-self: center; transform: none; }
   .menu-replay-slider input { height: 44px; }
   .account-bar {

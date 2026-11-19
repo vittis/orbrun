@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.153 — 2026-11-19
+
+- Android users can enter and exit fullscreen from the top-right corner of the main menu and the game.
+
 ## 0.3.152 — 2026-11-19
 
 - Settings → Interface → Character panel scale shrinks the corner stats, bars, and optional portrait to as little as 60%.

@@ -32,6 +32,7 @@ test('production shell loads local fonts under CSP and offers only bundled onlin
   await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
   await page.goto('http://127.0.0.1:5287/')
   await expect(page.getByRole('heading', { name: 'Polished Crawl' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Enter fullscreen' })).toHaveCount(0)
   await expect(page.locator('.menu-backdrop')).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => ['700 30px "Barlow Condensed"', '400 15px "IBM Plex Sans"', '500 18px "IBM Plex Mono"'].every(font => document.fonts.check(font)))).toBe(true)

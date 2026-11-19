@@ -16,6 +16,7 @@ import { gameSplit, isPortrait, levelMapCanvas, levelMapSplit, touchBeside, touc
 import { Chat } from './chat'
 import { Overlays } from './overlays'
 import { directionKey, isTextEntry, keydownMessage } from './keys'
+import { installFullscreenButton } from './fullscreen'
 import { isPadActivity, type Button, type GamepadInput, type PadEvent } from './gamepad'
 import { gamepadHints, type HintMode, type PadHintEvidence } from './gamepad-hints'
 import { touchHints, type TouchHintEvidence, type TouchLesson } from './touch-hints'
@@ -301,6 +302,9 @@ export class GameScreen {
     this.hooks = hooks
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
+    const fullscreen = new AbortController()
+    installFullscreenButton(this.root, fullscreen.signal)
+    this.unsub.push(() => fullscreen.abort())
     this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
     const st = hooks.settings()
@@ -1469,8 +1473,9 @@ export class GameScreen {
   }
 
   private onKeyDown(ev: KeyboardEvent) {
-    this.wake()
     const target = ev.target as HTMLElement | null
+    if (target?.classList?.contains('fullscreen-control') && ['Enter', ' ', 'Tab'].includes(ev.key)) return
+    this.wake()
     // a key typed into a field is still the keyboard speaking (a server prompt's on-screen keyboard goes away for it)
     this.inputFrom('keyboard')
     this.prepareInput()
@@ -1770,12 +1775,13 @@ export class GameScreen {
    * tabs as a swipe over it does (`outsideLift`).
    */
   private onDocPointer(ev: PointerEvent) {
+    const t = ev.target instanceof Element ? ev.target : null
+    if (t?.closest('.fullscreen-control')) return
     this.wake()
     this.pointerClosed = false
     // a finger anywhere (a menu's row, a prompt's chip) is the finger speaking: the touch bar comes up for it
     const touch = ev.pointerType === 'touch'
     if (touch) this.inputFrom('touch')
-    const t = ev.target instanceof Element ? ev.target : null
     if (t?.closest('.touchbar')) return
     if (touch && this.overlays.hasClientOverlay && !this.session.watching) {
       // inside a panel, on the on-screen keyboard or in the chat, the press is theirs

@@ -4,6 +4,64 @@ import { test, result } from './fixtures'
 
 type LiveAnimation = { receive(msg: Record<string, unknown>): void; walk(): void; destroy(): void; snapshot(): { xl: number; playerProjection: { x: number; y: number; scale: number } } }
 
+test.describe('Android fullscreen', () => {
+  test.use({
+    viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 },
+    isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (Linux; Android 15) Chrome/144.0.0.0 Mobile Safari/537.36',
+  })
+
+  test('toggles from the menu and game without covering controls', async ({ page }) => {
+    await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
+    let releaseClip!: () => void
+    const waitForClip = new Promise<void>(resolve => { releaseClip = resolve })
+    await page.route('**/menu/clips/**', async route => { await waitForClip; await route.continue() })
+    const enter = page.getByRole('button', { name: 'Enter fullscreen' })
+    const exit = page.getByRole('button', { name: 'Exit fullscreen' })
+    const fullscreen = () => page.evaluate(() => document.fullscreenElement === document.documentElement)
+    await page.goto('/')
+    await page.getByRole('combobox', { name: 'Server' }).selectOption('cdi')
+    await expect(enter).toBeVisible()
+    const corner = (await enter.boundingBox())!
+    expect(corner.width).toBeGreaterThanOrEqual(44)
+    expect(corner.x + corner.width).toBeGreaterThan(380)
+    expect(corner.y + corner.height).toBeLessThan((await page.getByRole('textbox', { name: 'Username' }).boundingBox())!.y)
+    await expect(page.locator('.menu-replay-status')).toContainText('Loading')
+    await page.screenshot({ path: 'test-results/fullscreen-menu-android.png' })
+    releaseClip()
+    await enter.tap()
+    await expect(exit).toBeVisible()
+    expect(await fullscreen()).toBe(true)
+    // The label also follows a fullscreen exit initiated outside the toggle.
+    await page.evaluate(() => document.exitFullscreen())
+    await expect(enter).toBeVisible()
+
+    await page.goto('/testbed/map-lifecycle.html')
+    await page.addStyleTag({ content: '#controls { display: none }' })
+    await expect(page.locator('.stats')).toBeVisible()
+    for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+      await page.setViewportSize(viewport)
+      const button = (await enter.boundingBox())!
+      expect(button.x + button.width).toBeGreaterThan(viewport.width - 10)
+      for (const selector of ['canvas.view', '.stats']) {
+        expect((await page.locator(selector).boundingBox())!.y).toBeGreaterThanOrEqual(button.y + button.height)
+      }
+      await page.screenshot({ path: `test-results/fullscreen-game-${viewport.width}.png` })
+    }
+    await page.locator('canvas.view').press('F5')
+    const system = page.getByRole('tab', { name: 'System', exact: true })
+    await expect(system).toBeVisible()
+    const before = (await result(page)).sent
+    await enter.tap()
+    await expect(exit).toBeVisible()
+    await expect(system).toBeVisible()
+    await exit.press('Enter')
+    await expect(enter).toBeVisible()
+    expect(await fullscreen()).toBe(false)
+    await expect(system).toBeVisible()
+    expect((await result(page)).sent).toEqual(before)
+  })
+})
+
 test('Shift+numpad sends server run commands when Windows consumes the modifier', async ({ page }) => {
   await page.goto('/testbed/live-animation.html')
   await expect.poll(async () => (await result(page)).playerOnLevel).toBe(true)
