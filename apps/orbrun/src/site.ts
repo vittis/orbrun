@@ -49,7 +49,7 @@ export const PAGES: Page[] = [
     contents: true,
     title: 'About Polished Crawl - DCSS in 2.5D',
     description:
-      'Play Dungeon Crawl Stone Soup in 2.5D on public WebTiles servers. Learn the keyboard, gamepad and touch controls, map views and privacy details.',
+      'See what Polished Crawl adds to Dungeon Crawl Stone Soup WebTiles, including 2.5D rendering, combat effects, and gamepad and touch controls.',
   },
   {
     path: '/about/new',
@@ -57,25 +57,25 @@ export const PAGES: Page[] = [
     name: 'What’s new',
     doc: 'CHANGELOG.md',
     title: 'What’s new in Polished Crawl',
-    description: 'Orbrun’s release notes, newest first: what changed in the 2.5D client for Dungeon Crawl Stone Soup.',
+    description: 'Polished Crawl’s release notes, newest first: what changed in the 2.5D client for Dungeon Crawl Stone Soup.',
   },
   {
     path: '/about/steam',
     name: 'Add to Steam',
     doc: 'STEAM.md',
     contents: true,
-    title: 'Add Orbrun to Steam on the Steam Deck',
+    title: 'Add Polished Crawl to Steam on the Steam Deck',
     description:
-      'Add Orbrun, the 2.5D Dungeon Crawl Stone Soup client, to your Steam Deck library with artwork and controller support.',
+      'Add Polished Crawl, the 2.5D Dungeon Crawl Stone Soup client, to your Steam Deck library with artwork and controller support.',
   },
   {
     path: '/about/install',
     name: 'Add to Home Screen',
     doc: 'INSTALL.md',
     contents: true,
-    title: 'Add Orbrun to your phone or tablet’s home screen',
+    title: 'Add Polished Crawl to your phone or tablet’s home screen',
     description:
-      'Install Orbrun on your phone, tablet or computer. Play Dungeon Crawl Stone Soup in 2.5D on public servers; online gameplay needs a connection.',
+      'Install Polished Crawl on your phone, tablet or computer. Play Dungeon Crawl Stone Soup in 2.5D on public servers; online gameplay needs a connection.',
   },
 ]
 

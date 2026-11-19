@@ -72,7 +72,7 @@ let lastBeat = Date.now()
 let hiddenAt = 0
 document.documentElement.style.setProperty('--ui-scale', String(getSettings().uiScale))
 /**
- * What a character's tab title ends in, so a game in progress reads as "orbrun the Chiller | Vine Stalker - Orbrun".
+ * What a character's tab title ends in, so a game in progress reads as "orbrun the Chiller | Vine Stalker - Polished Crawl".
  * Nothing in a window of its own: an installed app's title bar puts the app's name in front already.
  */
 const shortTitle = () => (ownWindow() ? '' : HOME.name)

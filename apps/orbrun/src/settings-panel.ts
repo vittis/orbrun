@@ -6,7 +6,7 @@ import { adjustSetting, groupAtDefaults, resetGroup, rowHint, rowOff, settingGro
 import { audio } from './audio/controller'
 
 /**
- * Orbrun's settings, one panel for the front end and the game: drawn as
+ * Polished Crawl's settings, one panel for the front end and the game: drawn as
  * the game draws a menu (a title line, a letter per item, the value on the
  * right between the arrows that turn it, the hovered line lit). Left and
  * right, A, Enter or the letter change a value.

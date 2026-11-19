@@ -98,7 +98,7 @@ export function menuHasSections(menu: Pick<MenuState, 'items'>): boolean {
  * block in the given direction, wrapping round the menu; -1 when the menu
  * has no other header. The server has no client-side port of this
  * (`cycle_headers doesn't currently have a client-side implementation`), so
- * Orbrun runs it on its own hover and reports it with `menu_hover`.
+ * Polished Crawl runs it on its own hover and reports it with `menu_hover`.
  */
 export function cycleHeadersTarget(menu: Pick<MenuState, 'items' | 'flags' | 'last_hovered'>, forward: boolean, vis: Visible): number {
   const items = menu.items
@@ -217,12 +217,12 @@ export function moreSwitchKeycode(key: string): number {
 }
 
 /**
- * Every menu is walked with a cursor of Orbrun's own, whether or not the
+ * Every menu is walked with a cursor of Polished Crawl's own, whether or not the
  * server set ARROWS_SELECT. Without that flag the official client leaves the
  * arrows scrolling and offers no way to walk the rows: you must read each
  * letter off the screen and type it (the shop, shopping.cc `ShopMenu`:
  * MF_MULTISELECT | MF_QUIET_SELECT | MF_ALLOW_FORMATTING | MF_INIT_HOVER, is
- * the worst of them, but the inventory and the rest are the same). Orbrun
+ * the worst of them, but the inventory and the rest are the same). Polished Crawl
  * moves the hover with up / down on all of them, as the pad's d-pad already
  * did, and tells the server where it is with `menu_hover` — which is what the
  * official client sends when the mouse crosses a row, so no menu is surprised
@@ -237,7 +237,7 @@ export function menuClientHover(menu: Pick<MenuState, 'tag' | 'flags'>): boolean
 /**
  * What a keydown means to the menu, or null when the key is the server's
  * (menu.js `menu_keydown_handler` and `menu_keypress_handler`, in one, since
- * Orbrun folds keypress into keydown). Alt and Ctrl combinations are never
+ * Polished Crawl folds keypress into keydown). Alt and Ctrl combinations are never
  * the menu's. Plain left / right are the server's (they switch inventory
  * categories or the action mode); with Shift they scroll a line.
  */

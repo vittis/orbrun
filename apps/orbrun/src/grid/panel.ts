@@ -3,7 +3,7 @@
  * cells are laid out.
  *
  * The official client floats the panel over the top-left corner of
- * `#dungeon`, where Orbrun's stats pane already is. Orbrun stands it in the
+ * `#dungeon`, where Polished Crawl's stats pane already is. Polished Crawl stands it in the
  * strip along the top of the view between the stats pane and the minimap:
  * the one place at the top of the screen no pane holds, so the panel reads
  * as part of the same row of HUD furniture and the view under it stays

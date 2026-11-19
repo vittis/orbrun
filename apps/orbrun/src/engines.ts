@@ -36,7 +36,7 @@ export const engines = new EngineStore({
 })
 
 /**
- * Keep Orbrun and the offline engine on this device: the service worker that
+ * Keep Polished Crawl and the offline engine on this device: the service worker that
  * keeps the app, so it opens with no connection, and answers the engine's
  * requests from what is kept (public/sw.js), and what counts as a game under
  * way, which downloads wait for. Only where the engine runs: elsewhere the

@@ -290,7 +290,7 @@ export function deriveMode(state: GameState): Mode {
  * are `MOUSE_MODE_PROMPT` (macro.cc). What tells it apart from a command
  * still running: its prompt-channel line is the last thing printed, and
  * nothing else has changed the mode since. The letters must reach it raw
- * (the official client sends every key raw; Orbrun's compass
+ * (the official client sends every key raw; Polished Crawl's compass
  * rewrite of `b` would hand it another compass letter, `n` cancelling and
  * `y` converting), so it is a prompt, not command mode. A prompt line
  * printed before the last mode that read a key (`readTo`) was that mode's,

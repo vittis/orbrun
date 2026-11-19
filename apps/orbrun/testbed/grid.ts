@@ -217,7 +217,7 @@ function screen(room?: RoomSpec): Screen {
 function homeRoom(): RoomSpec {
   const row = (glyph: string, color: number, key: string, label: string, here: string, act: () => void): RoomEntry => ({ glyph, color, key, label: `${key} - ${label}`, labelColor: 15, here, act })
   return {
-    title: 'ORBRUN',
+    title: 'POLISHED CRAWL',
     entries: [
       row('>', 7, 'p', 'Play        crawl.dcss.io as orbruntest', 'There is a stone staircase down here.', enterGame),
       row('\\', 5, 'w', 'Watch       14 games running', 'There is a gateway to the gallery here.', () => say('The gallery is not built in this test bed.')),

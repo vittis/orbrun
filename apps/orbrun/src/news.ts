@@ -19,7 +19,13 @@ const SEEN_KEY = 'orbrun.newsSeen'
 /** the release this device last read What's new under, if ever */
 export function newsSeen(): string | null {
   try {
-    return localStorage.getItem(SEEN_KEY)
+    const seen = localStorage.getItem(SEEN_KEY)
+    if (seen?.startsWith('0.2.')) return null
+    // Fork releases 0.3.6–0.3.160 were renumbered to 0.1.1–0.1.155.
+    const previous = seen?.match(/^0\.3\.(\d+)$/)
+    if (!previous) return seen
+    const patch = Number(previous[1])
+    return patch >= 6 && patch <= 160 ? `0.1.${patch - 5}` : null
   } catch {
     return null
   }

@@ -344,7 +344,7 @@ export class GameScreen {
       onGameMenu: () => {
         if (this.session.state.inputMode === MouseMode.COMMAND) this.runner.send(cm.mainMenuAction())
       },
-      // WebTiles' own settings menu here is the panel's rc options; Orbrun's settings screen is where those live
+      // WebTiles' own settings menu here is the panel's rc options; Polished Crawl's settings screen is where those live
       onPanelSettings: () => this.overlays.showSettings(),
       // the touch bar's buttons are the pad's, pressed by a finger: the press goes the pad's way (`pad`), the device is the finger
       onTouchButton: (button, down) => {
@@ -829,7 +829,7 @@ export class GameScreen {
       }
     }
     // a finger gets every button the screen has, by its word (bindings.ts touchLabels); a panel of ours names its own.
-    // A spectator's too: B and Start open the Orbrun menu, where Stop watching is, the one way out on a phone
+    // A spectator's too: B and Start open the Polished Crawl menu, where Stop watching is, the one way out on a phone
     // the bar's cast passes through crawl's "Cast which spell?" on its way to the aim: the buttons hold still through it,
     // rather than flash the prompt's own for a frame or two
     const passing = this.castPrompt()
@@ -1446,7 +1446,7 @@ export class GameScreen {
   private menuKey(menu: CommandMenu | 'levelmap' | 'equipment' | 'system') {
     const open = this.overlays.openMenu
     if (this.session.watching) {
-      // a spectator has the Orbrun menu only, as the pad's Start
+      // a spectator has the Polished Crawl menu only, as the pad's Start
       if (menu !== 'system') return
       if (open === 'system') this.overlays.clientOverlayInput('close')
       else if (!this.overlays.hasClientOverlay) this.uiOp('system')
@@ -1466,7 +1466,7 @@ export class GameScreen {
       this.uiOp(menu === 'battle' ? 'commands' : menu)
     }
     else if (this.overlays.hasClientOverlay) this.overlays.clientOverlayInput('close')
-    // elsewhere the Orbrun menu opens where Start opens it, and nowhere Start means something else
+    // elsewhere the Polished Crawl menu opens where Start opens it, and nowhere Start means something else
     else if (menu === 'system') { const a = buttonAction('START', this.ctx); if (a?.kind === 'ui' && a.op === 'system') this.uiOp('system') }
     // off the map F2 opens the palette for the screen, which no button opens
     else if (menu === 'levelmap') this.overlays.showPalette(this.ctx.mode === 'targeting' || this.ctx.mode === 'menu' ? this.ctx.mode : 'command')
@@ -1480,7 +1480,7 @@ export class GameScreen {
     this.inputFrom('keyboard')
     this.prepareInput()
     if (target && isTextEntry(target)) return
-    // F2–F5 are Orbrun's own: the pad's four menus, so a player can rebind a button (or anything) to them. A bare
+    // F2–F5 are Polished Crawl's own: the pad's four menus, so a player can rebind a button (or anything) to them. A bare
     // F1 goes on to Crawl (keys.ts CODES), which binds it to CMD_GAME_MENU alongside `~`; crawl binds none of these.
     const menu = !ev.shiftKey && !ev.ctrlKey && !ev.altKey && !ev.metaKey ? MENU_KEYS[ev.key] : undefined
     if (menu) {
@@ -1517,7 +1517,7 @@ export class GameScreen {
       if (ev.key === 'Escape') this.overlays.showSystem({ spectating: true, inGame: true })
       return
     }
-    // Esc is the server's game menu; Orbrun's settings are also under Commands → More.
+    // Esc is the server's game menu; Polished Crawl's settings are also under Commands → More.
     const mode = this.ctx.mode
     // on a screen the keyboard is a pad: Enter, Escape, Space and the arrows are its buttons and its
     // d-pad, and do exactly what those do (bindings.ts screenKey), down the same path
@@ -1676,7 +1676,7 @@ export class GameScreen {
   /**
    * Android's back (back.ts): B, the way out of whatever is up, but over the
    * map with nothing up, where crawl ignores Escape, Save and exit as the
-   * Orbrun menu's row sends it. Crawl's S asks first, so a second back is the
+   * Polished Crawl menu's row sends it. Crawl's S asks first, so a second back is the
    * B that answers no. The device stays what it was: back is no finger on the
    * view, nor the pad.
    */
@@ -1735,7 +1735,7 @@ export class GameScreen {
    * action_panel.js show_panel / hide_panel: the panel's X folds it away and
    * the placeholder unfolds it again, the rc's `action_panel_show` either
    * way, and the change goes back to the rc, so the official client and
-   * Orbrun agree on the next game.
+   * Polished Crawl agree on the next game.
    */
   private setPanelShown(shown: boolean) {
     const st = this.session.state
@@ -1762,11 +1762,11 @@ export class GameScreen {
    * `tile_web_mouse_control` on) a mousedown outside it sends Escape, "since
    * for crawl we really need to send a 'close popup' message to the server
    * rather than do it in the client". The chat is outside the game
-   * (`target_outside_game`) and keeps its clicks. Orbrun adds: a right click
+   * (`target_outside_game`) and keeps its clicks. Polished Crawl adds: a right click
    * closes wherever it lands, inside the popup too, the mirror of the right
    * click that opened a describe, so a look is over as fast as it began.
    * Under a finger, a crawl menu goes the same way (`popupUp`), and so do
-   * Orbrun's own panels: a tap outside them is their Escape, a step back
+   * Polished Crawl's own panels: a tap outside them is their Escape, a step back
    * (B). A mouse leaves those be, as before: it has the view to drag while
    * a setting is tuned. The touch bar is no outside, buttons or not: its
    * buttons are the pad's, and its Back already says what it does, so a tap
@@ -2186,7 +2186,7 @@ export class GameScreen {
 /** How long a turn of X's tabs waits on crawl before it gives up (`trackActions`), as the runner's `awaitPrompt` waits on a prompt. */
 const ACTION_TURN_MS = 1500
 
-/** The keys for the pad's four menus: F2 Select's level map, F3 X's actions, F4 Y's gear, F5 Start's Orbrun menu. */
+/** The keys for the pad's four menus: F2 Select's level map, F3 X's actions, F4 Y's gear, F5 Start's Polished Crawl menu. */
 const MENU_KEYS: Record<string, CommandMenu | 'levelmap' | 'equipment' | 'system'> = { F2: 'levelmap', F3: 'battle', F4: 'equipment', F5: 'system' }
 
 

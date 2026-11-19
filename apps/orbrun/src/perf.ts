@@ -758,7 +758,7 @@ export class PerfOverlay {
     const ua = navigator.userAgent.replace(/^.*\) /, '').slice(0, 60)
     const ctx = this.context()
     return [
-      `orbrun perf · ${d} · ${ua}`,
+      `Polished Crawl perf · ${d} · ${ua}`,
       `screen ${window.innerWidth}x${window.innerHeight} dpr${window.devicePixelRatio ?? 1} · ${navigator.hardwareConcurrency ?? '?'} cores · ${(navigator as { deviceMemory?: number }).deviceMemory ?? '?'}GB · ${window.location.search || '(no query)'}`,
       'renderer Canvas 2D',
       `start ${ctx.place ?? '?'} · ${ctx.mode ?? '?'} · ${ctx.cells ?? 0} cells`,
@@ -774,7 +774,7 @@ export class PerfOverlay {
     const text = this.log.text()
     // date-time, sortable and with nothing in it a file system dislikes
     const [date, time] = new Date().toISOString().slice(0, 19).split('T')
-    this.name = `orbrun-perf-${date.replace(/-/g, '')}-${time.replace(/:/g, '')}.txt`
+    this.name = `polished-crawl-perf-${date.replace(/-/g, '')}-${time.replace(/:/g, '')}.txt`
     try {
       const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
       const a = document.createElement('a')

@@ -1548,7 +1548,7 @@ export class FrontEnd {
   // ------------------------------------------------------------------ settings
 
   /**
-   * Orbrun's settings: a row per group (settings-rows.ts), each opening its
+   * Polished Crawl's settings: a row per group (settings-rows.ts), each opening its
    * own page under a Back; the Controls page leads on to the Gamepad controls
    * sheet, what every button does. The pause menu opens the same pages over the
    * game (overlays.ts), so a setting is in the same place in both.
@@ -1854,7 +1854,7 @@ export class FrontEnd {
         book.state === 'listing' ? `Looking for ${a.username}'s morgues on ${where}…`
         : book.state === 'reading' ? `Reading ${read} of ${book.games.length}…`
         : book.state === 'none' ? (server.offline ? `${a.username} has not finished a game on this device yet.` : `${server.name} has no morgues for ${a.username} yet.`)
-        : book.state === 'unlisted' ? `${server.name} does not list ${a.username}'s morgues where Orbrun can read them.`
+        : book.state === 'unlisted' ? `${server.name} does not list ${a.username}'s morgues where Polished Crawl can read them.`
         : book.state === 'failed' ? `Could not read the morgues from ${where}.`
         : book.more ? `The newest ${book.games.length}; ${book.more} older ${book.more === 1 ? 'game is' : 'games are'} on ${server.name}.`
         : ''

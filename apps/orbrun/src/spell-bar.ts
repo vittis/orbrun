@@ -1,6 +1,6 @@
 /**
  * The touch spell bar: the player's memorised spells, a button each, in a
- * row under the message log (hud.ts `renderSpellBar`). Orbrun's own; WebTiles
+ * row under the message log (hud.ts `renderSpellBar`). Polished Crawl's own; WebTiles
  * has no such thing, and never sends the spell list unasked: it comes only
  * in the `menu` crawl opens to list it (tag `spell`, spl-cast.cc
  * `list_spells`).

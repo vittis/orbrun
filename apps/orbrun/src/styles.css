@@ -57,7 +57,7 @@
   --color-14: #fce94f;
   --color-15: #eeeeec;
   /* the stats bars' track (grid/stats.ts): style.css's darkgray over the black page WebTiles stands it on,
-     so the empty end of a bar stays dark on Orbrun's bare pane instead of glowing over the dungeon */
+     so the empty end of a bar stays dark on Polished Crawl's bare pane instead of glowing over the dungeon */
   --stats-bar-track: color-mix(in srgb, var(--color-8) 45%, #000);
 }
 /* a screen at a device pixel or less per css px (a TV, a handheld's picture scaled up to one): a regular stroke is a
@@ -2030,7 +2030,7 @@ canvas.minimap.hidden,
   display: none;
 }
 
-/* one row of the WebTiles #monster_list: sprites, glyph-mode health box, name; Orbrun's bearing arrow in front */
+/* one row of the WebTiles #monster_list: sprites, glyph-mode health box, name; Polished Crawl's bearing arrow in front */
 .monsters .group {
   display: flex;
   gap: 0.4em;
@@ -3020,7 +3020,7 @@ canvas.minimap.hidden,
   background: rgba(60, 120, 255, 0.2);
 }
 
-/* Orbrun's own row on a server menu (the game menu's settings): the glyph
+/* Polished Crawl's own row on a server menu (the game menu's settings): the glyph
    stands in the tile column, so the row lines up with the server's */
 .popup li .tile-glyph {
   flex: none;
@@ -3798,7 +3798,7 @@ canvas.minimap.hidden,
 }
 
 /* consumables action panel (action_panel.js). The official client floats it over the top-left corner of #dungeon, where
-   Orbrun's stats pane already is; here it stands in the strip along the top of the view between the stats pane and the
+   Polished Crawl's stats pane already is; here it stands in the strip along the top of the view between the stats pane and the
    minimap (grid/panel.ts), centred in it — hud.ts puts its left edge on the middle of the strip and this pulls it back by
    half its own width, so the box is exactly what it draws. */
 /* left aligned in its strip, where action_panel.js stands the panel in the dungeon's top-left corner */
@@ -3872,11 +3872,11 @@ canvas.minimap.hidden,
   opacity: 0.85;
 }
 
-/* ------------------------------------------------- Orbrun's own overlays */
+/* ------------------------------------------------- Polished Crawl's own overlays */
 
 /*
  * The pause menu, settings, controls sheet, command palette and keyboard
- * are Orbrun's, so they get the front end's look: a dark plate with a gold
+ * are Polished Crawl's, so they get the front end's look: a dark plate with a gold
  * hairline and corner marks, small caps captions, text rows under one cursor.
  * Server popups (menus, describe, CRT screens) keep the `.popup` look.
  */
@@ -4300,7 +4300,7 @@ canvas.minimap.hidden,
     height: 44px;
   }
 }
-/* the palette and More rows stand apart from the commands, under a rule; the Orbrun menu's runs the same way */
+/* the palette and More rows stand apart from the commands, under a rule; the Polished Crawl menu's runs the same way */
 .command-menu li.row.sep,
 .sysmenu li.row.sep {
   margin-top: 0.45em;

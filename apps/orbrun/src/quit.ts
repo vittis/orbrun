@@ -1,7 +1,7 @@
 /**
  * Leaving the app, for the players who have no tab to close.
  *
- * Orbrun ships as a web page, so most of the time the browser already has a
+ * Polished Crawl ships as a web page, so most of the time the browser already has a
  * way out and a Quit row would be noise. Two places it does not: a kiosk
  * browser launched from Steam (STEAM.md), which on a Deck in Gaming Mode has
  * no chrome at all, and an installed web app in its own window.

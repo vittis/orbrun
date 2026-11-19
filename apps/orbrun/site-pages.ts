@@ -29,8 +29,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..', '..')
 
 /** where the markdown reader points a link to another file of the repository (markdown.ts REPO_BLOB) */
-const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.157/'
-const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.157'
+const REPO_BLOB = 'https://github.com/vittis/orbrun/blob/cloudflare-online-v1.158/'
+const SOURCE = 'https://github.com/vittis/orbrun/tree/cloudflare-online-v1.158'
 const ISSUES = 'https://github.com/vittis/orbrun/issues'
 const SITE_SCRIPT_PATH = '/site-controls.js'
 
@@ -192,12 +192,12 @@ export function docHtml(file: string, dom: Dom): { html: string; sections: { id:
     }
     for (const list of [...el.querySelectorAll('ul')]) padLegend(list as HTMLUListElement, dom)
     for (const list of [...el.querySelectorAll('ul')]) artList(list as HTMLUListElement, dom)
-    // the name to type (`Orbrun`) set as the name is drawn, not as code
+    // the name to type (`Polished Crawl`) set as the name is drawn, not as code
     for (const code of [...el.querySelectorAll('code')]) {
-      if (code.textContent !== 'Orbrun' || code.parentElement?.tagName === 'PRE') continue
+      if (code.textContent !== 'Polished Crawl' || code.parentElement?.tagName === 'PRE') continue
       const name = doc.createElement('span')
       name.className = 'name'
-      name.textContent = 'Orbrun'
+      name.textContent = 'Polished Crawl'
       code.replaceWith(name)
     }
     // each section a part of its own, drawn as a card; a step's number and a release's date set apart from its name (the words stay as they read)
@@ -242,7 +242,7 @@ function head(page: Page, css: string, beacon: string): string {
 <meta name="description" content="${description}" />
 <link rel="canonical" href="${url(page)}" />
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Orbrun" />
+<meta property="og:site_name" content="Polished Crawl" />
 <meta property="og:locale" content="en_US" />
 <meta property="og:title" content="${title}" />
 <meta property="og:description" content="${description}" />
@@ -259,8 +259,8 @@ function head(page: Page, css: string, beacon: string): string {
 <script type="application/ld+json">${structuredData(page)}</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="application-name" content="Orbrun" />
-<meta name="apple-mobile-web-app-title" content="Orbrun" />
+<meta name="application-name" content="Polished Crawl" />
+<meta name="apple-mobile-web-app-title" content="Polished Crawl" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="preload" href="/fonts/grenze-gotisch-700-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/fonts/dejavu-sans-mono-700.woff2" as="font" type="font/woff2" crossorigin />
@@ -274,7 +274,7 @@ function bar(page: Page): string {
   const docs = PAGES.filter((p) => p.path !== '/' && !p.modal)
   return `<header class="bar solid">
   <a class="brand" href="/"><img src="/orb.png" alt="" width="32" height="32" />Polished Crawl</a>
-  <nav aria-label="About Orbrun">
+  <nav aria-label="About Polished Crawl">
     ${docs.map((p) => `<a href="${p.path}"${p === page ? ' aria-current="page"' : ''}>${esc(p.name)}</a>`).join('\n    ')}
     <a href="${SOURCE}" target="_blank" rel="noopener">Source</a>
   </nav>
@@ -332,7 +332,7 @@ ${bar(page)}
 ${docMain(page, dom)}
 <section class="cta">
   <p>The dungeon is waiting.</p>
-  <a class="btn play" href="/">▶ Play Orbrun</a>
+  <a class="btn play" href="/">▶ Play Polished Crawl</a>
 </section>
 </main>
 <footer>
@@ -343,7 +343,7 @@ ${docMain(page, dom)}
     <a href="https://pocketzot.app/about" target="_blank" rel="noopener">PocketZot</a>
     <a href="${ISSUES}" target="_blank" rel="noopener">Report a bug</a>
   </div>
-  Orbrun is an unofficial client for Dungeon Crawl Stone Soup on the public servers. Not affiliated with the DCSS team.
+  Polished Crawl is an unofficial client for Dungeon Crawl Stone Soup on the public servers. Not affiliated with the DCSS team.
 </footer>
 <div class="prompts" aria-hidden="true">
   <span class="chip">${glyphHtml(dom, 'A', 'A')}Open</span>

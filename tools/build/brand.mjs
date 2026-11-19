@@ -79,13 +79,13 @@ function outline(text, size) {
 
 function wordmark({ background = true, rounded = true } = {}) {
   // the size that fills the width between the pads: orb, gap and name are all in ems of it
-  const probe = outline('Orbrun', 100)
+  const probe = outline('Polished Crawl', 100)
   const size = Math.floor((W - 2 * PAD) / (ORB_EM + ORB_GAP + probe.width / 100))
-  const { d, cap } = outline('Orbrun', size)
+  const { d, cap } = outline('Polished Crawl', size)
   const orbSize = ORB_EM * size
   const baseline = Math.round(H / 2 + cap / 2)
   const x0 = Math.round((W - (ORB_EM + ORB_GAP) * size - (probe.width / 100) * size) / 2)
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Orbrun">${GLOW}
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Polished Crawl">${GLOW}
   ${background ? `<rect width="${W}" height="${H}" rx="${rounded ? 12 : 0}" fill="${BG}"/>` : ''}
   ${orb(x0, baseline + ORB_DROP * size - orbSize, orbSize)}
   <path transform="translate(${x0 + (ORB_EM + ORB_GAP) * size} ${baseline})" fill="${INK}" filter="url(#inkshadow)" d="${d}"/>
@@ -98,7 +98,7 @@ function wordmark({ background = true, rounded = true } = {}) {
  * the orb alone on a dark rounded square of `size`; square-cornered for the icons a platform rounds or masks itself
  * (the orb's 48 of 64 already sits inside a maskable icon's safe circle)
  */
-const mark = (size, rounded = true) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="Orbrun">${GLOW}
+const mark = (size, rounded = true) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 64 64" role="img" aria-label="Polished Crawl">${GLOW}
   <rect width="64" height="64" rx="${rounded ? 10 : 0}" fill="${BG}"/>
   ${orb(8, 8, 48)}
 </svg>

@@ -1,7 +1,7 @@
 # Recorded menu gameplay
 
 The menu shuffles eleven spectator recordings and twenty-five staged engine recordings through
-Orbrun's normal 2.5D renderer and confirmed combat presentation. No game engine,
+Polished Crawl's normal 2.5D renderer and confirmed combat presentation. No game engine,
 video, external replay player, gameplay commands or public spectator connection
 is used by the backdrop. The home screen's ordinary server lobby is independent.
 

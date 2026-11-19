@@ -1,4 +1,4 @@
-// Keeps Orbrun on this device: the app itself, so it opens with no
+// Keeps Polished Crawl on this device: the app itself, so it opens with no
 // connection, and the offline engine (@orbrun/offline EngineStore).
 //
 // The app's files are listed by the build (shell.ts), which writes them in

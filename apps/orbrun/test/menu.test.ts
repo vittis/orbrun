@@ -543,14 +543,14 @@ describe('the front end: the home screen', () => {
   })
 
   it('marks the releases since What’s new was last read as New, and opens at its own address', () => {
-    localStorage.setItem('orbrun.newsSeen', '0.2.4')
+    localStorage.setItem('orbrun.newsSeen', '0.3.159')
     const { screen } = make()
     expect(screen.root.querySelector('[data-focus="news"].unread')).not.toBeNull()
     screen.open({ kind: 'menu', path: 'whats-new' })
     expect(screen.root.querySelector('dialog[open]')).not.toBeNull()
     const fresh = Array.from(screen.root.querySelectorAll('.doc.news .release.fresh h2 .ver'), (el) => el.textContent)
-    expect(fresh).toContain('0.2.5')
-    expect(fresh).not.toContain('0.2.4')
+    expect(fresh).toContain('0.1.155')
+    expect(fresh).not.toContain('0.1.154')
     expect(Array.from(screen.root.querySelectorAll('.doc.news .tag.new')).length).toBe(fresh.length - 1)
   })
 
@@ -1911,12 +1911,12 @@ describe('the front end: an account and its morgues', () => {
     expect(screen.view).toBe('accounts')
   })
 
-  it('says so when a server lists no morgues where Orbrun can read them', async () => {
+  it('says so when a server lists no morgues where Polished Crawl can read them', async () => {
     localStorage.setItem('orbrun.accounts', JSON.stringify([roguelikes]))
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })))
     const { screen } = make()
     screen.showMorgues(roguelikes)
-    await vi.waitFor(() => expect(screen.root.querySelector('.hint.empty')?.textContent).toBe('CRG does not list orbrun’s morgues where Orbrun can read them.'.replace('’', "'")))
+    await vi.waitFor(() => expect(screen.root.querySelector('.hint.empty')?.textContent).toBe('CRG does not list orbrun’s morgues where Polished Crawl can read them.'.replace('’', "'")))
     expect(scores(screen)).toEqual([])
   })
 

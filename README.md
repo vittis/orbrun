@@ -1,6 +1,6 @@
-<p align="center"><img src="assets/logo.svg" alt="Orbrun" width="560"></p>
+<p align="center"><img src="assets/logo.svg" alt="Polished Crawl" width="560"></p>
 
-# Orbrun — DCSS Client
+# Polished Crawl
 
 **Dungeon Crawl Stone Soup in a 2.5D dungeon, with keyboard, gamepad and touch controls.**
 
@@ -57,4 +57,4 @@ Development and preview include the bounded gamedata proxy; WebSockets connect d
 
 [AGPL-3.0-or-later](LICENSE). Copyright © 2026 the Orbrun developer. This is an independent, unofficial DCSS client. Upstream authorship, DCSS-derived code, artwork, fonts, PocketZot and Super Dungeon Crawl credits are recorded in [ATTRIBUTION.md](ATTRIBUTION.md). The hosted About page links the exact corresponding source for its release.
 
-Report fork issues at [vittis/orbrun](https://github.com/vittis/orbrun/issues).
+Report issues at [Polished Crawl issues](https://github.com/vittis/orbrun/issues).

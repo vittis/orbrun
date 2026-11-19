@@ -140,7 +140,7 @@ const COMMAND: Partial<Record<Button, Action>> = {
   R3: { kind: 'examine' },
   // the level map, where the ways across the dungeon are (levelmapTable)
   SELECT: { kind: 'ui', op: 'levelmap' },
-  // the way out of a game from the pad: the Orbrun menu, with Save and exit on it
+  // the way out of a game from the pad: the Polished Crawl menu, with Save and exit on it
   START: SYSTEM,
 }
 
@@ -1566,7 +1566,7 @@ function staticLabel(a: Action): string {
     case 'keys':
       return a.label
     case 'ui':
-      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Orbrun menu', keyboard: 'Keyboard', levelmap: 'Level map', findItems: 'Find…', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
+      return { commands: 'Actions', actionTab: 'Actions tab', equipment: 'Equipment', palette: 'Commands', system: 'Polished Crawl menu', keyboard: 'Keyboard', levelmap: 'Level map', findItems: 'Find…', bindings: 'Gamepad', scrollLog: 'Log', popupAction: 'Action' }[a.op]
     default:
       return actionLabel(a, EMPTY_CTX)
   }

@@ -37,13 +37,13 @@ const MONK = 8
  * track, in style.css's colours — `_full` lightgreen for health and
  * lightblue for magic, `_poison` yellow, `_decrease` red / magenta,
  * `_increase` green / blue, the track `#stats_hp_bar`'s own darkgray. The
- * colours are the palette's entries, so the bars take Orbrun's palette the
+ * colours are the palette's entries, so the bars take Polished Crawl's palette the
  * way every other coloured span in the pane does, and nothing is
  * translucent: a bar stands on its track, not on the view behind it.
  *
  * The one thing WebTiles has that the pane here does not is a black page
  * behind it. Its darkgray track reads as the dark part of the bar because
- * it sits on black; on Orbrun's bare pane the same grey sits over a lit
+ * it sits on black; on Polished Crawl's bare pane the same grey sits over a lit
  * dungeon and the bar reads washed out, its empty end nearly as bright as
  * its fill. So the track is the palette's darkgray taken most of the way
  * to black (`--stats-bar-track`): the black WebTiles paints under it,
@@ -129,7 +129,7 @@ export const PORTRAIT_ROWS = 4
 /**
  * The pane's narrow layout. WebTiles has no such thing: `#stats` is always
  * `enums.stat_width` wide, because the official client is a desktop client
- * and its sidebar never gives way. Orbrun's does (console.ts `gameSplit`
+ * and its sidebar never gives way. Polished Crawl's does (console.ts `gameSplit`
  * shrinks the column so a phone still gets a dungeon), and below this many
  * cells the captions no longer fit their columns -- `XL: 27 Next: 44%` alone
  * wants 16 of the left column's 45%. So under it the pane prints the same
@@ -399,7 +399,7 @@ export function statsRows(p: PlayerState, opts: ServerOptions, prev: BarMemory =
 
 /**
  * The server's quiver line without the fail rate crawl adds to a spell
- * (quiver.cc: "Cast: Magic Dart (5%)"), wherever Orbrun shows the line.
+ * (quiver.cc: "Cast: Magic Dart (5%)"), wherever Polished Crawl shows the line.
  */
 export function quiverLine(desc: string | undefined): string {
   return (desc ?? '').replace(/ \(\d+%\)(?=(?:<[^>]*>)*\s*$)/, '')
@@ -415,7 +415,7 @@ export interface StatBars {
 const GLANCE_GAP = 2
 
 /**
- * Orbrun's own, for a phone held upright (hud.ts `renderGlance`): the pane's
+ * Polished Crawl's own, for a phone held upright (hud.ts `renderGlance`): the pane's
  * Health and Magic rows side by side in one row `width` cells wide, a gap
  * between them, Health on the left; a Djinni's Health takes the whole row.
  */

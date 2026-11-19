@@ -5,7 +5,7 @@ import { Overlays } from '../src/overlays'
 import { deriveContext, type Context } from '../src/context'
 
 /**
- * Orbrun's own row on the game menu (main.cc `GameMenu`): the server's list is
+ * Polished Crawl's own row on the game menu (main.cc `GameMenu`): the server's list is
  * fixed on the server, so the settings row is the client's, drawn into the
  * same list above the separator before Quit. What is pinned here: the row is
  * kept out of the server's index space (a hover the server sends still lights
@@ -84,7 +84,7 @@ beforeEach(() => {
 })
 
 describe('the game menu', () => {
-  it('draws Orbrun settings above the separator before Quit, and nowhere else', () => {
+  it('draws Polished Crawl settings above the separator before Quit, and nowhere else', () => {
     const { st, frame, rows } = setup()
     openGameMenu(st)
     frame()
@@ -96,7 +96,7 @@ describe('the game menu', () => {
       '~ - Edit macros',
       '? - Help and manual',
       '/ - Lookup info',
-      '⚙ o - Orbrun settings',
+      '⚙ o - Polished Crawl settings',
       '',
       'Q - Quit and abandon character',
     ])
@@ -117,13 +117,13 @@ describe('the game menu', () => {
     for (let i = 0; i < 5; i++) ov.menuOp(st, 'next')
     expect(hovered()).toBe('/ - Lookup info')
     ov.menuOp(st, 'next')
-    expect(hovered()).toBe('⚙ o - Orbrun settings')
+    expect(hovered()).toBe('⚙ o - Polished Crawl settings')
     // the cursor is ours: nothing went to the server for that step
     expect(sent.filter((m) => m.msg === 'menu_hover').length).toBe(5)
     ov.menuOp(st, 'next')
     expect(hovered()).toBe('Q - Quit and abandon character')
     ov.menuOp(st, 'prev')
-    expect(hovered()).toBe('⚙ o - Orbrun settings')
+    expect(hovered()).toBe('⚙ o - Polished Crawl settings')
     ov.menuOp(st, 'prev')
     expect(hovered()).toBe('/ - Lookup info')
   })
@@ -158,11 +158,11 @@ describe('the game menu', () => {
     expect(hovered()).toBe('# - Generate and view character dump')
     // and on our own row when that is where it was left
     for (let i = 0; i < 4; i++) ov.menuOp(st, 'next')
-    expect(hovered()).toBe('⚙ o - Orbrun settings')
+    expect(hovered()).toBe('⚙ o - Polished Crawl settings')
     reduce(st, { msg: 'close_menu' } as never)
     frame()
     openGameMenu(st)
     frame()
-    expect(hovered()).toBe('⚙ o - Orbrun settings')
+    expect(hovered()).toBe('⚙ o - Polished Crawl settings')
   })
 })

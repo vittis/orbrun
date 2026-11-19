@@ -60,14 +60,14 @@ import {
 
 /**
  * The game menu (main.cc `GameMenu`, opened by Esc and by the action panel's
- * button): the one server menu Orbrun adds a row of its own to, since its
- * list is fixed on the server and Orbrun's settings belong on the screen that
+ * button): the one server menu Polished Crawl adds a row of its own to, since its
+ * list is fixed on the server and Polished Crawl's settings belong on the screen that
  * already holds Save and Quit. The row reads like the server's own
  * (menu.cc `MenuEntry::_get_text_preface`: hotkey, " - ", label).
  */
 const GAME_MENU_TAG = 'game_menu'
 const GAME_MENU_ROW_KEY = 'o'
-const GAME_MENU_ROW_TEXT = ` ${GAME_MENU_ROW_KEY} - Orbrun settings`
+const GAME_MENU_ROW_TEXT = ` ${GAME_MENU_ROW_KEY} - Polished Crawl settings`
 
 /** crawl's tile for each settings group's row, as the Start menu's rows carry theirs */
 const SETTING_GROUP_TILES: Record<SettingGroup, string> = { View: 'CMD_DISPLAY_MAP', Combat: 'CMD_AUTOFIGHT', Audio: 'CMD_SHOUT', Controls: 'CMD_KEYBOARD', Interface: 'CMD_DISPLAY_CHARACTER_STATUS' }
@@ -650,7 +650,7 @@ export class Overlays {
   /** the menu the footer cursor belongs to, so a rebuild of the same menu keeps it and a menu opened after (even one with the same tag) starts on its rows */
   private menuFooterOf: MenuState | null = null
   /**
-   * Orbrun's own row on the game menu, and the server item it is drawn above
+   * Polished Crawl's own row on the game menu, and the server item it is drawn above
    * (the separator before Quit). It sits inside the menu's list but is kept
    * out of `menuBody`, so every index the server sends still lines up with
    * the element that draws it.
@@ -770,7 +770,7 @@ export class Overlays {
     return !!this.clientOverlay
   }
 
-  /** Which of the four menus is open (an empty tab of X's actions, or the Orbrun menu), so its key can close it again. */
+  /** Which of the four menus is open (an empty tab of X's actions, or the Polished Crawl menu), so its key can close it again. */
   get openMenu(): CommandMenu | 'system' | null {
     const o = this.clientOverlay
     if (o?.kind === 'system') return 'system'
@@ -1262,7 +1262,7 @@ export class Overlays {
   }
 
   /**
-   * Orbrun's settings row on the game menu. It goes where the menu's own
+   * Polished Crawl's settings row on the game menu. It goes where the menu's own
    * options end — above the separator the server draws before Quit — and is
    * marked `extra` so the rows the server sent keep their indices.
    */
@@ -1296,7 +1296,7 @@ export class Overlays {
     else if (this.gameMenuLast >= 0) this.setHover(menu, this.gameMenuLast)
   }
 
-  /** Move the cursor onto Orbrun's row, or off it and back onto the server's. */
+  /** Move the cursor onto Polished Crawl's row, or off it and back onto the server's. */
   private setExtraHover(on: boolean) {
     this.menuExtraOn = on
     if (on) {
@@ -1308,14 +1308,14 @@ export class Overlays {
     this.menuExtra?.el.classList.toggle('hovered', on)
   }
 
-  /** Orbrun's row chosen: its settings open over the menu, which is still there behind them. */
+  /** Polished Crawl's row chosen: its settings open over the menu, which is still there behind them. */
   private openGameMenuRow() {
     this.setExtraHover(true)
     this.showSettings()
   }
 
   /**
-   * Up or down between the server's rows and Orbrun's. The row is in the ring
+   * Up or down between the server's rows and Polished Crawl's. The row is in the ring
    * where it is drawn, so the step onto it is the step that would cross it:
    * down off the last row above it, up off the first row below. True when the
    * cursor moved.
@@ -1492,7 +1492,7 @@ export class Overlays {
     if (!el) return null
     const body = el.querySelector('.body') as HTMLElement | null
     if (!body) return null
-    // Orbrun's own row (the game menu's settings) is not the server's: the rest line up with `menu.items`
+    // Polished Crawl's own row (the game menu's settings) is not the server's: the rest line up with `menu.items`
     return { body, lis: (Array.from(body.querySelectorAll('li')) as HTMLElement[]).filter((li) => !li.classList.contains('extra')) }
   }
 
@@ -1574,7 +1574,7 @@ export class Overlays {
     if (index >= menu.items.length) index = Math.max(0, menu.items.length - 1)
     const lis = this.menuBody()?.lis
     const paint = () => {
-      // the cursor is on a row again: the more line's switches and Orbrun's own row drop their highlight
+      // the cursor is on a row again: the more line's switches and Polished Crawl's own row drop their highlight
       this.menuFooterIndex = -1
       for (const f of this.menuFooter) f.el.classList.remove('hovered')
       if (this.menuExtraOn) this.setExtraHover(false)
@@ -1613,7 +1613,7 @@ export class Overlays {
    * go down the pad's path): menu.js menu_keydown_handler /
    * menu_keypress_handler's paging keys (PageUp, Home, `<`, Shift+arrows),
    * which the official client runs before anything reaches the server, and
-   * the letter of Orbrun's own row on the game menu, which reaches it from
+   * the letter of Polished Crawl's own row on the game menu, which reaches it from
    * anywhere as a server row's hotkey does. Returns true when the key was the
    * menu's (consumed); false leaves it raw, exactly as there.
    */
@@ -1865,7 +1865,7 @@ export class Overlays {
         // keymap; menu.cc process_command examines `last_hovered`). The spell, ability and item menus
         // answer it whatever their `[?]` mode is, so the toggle is never needed. A menu without
         // arrows-select drops a plain `menu_hover` (Menu::set_hovered keeps the hover only when
-        // forced), so the mouse form goes first there; the more line's switches and Orbrun's own
+        // forced), so the mouse form goes first there; the more line's switches and Polished Crawl's own
         // row have nothing to describe
         if (this.menuExtraOn || this.menuFooterIndex >= 0 || this.hovered < 0) break
         if (!menu.items[this.hovered]?.hotkeys?.length) break
@@ -3022,7 +3022,7 @@ export class Overlays {
     this.windows.show('client', el)
     this.clientOverlay = { kind, el, focus: 0, items, back }
     this.itemsTakeMouse(items)
-    // a finger lights a row of the command lists first, since a row can spend a turn; Orbrun's
+    // a finger lights a row of the command lists first, since a row can spend a turn; Polished Crawl's
     // menus (system, settings, the shortcuts sheet) take a tap at once, as the front end's do
     if (kind === 'choices' || kind === 'palette') {
       items.forEach((it, i) => tapLights(it, () => this.clientOverlay?.items === items && this.clientOverlay.focus === i, () => this.setClientFocus(i, false)))
@@ -3461,7 +3461,7 @@ export class Overlays {
   showSystem(opts: { spectating: boolean; inGame: boolean; chat?: boolean; run?: (action: Action) => void }) {
     const again = () => this.showSystem(opts)
     const el = h('div', { class: 'popup menu game sysmenu' })
-    el.append(h('div', { class: 'title' }, 'Orbrun'))
+    el.append(h('div', { class: 'title' }, 'Polished Crawl'))
     const body = h('div', { class: 'body' })
     el.append(body)
     // drawn as the Character tab's commands are (`choiceRows`): crawl's tile, the label, the game's key on the right,
@@ -3469,7 +3469,7 @@ export class Overlays {
     const choices: { label: string; key?: string; sub: string; tile?: string; sep?: boolean; run(): void }[] = []
     const add = (label: string, key: string | undefined, sub: string, tile: string | undefined, run: () => void, sep = false) => choices.push({ label, key, sub, tile, sep, run })
     const playing = opts.inGame && !opts.spectating
-    // three runs under rules: the game (back to it, its own commands and screens), Orbrun (the pad, the settings),
+    // three runs under rules: the game (back to it, its own commands and screens), Polished Crawl (the pad, the settings),
     // and last the way out
     add('Resume', 'Esc', 'back to the dungeon, where you left it', 'CMD_MAP_EXIT_MAP', () => {})
     if (playing) {
@@ -3480,7 +3480,7 @@ export class Overlays {
     }
     if (opts.inGame && opts.chat !== false) add('Chat', 'F12', 'talk to whoever is watching', 'CMD_REPLAY_MESSAGES', () => this.hooks.onSystemAction('chat'))
     add('Gamepad controls', undefined, 'what each button does, and how to change it', 'CMD_KEYBOARD', () => this.showBindings(this.hooks.padKind?.() ?? 'generic', again), true)
-    add('Settings', undefined, "Orbrun's own options: the dungeon, the controls, the HUD", 'CMD_EDIT_PLAYER_TILE', () => this.showSettings(again))
+    add('Settings', undefined, "Dungeon, controls and HUD options", 'CMD_EDIT_PLAYER_TILE', () => this.showSettings(again))
     // a player saves (crawl's S, which asks first, then go_lobby brings the front end back); a spectator has nothing to
     // save and goes back to the Watch screen (`/watch/<server>`) the game was picked from
     if (playing) add('Save and exit', 'S', 'the game keeps; come back to it whenever', 'CMD_SAVE_GAME_NOW', () => this.hooks.send(cm.input('S')), true)
@@ -3508,12 +3508,12 @@ export class Overlays {
     this.openClientOverlay('system', el, items)
     this.installTabs([
       { id: 'character', label: 'Character', hint: 'Review and manage · character, skills and spells', tile: 'CMD_DISPLAY_CHARACTER_STATUS', items: character, panel: characterPanel },
-      { id: 'system', label: 'System', hint: 'Orbrun and the game · options, help and the way out', tile: 'CMD_GAME_MENU', items, panel: ol },
+      { id: 'system', label: 'System', hint: 'Settings, help and exit', tile: 'CMD_GAME_MENU', items, panel: ol },
     ], 'system:', this.systemTab, (id) => { this.systemTab = id })
   }
 
   /**
-   * Orbrun's settings over the game: the groups as rows, each opening its own
+   * Polished Crawl's settings over the game: the groups as rows, each opening its own
    * page (settings-panel.ts) under a Back, the way the Gamepad controls sheet
    * opens from the same menu (and from the Controls page). `back` is where the last Back lands, the pause menu
    * this was reached from.
@@ -3521,7 +3521,7 @@ export class Overlays {
   showSettings(back?: () => void) {
     const again = () => this.showSettings(back)
     const el = h('div', { class: 'popup menu game command-menu settings-groups' })
-    el.append(h('div', { class: 'title' }, 'Orbrun settings'))
+    el.append(h('div', { class: 'title' }, 'Polished Crawl settings'))
     // the Start menu's rows (`choiceRows`), each group's own words on the line under the list
     const items = this.choiceRows([
       ...settingGroups().map((g) => ({ label: g.group, sub: g.hint, tile: SETTING_GROUP_TILES[g.group], run: () => this.showSettingsGroup(g.group, again) })),

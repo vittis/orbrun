@@ -1,7 +1,7 @@
 /**
  * A finger swiped sideways over a screen on top of the map is the d-pad's
  * Left or Right (game.ts presses them), so a tabbed menu (the pack, X's
- * actions, the Orbrun menu) turns its tabs under a swipe as the d-pad turns
+ * actions, the Polished Crawl menu) turns its tabs under a swipe as the d-pad turns
  * them, and any other screen does what its Left and Right do. Swiping left
  * pulls the next one in, as a phone turns pages: it is Right.
  * A swipe beside the menu, over the world it would close on a tap, does the

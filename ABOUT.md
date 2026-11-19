@@ -1,84 +1,25 @@
 # About Polished Crawl
 
-Polished Crawl is an unofficial [Dungeon Crawl Stone Soup](https://crawl.develz.org/) WebTiles client. Built on Orbrun, this client presents the game in Dungeon (2.5D), with keyboard, gamepad and touch controls.
+Polished Crawl is an unofficial Dungeon Crawl Stone Soup client for public WebTiles servers. Here’s what it adds to the standard WebTiles experience.
 
-[Play or watch](https://dcss-client.vittis.workers.dev/). The hosted build supports online play on the bundled public servers. Offline play and custom servers are development capabilities and are unavailable in this deployment.
+## Dungeon visuals
 
-The [complete source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.157) is available under [AGPL-3.0-or-later](LICENSE). Upstream Orbrun is by [Caeous](https://github.com/Caeous/orbrun). [ATTRIBUTION.md](ATTRIBUTION.md) records the original authors, DCSS-derived work and asset licenses.
+- An adjustable 2.5D camera gives walls height and creatures upright sprites. The minimap and full level map stay flat for navigation.
+- Creatures breathe, hover, hop, slither or glide. View settings control the camera tilt and zoom, movement animations and line-of-sight fades.
+- Melee lunges and recoil, projectile trails, spell effects and material-specific hit and death effects make combat easier to follow. A low-health vignette highlights danger, and blood and debris can be toned down or turned off.
+- The main menu plays silent recordings of real Crawl runs in the same 2.5D renderer.
 
-## Getting started
+## Controls and interface
 
-Choose **Watch** to spectate without signing in. Select your server in the compact header, then log in or register there. Choose **Play** or **Continue** for the offered DCSS version. Your username opens account management; **(edit rc)** opens the server’s RC file. Accounts, saves, rc files and scoreboard entries belong to that DCSS server. There is no separate Polished Crawl account.
+- Gamepad and touch layouts put movement, combat, gear, spells and exploration within reach. Keyboard play remains available.
+- The level map offers controller and touch shortcuts for finding stairs and listing known items on the current floor.
+- The character panel can be scaled down, with optional portrait and nearby monster list. The on-screen action hints adapt to the current controls.
+- Optional sound effects can use the CNC Open Sound Pack or a sound pack you import.
 
-[Add to Steam](STEAM.md) explains using the Steam Deck's browser and controller. [Add to Home Screen](INSTALL.md) explains installing the shell on phones, tablets and computers. Online gameplay needs a network connection.
+## Credits
 
-## The dungeon and maps
+- Vittis develops Polished Crawl. Caeous created the original client and its 2.5D renderer.
+- The Dungeon Crawl Stone Soup contributors made the game, WebTiles and tile art. Thanks to the public server operators and Crawl community.
+- Thanks to the PocketZot team and to vimuston, creator of Super Dungeon Crawl, for inspiration.
 
-Dungeon (2.5D) is the only gameplay presentation. It uses the server's tiles with raised walls, upright creatures, lighting and confirmed combat effects. Settings retain tilt, zoom, movement presentation and accessibility controls. The home screen plays a silent selection of recorded real Crawl gameplay in the same renderer. Opening another screen or hiding the tab pauses playback and the title reflection. The recordings use no local game engine, player accounts or saves. About & credits and What’s new open over the menu without losing typed account details.
-
-The minimap and temporary level map remain flat. Press `X` for the level map; closing it restores the dungeon. `Ctrl+X` opens the separate **in view** list. Messages, menus, stats, targeting and the monster list remain available. The client never predicts authoritative moves, damage or hidden information.
-
-## Controls
-
-### Keyboard
-
-Movement and targeting use compass directions, independent of the camera tilt.
-
-| Key | Action |
-|---|---|
-| `k` / `↑` | North |
-| `j` / `↓` | South |
-| `h` / `←` | West |
-| `l` / `→` | East |
-| `y`, `u`, `b`, `n` | Northwest, northeast, southwest, southeast |
-| Shift + direction | Run |
-| Ctrl + direction | Attack |
-| `X` / F2 | Level map |
-| `Ctrl+X` | In view list |
-| F3 | Actions menu |
-| F4 | Gear menu |
-| F5 | Orbrun menu |
-| F12 | Chat |
-
-Menus, prompts and text entry retain their contextual WebTiles keys. The F-keys open the gamepad's menus; press again to close. Escape opens the menu while spectating.
-
-### Gamepad (standard mapping)
-
-- Left stick or d-pad: move and target in the eight compass directions. Held movement repeats steps.
-- **A** does what the situation calls for; consult the action bar for the current command.
-- **B** cancels or backs out.
-- **X** opens spells, abilities, evocables and quiver; bumpers switch tabs. In a menu, X describes the selected row.
-- **Y** opens gear; Y in that menu swaps weapons.
-- **LB** waits; hold to rest.
-- **RB** aims the quivered action; press again to fire.
-- **LT** autoexplores.
-- **RT** autofights.
-- **R3** or **L3** examines; use the d-pad to move the cursor and A to describe it.
-- **Select** opens the level map. Map actions include stairs, travel, search and dungeon overview; hold Select for more map commands.
-- **Start** opens the Orbrun menu for character commands, help, settings, chat and save/exit.
-
-The action bar reflects the current server mode. Controller mappings and browser/device support can vary; automated input checks do not certify every physical controller.
-
-### Touch
-
-Touch buttons provide compass movement, targeting, exploration, fighting, waiting, quivering, spells and gear. Their labels change with the current mode. Tap a dungeon cell to select or act on it according to the current command. Tap stats for the Orbrun menu and the minimap for the level map. On the flat map, tap to select, drag to pan and pinch to zoom.
-
-Tap a spell to ready it and again to cast. Menus support selecting rows and swiping between tabs. Actions that spend a turn can require a confirming second tap. Numeric prompts offer a number pad.
-
-## Version support
-
-The client loads each connected server's enums, tile tables and atlases. Its parser supports known generated forms without executing remote JavaScript. Changed upstream formats may require a compatibility update; unsupported content fails explicitly rather than being guessed.
-
-## Security and privacy
-
-The browser connects directly to the chosen DCSS server over WSS. Passwords are sent in login messages and are not stored. Saving a login stores the server's token in browser storage alongside preferences. Clear the site's data to remove these local records. Protect your browser profile as you would any saved login.
-
-The host serves the app and bounded gamedata/morgue proxies for the bundled allowlisted servers. Game WebSocket traffic goes directly to DCSS. Custom proxy hosts and redirects are rejected. Executable scripts are served from the app's own origin under a restrictive Content Security Policy.
-
-The repository retains optional Cloudflare analytics support; it loads a beacon only when configured at build time. Do not put secrets in `VITE_` variables, fixtures or bug reports.
-
-## Credits and feedback
-
-DCSS is made by its volunteer contributors and runs on independently maintained public servers. Thanks to [PocketZot](https://pocketzot.app/about) and [Super Dungeon Crawl](https://github.com/vimuston/super-dungeon-crawl) for the inspirations described in the attribution record.
-
-Report fork issues at [vittis/orbrun](https://github.com/vittis/orbrun/issues). Upstream Orbrun is at [Caeous/orbrun](https://github.com/Caeous/orbrun); its author can be reached at <caeous@gmail.com>.
+Published under the GNU Affero General Public License v3 or later. [Source for this release](https://github.com/vittis/orbrun/tree/cloudflare-online-v1.158) · [Full attribution and licenses](ATTRIBUTION.md)

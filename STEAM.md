@@ -1,6 +1,6 @@
-# Add Orbrun to Steam
+# Add Polished Crawl to Steam
 
-Orbrun is a web page, so it goes onto a Steam Deck the way a browser does: as
+Polished Crawl is a web page, so it goes onto a Steam Deck the way a browser does: as
 a non-Steam game that opens Chrome full screen on dcss-client.vittis.workers.dev. It takes five
 steps and a few minutes.
 
@@ -26,10 +26,10 @@ Library**. Tick **Google Chrome** and click **Add Selected Programs**.
 If Chrome isn't in the list, right-click it in **Discover** and choose **Add
 to Steam** instead.
 
-## 3. Point it at Orbrun
+## 3. Point it at Polished Crawl
 
 Right-click Google Chrome in your library and choose **Properties**, and
-rename it to `Orbrun`.
+rename it to `Polished Crawl`.
 
 **Launch Options** already holds a long line that starts Chrome from its
 Flatpak, something like `run --branch=stable --arch=x86_64
@@ -42,7 +42,7 @@ and add:
 --kiosk https://dcss-client.vittis.workers.dev/
 ```
 
-That opens Orbrun full screen, with no browser around it.
+That opens Polished Crawl full screen, with no browser around it.
 
 ## 4. Add the artwork (optional)
 
@@ -61,5 +61,5 @@ Save each image, then set it in Steam where the line says:
 
 ## 5. Set up the controller
 
-Switch back to Gaming Mode. On Orbrun's page, press the controller icon, go to
+Switch back to Gaming Mode. On Polished Crawl's page, press the controller icon, go to
 **Layout > Templates** and choose **Gamepad with Joystick Trackpad**.

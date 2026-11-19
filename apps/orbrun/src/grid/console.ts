@@ -37,7 +37,7 @@ export const STAT_WIDTH = 42
 /**
  * The least the dungeon view keeps, in cells, on a screen too narrow for a
  * full sidebar beside it. The official client never meets one (it is a
- * desktop client); this is Orbrun's own floor, so a phone in portrait still
+ * desktop client); this is Polished Crawl's own floor, so a phone in portrait still
  * shows the dungeon. `show_diameter` in game.js is 17 cells: the view is
  * meant to show that many at once.
  */
@@ -151,7 +151,7 @@ export function touchBeside(grid: Grid): boolean {
  * for a column beside `MIN_VIEW_COLS` of clear view, the column (and the
  * stats pane with it) gives way down to nothing.
  *
- * Orbrun's own, for a phone: `foot` rows along the bottom are the touch
+ * Polished Crawl's own, for a phone: `foot` rows along the bottom are the touch
  * bar's (hud.ts renderTouchBar). The view runs on under them, the buttons
  * standing over the dungeon rather than on black, but every pane stands
  * above them, so no button covers a line of text. Held
@@ -254,7 +254,7 @@ export function levelMapSplit(grid: Grid, layout: GameLayout, opts: { hideSideba
 }
 
 /**
- * Orbrun's own, for a phone: the level map's canvas runs on under the touch
+ * Polished Crawl's own, for a phone: the level map's canvas runs on under the touch
  * bar as the view does, the buttons standing over the map rather than on
  * black. Where the map reaches the bar's rows along the foot it takes them
  * too; with the bar at the right column's foot (`touchBeside`), a map that

@@ -242,7 +242,7 @@ describe('the perf log', () => {
   it('holds the whole file to its budget by dropping the oldest samples', () => {
     const clock = { t: 0 }
     const log = new PerfLog(() => clock.t)
-    log.begin(['orbrun perf · test'])
+    log.begin(['Polished Crawl perf · test'])
     for (let i = 0; i < 2000; i++) {
       clock.t = i * LOG_INTERVAL_MS
       // alternating, so nothing collapses
@@ -252,7 +252,7 @@ describe('the perf log', () => {
     expect(text.length).toBeLessThan(LOG_BYTES)
     // the newest samples are the ones kept
     expect(section(text, 'samples').pop()).toContain('1999s')
-    expect(text).toContain('orbrun perf · test')
+    expect(text).toContain('Polished Crawl perf · test')
   })
 
   // the ring is the first thing to lose a spike, so the worst frames are held outside it
@@ -322,8 +322,8 @@ describe('saving from the pane', () => {
       HTMLAnchorElement.prototype.click = click
     }
     expect(downloads.length).toBe(1)
-    expect(downloads[0]).toMatch(/^orbrun-perf-\d{8}-\d{6}\.txt$/)
-    expect(el.textContent).toContain('saved orbrun-perf-')
+    expect(downloads[0]).toMatch(/^polished-crawl-perf-\d{8}-\d{6}\.txt$/)
+    expect(el.textContent).toContain('saved polished-crawl-perf-')
     o.destroy()
   })
 })

@@ -1,10 +1,21 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { newer, newsDoc } from '../src/news'
+import { changelog, newer, newsDoc, newsSeen } from '../src/news'
 
-const MD = ['# What’s new', '', 'Notable changes to Orbrun, newest first.', '', '## 0.2.10 — 2026-10-02', '', '- Ten.', '', '## 0.2.9 — 2026-10-01', '', '- Nine.', '', '## 0.2.8 — 2026-09-30', '', '- Eight.'].join('\n')
+const MD = ['# What’s new', '', 'Notable changes to Polished Crawl, newest first.', '', '## 0.2.10 — 2026-10-02', '', '- Ten.', '', '## 0.2.9 — 2026-10-01', '', '- Nine.', '', '## 0.2.8 — 2026-09-30', '', '- Eight.'].join('\n')
 
 describe('What’s new', () => {
+  it('marks only the new release as fresh for someone who read the previous numbering', () => {
+    localStorage.setItem('orbrun.newsSeen', '0.3.160')
+    try {
+      const doc = newsDoc(changelog, newsSeen())
+      expect(doc.querySelectorAll('.release.fresh')).toHaveLength(1)
+      expect(doc.querySelector('.release.latest')).toBe(doc.querySelector('.release.fresh'))
+    } finally {
+      localStorage.removeItem('orbrun.newsSeen')
+    }
+  })
+
   it('orders releases by number, not by spelling', () => {
     expect(newer('0.2.10', '0.2.9')).toBe(true)
     expect(newer('0.3', '0.2.9')).toBe(true)

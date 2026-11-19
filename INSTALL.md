@@ -5,7 +5,7 @@
 Open [dcss-client.vittis.workers.dev](https://dcss-client.vittis.workers.dev) in Chrome on your phone or tablet. Tap the **⋮** menu at the
 top right, choose **Add to Home screen**, then **Install**.
 
-Orbrun appears with your other apps. Open it from there, not from the
+Polished Crawl appears with your other apps. Open it from there, not from the
 browser, to play full screen. Portrait and landscape both work.
 
 If the system bars are still visible, open **Settings › Interface › Go fullscreen**
@@ -23,7 +23,7 @@ If there is no icon, look in the browser's menu: in Chrome, **Cast, save and
 share › Install page as app**; in Edge, **Apps › Install this site as an
 app**.
 
-Orbrun opens in its own window and joins your Start menu, Launchpad or app
+Polished Crawl opens in its own window and joins your Start menu, Launchpad or app
 list. Press F11 (Control-Command-F on a Mac) for full screen.
 
 ## iPhone and iPad
@@ -35,11 +35,11 @@ This hosted build plays on public servers only, on every platform. Installing th
 
 ## Steam Deck
 
-On a Deck, add Orbrun to Steam instead. It then opens from your library in
+On a Deck, add Polished Crawl to Steam instead. It then opens from your library in
 Gaming Mode with the controller ready: see [STEAM.md](STEAM.md).
 
 ## Removing it
 
-Remove Orbrun the way you remove any app: hold its icon and choose
+Remove Polished Crawl the way you remove any app: hold its icon and choose
 **Uninstall** or **Remove**, or on a computer open it and choose **Uninstall**
 from its window's menu. Settings and saved login tokens are kept by the browser; clear the site's data if you want them removed. Online saves remain on their DCSS server.

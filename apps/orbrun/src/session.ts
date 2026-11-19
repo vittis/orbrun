@@ -191,7 +191,7 @@ export class Session {
   }
 
   /**
-   * Orbrun's own: a key the player sends may be held back while the spell
+   * Polished Crawl's own: a key the player sends may be held back while the spell
    * bar looks the spell list up (spell-bar.ts `SpellBook`), and is sent once
    * the look is done; true when it was held. `own` is the look's, never held.
    */

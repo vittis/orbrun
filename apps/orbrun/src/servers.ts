@@ -417,7 +417,7 @@ export function describePlace(c: LastCharacter): string {
 }
 
 /**
- * "orbrun the Chiller | Vine Stalker of Vehumet - Orbrun": the browser tab's
+ * "orbrun the Chiller | Vine Stalker of Vehumet - Polished Crawl": the browser tab's
  * title while in a game, so a tab (or a window in a taskbar) says whose game
  * it is. The species and god read as the HUD's second line does, and the site
  * follows a hyphen, as the site's page titles have it (site.ts).

@@ -42,7 +42,7 @@ export interface HudHooks {
   onPanelHide(): void
   /** action_panel.js: the game-menu button sends `main_menu_action`. */
   onGameMenu(): void
-  /** action_panel.js show_settings: a right click on the X opens the panel's settings — Orbrun's own settings screen. */
+  /** action_panel.js show_settings: a right click on the X opens the panel's settings — Polished Crawl's own settings screen. */
   onPanelSettings(): void
   /** a finger went down (`down`) or came up on one of the touch bar's buttons: the pad's own button, pressed */
   onTouchButton(button: Button, down: boolean): void
@@ -62,8 +62,8 @@ const MONSTER_LIST_MAX_ROWS = 5
 const MONSTER_LIST_MAX_SPRITES = 6
 /**
  * action_panel.js reserves two cells before the first item: the X that folds
- * the panel away (a right click on it opens the panel's settings; Orbrun
- * opens its own settings screen there) and the game-menu button. Orbrun draws
+ * the panel away (a right click on it opens the panel's settings; Polished Crawl
+ * opens its own settings screen there) and the game-menu button. Polished Crawl draws
  * both, as the official client does.
  */
 const NUM_RESERVED_BUTTONS = 2
@@ -146,7 +146,7 @@ const MENU_BUTTONS: readonly Button[] = [...MENU_LEFT, ...MENU_RIGHT]
 /**
  * One row of the WebTiles monster list (`monster_list.js`): a strip of sprites
  * drawn with the cell renderer, the glyph-mode health box, the name.
- * Orbrun adds a compass bearing arrow in front.
+ * Polished Crawl adds a compass bearing arrow in front.
  */
 interface MonsterRow {
   node: HTMLElement
@@ -989,7 +989,7 @@ export class Hud {
    * `action_panel_scale`, `action_panel_orientation`, `action_panel_show`,
    * `action_panel_disabled` and `action_panel_font_*` come from the rc.
    * A left click uses the item, a right click describes it, exactly as the
-   * official client sends them. Orbrun adds the inventory letter in the
+   * official client sends them. Polished Crawl adds the inventory letter in the
    * corner so the same slot is reachable from the palette.
    *
    * It stands in the strip between the stats pane and the minimap
@@ -1134,7 +1134,7 @@ export class Hud {
       }
       cursorOn(i)
       if (item.useless) drawNamed('icons', 'OOR_MESH', i)
-      // Orbrun: the inventory letter, bottom-right, so the palette and the panel name the same slot
+      // Polished Crawl: the inventory letter, bottom-right, so the palette and the panel name the same slot
       ctx.save()
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.fillStyle = 'rgba(255,255,255,0.85)'
@@ -1258,7 +1258,7 @@ export class Hud {
    * each row a strip of up to six sprites drawn with the cell renderer (so
    * every badge the map cell carries is on the thumbnail too), the glyph-mode
    * health box, then the name (or "3 jackals") in its attitude and threat
-   * colours; an ellipsis on the last row when rows were cut. Orbrun adds a
+   * colours; an ellipsis on the last row when rows were cut. Polished Crawl adds a
    * compass bearing arrow.
    */
   private renderMonsters(scene: Scene, state: GameState, gd: Gamedata | null) {
@@ -1522,7 +1522,7 @@ export class Hud {
    * The pad's standing menu buttons, in the view's two bottom corners: the
    * ones that open a screen rather than spend a turn. The left hand's one
    * (Select: Travel) stands in the left corner reading from its glyph, the
-   * right hand's (Start: Character, the Orbrun menu, over Y: Gear over
+   * right hand's (Start: Character, the Polished Crawl menu, over Y: Gear over
    * X: Spells) hard against the right edge with its glyphs at the edge, so
    * each sits where its thumb is. Only while the play view is up and
    * the pad spoke last: in a menu or while aiming these buttons mean other

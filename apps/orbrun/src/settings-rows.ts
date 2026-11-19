@@ -5,7 +5,7 @@ import { rcOption } from '@orbrun/offline'
 import { MINIMAP_CELL_DEFAULT, MINIMAP_TILES_DEFAULT, MINIMAP_TILES_LEAST } from './hud'
 
 /**
- * Orbrun's own settings, one row each: what it is called, which key it sets,
+ * Polished Crawl's own settings, one row each: what it is called, which key it sets,
  * the values it cycles through (in the order left and right walk them) and
  * how a value reads. The same list draws the settings scroll on the front
  * end's map (lobby.ts) and the settings menu in a game (main.ts), so the two
