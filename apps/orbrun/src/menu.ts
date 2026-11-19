@@ -332,6 +332,7 @@ export class FrontEnd {
     this.root = h('div', { class: 'screen home' })
     host.append(this.root)
     this.root.addEventListener('focusin', this.onNativeFocus)
+    this.root.addEventListener('pointerdown', () => this.root.removeAttribute('data-pad-focus'), true)
     this.media = new MenuBackdrop(this.root)
     this.home = new HomeView({
       server: id => {
@@ -419,6 +420,9 @@ export class FrontEnd {
    * Start confirms like Enter.
    */
   pad(ev: PadEvent) {
+    if (ev.type === 'press' || (ev.type === 'dir' && ev.dir !== null)) {
+      this.root.toggleAttribute('data-pad-focus', !ev.touch)
+    }
     if (this.modal) return this.modal.pad(ev)
     if (ev.type === 'pan') {
       // a document takes the right stick as its scroll; other screens leave the scenery fixed
@@ -503,6 +507,7 @@ export class FrontEnd {
 
   /** Keyboard. Returns true when the key was taken. */
   key(ev: KeyboardEvent): boolean {
+    this.root.removeAttribute('data-pad-focus')
     if (this.modal) return this.modal.key(ev)
     if (this.osk.visible) {
       if (ev.key === 'Escape') {
@@ -1218,8 +1223,8 @@ export class FrontEnd {
     rows.push({ id: 'settings', label: 'Settings', marker: '?', fn: () => this.showSettings(() => this.showHome()) })
     if (canQuit()) rows.push({ id: 'quit', label: 'Quit', marker: '<', fn: () => this.quit() })
     if (this.error) { notices.push(h('div', { class: 'error' }, this.error)); this.error = null }
-    const entering = this._view !== 'home' || !this.home.el.isConnected
-    if (entering) {
+    const returning = this._view !== 'home'
+    if (returning || !this.home.el.isConnected) {
       this.setView('home', 'polished')
       for (const child of Array.from(this.root.children)) if (child !== this.media.el) child.remove()
       this.root.append(this.home.el)
@@ -1235,7 +1240,7 @@ export class FrontEnd {
       const focus = this.marks.get('home') ?? rows[0]?.id
       this.prepareFocus([...all, ...extra])
       this.nav.set(this.navItems, 'home', { wrap: true, keepColumn: true }, Math.max(0, all.findIndex(f => f.id === focus)))
-      if (entering) this.nav.current()?.onFocus?.()
+      if (returning) this.nav.current()?.onFocus?.()
     }
     this.media.cover(!!this.modal)
     if (report) this.showExit(report.s, report.exit, report.why, report.words)

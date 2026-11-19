@@ -128,8 +128,11 @@
 .polished-footer { display: flex; gap: 24px; margin: auto var(--gutter) 20px; padding-top: 20px; }
 .polished-footer button { padding: 8px 0; font-size: 12px; color: #aab39b; }
 .polished-footer .unread::after { content: '•'; margin-left: 6px; color: #d4b060; }
-.polished-home :is(button, a, select, input):focus-visible, .polished-home .focused { outline: 1px solid #cab36a; outline-offset: 5px; }
-.account-bar :is(button, a, select, input):focus-visible, .account-bar .focused { outline-offset: 2px; }
+.polished-home :is(button, a, select, input):is(:focus-visible, :where([data-pad-focus]) :focus) {
+  outline: 1px solid #cab36a;
+  outline-offset: 5px;
+}
+.account-bar :is(button, a, select, input):focus { outline-offset: 2px; }
 .polished-home button:hover, .polished-home a:hover { color: #efd28c; }
 .polished-home button:disabled { opacity: .6; cursor: default; }
 .menu-modal { box-sizing: border-box; color: #d6d7c9; background: #10170f; border: 1px solid #626b44; border-radius: 3px; padding: 28px 30px; width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: hidden; font: 15px/1.6 'IBM Plex Sans', sans-serif; }

@@ -663,6 +663,16 @@ for (const touch of [false, true]) {
       const user = page.getByRole('textbox', { name: 'Username', exact: true }), pass = page.getByLabel('Password', { exact: true })
       const server = page.getByRole('combobox', { name: 'Server', exact: true })
       const login = page.getByRole('button', { name: 'Log in', exact: true })
+      const firstCommand = page.getByRole('navigation', { name: 'Main menu' }).getByRole('button').first()
+      await expect(firstCommand).not.toBeFocused()
+      await expect(firstCommand).toHaveCSS('outline-style', 'none')
+      await page.getByRole('button', { name: 'Accounts', exact: true }).focus()
+      await page.keyboard.press('Tab')
+      await expect(firstCommand).toBeFocused()
+      await expect(firstCommand).toHaveCSS('outline-style', 'solid')
+      await page.locator('.polished-subtitle').click()
+      await expect(firstCommand).not.toBeFocused()
+      await expect(firstCommand).toHaveCSS('outline-style', 'none')
       // Cover both a remembered account and a server where this device has never logged in.
       if (touch) {
         await server.selectOption('cao')

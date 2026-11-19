@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.145 — 2026-11-18
+
+- Main menu buttons show an outline when focused with the keyboard or controller.
+
 ## 0.3.144 — 2026-11-18
 
 - The Username and Password labels fit on narrow phones.
