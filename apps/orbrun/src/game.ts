@@ -303,7 +303,7 @@ export class GameScreen {
     this.root = h('div', { class: 'screen game' })
     host.append(this.root)
     const fullscreen = new AbortController()
-    installFullscreenButton(this.root, fullscreen.signal)
+    const fullscreenButton = installFullscreenButton(this.root, fullscreen.signal)
     this.unsub.push(() => fullscreen.abort())
     this.root.append(this.canvas, this.loading, this.fps.root)
     this.root.append(this.nearDeath.root, this.levelUp.root, this.levelUp.announcement)
@@ -363,7 +363,7 @@ export class GameScreen {
         this.prepareInput()
         this.runner.execute(touchExtraAction(id, this.ctx))
       },
-    })
+    }, fullscreenButton)
     // straight to the session: the runner drops what a spectator sends, and chat is a spectator's to send
     this.chat = new Chat(this.root, { send: (m) => this.session.send(m), padKind: () => this.hooks.gamepad.kind })
     this.overlays = new Overlays(this.root, {

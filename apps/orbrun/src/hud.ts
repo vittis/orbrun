@@ -504,7 +504,7 @@ export class Hud {
     return { rows: Math.ceil(h / host.grid.ch - 1e-6), cols }
   }
 
-  constructor(host: HTMLElement, hooks: HudHooks) {
+  constructor(host: HTMLElement, hooks: HudHooks, private fullscreenButton?: HTMLButtonElement) {
     this.hooks = hooks
     this.root = h('div', { class: 'hud' })
     this.root.append(this.stats, this.sidebar, this.statuses, this.actionPanel, this.messages, this.glance, this.menubar, this.actionbar, this.touchbar, this.spellbar)
@@ -594,6 +594,7 @@ export class Hud {
     this.messages.hidden = hidden.messages
     const at = host.px(free)
     this.freePx = { left: at.left, top: at.top, width: at.width, height: at.height }
+    this.placeFullscreen(this.statsKeys.length)
     for (const bar of [this.actionbar, this.menubar]) bar.style.maxHeight = cells.stackedDesktop ? at.height + 'px' : ''
     // The menu strip spans the full view width.
     const viewPx = host.px(cells.view)
@@ -740,6 +741,21 @@ export class Hud {
     this.snapDue = true
   }
 
+  private placeFullscreen(statsRows: number) {
+    const { fullscreenButton: button, host, cells, freePx } = this
+    if (!button || !host || !cells || !freePx) return
+    const portrait = isPortrait(host.grid)
+    // In portrait the character sheet overlays the canvas. Its height follows the rendered rows.
+    const top = portrait && !this.stats.hidden
+      ? Math.max(freePx.top, host.px(cells.stats).top + statsRows * this.statsRowPx)
+      : freePx.top
+    const right = portrait
+      ? this.sidebar.hidden ? 0 : host.width - host.px(cells.sidebar).left
+      : host.width - freePx.left - freePx.width
+    button.style.setProperty('--fullscreen-view-top', top + 'px')
+    button.style.setProperty('--fullscreen-view-right', right + 'px')
+  }
+
   status(text: string) {
     this.statusEl.textContent = text
     this.statusEl.style.display = ''
@@ -864,6 +880,7 @@ export class Hud {
       for (let i = 0; i < keys.length; i++) if (keys[i] !== this.statsKeys[i]) lines[i + 1].replaceWith(paintRow(rows[i]))
     }
     this.statsKeys = keys
+    this.placeFullscreen(rows.length)
     // Status lights can wrap beyond the character pane's reserved rows.
     // Keep the 2.5D list and badges below its actual text as conditions change.
     const host = this.host

@@ -1661,43 +1661,37 @@ a.item.beside {
 }
 
 #app {
-  --fullscreen-size: 44px;
-  --fullscreen-top: max(4px, env(safe-area-inset-top, 0px));
-  --fullscreen-right: max(4px, env(safe-area-inset-right, 0px));
-}
-
-/* Give the game and its overlays their own viewport below the corner control. */
-.screen.game:has(> .fullscreen-control) {
-  top: calc(var(--fullscreen-top) + var(--fullscreen-size) + 4px);
+  --fullscreen-size: 32px;
+  --fullscreen-right: calc(env(safe-area-inset-right, 0px) + 4px);
 }
 
 button.fullscreen-control {
-  position: fixed;
-  top: var(--fullscreen-top);
-  right: var(--fullscreen-right);
+  position: absolute;
+  top: calc(max(env(safe-area-inset-top, 0px), var(--fullscreen-view-top, 0px)) + 4px);
+  right: max(var(--fullscreen-right), calc(var(--fullscreen-view-right, 0px) + 4px));
   z-index: 3;
   display: grid;
   place-items: center;
   width: var(--fullscreen-size);
   height: var(--fullscreen-size);
   padding: 0;
-  border: 1px solid #535b47;
+  border: 0;
   border-radius: 4px;
-  background: #10170f;
-  color: #dfc27d;
-  font-size: 20px;
+  background: rgb(0 0 0 / 45%);
+  color: rgb(235 219 176 / 78%);
+  font-size: 15px;
   cursor: pointer;
   pointer-events: auto;
+}
+
+button.fullscreen-control:is(:focus-visible, :active) {
+  background: rgb(0 0 0 / 75%);
+  color: #efd28c;
 }
 
 button.fullscreen-control:focus-visible {
   outline: 2px solid #efd28c;
   outline-offset: 1px;
-}
-
-.screen.game > .fullscreen-control {
-  position: absolute;
-  top: calc(-1 * var(--fullscreen-size) - 4px);
 }
 
 /* the frame timing readout (perf.ts), over everything and in nothing's way */

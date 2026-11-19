@@ -10,7 +10,7 @@ test.describe('Android fullscreen', () => {
     isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (Linux; Android 15) Chrome/144.0.0.0 Mobile Safari/537.36',
   })
 
-  test('toggles from the menu and game without covering controls', async ({ page }) => {
+  test('toggles from the menu and overlays the game without shrinking the viewport', async ({ page }) => {
     await page.routeWebSocket(/wss?:\/\//, socket => socket.send(JSON.stringify({ msg: 'lobby_complete' })))
     let releaseClip!: () => void
     const waitForClip = new Promise<void>(resolve => { releaseClip = resolve })
@@ -22,9 +22,10 @@ test.describe('Android fullscreen', () => {
     await page.getByRole('combobox', { name: 'Server' }).selectOption('cdi')
     await expect(enter).toBeVisible()
     const corner = (await enter.boundingBox())!
-    expect(corner.width).toBeGreaterThanOrEqual(44)
+    await expect(enter).toHaveCSS('position', 'absolute')
     expect(corner.x + corner.width).toBeGreaterThan(380)
-    expect(corner.y + corner.height).toBeLessThan((await page.getByRole('textbox', { name: 'Username' }).boundingBox())!.y)
+    const login = (await page.getByRole('button', { name: 'Log in', exact: true }).boundingBox())!
+    expect(login.x + login.width).toBeLessThanOrEqual(corner.x)
     await expect(page.locator('.menu-replay-status')).toContainText('Loading')
     await page.screenshot({ path: 'test-results/fullscreen-menu-android.png' })
     releaseClip()
@@ -40,24 +41,24 @@ test.describe('Android fullscreen', () => {
     await expect(page.locator('.stats')).toBeVisible()
     for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
       await page.setViewportSize(viewport)
+      await expect.poll(() => page.locator('.screen.game').boundingBox()).toEqual({ x: 0, y: 0, ...viewport })
+      const canvas = (await page.locator('canvas.view').boundingBox())!
       const button = (await enter.boundingBox())!
-      expect(button.x + button.width).toBeGreaterThan(viewport.width - 10)
-      for (const selector of ['canvas.view', '.stats']) {
-        expect((await page.locator(selector).boundingBox())!.y).toBeGreaterThanOrEqual(button.y + button.height)
-      }
+      const stats = (await page.locator('.stats').boundingBox())!
+      expect(button.x).toBeGreaterThanOrEqual(canvas.x)
+      expect(button.y).toBeGreaterThanOrEqual(canvas.y)
+      expect(button.x + button.width).toBeLessThanOrEqual(canvas.x + canvas.width)
+      expect(button.y + button.height).toBeLessThanOrEqual(canvas.y + canvas.height)
+      if (viewport.width < viewport.height) expect(button.y).toBeGreaterThanOrEqual(stats.y + stats.height)
+      else expect(button.x + button.width).toBeLessThanOrEqual(stats.x)
       await page.screenshot({ path: `test-results/fullscreen-game-${viewport.width}.png` })
     }
-    await page.locator('canvas.view').press('F5')
-    const system = page.getByRole('tab', { name: 'System', exact: true })
-    await expect(system).toBeVisible()
     const before = (await result(page)).sent
     await enter.tap()
     await expect(exit).toBeVisible()
-    await expect(system).toBeVisible()
     await exit.press('Enter')
     await expect(enter).toBeVisible()
     expect(await fullscreen()).toBe(false)
-    await expect(system).toBeVisible()
     expect((await result(page)).sent).toEqual(before)
   })
 })

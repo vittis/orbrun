@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.154 — 2026-11-19
+
+- The smaller Android fullscreen icon overlays the dungeon without reducing the gameplay viewport.
+
 ## 0.3.153 — 2026-11-19
 
 - Android users can enter and exit fullscreen from the top-right corner of the main menu and the game.

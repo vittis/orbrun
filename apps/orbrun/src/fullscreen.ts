@@ -31,4 +31,5 @@ export function installFullscreenButton(host: HTMLElement, signal: AbortSignal) 
   document.addEventListener('fullscreenchange', update, { signal })
   update()
   host.append(button)
+  return button
 }
