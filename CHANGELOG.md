@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.148 — 2026-11-18
+
+- The level map again follows the browser’s pixel ratio when zoomed below 100% on a standard-density display.
+
 ## 0.3.147 — 2026-11-18
 
 - Main menu replays render at higher resolution on phones, with smoother creature sprites.

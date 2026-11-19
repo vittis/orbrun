@@ -649,7 +649,7 @@ export class GameScreen {
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
     const phoneDungeon = this.grid.phone && !mapView
-    const dpr = phoneDungeon ? phoneDungeonDpr() : 1
+    const dpr = phoneDungeon ? phoneDungeonDpr() : Math.min(window.devicePixelRatio || 1, 1)
     this.canvas.classList.toggle('view-hidpi', dpr > 1)
     if (this.renderer instanceof Render25d) this.renderer.setOptions({ filterCreatureScaling: phoneDungeon })
     this.renderer.resize(px.width, px.height, dpr)

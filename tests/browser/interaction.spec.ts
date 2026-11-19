@@ -464,6 +464,17 @@ for (const touch of [false, true]) {
   })
 }
 
+test.describe('desktop browser zoom below 100%', () => {
+  test.use({ deviceScaleFactor: 0.75 })
+
+  test('the flat map uses the browser pixel ratio', async ({ page }) => {
+    await page.goto('/testbed/map-lifecycle.html')
+    await page.getByRole('button', { name: 'Open level map', exact: true }).click()
+    await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')
+    const scale = await page.locator('canvas.view').evaluate(el => (el as HTMLCanvasElement).width / el.getBoundingClientRect().width)
+    expect(scale).toBeCloseTo(0.75)
+  })
+})
 
 test('unexplored atmosphere can be disabled independently, persists and resets', async ({ page }) => {
   await page.routeWebSocket(/wss?:\/\//, socket => socket.close())
