@@ -1723,12 +1723,11 @@ a.item.beside {
   display: block;
   /* Returning keyboard control from a panel focuses the canvas; the playfield has no focus frame. */
   outline: none;
-  /* The view draws one pixel per CSS pixel whatever the display's density
-     (game.ts `viewDpr`), so on a HiDPI screen the compositor is the thing that
-     scales it up. Left to itself it does that smoothly, which softens every
-     32-texel sprite edge in the frame; pixelated makes the upscale a clean
-     doubling, the way every other pixel-art canvas here is drawn. */
   image-rendering: pixelated;
+}
+.game canvas.view.view-hidpi {
+  /* Blend the remaining compositor upscale on high-density phones. */
+  image-rendering: auto;
 }
 /* the probe the grid host measures a cell with: the one grid font */
 .game .grid-probe {
@@ -1894,6 +1893,9 @@ a.item.beside {
   top: 0;
   display: block;
   image-rendering: pixelated;
+}
+.game.phone .stats canvas.portrait {
+  image-rendering: auto;
 }
 .degenerated_stat {
   color: var(--color-14); /* yellow */

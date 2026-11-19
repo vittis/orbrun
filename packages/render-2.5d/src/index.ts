@@ -48,6 +48,8 @@ export interface Render25dOptions extends MovementAppearance {
   center?: { x: number; y: number } | null
   minibars?: Minibars | null
   filterScaling?: boolean
+  /** Filter upright player and monster artwork independently of terrain. */
+  filterCreatureScaling?: boolean
 }
 
 interface Hit { key: CellKey; left: number; top: number; right: number; bottom: number }
@@ -86,7 +88,7 @@ export class Render25d implements MapRenderer {
   private hits: Hit[] = []
   private active = false
   private opts: Required<Render25dOptions> = {
-    tilt: 50, zoom: 1, animate: true, unexploredFog: false, unexploredAtmosphere: true, center: null, minibars: null, filterScaling: false,
+    tilt: 50, zoom: 1, animate: true, unexploredFog: false, unexploredAtmosphere: true, center: null, minibars: null, filterScaling: false, filterCreatureScaling: false,
     meleeBumpStrength: 1.75, meleeBumpSnap: 0.7,
     hitGore: 1, deathGore: 0.5, hitSprayOutward: 1, deathSprayOutward: 0.75, combatVfxVariation: 0.25,
     movement: true, movementDuration: 0.1, movementEasing: 'ease-out',
@@ -800,8 +802,9 @@ export class Render25d implements MapRenderer {
     ctx.save()
     // Idle motion filters an integer-enlarged sprite, keeping solid pixel centres
     // while easing row transitions. Explicit smooth scaling uses the atlas directly.
-    const rasterScale = animatedPose && !cloud && !this.opts.filterScaling ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
-    ctx.imageSmoothingEnabled = cloud || this.opts.filterScaling || animatedPose
+    const filter = this.opts.filterScaling || (this.opts.filterCreatureScaling && creature && !b.lying)
+    const rasterScale = animatedPose && !cloud && !filter ? Math.max(2, Math.min(4, Math.ceil(size * this.dpr / 32))) : 1
+    ctx.imageSmoothingEnabled = cloud || filter || animatedPose
     ctx.globalAlpha = (b.alpha ?? 1) * (cloud ? 0.58 : 1) * opacity
     const brightness = this.opts.animate && visible ? this.effects.hits.brightness(combatActorId(b), time) : 1
     if (brightness > 1) {

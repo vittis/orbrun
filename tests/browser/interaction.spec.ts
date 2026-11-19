@@ -410,12 +410,18 @@ for (const touch of [false, true]) {
     })
   })
   test.describe(touch ? 'narrow touch' : 'narrow mouse', () => {
-    test.use({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: touch })
+    test.use({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: touch, deviceScaleFactor: 3 })
     test('readable HUD and repeated map/overview restoration', async ({ page }) => {
       await page.goto('/testbed/map-lifecycle.html')
       await expect.poll(async () => (await result(page)).renderer).toBe('Render25d')
       expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(touch)
       expect(await page.evaluate(() => screen.width)).toBe(390)
+      const canvas = page.locator('canvas.view')
+      const backingScale = () => canvas.evaluate(el => (el as HTMLCanvasElement).width / el.getBoundingClientRect().width)
+      const dungeonScale = touch ? 1.5 : 1
+      await expect(canvas).toHaveCSS('image-rendering', touch ? 'auto' : 'pixelated')
+      await expect(page.locator('canvas.portrait')).toHaveCSS('image-rendering', touch ? 'auto' : 'pixelated')
+      expect(await backingScale()).toBeCloseTo(dungeonScale)
       const layout = await page.locator('.stats').evaluate(el => {
         const rect = el.getBoundingClientRect()
         return { left: rect.left, right: rect.right, width: rect.width, viewport: innerWidth }
@@ -430,6 +436,8 @@ for (const touch of [false, true]) {
       expect(overflow.filter(line => line.content > line.width + 1), 'clipped stats text').toEqual([])
       await page.getByRole('button', { name: 'Open level map', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')
+      await expect(canvas).toHaveCSS('image-rendering', 'pixelated')
+      expect(await backingScale()).toBeCloseTo(1)
       await expect.poll(async () => (await result(page)).cursor).toMatchObject({ x: 13, y: 7 })
       await page.getByRole('button', { name: 'Change tilt and zoom', exact: true }).click()
       expect((await result(page)).renderer).toBe('Render2d')
@@ -438,7 +446,8 @@ for (const touch of [false, true]) {
       expect((await result(page)).renderer).toBe('Render2d')
       await page.getByRole('button', { name: 'Close view', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render25d')
-      expect(await result(page)).toMatchObject({ tilt: 65, zoom: 1.2, cursor: null, canvases: 1, appliedDungeonOptions: { tilt: 65, zoom: 1.2 } })
+      expect(await result(page)).toMatchObject({ tilt: 65, zoom: 1.2, cursor: null, canvases: 1, appliedDungeonOptions: { tilt: 65, zoom: 1.2, filterCreatureScaling: touch } })
+      expect(await backingScale()).toBeCloseTo(dungeonScale)
       await page.setViewportSize({ width: 640, height: 720 })
       await page.getByRole('button', { name: 'Open level map', exact: true }).click()
       await expect.poll(async () => (await result(page)).renderer).toBe('Render2d')

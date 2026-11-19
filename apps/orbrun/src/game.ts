@@ -37,8 +37,8 @@ import { NearDeath } from './near-death'
 import { LevelUp } from './level-up'
 import { QuickSettings } from './quick-settings'
 
-/** Cap dungeon pixels per CSS pixel to keep the pixel art crisp. */
-const VIEW_MAX_DPR = 1
+/** Bound the phone dungeon's backing store to 2.25 times its CSS pixel area. */
+const PHONE_DUNGEON_MAX_DPR = 1.5
 /** at rest the frame loop sleeps, waking to run its body this often, so nothing that changed without waking it waits longer */
 const IDLE_TICK_MS = 250
 /** how long crawl and we must have said nothing before the spell bar looks its list up (spell-bar.ts) */
@@ -650,7 +650,11 @@ export class GameScreen {
     // the map is centred, and its cells fitted, on its part above the touch bar (render-2d `foot`)
     const mapPx = map ? this.grid.px(map) : null
     this.mapFoot = mapPx ? Math.max(0, px.top + px.height - mapPx.top - mapPx.height) : 0
-    this.renderer.resize(px.width, px.height, this.viewDpr())
+    const phoneDungeon = this.grid.phone && !mapView
+    const dpr = Math.min(window.devicePixelRatio || 1, phoneDungeon ? PHONE_DUNGEON_MAX_DPR : 1)
+    this.canvas.classList.toggle('view-hidpi', dpr > 1)
+    if (this.renderer instanceof Render25d) this.renderer.setOptions({ filterCreatureScaling: phoneDungeon })
+    this.renderer.resize(px.width, px.height, dpr)
     // what rides the view's edges keeps clear of the panes
     const free = map ?? cells.clear
     this.hud.spellRow = spells
@@ -667,17 +671,6 @@ export class GameScreen {
     const log = hideMessages || !msgPx.width ? null : msgPx
     this.chat.place(this.grid.px(cells.sidebar), this.root.clientHeight, this.root.clientWidth, !!this.grid.phone, log)
     this.needsRender = true
-  }
-
-  /**
-   * The view's pixel ratio: one drawn pixel per CSS pixel, whatever the
-   * display's density. The view is 32-texel pixel
-   * art drawn unfiltered, so a HiDPI display's extra pixels buy it almost
-   * nothing and cost a weak GPU most of its fill; the HUD's own canvases and
-   * text keep the full density.
-   */
-  private viewDpr(): number {
-    return Math.min(window.devicePixelRatio || 1, VIEW_MAX_DPR)
   }
 
   private makeRenderer(): MapRenderer {

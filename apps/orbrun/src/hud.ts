@@ -876,11 +876,12 @@ export class Hud {
     // those, not the scene's revision, which moves with every monster's step
     const cell = scene.playerOnLevel ? scene.cells.get(cellKey(scene.player.x, scene.player.y)) : undefined
     const here = cell ? scene.billboards.filter((b) => b.x === scene.player.x && b.y === scene.player.y) : []
-    const pre = [cell, ...here, scene.playerOnLevel, scene.player.x, scene.player.y, mode, o.glyph_mode_font, o.tile_filter_scaling, gd?.version, this.portraitPx]
+    const filterScaling = this.host?.phone === true || o.tile_filter_scaling === true
+    const pre = [cell, ...here, scene.playerOnLevel, scene.player.x, scene.player.y, mode, o.glyph_mode_font, filterScaling, gd?.version, this.portraitPx]
     if (!changed(this.portraitPre, pre)) return
     this.portraitPre = pre
     const px = this.portraitPx
-    this.portrait.setOptions({ cellSize: px, mode, filterScaling: o.tile_filter_scaling === true, glyphFont: rcFont(o.glyph_mode_font) })
+    this.portrait.setOptions({ cellSize: px, mode, filterScaling, glyphFont: rcFont(o.glyph_mode_font) })
     if (gd) this.portrait.setTiles(gd)
     this.portrait.setScene(scene)
     this.portrait.clear(true)

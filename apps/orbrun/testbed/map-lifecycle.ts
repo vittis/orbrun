@@ -76,6 +76,6 @@ document.getElementById('close')!.onclick = () => {
 document.getElementById('target')!.onclick = () => {
   send({ msg: 'input_mode', mode: MouseMode.TARGET }); send({ msg: 'cursor', id: 0, loc: { x: 11, y: 3 } })
 }
-document.getElementById('settings')!.onclick = () => { saveSettings({ ...settings, depthTilt: settings.depthTilt === 50 ? 65 : 50, depthZoom: settings.depthZoom === 1 ? 1.2 : 1 }); screen.applySettings() }
+document.getElementById('settings')!.onclick = () => { saveSettings({ ...settings, depthTilt: settings.depthTilt === 65 ? defaultSettings.depthTilt : 65, depthZoom: settings.depthZoom === 1 ? 1.2 : 1 }); screen.applySettings() }
 const timer = setInterval(() => { document.getElementById('result')!.textContent = JSON.stringify({ presentation, appliedDungeonOptions, renderer: active.constructor.name, cursor, created, destroyed, canvases: document.querySelectorAll('canvas.view').length, tilt: settings.depthTilt, zoom: settings.depthZoom, sent: sent.slice(-8) }) }, 100)
 window.addEventListener('pagehide', () => { clearInterval(timer); screen.destroy() }, { once: true })

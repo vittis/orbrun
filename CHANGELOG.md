@@ -2,6 +2,10 @@
 
 Notable changes to Polished Crawl (built on Orbrun), newest first.
 
+## 0.3.146 — 2026-11-18
+
+- On phones, the dungeon renders at a higher resolution with smoother creature sprites and character portraits.
+
 ## 0.3.145 — 2026-11-18
 
 - Main menu buttons show an outline when focused with the keyboard or controller.

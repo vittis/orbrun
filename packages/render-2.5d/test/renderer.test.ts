@@ -787,6 +787,29 @@ describe('environmental lighting', () => {
     expect(samples[2]).toEqual({ smooth: true, rasterScale: 1 })
     tile.mockRestore()
   })
+
+  it('filters still creatures independently of standing scenery', () => {
+    const { r } = renderer(), filtered = new Map<number, boolean>()
+    const tile = vi.spyOn(TileCache.prototype, 'draw').mockImplementation((ctx, layers) => {
+      filtered.set(layers[0].tile, ctx.imageSmoothingEnabled)
+      return true
+    })
+    try {
+      const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
+      scene.billboards = [
+        { kind: 'player', tile: 2, x: 0, y: 0, height: 1 },
+        { kind: 'monster', tile: 3, x: 1, y: 0, height: 1, life: { held: true } },
+        { kind: 'monster', tile: 4, x: 2, y: 0, height: 1, scenery: true },
+      ]
+      r.setOptions({ filterCreatureScaling: true })
+      r.setScene(scene)
+      r.render(1)
+      expect(filtered).toEqual(new Map([[2, true], [3, true], [4, false]]))
+    } finally {
+      tile.mockRestore()
+    }
+  })
+
   it('the player never emits a light pool or lights ordinary dungeon cells', () => {
     const scene = sceneOf(cell(0, 0), cell(1, 0), cell(2, 0))
     expect(lightField(scene).size).toBe(0)
