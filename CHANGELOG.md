@@ -1,5 +1,9 @@
 # What's new
 
+## 0.1.157 — 2026-11-19
+
+- About now names and links to the original project in Credits.
+
 ## 0.1.156 — 2026-11-19
 
 - Unified the app under the Polished Crawl name and refreshed About with a guide to its visual and control enhancements.
